@@ -1,0 +1,26 @@
+{
+  "name": "daggerheart-ingestion",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "ingest": "node --env-file=.env.ingestion ./node_modules/ts-node/dist/bin.js -r tsconfig-paths/register src/index.ts",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.600.0",
+    "@aws-sdk/lib-dynamodb": "^3.600.0",
+    "glob": "^11.0.0",
+    "slugify": "^1.6.6"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^20.14.0",
+    "jest": "^30.3.0",
+    "ts-jest": "^29.4.6",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.5.0"
+  }
+}
