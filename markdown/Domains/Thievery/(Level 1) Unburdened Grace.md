@@ -1,0 +1,1 @@
+When you are wearing light or no armor, gain a bonus to your evasion equal to half your Finesse.

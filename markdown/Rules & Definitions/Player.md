@@ -1,0 +1,1 @@
+A [[Character]] controlled by a player at the table other than the GM.

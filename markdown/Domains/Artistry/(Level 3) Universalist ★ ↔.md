@@ -1,0 +1,3 @@
+You create works which inspire others even without the use of language. You can attempt to influence the actions of characters with whom you share no common language or culture. Describe the actions you take to effect communication with these entities, and treat these [[Creature]]s as [[Character]]s.
+***
+**Curse**: You adopt odd mannerisms and patterns of speech as your thinking about language has changed significantly. You often invent words on the spot and use them as if others should understand you. When using language to communicate ideas, you may take penalties at the GM's discretion. If you have the [[(Level 3) Commune ★ ↔]] domain card, your oddities are seen as charming instead of off-putting, and you instead gain advantages at the GM's discretion.

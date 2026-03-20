@@ -1,0 +1,3 @@
+_You hail from [[The Waste]], and as such you are subject to the isolation and madness that infects most of that land. It is not without its advantages, as it often allows you to peak behind the veil of reality._
+
+**Mad**: Once per session, the GM can take an action on your behalf. If they do so, you may ask one question of the GM relating to the game. If they refuse to answer, you may choose for the action to not happen or to gain 2 Hope.

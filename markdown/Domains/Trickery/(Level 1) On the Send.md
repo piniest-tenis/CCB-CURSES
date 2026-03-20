@@ -1,0 +1,1 @@
+Once per rest when you succeed at a Trait Roll to deceive a character, describe how you orchestrate a continuance of the lie. Mark a Stress to place a number of tokens on this card equal to your Spellcast trait. You may spend a token from this card to cause your target to fail a roll related to your deception. At the end of the scene, clear all tokens from this card.

@@ -1,0 +1,3 @@
+Make a Spellcast Roll (13) and target a [[Character]] or [[Creature]] within Melee range. On a success with Hope, clear 2 Hit Points and Stress on the target. On a success with Fear, clear 2 Hit Points on the target. On a failure, clear 1 Stress or Hit Point on the target.
+***
+**Curse**: When you fail this roll, gain the _Wracked with Doubt_ condition. Gain a -1 penalty to your Presence. This condition can stack. On your next rest, clear all instances of _Wracked with Doubt_.

@@ -1,0 +1,1 @@
+Make a Spellcast Roll against all targets within Very Close range. Targets you succeed against gain the _Blinded_ condition. While _Blinded_, they're _Vulnerable_ and unable to see. This condition is cleared after the target is successfully attacked or they spend time on their turn to clear the dust from their eyes.

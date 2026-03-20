@@ -1,0 +1,1 @@
+Once per rest, when you critically succeed on an attack roll, all allies attacking the same target gain Advantage on their next roll to attack the same target.

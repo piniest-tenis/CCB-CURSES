@@ -1,0 +1,5 @@
+Make a Spellcast Roll against a target within Close range. On a success, spend a Hope to expose the target to a feature of your body or mind that momentarily breaks their brain. 
+
+The target gains the _Immersed_ condition. While _Immersed_, they cannot take actions other than to move the nearest ally with the goal of touching them. If a target is touched in this manner, the new target gains the _Immersed_ condition and the original target clears the _Immersed_ condition and becomes immune to its effects. If no valid targets remain when a target gains the _Immersed_ condition, it does d12 damage using your Proficiency and ends immediately.
+***
+**Curse**: You gain a trinket that is roughly hand-sized and made of black stone. It sticks firmly to your person. When you use the ability on this Domain Card, it grows by 50%. As it gets larger, it introduces new complications determined by your GM. You can take a special downtime project called _Centering_ with a Countdown Tracker of 4. On completion of this special downtime project, the trinket returns to its original size.

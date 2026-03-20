@@ -1,0 +1,4 @@
+You have become adept at getting into places that are otherwise barred to you. When attempting to enter into any space which has been secured against intruders, gain Advantage. If you succeed at one of these rolls, place a token on this card. You may spend a token from this card to add +1 to the result of a roll to enter into any space which has been secured against intruders.
+
+---
+**Curse**: You are too good at your job. Either you attract the attention of an organization that wants to force you to work for them, or a squadron that seeks justice for something you've stolen. They will pursue you in this campaign until dealt with directly by your character. If you have the [[(Level 4) Orator ★ ↔]] Domain Card in your loadout, you gain a means to call on the pursuing organization directly, and attempt to set them against an adversary. Work with your GM to determine benefits of this action.

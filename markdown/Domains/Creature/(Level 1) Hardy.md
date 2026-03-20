@@ -1,0 +1,1 @@
+Once per Scene when you would normally mark a Hit Point, you may mark a Stress instead.

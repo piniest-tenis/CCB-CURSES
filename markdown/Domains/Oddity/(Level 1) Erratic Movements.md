@@ -1,0 +1,1 @@
+Once per rest, you may move up to Far range without a roll. You control your destination, but the means of conveyance is instantaneous and inexplicable.

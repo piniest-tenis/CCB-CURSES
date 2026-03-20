@@ -1,0 +1,1 @@
+Once per session, when you are caught in a deception, you can mark 3 Stress to invent an outside authority who will verify your story. Until the end of the scene, the target of this Ability will believe a lie they have previously seen through. While this will not hold up to further scrutiny, it will work to deceive all but the most fastidious investigators.

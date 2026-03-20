@@ -1,0 +1,3 @@
+Gain a special downtime project called _Infiltration_ with a Completion Tracker of 4. While this project is active, gain a +2 bonus to your Finesse. When the project completes, gain one of the following permanent effects:
+- Choose a [[Faction]]. You gain a new downtime move for long rests called _Gather Intel_. When you take this move, roll a number of d4 dice equal to your Proficiency and take the highest result. You may ask that many questions of the GM about that faction and its movements.
+- Gain detailed information about forthcoming movements of your adversaries. You learn of the next tick on any long-term countdown trackers that are currently running.

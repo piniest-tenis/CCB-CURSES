@@ -1,0 +1,1 @@
+You can spend a few moments speaking encouraging words to your allies. When you do so, each party member gains a Hope.

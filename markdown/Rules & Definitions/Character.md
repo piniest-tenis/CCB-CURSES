@@ -1,0 +1,1 @@
+Any sentient [[Creature]] capable of language and advanced reasoning.

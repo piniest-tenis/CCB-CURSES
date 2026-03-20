@@ -1,0 +1,1 @@
+If you have a Favor, you can make a reasonable request of the faction or any [[Adherent]] of the faction. At the GM's discretion, the requested favor will be fulfilled, and the token is spent. If it is denied, you retain the favor. Requests made with a favor token gain a +2 bonus to [[Attitude]].

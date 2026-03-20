@@ -1,0 +1,1 @@
+Any living being on Tidwell incapable of language and/or advanced reasoning.

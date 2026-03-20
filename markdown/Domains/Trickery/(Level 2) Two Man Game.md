@@ -1,0 +1,1 @@
+When another player engages in a scheme to deceive with you, you can mark two Stress for them to gain the benefits of a Domain Card that is currently in your Vault until the end of the scene.

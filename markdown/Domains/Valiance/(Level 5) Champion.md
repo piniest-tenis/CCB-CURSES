@@ -1,0 +1,3 @@
+When this card first enters your load out, choose a [[Faction]]. When you take an action which aligns with your chosen faction's [[Primary Goals]], you gain a bonus to ALL rolls equal to your [[Reputation]] with the chosen Faction. 
+
+You gain a special downtime project called _Shifting Allegiance_ with a Countdown Tracker of 6. When this project completes, you may choose a new faction for the benefits of this card and remove the old faction (if it exists).

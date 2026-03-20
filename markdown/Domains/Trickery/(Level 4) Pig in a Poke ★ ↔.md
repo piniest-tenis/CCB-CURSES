@@ -1,0 +1,3 @@
+Once per rest, after you have sold or given away an item since your last rest, you may make a Spellcast Roll targeting the recipient. On a success, you may replace the item you parted with by swapping it for any item you are currently carrying.
+***
+**Curse**: Every time you do this, it results in a deep animosity by the fooled party. They take a -2 penalty to their [[Attitude]] towards you in addition to any other non-curse effects may worsen their attitude. If you have the [[(Level 4) Righteous Fire ★ ↔]] domain card in your loadout, you can give the target of this ability the _Blazing_ condition in addition to its normal effects.

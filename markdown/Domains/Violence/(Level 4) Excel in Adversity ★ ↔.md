@@ -1,0 +1,3 @@
+When you interact with an [[Adherent]] of a [[Faction]] with whom your party has a negative [[Reputation]], you can spend a Hope to gain a bonus to your next roll equal to double the penalty with that Faction.
+***
+**Curse**: You gain a brand, mark, trinket, or scar that indicates to others you have made an enemy of a powerful faction. Others are wary to trust you because of this. You gain a -1 penalty to [[Attitude]] for your first interaction with adherents of a Faction you're meeting for the first time. If you have the [[(Level 3) Performer ★ ↔]] domain card in your loadout, you can spend a token from that card to ignore this curse.

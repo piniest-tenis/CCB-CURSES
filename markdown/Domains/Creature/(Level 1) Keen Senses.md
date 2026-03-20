@@ -1,0 +1,1 @@
+When you use any of your senses to detect, observe or investigate, you gain Advantage on Instinct rolls.

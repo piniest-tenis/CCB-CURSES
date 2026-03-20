@@ -1,0 +1,1 @@
+When you have marked all but 1 Hit Point, you can use d20s for all damage dice.

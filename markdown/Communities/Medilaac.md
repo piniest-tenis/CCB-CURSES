@@ -1,0 +1,3 @@
+_Your time in Medilaac shaped your views on family and society. You have gained an intense appreciation for their adaptability to different cultures._
+
+**Cultural Shapeshifter**: During character creation, choose another community. You gain the benefits of that community. Once per long rest, you may spend a downtime action to gain the benefits of any other Community card. This benefit persists until you next take the action.

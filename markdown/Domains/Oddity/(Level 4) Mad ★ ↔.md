@@ -1,0 +1,4 @@
+You gain insight into the world that others couldn't possibly understand. Once per session, you may ask a question of the GM directly about the world of Tidwell or any of its inhabitants. The GM must answer honestly. This answer is only delivered to you.
+
+---
+**Curse**: Your grasp on this world is tenuous at best. once per session, the GM may take control of your character for one action or interaction. This action cannot cause you to lose your last Hit Point. If you have the [[(Level 5) Investigator ★ ↔]] Domain Card in your loadout, once per session, you may ask a question of the GM directly about the world of Tidwell or any of its inhabitants. The GM must answer honestly. This is distinct from all other effect limitations, (i.e. does not count against the "once per session" limit of the base "Mad" ability).

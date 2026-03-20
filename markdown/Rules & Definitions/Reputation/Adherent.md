@@ -1,0 +1,1 @@
+A member of a [[Faction]]. It is possible for an Adherent to be a member of multiple factions at once. In the event that you are dealing with an adherent of multiple factions, add the result of all factions' [[Reputation]] score when calculating [[Attitude]].

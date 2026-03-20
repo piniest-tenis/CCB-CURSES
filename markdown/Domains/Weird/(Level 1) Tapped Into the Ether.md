@@ -1,0 +1,1 @@
+Once per scene, spend a Hope to add your Knowledge to your next roll.

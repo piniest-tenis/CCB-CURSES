@@ -1,0 +1,1 @@
+You become immune to effects which alter perception from sources other than your domain cards. Once per session, you may make a Spellcast Roll (15). On a success, you can share your perception of a thing with all allies within Far range. Once an ally sees the object as you see it, they retain a perfect memory of your perception even after the effect ends.

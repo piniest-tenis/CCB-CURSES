@@ -1,0 +1,1 @@
+Once per rest, you gain a temporary +1 bonus to the [[Attitude]] of a [[Character]] to whom you make a request. Make a Presence roll. On a success with Fear, the target fulfills your request but gains a -1 penalty to their [[Attitude]] towards you until your next rest.

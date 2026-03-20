@@ -1,0 +1,1 @@
+_You were raised in a community adherent to the Church of the Bent Trunk. You hold charity and humility as core values._

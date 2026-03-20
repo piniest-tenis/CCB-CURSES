@@ -1,0 +1,1 @@
+You gain a bonus to Presence rolls equal to the number of Hit Points you have marked.

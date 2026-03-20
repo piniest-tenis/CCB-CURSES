@@ -1,0 +1,3 @@
+Once per session, when you succeed on a trait roll with Fear, you can mark a Stress to roll a d4. Divide the result as Hope and distribute it how you choose within your party.
+***
+**Curse:** When you use this ability, you begin to glow with the intensity of candlelight. This light does not illuminate the space around you, but instead makes you Vulnerable. This effect ends when you either mark a Hit Point or take a long rest.

@@ -1,0 +1,1 @@
+When more than half your Hit Points are marked, add your Strength to your Evasion.

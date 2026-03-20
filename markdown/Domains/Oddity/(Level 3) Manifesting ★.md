@@ -1,0 +1,5 @@
+Once per rest, you can manifest in reality a figment of your imagination. It can be of any shape or form you desire, but no larger than yourself. No matter the shape it takes, this manifestation is alive and has its own motivations and personality. The manifestation will remain active for the duration of the scene, at which point it will dissipate. While active, you can have the manifestation take any action reasonable for it to take, provided it agrees and wants to as well.
+
+When this manifestation attacks an adversary, make a Spellcast Roll against it. On a success, it does d10 damage using your Proficiency and immediately dissipates.
+***
+**Curse**: You have difficulty keeping your imagination to yourself. Once per session, you must describe a scenario, situation or character you have invented to an ally or [[Character]]. The session after failing to do so, your GM will describe a manifestation that springs forth from your head, with motivations determined by your GM.

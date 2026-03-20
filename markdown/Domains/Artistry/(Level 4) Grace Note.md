@@ -1,0 +1,1 @@
+Whenever you are involved in a Tag Team Roll initiated by another player, gain a Hope. Tag Team Rolls initiated by you cost 2 Hope instead of 3.

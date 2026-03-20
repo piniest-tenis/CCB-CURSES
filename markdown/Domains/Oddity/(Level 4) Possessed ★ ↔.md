@@ -1,0 +1,5 @@
+You are a conduit for the [[Etherotaxia]] of Tidwell. These entities possess unique capabilities which you do not. 
+
+Once per session, you can activate this card's ability to choose a Domain Card from **any** Domain. If you meet its level requirements, you may put it in your loadout. At the end of the Scene, remove the selected card from your Loadout.
+
+**Curse**: The entity possessing you has different aims and goals than you do, and does not communicate directly with you about those goals. After a scene in which you activated this card's ability, you must roll a d4. On a 1, the entity possessing you takes over and pursues its goals. You must take actions towards satisfying the goal the GM describes for you. If you have the [[(Level 4) Writer ★ ↔]] Domain Card, you can describe a scene where you attempt communication with the entity possessing you, after which you must make a Spellcast Roll (15) to convince the entity to abandon its goals in favor of your own.

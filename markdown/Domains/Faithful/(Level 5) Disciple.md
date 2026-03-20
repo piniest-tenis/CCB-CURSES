@@ -1,0 +1,1 @@
+You pledge yourself fully to a [[Faction]] that exists in Tidwell. You gain a +2 bonus to [[Attitude]] with all [[Adherent]]s of that faction. If you violate one of the [[Primary Goals]] of that faction, you lose this bonus until you undertake a special project called _Penance_. Work with your GM to determine the details of that project should you need it.

@@ -1,0 +1,1 @@
+When an ally within close range succeeds on a roll with Hope, you can make a Spellcast Reaction Roll (13). On a success, mark a Stress to gain 2 Hope.

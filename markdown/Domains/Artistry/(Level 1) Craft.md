@@ -1,0 +1,1 @@
+Once per session, during a rest where you work on a project as a downtime activity, you may mark an additional tick on the progress countdown to your project completion.

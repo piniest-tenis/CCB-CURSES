@@ -1,0 +1,1 @@
+When you interact with a [[Character]], you can spend a Hope to determine whether they are lying to you.

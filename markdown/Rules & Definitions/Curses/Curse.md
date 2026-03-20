@@ -1,0 +1,1 @@
+A drawback on starred domain cards (★) which carries a roleplay or mechanical effect on how your character is played.

@@ -1,0 +1,1 @@
+An Aura is a spell that can be turned on by the player. When active, an Aura has specific effects within a given range that will occur at the end of the turn for the player holding the aura. When a player with an active aura is hit, they must succeed at a Spellcast Roll with the Maintenance Difficulty listed on the domain card.

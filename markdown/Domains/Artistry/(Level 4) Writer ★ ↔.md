@@ -1,0 +1,5 @@
+You have the ability to craft a narrative, persuasive, or expository piece of writing with expertise. During a long rest, you may work on a special project to influence a whole [[Faction]] with whom you share a common language. Describe the goal of your writing, the speed at which you aim for the influence to happen, and work with your GM to set the necessary ticks for completion. This can affect [[Reputation]] with that faction.
+
+Only one special project may be active at a time. Inactive projects no longer provide the benefits originally granted unless explicitly stated otherwise by the GM.
+***
+**Curse**: You struggle with internal demons. On selecting this domain card, work with your GM to craft a custom condition relating to this affliction. Once per session, the GM can spend a Fear to force you to succumb to that Condition. If you have the [[(Level 4) Dirty Fighter ★ ↔]] Domain Card, you instead revel in this affliction. Work with your GM to positively change the effects of this condition accordingly.

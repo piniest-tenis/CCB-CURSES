@@ -1,0 +1,1 @@
+When you spend a turn studying an adversary, gain Advantage on rolls against that target for the rest of the scene.

@@ -1,0 +1,3 @@
+_You were raised amongst the seafaring clans of the Poireau Island. You have gained an advanced knowledge of tight-knit, insular communities and can navigate them with ease._
+
+**Attuned to Custom**: Once per session, you may make an attempt to socially influence a character when the character would be otherwise unwilling. Work with your GM to determine the Difficulty and manner of this interaction.

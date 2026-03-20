@@ -1,0 +1,1 @@
+When you touch a creature, either via an attack or an interaction, you can mark a Stress to implant a small, trackable object on their person. If you spend a few moments concentrating on the object, you can discern its direction relative to you.

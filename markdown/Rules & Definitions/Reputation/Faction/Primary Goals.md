@@ -1,0 +1,1 @@
+Every [[Faction]] has 1-3 Primary Goals that bind its [[Adherent]]s into a common cause. These goals may be publicly known, or held in secret.

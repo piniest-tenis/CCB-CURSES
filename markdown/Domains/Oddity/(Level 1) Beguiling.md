@@ -1,0 +1,1 @@
+Your presence is distracting. When a [[Character]] is interacting with you, you can spend a Hope to reduce the Difficulty for allies attempting to go unnoticed by that character.

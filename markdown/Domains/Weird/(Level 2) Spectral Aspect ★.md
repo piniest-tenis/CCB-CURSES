@@ -1,0 +1,3 @@
+Make a Spellcast Roll (15). Once per rest on a success, you and belongings on your person become _Semi-Corporeal_. While _Semi-Corporeal_ you gain a bonus to Evasion equal to your Proficiency, and can move through any solid object except for stone. This effect ends if you make an attack, cast another spell, or at the end of the scene.
+***
+**Curse**: You leave pieces of you behind when you transition between worlds. Whenever you use this ability, roll a d6. On a 1, describe how a belonging or a small piece of your body does not transition with you.

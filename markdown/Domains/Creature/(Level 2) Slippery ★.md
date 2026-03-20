@@ -1,0 +1,3 @@
+Gain a bonus to your Evasion equal to your Agility.
+***
+**Curse**: You develop a coating of your choice that is oily, watery, or slimy. For species that would normally have this type of coating, yours becomes particularly prodigious. This is off-putting to other [[Character|Characters]], and causes them to treat you with a -1 penalty to [[Attitude]] until you next gain [[Reputation]] with their [[Faction]].

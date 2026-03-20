@@ -1,0 +1,1 @@
+You gain a +1 bonus to [[Attitude]] to [[Adherent|Adherents]] of [[Faction|Factions]] which have a [[Primary Goals|Primary Goal]] associated with knowledge.

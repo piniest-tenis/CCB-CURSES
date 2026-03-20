@@ -1,0 +1,1 @@
+After you make a roll but before you know the result, you can mark any number of Hit Points and gain a +2 bonus to the result of the roll for each.

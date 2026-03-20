@@ -1,0 +1,1 @@
+When you make a roll to influence a character, you can spend a Hope to add either your Finesse, Agility or Strength to the roll.

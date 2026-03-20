@@ -1,0 +1,5 @@
+You gain a special downtime project called _Sow Discontent_ with a Countdown Tracker of 6. Choose a target [[Faction]] with whose [[Adherent|Adherents]] you have direct contact. When this downtime project is complete, a portion of the targeted faction splinters into a new Faction. Work with your GM to set the new [[Primary Goals]] of this faction, aligned against at least one primary goal of the original faction. 
+
+Only one _Sow Discontent_ project may be active at any time.
+
+Your party starts with +1 [[Reputation]] with this new faction. Every time you help achieve one of its primary goals, gain +1 reputation with this faction. When all of its primary goals are met, this new faction replaces the original [[Faction]] and the _Sow Discontent_ project ends. This may happen with or without your assistance, but no reputation is gained unless the party is directly involved.

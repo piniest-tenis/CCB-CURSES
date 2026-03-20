@@ -1,0 +1,1 @@
+Once per rest when you make an Instinct roll, you can add your Proficiency to the result.

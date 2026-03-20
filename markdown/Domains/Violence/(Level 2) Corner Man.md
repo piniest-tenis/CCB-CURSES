@@ -1,0 +1,1 @@
+Once per session during a short rest, you can spend a Hope to take the long rest downtime move **Clear all Hit Points**.

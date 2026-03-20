@@ -1,0 +1,1 @@
+When you fail a roll to deceive a target, you can mark a Stress to re-roll the result.

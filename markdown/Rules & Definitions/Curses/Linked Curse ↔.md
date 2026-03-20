@@ -1,0 +1,1 @@
+Linked Curses are spells or effects which are part of a larger ecosystem of curses woven together at some point. These domain cards grant different abilities based on the presence of a Linked Curse listed in their description.

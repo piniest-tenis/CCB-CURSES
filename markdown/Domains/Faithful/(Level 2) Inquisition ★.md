@@ -1,0 +1,3 @@
+Once per Scene, make a Spellcast Roll against a target within Very Close range. On a success, your questions press the person being interrogated, causing them to gain Stress for every lie told or unanswered question. If they acquire 2 Stress this way, the effect ends.
+***
+**Curse**: You bear a symbol of a religion. It can be any religion of Tidwell or one of your own creation. When speaking, you must show penitence to the deity or figurehead of that religion. If you speak without doing so, you must mark a Stress.
