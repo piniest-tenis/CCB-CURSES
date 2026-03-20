@@ -1,0 +1,67 @@
+/**
+ * src/app/globals.css
+ * Tailwind directives + CSS custom properties for the fantasy theme.
+ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222 47% 6%;
+    --foreground: 36 33% 85%;
+
+    --card: 222 47% 9%;
+    --card-foreground: 36 33% 85%;
+
+    --popover: 222 47% 8%;
+    --popover-foreground: 36 33% 85%;
+
+    --primary: 345 60% 37%;
+    --primary-foreground: 36 33% 95%;
+
+    --secondary: 222 30% 15%;
+    --secondary-foreground: 36 33% 85%;
+
+    --muted: 222 30% 12%;
+    --muted-foreground: 36 15% 55%;
+
+    --accent: 42 87% 45%;
+    --accent-foreground: 222 47% 6%;
+
+    --destructive: 345 60% 37%;
+    --destructive-foreground: 36 33% 95%;
+
+    --border: 345 30% 18%;
+    --input: 222 30% 12%;
+    --ring: 42 87% 45%;
+
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground));
+  }
+}

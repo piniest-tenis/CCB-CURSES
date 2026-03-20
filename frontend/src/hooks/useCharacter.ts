@@ -1,0 +1,158 @@
+/**
+ * src/hooks/useCharacter.ts
+ *
+ * TanStack Query v5 hooks for character CRUD and rest operations.
+ * All mutations invalidate or update relevant query caches automatically.
+ */
+
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  type UseQueryResult,
+  type UseMutationResult,
+} from "@tanstack/react-query";
+import { apiClient } from "@/lib/api";
+import type { Character, CharacterSummary, RestResult } from "@shared/types";
+
+// ─── Query keys ───────────────────────────────────────────────────────────────
+
+export const characterKeys = {
+  all:    ["characters"] as const,
+  lists:  () => [...characterKeys.all, "list"] as const,
+  list:   (params: CharacterListParams) =>
+    [...characterKeys.lists(), params] as const,
+  detail: (id: string) =>
+    [...characterKeys.all, "detail", id] as const,
+};
+
+// ─── Input / response types ───────────────────────────────────────────────────
+
+export interface CharacterListParams {
+  limit?:  number;
+  cursor?: string;
+}
+
+export interface CharacterListData {
+  characters: CharacterSummary[];
+  cursor: string | null;
+}
+
+export interface CreateCharacterInput {
+  name:        string;
+  classId:     string;
+  subclassId?: string;
+  communityId?: string;
+  ancestryId?: string;
+  level?:      number;
+}
+
+// ─── useCharacters ────────────────────────────────────────────────────────────
+
+export function useCharacters(
+  params?: CharacterListParams
+): UseQueryResult<CharacterListData> {
+  const searchParams = new URLSearchParams();
+  if (params?.limit  !== undefined) searchParams.set("limit",  String(params.limit));
+  if (params?.cursor !== undefined) searchParams.set("cursor", params.cursor);
+  const qs = searchParams.toString();
+
+  return useQuery({
+    queryKey: params ? characterKeys.list(params) : characterKeys.lists(),
+    queryFn:  () =>
+      apiClient.get<CharacterListData>(
+        qs ? `/characters?${qs}` : "/characters"
+      ),
+    staleTime: 60_000,
+  });
+}
+
+// ─── useCharacter ─────────────────────────────────────────────────────────────
+
+export function useCharacter(
+  characterId: string | undefined
+): UseQueryResult<Character> {
+  return useQuery({
+    queryKey: characterKeys.detail(characterId ?? ""),
+    queryFn:  () => apiClient.get<Character>(`/characters/${characterId}`),
+    enabled:  Boolean(characterId),
+    staleTime: 30_000,
+  });
+}
+
+// ─── useCreateCharacter ───────────────────────────────────────────────────────
+
+export function useCreateCharacter(): UseMutationResult<
+  Character,
+  Error,
+  CreateCharacterInput
+> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateCharacterInput) =>
+      apiClient.post<Character>("/characters", input),
+    onSuccess: () => {
+      // Invalidate all character lists so the new character appears
+      queryClient.invalidateQueries({ queryKey: characterKeys.lists() });
+    },
+  });
+}
+
+// ─── useUpdateCharacter ───────────────────────────────────────────────────────
+
+export function useUpdateCharacter(
+  characterId: string
+): UseMutationResult<Character, Error, Partial<Character>> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (patch: Partial<Character>) =>
+      apiClient.patch<Character>(`/characters/${characterId}`, patch),
+    onSuccess: (updated) => {
+      // Update the detail cache directly (no refetch needed)
+      queryClient.setQueryData(characterKeys.detail(characterId), updated);
+      // Invalidate the list so the updatedAt timestamp refreshes
+      queryClient.invalidateQueries({ queryKey: characterKeys.lists() });
+    },
+  });
+}
+
+// ─── useDeleteCharacter ───────────────────────────────────────────────────────
+
+export function useDeleteCharacter(): UseMutationResult<void, Error, string> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (characterId: string) =>
+      apiClient.delete(`/characters/${characterId}`),
+    onSuccess: (_data, characterId) => {
+      queryClient.removeQueries({
+        queryKey: characterKeys.detail(characterId),
+      });
+      queryClient.invalidateQueries({ queryKey: characterKeys.lists() });
+    },
+  });
+}
+
+// ─── useRest ──────────────────────────────────────────────────────────────────
+
+export function useRest(
+  characterId: string
+): UseMutationResult<RestResult, Error, "short" | "long"> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (restType: "short" | "long") =>
+      apiClient.post<RestResult>(`/characters/${characterId}/rest`, {
+        restType,
+      }),
+    onSuccess: (result) => {
+      // Update the detail cache with the post-rest character state
+      queryClient.setQueryData(
+        characterKeys.detail(characterId),
+        result.character
+      );
+    },
+  });
+}
