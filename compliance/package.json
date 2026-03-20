@@ -1,0 +1,32 @@
+{
+  "name": "@daggerheart/compliance",
+  "version": "1.0.0",
+  "description": "SRD compliance validators and calculators for the Daggerheart Character Platform",
+  "main": "dist/compliance/src/index.js",
+  "types": "dist/compliance/src/index.d.ts",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/compliance/src/index.js",
+      "require": "./dist/compliance/src/index.js",
+      "types": "./dist/compliance/src/index.d.ts"
+    }
+  }
+}
