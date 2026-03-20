@@ -1,0 +1,12 @@
+{
+  "name": "daggerheart-shared",
+  "version": "1.0.0",
+  "private": true,
+  "main": "src/types.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}
