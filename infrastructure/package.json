@@ -1,0 +1,25 @@
+{
+  "name": "daggerheart-infrastructure",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "cdk": "cdk",
+    "deploy:dev": "cdk deploy --all --context stage=dev",
+    "deploy:staging": "cdk deploy --all --context stage=staging",
+    "deploy:prod": "cdk deploy --all --require-approval broadening --context stage=prod",
+    "diff": "cdk diff --all",
+    "synth": "cdk synth"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.150.0",
+    "constructs": "^10.3.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "@types/node": "^20.14.0",
+    "aws-cdk": "^2.150.0",
+    "ts-node": "^10.9.2",
+    "source-map-support": "^0.5.21"
+  }
+}
