@@ -1,0 +1,66 @@
+{
+  "DaggerheartAuth-dev": {
+    "ExportsOutputFnGetAttUserPool6BA7E5F2Arn686ACC00": "arn:aws:cognito-idp:us-east-2:625693792690:userpool/us-east-2_fr2WQaYV4",
+    "UserPoolIdOutput": "us-east-2_fr2WQaYV4",
+    "UserPoolClientIdOutput": "5vje90448hq87rnco12b31io24",
+    "CognitoIssuerUrl": "https://cognito-idp.us-east-2.amazonaws.com/us-east-2_fr2WQaYV4",
+    "ExportsOutputRefUserPool6BA7E5F296FD7236": "us-east-2_fr2WQaYV4",
+    "ExportsOutputRefUserPoolClient2F5918F753847A55": "5vje90448hq87rnco12b31io24",
+    "UserPoolArnOutput": "arn:aws:cognito-idp:us-east-2:625693792690:userpool/us-east-2_fr2WQaYV4"
+  },
+  "DaggerheartData-dev": {
+    "MediaTableName": "daggerheart-media-dev",
+    "ExportsOutputRefClassesTable4AE801CB7AB7AA91": "daggerheart-classes-dev",
+    "UsersTableArn": "arn:aws:dynamodb:us-east-2:625693792690:table/daggerheart-users-dev",
+    "ClassesTableName": "daggerheart-classes-dev",
+    "ExportsOutputRefDomainCardsTable8E2A0C0904849D85": "daggerheart-domaincards-dev",
+    "UsersTableName": "daggerheart-users-dev",
+    "DomainCardsTableName": "daggerheart-domaincards-dev",
+    "CharactersTableName": "daggerheart-characters-dev",
+    "ExportsOutputFnGetAttDomainCardsTable8E2A0C09ArnCC1CFA2F": "arn:aws:dynamodb:us-east-2:625693792690:table/daggerheart-domaincards-dev",
+    "ClassesTableArn": "arn:aws:dynamodb:us-east-2:625693792690:table/daggerheart-classes-dev",
+    "GameDataTableArn": "arn:aws:dynamodb:us-east-2:625693792690:table/daggerheart-gamedata-dev",
+    "MediaTableArn": "arn:aws:dynamodb:us-east-2:625693792690:table/daggerheart-media-dev",
+    "ExportsOutputRefUsersTable9725E9C857961836": "daggerheart-users-dev",
+    "DomainCardsTableArn": "arn:aws:dynamodb:us-east-2:625693792690:table/daggerheart-domaincards-dev",
+    "ExportsOutputFnGetAttMediaTableCFC93525ArnF294BAB2": "arn:aws:dynamodb:us-east-2:625693792690:table/daggerheart-media-dev",
+    "GameDataTableName": "daggerheart-gamedata-dev",
+    "ExportsOutputFnGetAttUsersTable9725E9C8Arn5684EF99": "arn:aws:dynamodb:us-east-2:625693792690:table/daggerheart-users-dev",
+    "ExportsOutputRefMediaTableCFC9352587C39C4F": "daggerheart-media-dev",
+    "ExportsOutputFnGetAttClassesTable4AE801CBArn1FF0AAF5": "arn:aws:dynamodb:us-east-2:625693792690:table/daggerheart-classes-dev",
+    "ExportsOutputRefGameDataTable1D572DEE61C7A583": "daggerheart-gamedata-dev",
+    "ExportsOutputFnGetAttGameDataTable1D572DEEArnCD9494EC": "arn:aws:dynamodb:us-east-2:625693792690:table/daggerheart-gamedata-dev",
+    "ExportsOutputFnGetAttCharactersTable0F2A9F65ArnB8C5EC5A": "arn:aws:dynamodb:us-east-2:625693792690:table/daggerheart-characters-dev",
+    "ExportsOutputRefCharactersTable0F2A9F65610D8238": "daggerheart-characters-dev",
+    "CharactersTableArn": "arn:aws:dynamodb:us-east-2:625693792690:table/daggerheart-characters-dev"
+  },
+  "DaggerheartStorage-dev": {
+    "MediaBucketArn": "arn:aws:s3:::daggerheart-media-dev-625693792690",
+    "MediaBucketName": "daggerheart-media-dev-625693792690",
+    "CdnDistributionId": "E2FYNJJG18MRVR",
+    "CdnDomainName": "d144nqghu71795.cloudfront.net",
+    "ExportsOutputRefMediaBucketBCBB02BA270A7AEB": "daggerheart-media-dev-625693792690",
+    "ExportsOutputFnGetAttMediaDistribution4D42B96FDomainName8E95D8D6": "d144nqghu71795.cloudfront.net",
+    "ExportsOutputFnGetAttMediaBucketBCBB02BAArnB94B784B": "arn:aws:s3:::daggerheart-media-dev-625693792690"
+  },
+  "DaggerheartApi-dev": {
+    "UsersHandlerArn": "arn:aws:lambda:us-east-2:625693792690:function:daggerheart-users-dev",
+    "IngestionJobsTableName": "daggerheart-ingestion-jobs-dev",
+    "CharactersHandlerArn": "arn:aws:lambda:us-east-2:625693792690:function:daggerheart-characters-dev",
+    "ApiUrl": "https://uzai3cpj0j.execute-api.us-east-2.amazonaws.com/dev",
+    "GameDataHandlerArn": "arn:aws:lambda:us-east-2:625693792690:function:daggerheart-gamedata-dev",
+    "ComplianceHandlerArn": "arn:aws:lambda:us-east-2:625693792690:function:daggerheart-compliance-dev",
+    "AuthAdminHandlerArn": "arn:aws:lambda:us-east-2:625693792690:function:daggerheart-auth-admin-dev",
+    "IngestionAdminHandlerArn": "arn:aws:lambda:us-east-2:625693792690:function:daggerheart-ingestion-admin-dev",
+    "ApiId": "uzai3cpj0j",
+    "ExportsOutputFnGetAttHttpApiF5A9A8A7ApiEndpoint082134F8": "https://uzai3cpj0j.execute-api.us-east-2.amazonaws.com",
+    "MediaHandlerArn": "arn:aws:lambda:us-east-2:625693792690:function:daggerheart-media-dev"
+  },
+  "DaggerheartFrontend-dev": {
+    "FrontendDomainName": "dqt96kbhxdqy3.cloudfront.net",
+    "FrontendBucketName": "daggerheart-frontend-dev-625693792690",
+    "FrontendDistributionId": "E12V8PHM7C7JBP",
+    "ApiUrlForFrontend": "https://uzai3cpj0j.execute-api.us-east-2.amazonaws.com/dev",
+    "AmplifyHostingNote": "For SSR support, migrate to AWS Amplify Hosting and set `output: 'export'` can be removed from next.config.js"
+  }
+}
