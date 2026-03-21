@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
     "@aws-sdk/client-cloudfront": "^3.1013.0",
@@ -36,6 +40,7 @@
     "zustand": "^4.5.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.0",
     "@types/node": "^20.14.10",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",

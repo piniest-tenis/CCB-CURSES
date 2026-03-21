@@ -4,31 +4,49 @@
  * src/app/character/[id]/build/CharacterBuilderPageClient.tsx
  *
  * Character builder/editor page for existing characters.
- * Allows users to modify their character's class, ancestry, and community.
- * 
+ * Allows users to modify their character's class, ancestry, community,
+ * weapons, armor, starting equipment, domain cards, and trait bonuses.
+ *
  * Flow:
- *   1. Choose Class — select class + subclass
- *   2. Heritage — select ancestry and community
- *   3. Review — confirm changes and save
- * 
+ *   1. Choose Class
+ *   2. Choose Subclass
+ *   3. Choose Heritage (Ancestry + Community)
+ *   4. Assign Traits
+ *   5. Choose Starting Weapons
+ *   6. Choose Starting Armor
+ *   7. Take Starting Equipment
+ *   8. Take Domain Deck Cards
+ *   9. Review & Save
+ *
  * After saving, redirects back to character sheet.
  */
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useCharacter, useUpdateCharacter } from "@/hooks/useCharacter";
 import { useClass, useClasses, useAncestries, useCommunities } from "@/hooks/useGameData";
 import type { Character, AncestryData, CommunityData } from "@shared/types";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { CollapsibleSRDDescription } from "@/components/character/CollapsibleSRDDescription";
 import { TraitAssignmentPanel, type TraitBonuses } from "@/components/character/TraitAssignmentPanel";
+import { WeaponSelectionPanel } from "@/components/character/WeaponSelectionPanel";
+import { ArmorSelectionPanel } from "@/components/character/ArmorSelectionPanel";
+import { StartingEquipmentPanel, type StartingEquipmentSelections } from "@/components/character/StartingEquipmentPanel";
+import { DomainCardSelectionPanel } from "@/components/character/DomainCardSelectionPanel";
+import { ALL_TIER1_WEAPONS, TIER1_ARMOR, UNIVERSAL_STARTING_ITEMS, STARTING_GOLD } from "@/lib/srdEquipment";
 
 interface CharacterBuilderPageProps {
   params: { id: string };
 }
 
-export default function CharacterBuilderPageClient({ params }: CharacterBuilderPageProps) {
-  const { id: characterId } = params;
+export default function CharacterBuilderPageClient({ params: _params }: CharacterBuilderPageProps) {
+  const pathname = usePathname();
+  // Extract the real character ID from the browser URL.
+  // params.id is "__placeholder__" in a static export because Next.js only
+  // pre-renders one HTML file per dynamic segment. usePathname() always
+  // reflects the actual browser URL — identical pattern to CharacterPageClient.
+  // Path shape: /character/{id}/build  → segments[2] is the id.
+  const characterId = pathname?.split("/")[2] ?? "";
   const router = useRouter();
   
   // Queries
@@ -39,12 +57,35 @@ export default function CharacterBuilderPageClient({ params }: CharacterBuilderP
   
   // Builder state
   const updateMutation = useUpdateCharacter(characterId);
-  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>(1);
   const [classId, setClassId] = useState(character?.classId ?? "");
   const [subclassId, setSubclassId] = useState(character?.subclassId ?? "");
   const [ancestryId, setAncestryId] = useState(character?.ancestryId ?? "");
   const [communityId, setCommunityId] = useState(character?.communityId ?? "");
   const [traitBonuses, setTraitBonuses] = useState<TraitBonuses>(character?.traitBonuses ?? {});
+  const [primaryWeaponId, setPrimaryWeaponId] = useState<string | null>(
+    character?.weapons?.primary?.name
+      ? ALL_TIER1_WEAPONS.find((w) => w.name === character.weapons.primary.name)?.id ?? null
+      : null
+  );
+  const [secondaryWeaponId, setSecondaryWeaponId] = useState<string | null>(
+    character?.weapons?.secondary?.name
+      ? ALL_TIER1_WEAPONS.find((w) => w.name === character.weapons.secondary.name)?.id ?? null
+      : null
+  );
+  const [armorId, setArmorId] = useState<string | null>(null);
+
+  // Step 7: Starting Equipment
+  const [equipmentSelections, setEquipmentSelections] = useState<StartingEquipmentSelections>({
+    consumableId: null,
+    classItem: null,
+  });
+
+  // Step 8: Domain Cards
+  const [selectedDomainCardIds, setSelectedDomainCardIds] = useState<string[]>(
+    character?.domainLoadout ?? []
+  );
+
   const [heritageTab, setHeritageTab] = useState<"ancestry" | "community">("ancestry");
   const [error, setError] = useState<string | null>(null);
   
@@ -65,16 +106,65 @@ export default function CharacterBuilderPageClient({ params }: CharacterBuilderP
   const canGoNext2 = Boolean(subclassId);
   const canGoNext3 = Boolean(ancestryId && communityId);
   const canGoNext4 = Object.keys(traitBonuses).length === 4;
+  const canGoNext5 = Boolean(primaryWeaponId); // secondary is optional
+  const canGoNext6 = Boolean(armorId);
+  const canGoNext7 = Boolean(equipmentSelections.consumableId && equipmentSelections.classItem);
+  const canGoNext8 = selectedDomainCardIds.length === 2;
+
+  // Helper: find selected weapon/armor data for save
+  const primaryWeapon = ALL_TIER1_WEAPONS.find((w) => w.id === primaryWeaponId) ?? null;
+  const secondaryWeapon = ALL_TIER1_WEAPONS.find((w) => w.id === secondaryWeaponId) ?? null;
   
   const handleSave = async () => {
     setError(null);
     try {
+      // Build inventory array from selections
+      const inventory: string[] = [
+        ...UNIVERSAL_STARTING_ITEMS,
+        ...(equipmentSelections.consumableId === "minor-health-potion"
+          ? ["Minor Health Potion"]
+          : equipmentSelections.consumableId === "minor-stamina-potion"
+            ? ["Minor Stamina Potion"]
+            : []),
+        ...(equipmentSelections.classItem ? [equipmentSelections.classItem] : []),
+      ];
+
       const updated = await updateMutation.mutateAsync({
         classId,
         subclassId: subclassId || undefined,
         ancestryId: ancestryId || undefined,
         communityId: communityId || undefined,
         traitBonuses,
+        weapons: {
+          primary: primaryWeapon
+            ? {
+                name: primaryWeapon.name,
+                trait: primaryWeapon.trait.toLowerCase() as Character["weapons"]["primary"]["trait"],
+                damage: primaryWeapon.damageDie,
+                range: primaryWeapon.range,
+                type: primaryWeapon.damageType.toLowerCase() as "physical" | "magic",
+                burden: (primaryWeapon.burden === "Two-Handed" ? "two-handed" : "one-handed") as "one-handed" | "two-handed",
+                tier: 1,
+                feature: primaryWeapon.feature,
+              }
+            : { name: null, trait: null, damage: null, range: null, type: null, burden: null, tier: null, feature: null },
+          secondary: secondaryWeapon
+            ? {
+                name: secondaryWeapon.name,
+                trait: secondaryWeapon.trait.toLowerCase() as Character["weapons"]["secondary"]["trait"],
+                damage: secondaryWeapon.damageDie,
+                range: secondaryWeapon.range,
+                type: secondaryWeapon.damageType.toLowerCase() as "physical" | "magic",
+                burden: (secondaryWeapon.burden === "Two-Handed" ? "two-handed" : "one-handed") as "one-handed" | "two-handed",
+                tier: 1,
+                feature: secondaryWeapon.feature,
+              }
+            : { name: null, trait: null, damage: null, range: null, type: null, burden: null, tier: null, feature: null },
+        },
+        gold: STARTING_GOLD,
+        inventory,
+        domainLoadout: selectedDomainCardIds,
+        domainVault: selectedDomainCardIds,
       } as Partial<Character>);
       
       // Redirect back to character sheet
@@ -132,7 +222,7 @@ export default function CharacterBuilderPageClient({ params }: CharacterBuilderP
                 Edit Character
               </h2>
               <p className="text-xs text-[#b9baa3]/40 mt-0.5">
-                {character.name} • Step {step} of 5
+                {character.name} • Step {step} of 9
               </p>
             </div>
             
@@ -477,7 +567,7 @@ export default function CharacterBuilderPageClient({ params }: CharacterBuilderP
                 
                 <CollapsibleSRDDescription
                   title="What are Traits?"
-                  content="Your character has six traits that represent their physical, mental, and social aptitude: **Agility** (Sprint, Leap, Maneuver), **Cunning** (Finesse, Investigate, Deceive), **Presence** (Inspire, Intimidate, Persuade), **Spellcast** (magic rolls), **Toughness** (resist), **Wit** (wit rolls)."
+                   content="Your character has six traits: **Agility** (sprint, leap, maneuver), **Strength** (lift, break, grapple), **Finesse** (precise attacks, sleight of hand), **Instinct** (react, track, sense danger), **Presence** (inspire, intimidate, persuade), **Knowledge** (recall lore, investigate, deduce). Your subclass's spellcast trait is pre-set to +2."
                 />
                 
                 <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 p-6">
@@ -490,8 +580,135 @@ export default function CharacterBuilderPageClient({ params }: CharacterBuilderP
               </div>
             )}
             
-            {/* Step 5: Review */}
+            {/* Step 5: Choose Starting Weapons */}
             {step === 5 && (
+              <div className="flex flex-1 min-h-0 flex-col">
+                <div className="px-6 pt-5 pb-3 shrink-0 space-y-3">
+                  <div>
+                    <h3 className="font-serif text-xl font-semibold text-[#f7f7ff]">Choose Starting Weapons</h3>
+                    <p className="text-sm text-[#b9baa3]/60 mt-0.5">Select a primary weapon. A secondary weapon is optional.</p>
+                  </div>
+                  <CollapsibleSRDDescription
+                    title="About Starting Weapons"
+                    content={
+                      "Tier 1 weapons are the only legal choices at character creation. A **primary weapon** fills one or two hands. " +
+                      "A **secondary weapon** occupies your second hand — unavailable if your primary is Two-Handed. " +
+                      (selectedSubclass
+                        ? `Your subclass (**${selectedSubclass.name}**) uses **${selectedSubclass.spellcastTrait}** as its spellcast trait — magic weapons matching that trait are marked as Suggested.`
+                        : "Magic weapons require a matching spellcast trait.")
+                    }
+                  />
+                </div>
+                <div className="flex-1 min-h-0 overflow-hidden border-t border-slate-700/30">
+                  <WeaponSelectionPanel
+                    primaryWeaponId={primaryWeaponId}
+                    secondaryWeaponId={secondaryWeaponId}
+                    onPrimaryChange={setPrimaryWeaponId}
+                    onSecondaryChange={setSecondaryWeaponId}
+                    subclassId={subclassId}
+                    hasSpellcastTrait={Boolean(selectedSubclass?.spellcastTrait)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Step 6: Choose Starting Armor */}
+            {step === 6 && selectedClassData && (
+              <div className="flex flex-1 min-h-0 flex-col">
+                <div className="px-6 pt-5 pb-3 shrink-0 space-y-3">
+                  <div>
+                    <h3 className="font-serif text-xl font-semibold text-[#f7f7ff]">Choose Starting Armor</h3>
+                    <p className="text-sm text-[#b9baa3]/60 mt-0.5">Select one armor. Thresholds shown are base values; add your level to each.</p>
+                  </div>
+                  <CollapsibleSRDDescription
+                    title="About Armor"
+                    content={
+                      "Armor provides **Armor Slots** you mark to reduce incoming damage. Each slot absorbs one threshold step. " +
+                      "Your **damage thresholds** (Major and Severe) equal the armor's base values plus your level. " +
+                      `Your class (**${selectedClassData.name}**) has Starting Evasion **${selectedClassData.startingEvasion}** — ` +
+                      "lighter armor suits higher evasion classes, heavier armor suits lower evasion classes."
+                    }
+                  />
+                </div>
+                <div className="flex-1 min-h-0 overflow-hidden border-t border-slate-700/30">
+                  <ArmorSelectionPanel
+                    armorId={armorId}
+                    onArmorChange={setArmorId}
+                    startingEvasion={selectedClassData.startingEvasion}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Step 7: Starting Equipment */}
+            {step === 7 && selectedClassData && (
+              <div className="flex flex-1 min-h-0 flex-col">
+                <div className="px-6 pt-5 pb-3 shrink-0 space-y-3">
+                  <div>
+                    <h3 className="font-serif text-xl font-semibold text-[#f7f7ff]">Take Your Starting Equipment</h3>
+                    <p className="text-sm text-[#b9baa3]/60 mt-0.5">
+                      Every adventurer begins with a set of standard gear, plus one consumable and one personal item.
+                    </p>
+                  </div>
+                  <CollapsibleSRDDescription
+                    title="About Starting Equipment"
+                    content={
+                      "**SRD page 3, Step 5:** Add the following items to your Inventory: a torch, 50 feet of rope, basic supplies, " +
+                      "and a handful of gold. Then choose either a **Minor Health Potion** (clear 1d4 HP) or a **Minor Stamina Potion** (clear 1d4 Stress). " +
+                      "Finally, take one of your **class-specific items** listed on your class guide.\n\n" +
+                      "**Gold (SRD page 58):** Gold is tracked in three tiers — Handfuls → Bags (10:1) → Chests (10:1). " +
+                      "You start with 1 handful. You cannot have more than 1 chest at once."
+                    }
+                  />
+                </div>
+                <div className="flex-1 min-h-0 overflow-hidden border-t border-slate-700/30">
+                  <StartingEquipmentPanel
+                    classId={classId}
+                    className={selectedClassData.name}
+                    selections={equipmentSelections}
+                    onChange={setEquipmentSelections}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Step 8: Domain Deck Cards */}
+            {step === 8 && selectedClassData && (
+              <div className="flex flex-1 min-h-0 flex-col">
+                <div className="px-6 pt-5 pb-3 shrink-0 space-y-3">
+                  <div>
+                    <h3 className="font-serif text-xl font-semibold text-[#f7f7ff]">Take Domain Deck Cards</h3>
+                    <p className="text-sm text-[#b9baa3]/60 mt-0.5">
+                      Choose 2 Level 1 cards from your class domains: {selectedClassData.domains.join(" & ")}.
+                    </p>
+                  </div>
+                  <CollapsibleSRDDescription
+                    title="About Domain Cards"
+                    content={
+                      "**SRD page 4:** Each domain card provides features your PC can use during adventures — unique attacks, spells, " +
+                      "passive effects, downtime abilities, or one-time benefits.\n\n" +
+                      `Your class (**${selectedClassData.name}**) has access to two domains: **${selectedClassData.domains.join("** and **")}**. ` +
+                      "You may take 1 card from each domain or 2 cards from a single domain — your choice.\n\n" +
+                      "**Recall Cost (SRD page 5):** The lightning bolt number on each card shows how many Stress you must mark " +
+                      "to swap it from your vault into your loadout outside of a rest. During a rest, swaps are free.\n\n" +
+                      "**Shared Domains:** Multiple classes share domains (e.g., Blade is shared by Guardian and Warrior). " +
+                      "This has no special mechanical effect — you always draw from your own class's two domains only."
+                    }
+                  />
+                </div>
+                <div className="flex-1 min-h-0 overflow-hidden border-t border-slate-700/30">
+                  <DomainCardSelectionPanel
+                    classDomains={selectedClassData.domains}
+                    selectedCardIds={selectedDomainCardIds}
+                    onSelectionChange={setSelectedDomainCardIds}
+                    characterLevel={character?.level ?? 1}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Step 9: Review */}
+            {step === 9 && (
               <div className="flex-1 overflow-y-auto p-6">
                 <div className="max-w-xl mx-auto space-y-6">
                   <h3 className="font-serif text-xl font-semibold text-[#f7f7ff]">
@@ -541,27 +758,118 @@ export default function CharacterBuilderPageClient({ params }: CharacterBuilderP
                       </p>
                     </div>
                     
-                    {/* Traits */}
+                     {/* Traits */}
                     {Object.keys(traitBonuses).length > 0 && (
+                       <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
+                         <p className="text-xs uppercase tracking-wider text-[#b9baa3]/50 font-medium mb-3">
+                           Trait Bonuses
+                         </p>
+                         <div className="space-y-1">
+                           {Object.entries(traitBonuses)
+                             .sort((a, b) => b[1] - a[1])
+                             .map(([trait, bonus]) => (
+                               <div key={trait} className="flex items-center justify-between">
+                                 <span className="text-sm text-[#b9baa3]/70">
+                                   {trait.charAt(0).toUpperCase() + trait.slice(1)}
+                                 </span>
+                                 <span className={`font-semibold ${
+                                   bonus > 0 ? "text-[#4ade80]" : "text-[#fe5f55]"
+                                 }`}>
+                                   {bonus > 0 ? "+" : ""}{bonus}
+                                 </span>
+                               </div>
+                             ))}
+                         </div>
+                       </div>
+                     )}
+
+                    {/* Weapons */}
+                    <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
+                      <p className="text-xs uppercase tracking-wider text-[#b9baa3]/50 font-medium mb-3">
+                        Weapons
+                      </p>
+                      <div className="space-y-2">
+                        <div>
+                          <span className="text-xs text-[#b9baa3]/50">Primary: </span>
+                          <span className="text-sm font-semibold text-[#f7f7ff]">
+                            {primaryWeapon?.name ?? "Not selected"}
+                          </span>
+                          {primaryWeapon && (
+                            <span className="text-xs text-[#b9baa3]/50 ml-2">
+                              {primaryWeapon.damageDie} · {primaryWeapon.range} · {primaryWeapon.burden}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <span className="text-xs text-[#b9baa3]/50">Secondary: </span>
+                          <span className="text-sm font-semibold text-[#f7f7ff]">
+                            {secondaryWeapon?.name ?? <span className="italic text-[#b9baa3]/40">None</span>}
+                          </span>
+                          {secondaryWeapon && (
+                            <span className="text-xs text-[#b9baa3]/50 ml-2">
+                              {secondaryWeapon.damageDie} · {secondaryWeapon.range}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                     {/* Armor */}
+                    {armorId && (() => {
+                      const armor = TIER1_ARMOR.find((a) => a.id === armorId);
+                      return armor ? (
+                        <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
+                          <p className="text-xs uppercase tracking-wider text-[#b9baa3]/50 font-medium mb-1">
+                            Armor
+                          </p>
+                          <p className="text-lg font-semibold text-[#f7f7ff]">{armor.name}</p>
+                          <p className="text-xs text-[#b9baa3]/50 mt-0.5">
+                            Score {armor.baseArmorScore} · Major {armor.baseMajorThreshold + 1}+ · Severe {armor.baseSevereThreshold + 1}+
+                            {armor.featureType && ` · ${armor.featureType}`}
+                          </p>
+                        </div>
+                      ) : null;
+                    })()}
+
+                    {/* Starting Equipment */}
+                    <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
+                      <p className="text-xs uppercase tracking-wider text-[#b9baa3]/50 font-medium mb-3">
+                        Starting Equipment
+                      </p>
+                      <div className="space-y-1.5">
+                        {UNIVERSAL_STARTING_ITEMS.map((item) => (
+                          <p key={item} className="text-sm text-[#b9baa3]/70">{item}</p>
+                        ))}
+                        <p className="text-sm text-[#b9baa3]/70">
+                          {STARTING_GOLD.handfuls} handful of gold
+                        </p>
+                        {equipmentSelections.consumableId && (
+                          <p className="text-sm font-semibold text-[#f7f7ff]">
+                            {equipmentSelections.consumableId === "minor-health-potion"
+                              ? "Minor Health Potion"
+                              : "Minor Stamina Potion"}
+                          </p>
+                        )}
+                        {equipmentSelections.classItem && (
+                          <p className="text-sm font-semibold text-[#f7f7ff]">
+                            {equipmentSelections.classItem}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Domain Cards */}
+                    {selectedDomainCardIds.length > 0 && (
                       <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
-                        <p className="text-xs uppercase tracking-wider text-[#b9baa3]/50 font-medium mb-3">
-                          Trait Bonuses
+                        <p className="text-xs uppercase tracking-wider text-[#b9baa3]/50 font-medium mb-2">
+                          Domain Cards ({selectedDomainCardIds.length}/2)
                         </p>
                         <div className="space-y-1">
-                          {Object.entries(traitBonuses)
-                            .sort((a, b) => b[1] - a[1])
-                            .map(([trait, bonus]) => (
-                              <div key={trait} className="flex items-center justify-between">
-                                <span className="text-sm text-[#b9baa3]/70">
-                                  {trait.charAt(0).toUpperCase() + trait.slice(1)}
-                                </span>
-                                <span className={`font-semibold ${
-                                  bonus > 0 ? "text-[#4ade80]" : "text-[#fe5f55]"
-                                }`}>
-                                  {bonus > 0 ? "+" : ""}{bonus}
-                                </span>
-                              </div>
-                            ))}
+                          {selectedDomainCardIds.map((cardId) => (
+                            <p key={cardId} className="text-sm font-semibold text-[#f7f7ff]">
+                              {cardId}
+                            </p>
+                          ))}
                         </div>
                       </div>
                     )}
@@ -577,7 +885,6 @@ export default function CharacterBuilderPageClient({ params }: CharacterBuilderP
             )}
           </div>
           
-           {/* Footer */}
            <div className="shrink-0 border-t border-slate-700/40 px-6 py-4 flex items-center justify-between gap-4">
              <button
                type="button"
@@ -585,7 +892,7 @@ export default function CharacterBuilderPageClient({ params }: CharacterBuilderP
                  if (step === 1) {
                    router.push(`/character/${characterId}`);
                  } else {
-                   setStep((s) => (s - 1) as 1 | 2 | 3 | 4 | 5);
+                   setStep((s) => (s - 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9);
                  }
                }}
                className="
@@ -599,15 +906,19 @@ export default function CharacterBuilderPageClient({ params }: CharacterBuilderP
              </button>
              
              <div className="flex gap-3">
-               {step < 5 && (
+               {step < 9 && (
                  <button
                    type="button"
-                   onClick={() => setStep((s) => (s + 1) as 1 | 2 | 3 | 4 | 5)}
+                   onClick={() => setStep((s) => (s + 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9)}
                    disabled={
                      (step === 1 && !canGoNext1) ||
                      (step === 2 && !canGoNext2) ||
                      (step === 3 && !canGoNext3) ||
-                     (step === 4 && !canGoNext4)
+                     (step === 4 && !canGoNext4) ||
+                     (step === 5 && !canGoNext5) ||
+                     (step === 6 && !canGoNext6) ||
+                     (step === 7 && !canGoNext7) ||
+                     (step === 8 && !canGoNext8)
                    }
                    className="
                      rounded-lg px-6 py-2.5 font-semibold text-sm
@@ -621,7 +932,7 @@ export default function CharacterBuilderPageClient({ params }: CharacterBuilderP
                  </button>
                )}
                
-               {step === 5 && (
+               {step === 9 && (
                  <button
                    type="button"
                    onClick={handleSave}

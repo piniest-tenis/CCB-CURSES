@@ -23,16 +23,47 @@ function setNestedValue(
   value: unknown
 ): Record<string, unknown> {
   const parts = path.split(".");
-  const result = { ...obj };
-  let current: Record<string, unknown> = result;
+  const cloneValue = (input: unknown): unknown => {
+    if (Array.isArray(input)) return [...input];
+    if (input && typeof input === "object") {
+      return { ...(input as Record<string, unknown>) };
+    }
+    return {};
+  };
+
+  const getContainerValue = (
+    container: Record<string, unknown> | unknown[],
+    key: string
+  ): unknown => {
+    if (Array.isArray(container)) {
+      return container[Number(key)];
+    }
+    return container[key];
+  };
+
+  const setContainerValue = (
+    container: Record<string, unknown> | unknown[],
+    key: string,
+    nextValue: unknown
+  ) => {
+    if (Array.isArray(container)) {
+      container[Number(key)] = nextValue;
+      return;
+    }
+    container[key] = nextValue;
+  };
+
+  const result = cloneValue(obj) as Record<string, unknown>;
+  let current: Record<string, unknown> | unknown[] = result;
 
   for (let i = 0; i < parts.length - 1; i++) {
     const key = parts[i];
-    current[key] = { ...(current[key] as Record<string, unknown>) };
-    current = current[key] as Record<string, unknown>;
+    const next = cloneValue(getContainerValue(current, key));
+    setContainerValue(current, key, next);
+    current = next as Record<string, unknown> | unknown[];
   }
 
-  current[parts[parts.length - 1]] = value;
+  setContainerValue(current, parts[parts.length - 1], value);
   return result;
 }
 

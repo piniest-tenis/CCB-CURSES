@@ -24,10 +24,14 @@
  */
 
 import React, { useState } from "react";
-import type { CharacterTrackers, WeaponBurden, WeaponDamageType } from "@shared/types";
+import type { WeaponBurden, WeaponDamageType } from "@shared/types";
 import { useCharacterStore } from "@/store/characterStore";
 import { useAncestry, useCommunity } from "@/hooks/useGameData";
 import { useActionButton, InlineActionError } from "./ActionButton";
+import { EditableField } from "./EditSidebar";
+import {
+  experienceNameField,
+} from "./editSidebarConfig";
 
 // ─── Props helper: characterId is provided by TrackersPanel from the store ────
 
@@ -70,24 +74,28 @@ function ActionableSlotTracker({
   const handleToggle = async (index: number) => {
     const isFilled = index < marked;
     if (isFilled) {
-      // Clear down to this index: n = marked - index
       await fire(clearActionId, { n: marked - index });
     } else {
-      // Mark up to index + 1: n = index + 1 - marked
       await fire(markActionId, { n: index + 1 - marked });
     }
   };
 
   return (
-    <div className="flex flex-col gap-1.5">
-      {/* Header row: label + marked/max counter */}
+    <div className="flex flex-col gap-1">
+      {/* Header row: label + numeric summary + max editor */}
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-wider text-parchment-400">
           {label}
         </span>
-        <div className="flex items-center gap-1 text-xs text-parchment-500">
-          <span aria-label={`${label} marked`}>{marked}</span>
-          <span>/</span>
+        <div className="flex items-center gap-1 text-xs">
+          <span
+            aria-live="polite"
+            aria-label={`${label}: ${marked} of ${max}`}
+            className="font-semibold text-parchment-300 tabular-nums"
+          >
+            {marked}
+          </span>
+          <span className="text-parchment-600">/</span>
           <input
             type="number"
             min={1}
@@ -99,21 +107,21 @@ function ActionableSlotTracker({
             }}
             aria-label={`${label} max slots`}
             className="
-              w-8 bg-transparent text-center text-parchment-300
+              w-7 bg-transparent text-center text-parchment-400
               border-b border-burgundy-800 focus:outline-none focus:ring-1 focus:ring-gold-500 focus:border-gold-500
               [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none
               transition-colors
             "
           />
           {hardMax && (
-            <span className="text-parchment-700 text-[10px]">/{hardMax}</span>
+            <span className="text-parchment-500 text-[10px]">/{hardMax}</span>
           )}
         </div>
       </div>
 
-      {/* Slot circles */}
+      {/* Slot circles — 24px circles with sufficient spacing for WCAG 2.5.8 */}
       <div
-        className="flex flex-wrap gap-1.5"
+        className="flex flex-wrap gap-1"
         role="group"
         aria-label={`${label} slots`}
         aria-describedby={inlineError ? errorId : undefined}
@@ -128,16 +136,15 @@ function ActionableSlotTracker({
               disabled={isPending}
               aria-label={`${label} slot ${i + 1} — ${filled ? "marked" : "empty"}`}
               aria-pressed={filled}
-              className={`
-                h-8 w-8 rounded-full border-2 transition-all duration-150
-                focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-1 focus:ring-offset-slate-900
-                disabled:opacity-60 disabled:cursor-wait
-                ${
-                  filled
-                    ? `${colorFilled} border-transparent shadow-sm`
-                    : "border-burgundy-700 bg-transparent hover:border-gold-500"
-                }
-              `}
+              className={[
+                // 24px visible, but min-h/min-w ensures 32px touch target
+                "h-6 w-6 min-h-[32px] min-w-[32px] rounded-full border-2 transition-all duration-150",
+                "focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-1 focus:ring-offset-slate-900",
+                "disabled:opacity-60 disabled:cursor-wait",
+                filled
+                  ? `${colorFilled} border-transparent shadow-sm`
+                  : "border-burgundy-700 bg-transparent hover:border-gold-500",
+              ].join(" ")}
             />
           );
         })}
@@ -147,196 +154,820 @@ function ActionableSlotTracker({
   );
 }
 
-// ─── ThresholdDisplay (read-only) ─────────────────────────────────────────────
-// SRD p.3/22: Damage thresholds = armor base threshold + character level.
-// These are derived values, not user-editable.
+// ─── DamageCalculatorSidebar ─────────────────────────────────────────────────
+// SRD p.20, 29: Player inputs raw damage. Sidebar shows the damage tier and
+// HP to mark. Player may optionally mark 1 Armor Slot to drop the tier one
+// step. Accept fires mark-hp (and mark-armor if used). Cancel discards.
+//
+// Damage resolution (SRD p.20):
+//   damage >= severe threshold  → Severe  → 3 HP
+//   damage >= major threshold   → Major   → 2 HP
+//   damage > 0                  → Minor   → 1 HP
+//   damage <= 0                 → None    → 0 HP
+//
+// Armor (SRD p.29): Mark 1 slot → drop severity one tier:
+//   Severe → Major, Major → Minor, Minor → None
 
-interface ThresholdDisplayProps {
-  label: string;
-  value: number;
+type DamageTier = "none" | "minor" | "major" | "severe";
+
+function calcTier(damage: number, major: number, severe: number): DamageTier {
+  if (damage <= 0)        return "none";
+  if (damage >= severe)   return "severe";
+  if (damage >= major)    return "major";
+  return "minor";
 }
 
-function ThresholdDisplay({ label, value }: ThresholdDisplayProps) {
+function tierDown(tier: DamageTier): DamageTier {
+  if (tier === "severe") return "major";
+  if (tier === "major")  return "minor";
+  return "none";
+}
+
+const TIER_HP: Record<DamageTier, number> = {
+  none: 0, minor: 1, major: 2, severe: 3,
+};
+
+const TIER_LABEL: Record<DamageTier, string> = {
+  none: "No damage", minor: "Minor", major: "Major", severe: "Severe",
+};
+
+const TIER_COLOR: Record<DamageTier, string> = {
+  none:   "text-parchment-600",
+  minor:  "text-parchment-300",
+  major:  "text-[#b9cfe8]",
+  severe: "text-burgundy-300",
+};
+
+interface DamageCalculatorSidebarProps {
+  open:        boolean;
+  onClose:     () => void;
+  major:       number;
+  severe:      number;
+  armorMarked: number;
+  armorMax:    number;
+  characterId: string;
+}
+
+function DamageCalculatorSidebar({
+  open,
+  onClose,
+  major,
+  severe,
+  armorMarked,
+  armorMax,
+  characterId,
+}: DamageCalculatorSidebarProps) {
+  const [damage, setDamage]         = React.useState<string>("");
+  const [useArmor, setUseArmor]     = React.useState(false);
+  const [actionError, setActionError] = React.useState<string | null>(null);
+  const [isPending, setIsPending]   = React.useState(false);
+  const headingId  = React.useId();
+  const panelRef   = React.useRef<HTMLDivElement>(null);
+  const inputRef   = React.useRef<HTMLInputElement>(null);
+
+  const { fire } = useActionButton(characterId);
+
+  // Reset state whenever sidebar opens
+  React.useEffect(() => {
+    if (!open) return;
+    setDamage("");
+    setUseArmor(false);
+    setActionError(null);
+    const t = setTimeout(() => inputRef.current?.focus(), 50);
+    return () => clearTimeout(t);
+  }, [open]);
+
+  // Escape to close
+  React.useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { e.stopPropagation(); onClose(); }
+    };
+    document.addEventListener("keydown", handler, true);
+    return () => document.removeEventListener("keydown", handler, true);
+  }, [open, onClose]);
+
+  // Tab-trap
+  React.useEffect(() => {
+    if (!open || !panelRef.current) return;
+    const panel = panelRef.current;
+    const selector = 'button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const focusable = Array.from(panel.querySelectorAll<HTMLElement>(selector)).filter(
+        (el) => !el.hasAttribute("disabled")
+      );
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last  = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault(); last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault(); first.focus();
+      }
+    };
+    panel.addEventListener("keydown", handleTab);
+    return () => panel.removeEventListener("keydown", handleTab);
+  }, [open]);
+
+  const rawDamage   = parseInt(damage, 10);
+  const validDamage = !isNaN(rawDamage) && rawDamage > 0;
+  const baseTier    = validDamage ? calcTier(rawDamage, major, severe) : null;
+  const finalTier   = baseTier === null
+    ? null
+    : useArmor ? tierDown(baseTier) : baseTier;
+  const hpToMark    = finalTier === null ? null : TIER_HP[finalTier];
+
+  // Armor availability
+  const armorAvailable = armorMax - armorMarked;
+  const canUseArmor    = armorAvailable > 0 && baseTier !== null && baseTier !== "none";
+
+  const handleAccept = async () => {
+    if (hpToMark === null) return;
+    setActionError(null);
+    setIsPending(true);
+    try {
+      // Mark armor first if used
+      if (useArmor) {
+        await fire("mark-armor", { n: 1 });
+      }
+      // Mark HP (0 HP = no action needed)
+      if (hpToMark > 0) {
+        await fire("mark-hp", { n: hpToMark });
+      }
+      onClose();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "An error occurred.");
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  const inputClass = `
+    w-full rounded-lg border border-[#577399]/35 bg-[#f7f7ff]
+    px-4 py-2.5 text-sm text-[#0a100d] placeholder:text-slate-400
+    focus:outline-none focus:ring-2 focus:ring-[#577399]
+    [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none
+  `;
+
   return (
-    <div className="flex flex-col items-center gap-1">
+    <>
+      {open && (
+        <div
+          aria-hidden="true"
+          onClick={onClose}
+          className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm lg:hidden"
+        />
+      )}
       <div
-        className="
-          h-10 w-14 rounded border border-burgundy-700 bg-slate-900
-          flex items-center justify-center shadow-inner
-        "
-        aria-label={`${label} damage threshold: ${value}`}
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={headingId}
+        aria-hidden={!open}
+        inert={!open ? ("" as unknown as boolean) : undefined}
+        className={[
+          "fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-[28rem] flex-col",
+          "border-l border-[#577399]/35 bg-[#0f1713] shadow-2xl",
+          "transition-transform duration-300 ease-in-out",
+          open ? "translate-x-0" : "translate-x-full",
+        ].join(" ")}
       >
-        <span className="text-lg font-bold text-parchment-200">{value}</span>
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[#577399]/25 px-5 py-4">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.24em] sidebar-text">Damage</p>
+            <h2 id={headingId} className="font-serif text-lg font-semibold text-[#f7f7ff]">Damage Calculator</h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close damage calculator"
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#577399]/30 text-[#b9baa3] hover:bg-[#577399]/12 hover:text-[#f7f7ff] focus:outline-none focus:ring-2 focus:ring-[#577399]"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
+          {/* Current thresholds reference */}
+          <div className="rounded-xl border border-[#577399]/20 bg-[#b9baa3]/[0.06] px-4 py-3 space-y-1">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] sidebar-text">Your thresholds</p>
+            <div className="flex items-center gap-3 text-sm">
+              <span className="text-parchment-500">Minor</span>
+              <span className="sidebar-text-secondary">·</span>
+              <span className="font-bold text-[#b9cfe8] tabular-nums">{major}</span>
+              <span className="text-parchment-500">Major</span>
+              <span className="sidebar-text-secondary">·</span>
+              <span className="font-bold text-burgundy-300 tabular-nums">{severe}</span>
+              <span className="text-parchment-500">Severe</span>
+            </div>
+            <p className="text-[11px] sidebar-text-secondary italic">
+              Damage ≥ {severe} = Severe · ≥ {major} = Major · &lt; {major} = Minor (SRD p. 20)
+            </p>
+          </div>
+
+          {/* Damage input */}
+          <div className="space-y-1.5">
+            <label htmlFor="damage-calc-input" className="text-[11px] font-semibold uppercase tracking-[0.18em] sidebar-text">
+              Damage received
+            </label>
+            <input
+              id="damage-calc-input"
+              ref={inputRef}
+              type="number"
+              min={0}
+              value={damage}
+              onChange={(e) => setDamage(e.target.value)}
+              placeholder="Enter damage amount…"
+              className={inputClass}
+            />
+          </div>
+
+          {/* Armor slot control */}
+          <div className="rounded-xl border border-[#577399]/20 bg-[#b9baa3]/[0.04] px-4 py-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] sidebar-text">
+                  Mark armor slot
+                </p>
+                <p className="text-[11px] sidebar-text-secondary mt-0.5">
+                  {armorAvailable} of {armorMax} available · drops severity 1 tier (SRD p. 29)
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={useArmor}
+                disabled={!canUseArmor}
+                onClick={() => canUseArmor && setUseArmor((v) => !v)}
+                aria-label={useArmor ? "Armor slot will be marked" : "Mark an armor slot to reduce damage"}
+                className={[
+                  "relative h-7 w-12 rounded-full border-2 transition-all duration-200",
+                  "focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2 focus:ring-offset-[#0f1713]",
+                  "disabled:opacity-30 disabled:cursor-not-allowed",
+                  useArmor
+                    ? "border-parchment-400 bg-parchment-500/30"
+                    : "border-[#577399]/40 bg-transparent",
+                ].join(" ")}
+              >
+                <span
+                  aria-hidden="true"
+                  className={[
+                    "absolute top-0.5 h-5 w-5 rounded-full transition-all duration-200",
+                    useArmor
+                      ? "left-[calc(100%-1.375rem)] bg-parchment-400"
+                      : "left-0.5 bg-[#577399]/50",
+                  ].join(" ")}
+                />
+              </button>
+            </div>
+
+            {/* Visual armor slot row */}
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Armor slots">
+              {Array.from({ length: armorMax }, (_, i) => {
+                const alreadyMarked = i < armorMarked;
+                const willMark      = !alreadyMarked && useArmor && i === armorMarked;
+                return (
+                  <span
+                    key={i}
+                    aria-hidden="true"
+                    className={[
+                      "h-5 w-5 rounded-full border-2 transition-all duration-150",
+                      alreadyMarked
+                        ? "bg-parchment-500 border-transparent"
+                        : willMark
+                        ? "bg-parchment-500/40 border-parchment-400 animate-pulse"
+                        : "border-burgundy-700 bg-transparent",
+                    ].join(" ")}
+                  />
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Result */}
+          {finalTier !== null && (
+            <div className={[
+              "rounded-xl border px-4 py-4 space-y-1 text-center",
+              finalTier === "none"   ? "border-[#577399]/20 bg-[#577399]/5"      : "",
+              finalTier === "minor"  ? "border-parchment-700/40 bg-parchment-900/10" : "",
+              finalTier === "major"  ? "border-[#577399]/40 bg-[#577399]/10"     : "",
+              finalTier === "severe" ? "border-burgundy-700/60 bg-burgundy-900/20" : "",
+            ].join(" ")}>
+              {useArmor && baseTier !== finalTier && (
+                <p className="text-[11px] sidebar-text-secondary line-through">
+                  {TIER_LABEL[baseTier!]} → {TIER_HP[baseTier!]} HP (before armor)
+                </p>
+              )}
+              <p className={`text-2xl font-bold font-serif ${TIER_COLOR[finalTier]}`}>
+                {TIER_LABEL[finalTier]}
+              </p>
+              <p className="text-sm text-[#b9baa3]">
+                Mark{" "}
+                <span className="font-bold text-[#f7f7ff]">{hpToMark} HP</span>
+                {useArmor && " + 1 armor slot"}
+              </p>
+            </div>
+          )}
+
+          {!validDamage && !damage && (
+            <p className="text-center text-sm sidebar-text-secondary italic">
+              Enter a damage amount above to see the result.
+            </p>
+          )}
+
+          {actionError && (
+            <p role="alert" className="rounded-lg border border-[#fe5f55]/40 bg-[#fe5f55]/10 px-3 py-2 text-sm text-[#fe5f55]">
+              {actionError}
+            </p>
+          )}
+        </div>
+
+        {/* Footer — Accept / Cancel */}
+        <div className="border-t border-[#577399]/25 px-5 py-4 flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 rounded-xl border border-[#577399]/30 bg-transparent px-4 py-3 text-sm font-semibold text-[#b9baa3] hover:bg-[#577399]/10 focus:outline-none focus:ring-2 focus:ring-[#577399]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleAccept}
+            disabled={hpToMark === null || isPending}
+            aria-busy={isPending}
+            className="
+              flex-1 rounded-xl border border-burgundy-600/60 bg-burgundy-800/40 px-4 py-3
+              text-sm font-semibold text-parchment-100
+              hover:bg-burgundy-700/60 hover:border-burgundy-500
+              disabled:opacity-40 disabled:cursor-not-allowed
+              focus:outline-none focus:ring-2 focus:ring-burgundy-500
+              transition-colors
+            "
+          >
+            {isPending ? (
+              <span aria-hidden="true" className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            ) : hpToMark === 0 ? (
+              "Accept (no HP)"
+            ) : (
+              `Accept — mark ${hpToMark} HP${useArmor ? " + armor" : ""}`
+            )}
+          </button>
+        </div>
       </div>
-      <span className="text-[10px] uppercase tracking-widest text-parchment-500">
-        {label}
-      </span>
-    </div>
+    </>
   );
 }
 
-// ─── WeaponCard ───────────────────────────────────────────────────────────────
+// ─── DamageThresholdBar (read-only) ───────────────────────────────────────────
+// SRD p.3/22: Damage thresholds are derived (armor base + level), not editable.
+// Format: Minor Damage | <value> | Major Damage | <value> | Severe Damage
+// A calculator button opens DamageCalculatorSidebar.
 
-interface WeaponCardProps {
-  slot: "primary" | "secondary";
+interface DamageThresholdBarProps {
+  major:       number;
+  severe:      number;
+  armorMarked: number;
+  armorMax:    number;
+  characterId: string;
+}
+
+function DamageThresholdBar({ major, severe, armorMarked, armorMax, characterId }: DamageThresholdBarProps) {
+  const [calcOpen, setCalcOpen] = React.useState(false);
+
+  return (
+    <>
+      <div className="flex items-center gap-3 flex-wrap">
+        <dl
+          className="flex flex-wrap items-center gap-x-0 gap-y-1 flex-1"
+          aria-label="Damage thresholds"
+        >
+          {/* Minor — no threshold number, just the label */}
+          <div className="flex items-center">
+            <dt className="text-xs text-parchment-500 whitespace-nowrap">
+              <abbr title="Minor Damage" className="no-underline">
+                <span className="hidden sm:inline">Minor Damage</span>
+                <span className="sm:hidden">Minor</span>
+              </abbr>
+            </dt>
+          </div>
+
+          <span aria-hidden="true" className="mx-2 text-burgundy-700 select-none font-light">|</span>
+
+          {/* Major threshold value */}
+          <div className="flex items-center gap-1.5">
+            <dd className="rounded bg-[#577399]/20 border border-[#577399]/40 px-2 py-0.5 text-base font-bold text-[#b9cfe8] tabular-nums leading-none">
+              {major}
+            </dd>
+            <dt className="text-xs text-parchment-500 whitespace-nowrap">
+              <abbr title="Major Damage" className="no-underline">
+                <span className="hidden sm:inline">Major Damage</span>
+                <span className="sm:hidden">Major</span>
+              </abbr>
+            </dt>
+          </div>
+
+          <span aria-hidden="true" className="mx-2 text-burgundy-700 select-none font-light">|</span>
+
+          {/* Severe threshold value */}
+          <div className="flex items-center gap-1.5">
+            <dd className="rounded bg-burgundy-900/40 border border-burgundy-700/60 px-2 py-0.5 text-base font-bold text-burgundy-300 tabular-nums leading-none">
+              {severe}
+            </dd>
+            <dt className="text-xs text-parchment-500 whitespace-nowrap">
+              <abbr title="Severe Damage" className="no-underline">
+                <span className="hidden sm:inline">Severe Damage</span>
+                <span className="sm:hidden">Severe</span>
+              </abbr>
+            </dt>
+          </div>
+        </dl>
+
+        {/* Calculator button */}
+        <button
+          type="button"
+          onClick={() => setCalcOpen(true)}
+          aria-label="Open damage calculator"
+          aria-haspopup="dialog"
+          className="
+            flex items-center gap-1.5 rounded-lg border border-burgundy-800/70 bg-slate-900
+            px-2.5 py-1.5 text-[11px] font-semibold text-parchment-400
+            hover:border-burgundy-600 hover:text-parchment-200 hover:bg-slate-800
+            focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-1 focus:ring-offset-slate-900
+            transition-colors flex-shrink-0
+          "
+        >
+          <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 5h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1z" />
+          </svg>
+          Damage
+        </button>
+      </div>
+
+      <DamageCalculatorSidebar
+        open={calcOpen}
+        onClose={() => setCalcOpen(false)}
+        major={major}
+        severe={severe}
+        armorMarked={armorMarked}
+        armorMax={armorMax}
+        characterId={characterId}
+      />
+    </>
+  );
+}
+
+// ─── WeaponSidebar ────────────────────────────────────────────────────────────
+// A self-contained slide-in panel for editing all weapon properties at once,
+// modelled after ConditionsSidebar. Uses debounced updateField calls.
+
+interface WeaponSidebarProps {
+  open:     boolean;
+  onClose:  () => void;
+  slot:     "primary" | "secondary";
 }
 
 const DAMAGE_TYPES: WeaponDamageType[] = ["physical", "magic"];
 const BURDENS: WeaponBurden[]          = ["one-handed", "two-handed"];
 
-function WeaponCard({ slot }: WeaponCardProps) {
+function WeaponSidebar({ open, onClose, slot }: WeaponSidebarProps) {
   const { activeCharacter, updateField } = useCharacterStore();
+  const headingId = React.useId();
+  const panelRef  = React.useRef<HTMLDivElement>(null);
+
+  // Focus first focusable element when opened
+  React.useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => {
+      const first = panelRef.current?.querySelector<HTMLElement>(
+        'button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      first?.focus();
+    }, 50);
+    return () => clearTimeout(t);
+  }, [open]);
+
+  // Escape to close
+  React.useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { e.stopPropagation(); onClose(); }
+    };
+    document.addEventListener("keydown", handler, true);
+    return () => document.removeEventListener("keydown", handler, true);
+  }, [open, onClose]);
+
+  // Tab-trap
+  React.useEffect(() => {
+    if (!open || !panelRef.current) return;
+    const panel = panelRef.current;
+    const selector = 'button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const focusable = Array.from(panel.querySelectorAll<HTMLElement>(selector)).filter(
+        (el) => !el.hasAttribute("disabled")
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault(); last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault(); first.focus();
+      }
+    };
+    panel.addEventListener("keydown", handleTab);
+    return () => panel.removeEventListener("keydown", handleTab);
+  }, [open]);
+
   if (!activeCharacter) return null;
 
   const weapon = activeCharacter.weapons[slot];
   const base   = `weapons.${slot}`;
-  const tierId = `${slot}-weapon-tier`;
+  const title  = slot === "primary" ? "Primary Weapon" : "Secondary Weapon";
+
+  // Debounced text field — updates store immediately, then persists
+  const debounceRefs = React.useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const handleText = (subField: string, value: string) => {
+    updateField(`${base}.${subField}`, value === "" ? null : value);
+  };
+
+  const inputClass = `
+    w-full rounded-lg border border-[#577399]/35 bg-[#f7f7ff]
+    px-4 py-2.5 text-sm text-[#0a100d] placeholder:text-slate-400
+    focus:outline-none focus:ring-2 focus:ring-[#577399]
+  `;
+  const selectClass = `
+    w-full rounded-lg border border-[#577399]/35 bg-[#f7f7ff]
+    px-4 py-2.5 text-sm text-[#0a100d]
+    focus:outline-none focus:ring-2 focus:ring-[#577399]
+  `;
+  const labelClass = "text-[11px] font-semibold uppercase tracking-[0.18em] sidebar-text";
 
   return (
-    <div className="rounded-lg border border-burgundy-800 bg-slate-850 p-3 shadow-card space-y-2">
-      <h4 className="text-xs font-semibold uppercase tracking-wider text-gold-600">
-        {slot === "primary" ? "Primary Weapon" : "Secondary Weapon"}
-      </h4>
-
-      {/* Weapon name */}
-      <input
-        type="text"
-        placeholder="Weapon name"
-        value={weapon.name ?? ""}
-        onChange={(e) => updateField(`${base}.name`, e.target.value || null)}
-        aria-label={`${slot} weapon name`}
-        className="
-          w-full rounded bg-slate-900 px-2 py-1 text-sm text-parchment-200
-          border border-burgundy-800 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500
-          placeholder-parchment-700 transition-colors
-        "
-      />
-
-      <div className="grid grid-cols-2 gap-2">
-        {/* Trait */}
-        <input
-          type="text"
-          placeholder="Trait (e.g. Agility)"
-          value={weapon.trait ?? ""}
-          onChange={(e) => updateField(`${base}.trait`, e.target.value || null)}
-          aria-label={`${slot} weapon trait`}
-          className="
-            rounded bg-slate-900 px-2 py-1 text-xs text-parchment-300
-            border border-burgundy-800 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500
-            placeholder-parchment-700 transition-colors
-          "
+    <>
+      {open && (
+        <div
+          aria-hidden="true"
+          onClick={onClose}
+          className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm lg:hidden"
         />
-
-        {/* Damage */}
-        <input
-          type="text"
-          placeholder="Damage (e.g. 2d6+2)"
-          value={weapon.damage ?? ""}
-          onChange={(e) => updateField(`${base}.damage`, e.target.value || null)}
-          aria-label={`${slot} weapon damage`}
-          className="
-            rounded bg-slate-900 px-2 py-1 text-xs text-parchment-300
-            border border-burgundy-800 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500
-            placeholder-parchment-700 transition-colors
-          "
-        />
-
-        {/* Range */}
-        <input
-          type="text"
-          placeholder="Range (e.g. Melee)"
-          value={weapon.range ?? ""}
-          onChange={(e) => updateField(`${base}.range`, e.target.value || null)}
-          aria-label={`${slot} weapon range`}
-          className="
-            rounded bg-slate-900 px-2 py-1 text-xs text-parchment-300
-            border border-burgundy-800 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500
-            placeholder-parchment-700 transition-colors
-          "
-        />
-
-        {/* Damage type */}
-        <select
-          value={weapon.type ?? ""}
-          onChange={(e) =>
-            updateField(`${base}.type`, (e.target.value as WeaponDamageType) || null)
-          }
-          aria-label={`${slot} weapon type`}
-          className="
-            rounded bg-slate-900 px-2 py-1 text-xs text-parchment-300
-            border border-burgundy-800 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500
-            transition-colors
-          "
-        >
-          <option value="">Type…</option>
-          {DAMAGE_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t.charAt(0).toUpperCase() + t.slice(1)}
-            </option>
-          ))}
-        </select>
-
-        {/* Burden */}
-        <select
-          value={weapon.burden ?? ""}
-          onChange={(e) =>
-            updateField(`${base}.burden`, (e.target.value as WeaponBurden) || null)
-          }
-          aria-label={`${slot} weapon burden`}
-          className="
-            col-span-2 rounded bg-slate-900 px-2 py-1 text-xs text-parchment-300
-            border border-burgundy-800 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500
-            transition-colors
-          "
-        >
-          <option value="">Burden…</option>
-          {BURDENS.map((b) => (
-            <option key={b} value={b}>
-              {b.replace("-", " ")}
-            </option>
-          ))}
-        </select>
-
-        {/* Tier — SRD page 23 */}
-        <div className="flex items-center gap-2">
-          <label htmlFor={tierId} className="text-[10px] uppercase tracking-wider text-parchment-600 shrink-0">
-            Tier
-          </label>
-          <select
-            id={tierId}
-            value={weapon.tier ?? ""}
-            onChange={(e) =>
-              updateField(`${base}.tier`, e.target.value ? parseInt(e.target.value, 10) : null)
-            }
-            aria-label={`${slot} weapon tier`}
-            className="
-              flex-1 rounded bg-slate-900 px-2 py-1 text-xs text-parchment-300
-              border border-burgundy-800 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500
-              transition-colors
-            "
+      )}
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={headingId}
+        aria-hidden={!open}
+        inert={!open ? ("" as unknown as boolean) : undefined}
+        className={[
+          "fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-[28rem] flex-col",
+          "border-l border-[#577399]/35 bg-[#0f1713] shadow-2xl",
+          "transition-transform duration-300 ease-in-out",
+          open ? "translate-x-0" : "translate-x-full",
+        ].join(" ")}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[#577399]/25 px-5 py-4">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.24em] sidebar-text">Weapon</p>
+            <h2 id={headingId} className="font-serif text-lg font-semibold text-[#f7f7ff]">{title}</h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={`Close ${title} editor`}
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#577399]/30 text-[#b9baa3] hover:bg-[#577399]/12 hover:text-[#f7f7ff] focus:outline-none focus:ring-2 focus:ring-[#577399]"
           >
-            <option value="">—</option>
-            {[1, 2, 3, 4].map((t) => (
-              <option key={t} value={t}>Tier {t}</option>
-            ))}
-          </select>
+            ✕
+          </button>
         </div>
 
-        {/* Feature — SRD page 23 */}
-        <input
-          type="text"
-          placeholder="Feature (e.g. Reliable)"
-          value={weapon.feature ?? ""}
-          onChange={(e) => updateField(`${base}.feature`, e.target.value || null)}
-          aria-label={`${slot} weapon feature`}
-          className="
-            rounded bg-slate-900 px-2 py-1 text-xs text-parchment-300
-            border border-burgundy-800 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500
-            placeholder-parchment-700 transition-colors
-          "
-        />
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
+          {/* SRD help */}
+          <div className="rounded-xl border border-[#577399]/20 bg-[#b9baa3]/[0.06] px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] sidebar-text mb-1">SRD guidance</p>
+            <p className="text-sm leading-relaxed text-[#f7f7ff]">
+              Weapons are defined by their trait, damage dice, range, burden, tier, and any special feature. Add your proficiency to damage if the weapon is in your proficiency tier. (SRD p. 23)
+            </p>
+          </div>
+
+          {/* Name */}
+          <div className="space-y-1.5">
+            <label htmlFor={`weapon-${slot}-name`} className={labelClass}>Name</label>
+            <input
+              id={`weapon-${slot}-name`}
+              type="text"
+              defaultValue={weapon.name ?? ""}
+              onChange={(e) => handleText("name", e.target.value)}
+              placeholder="e.g. Shortsword, Hunter's Bow…"
+              className={inputClass}
+            />
+          </div>
+
+          {/* Trait */}
+          <div className="space-y-1.5">
+            <label htmlFor={`weapon-${slot}-trait`} className={labelClass}>Trait</label>
+            <input
+              id={`weapon-${slot}-trait`}
+              type="text"
+              defaultValue={weapon.trait ?? ""}
+              onChange={(e) => handleText("trait", e.target.value)}
+              placeholder="e.g. Agility, Strength, Finesse…"
+              className={inputClass}
+            />
+            <p className="text-[11px] sidebar-text-secondary">The core trait used when making an attack roll.</p>
+          </div>
+
+          {/* Damage */}
+          <div className="space-y-1.5">
+            <label htmlFor={`weapon-${slot}-damage`} className={labelClass}>Damage</label>
+            <input
+              id={`weapon-${slot}-damage`}
+              type="text"
+              defaultValue={weapon.damage ?? ""}
+              onChange={(e) => handleText("damage", e.target.value)}
+              placeholder="e.g. 2d6+2, 1d8…"
+              className={inputClass}
+            />
+          </div>
+
+          {/* Range */}
+          <div className="space-y-1.5">
+            <label htmlFor={`weapon-${slot}-range`} className={labelClass}>Range</label>
+            <input
+              id={`weapon-${slot}-range`}
+              type="text"
+              defaultValue={weapon.range ?? ""}
+              onChange={(e) => handleText("range", e.target.value)}
+              placeholder="e.g. Melee, Close, Far…"
+              className={inputClass}
+            />
+          </div>
+
+          {/* Type */}
+          <div className="space-y-1.5">
+            <label htmlFor={`weapon-${slot}-type`} className={labelClass}>Damage Type</label>
+            <select
+              id={`weapon-${slot}-type`}
+              value={weapon.type ?? ""}
+              onChange={(e) => updateField(`${base}.type`, (e.target.value as WeaponDamageType) || null)}
+              className={selectClass}
+            >
+              <option value="">— Select type —</option>
+              {DAMAGE_TYPES.map((t) => (
+                <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Burden */}
+          <div className="space-y-1.5">
+            <label htmlFor={`weapon-${slot}-burden`} className={labelClass}>Burden</label>
+            <select
+              id={`weapon-${slot}-burden`}
+              value={weapon.burden ?? ""}
+              onChange={(e) => updateField(`${base}.burden`, (e.target.value as WeaponBurden) || null)}
+              className={selectClass}
+            >
+              <option value="">— Select burden —</option>
+              {BURDENS.map((b) => (
+                <option key={b} value={b}>{b.replace("-", " ")}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Tier */}
+          <div className="space-y-1.5">
+            <label htmlFor={`weapon-${slot}-tier`} className={labelClass}>Tier</label>
+            <select
+              id={`weapon-${slot}-tier`}
+              value={weapon.tier ?? ""}
+              onChange={(e) => updateField(`${base}.tier`, e.target.value ? parseInt(e.target.value, 10) : null)}
+              className={selectClass}
+            >
+              <option value="">— Select tier —</option>
+              {[1, 2, 3, 4].map((t) => <option key={t} value={t}>Tier {t}</option>)}
+            </select>
+          </div>
+
+          {/* Feature */}
+          <div className="space-y-1.5">
+            <label htmlFor={`weapon-${slot}-feature`} className={labelClass}>Feature</label>
+            <input
+              id={`weapon-${slot}-feature`}
+              type="text"
+              defaultValue={weapon.feature ?? ""}
+              onChange={(e) => handleText("feature", e.target.value)}
+              placeholder="e.g. Reliable, Slow, Thrown…"
+              className={inputClass}
+            />
+            <p className="text-[11px] sidebar-text-secondary">Optional keyword that modifies how the weapon is used.</p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-[#577399]/25 px-5 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-xl border border-[#577399]/40 bg-[#577399]/15 px-4 py-3 text-sm font-semibold text-[#f7f7ff] hover:bg-[#577399]/25 focus:outline-none focus:ring-2 focus:ring-[#577399]"
+          >
+            Done
+          </button>
+        </div>
       </div>
-    </div>
+    </>
+  );
+}
+
+// ─── WeaponCard ───────────────────────────────────────────────────────────────
+// The entire card is a single <button> that opens WeaponSidebar.
+// Name is prominent; a kicker line shows the other properties.
+
+interface WeaponCardProps {
+  slot: "primary" | "secondary";
+}
+
+function WeaponCard({ slot }: WeaponCardProps) {
+  const { activeCharacter } = useCharacterStore();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  if (!activeCharacter) return null;
+
+  const weapon = activeCharacter.weapons[slot];
+
+  // Build kicker from available data
+  const kickerParts = [
+    weapon.damage,
+    weapon.range,
+    weapon.type && (weapon.type.charAt(0).toUpperCase() + weapon.type.slice(1)),
+    weapon.trait,
+    weapon.burden && weapon.burden.replace("-", " "),
+    weapon.tier != null && `Tier ${weapon.tier}`,
+  ].filter(Boolean).join(" · ");
+
+  const ariaLabel = weapon.name
+    ? `Edit ${slot} weapon: ${weapon.name}${kickerParts ? `. ${kickerParts}` : ""}`
+    : `Add ${slot} weapon — tap to edit`;
+
+  return (
+    <>
+      <div className="rounded-lg border border-burgundy-800 bg-slate-850 shadow-card overflow-hidden">
+        {/* Slot label */}
+        <div className="px-3 pt-2 pb-1 border-b border-burgundy-900/50">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-gold-600">
+            {slot === "primary" ? "Primary Weapon" : "Secondary Weapon"}
+          </span>
+        </div>
+
+        {/* Single clickable body */}
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(true)}
+          aria-label={ariaLabel}
+          aria-haspopup="dialog"
+          aria-expanded={sidebarOpen}
+          className="
+            w-full text-left px-3 py-3
+            hover:bg-slate-800/60 focus:outline-none focus-visible:ring-2
+            focus-visible:ring-[#577399] focus-visible:ring-inset
+            transition-colors cursor-pointer group
+          "
+        >
+          <p className="text-sm font-semibold text-parchment-100 group-hover:text-parchment-50 leading-snug">
+            {weapon.name ?? (
+              <span className="text-parchment-500 italic font-normal">Unnamed weapon…</span>
+            )}
+          </p>
+          {kickerParts && (
+            <p className="mt-0.5 text-xs text-parchment-500 truncate leading-snug">
+              {kickerParts}
+            </p>
+          )}
+          {weapon.feature && (
+            <p className="mt-0.5 text-[10px] text-gold-600 truncate">
+              <span aria-label="Has feature" className="mr-1">✦</span>
+              {weapon.feature}
+            </p>
+          )}
+          {/* Edit hint */}
+          <p className="mt-1 text-[10px] text-parchment-500 group-hover:text-parchment-300 transition-colors">
+            Tap to edit all fields
+          </p>
+        </button>
+      </div>
+
+      <WeaponSidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        slot={slot}
+      />
+    </>
   );
 }
 
@@ -553,13 +1184,6 @@ function ExperiencesList() {
     );
   };
 
-  const updateExpName = (index: number, value: string) => {
-    updateField(
-      "experiences",
-      experiences.map((exp, i) => (i === index ? { ...exp, name: value } : exp))
-    );
-  };
-
   const updateExpBonus = (index: number, value: number) => {
     updateField(
       "experiences",
@@ -574,7 +1198,7 @@ function ExperiencesList() {
       </span>
 
       {experiences.length === 0 && (
-        <p className="text-xs text-parchment-600 italic">No experiences yet.</p>
+        <p className="text-xs text-parchment-500 italic">No experiences yet.</p>
       )}
 
       {experiences.map((exp, i) => (
@@ -582,18 +1206,18 @@ function ExperiencesList() {
           key={i}
           className="flex items-center gap-2 rounded-lg border border-burgundy-900/40 bg-slate-900/50 px-3 py-2"
         >
-          <input
-            type="text"
-            value={exp.name}
-            onChange={(e) => updateExpName(i, e.target.value)}
-            placeholder="Experience name"
-            aria-label={`Experience ${i + 1} name`}
-            className="
-              flex-1 rounded bg-transparent px-1 py-0 text-sm text-parchment-200
-              border-b border-transparent focus:border-gold-600 focus:outline-none
-              placeholder-parchment-700 transition-colors
-            "
-          />
+          {/* Experience name — opens sidebar for editing */}
+          <EditableField
+            field={experienceNameField(i)}
+            className="flex-1 min-w-0 text-left"
+            activeClassName="ring-2 ring-gold-500/60 rounded"
+          >
+            <div className="rounded px-1 py-0.5 text-sm text-parchment-200 min-h-[1.5rem] truncate">
+              {exp.name || (
+                <span className="text-parchment-500">Experience name…</span>
+              )}
+            </div>
+          </EditableField>
           <IncrementControls
             value={exp.bonus}
             onChange={(v) => updateExpBonus(i, v)}
@@ -633,7 +1257,7 @@ function ExperiencesList() {
             aria-label="Decrease new experience starting bonus"
             className="
               h-9 w-9 rounded border border-burgundy-800 bg-slate-900
-              text-xs text-parchment-600 hover:bg-burgundy-900/30
+              text-xs text-parchment-500 hover:bg-burgundy-900/30
               disabled:opacity-25 disabled:cursor-not-allowed
               transition-colors flex items-center justify-center leading-none
               focus:outline-none focus:ring-2 focus:ring-gold-500
@@ -648,7 +1272,7 @@ function ExperiencesList() {
             aria-label="Increase new experience starting bonus"
             className="
               h-9 w-9 rounded border border-burgundy-800 bg-slate-900
-              text-xs text-parchment-600 hover:bg-gold-900/20
+              text-xs text-parchment-500 hover:bg-gold-900/20
               transition-colors flex items-center justify-center leading-none
               focus:outline-none focus:ring-2 focus:ring-gold-500
             "
@@ -708,14 +1332,14 @@ function TraitsSection() {
       <span className="text-xs font-semibold uppercase tracking-wider text-parchment-400">
         Traits
       </span>
-      <p className="text-[11px] text-parchment-600 italic -mt-1">
+      <p className="text-[11px] text-parchment-500 italic -mt-1">
         Ancestry and community traits — increment as you level up.
       </p>
 
       {ancestryData && (
         <div className="flex items-center gap-2 rounded-lg border border-burgundy-900/40 bg-slate-900/50 px-3 py-2">
           <div className="flex-1 min-w-0">
-            <span className="text-[10px] uppercase tracking-wider text-parchment-600 block">
+            <span className="text-[10px] uppercase tracking-wider text-parchment-500 block">
               Ancestry — {ancestryData.name}
             </span>
             <span className="text-sm font-semibold text-parchment-200">
@@ -733,7 +1357,7 @@ function TraitsSection() {
       {ancestryData?.secondTraitName && (
         <div className="flex items-center gap-2 rounded-lg border border-burgundy-900/40 bg-slate-900/50 px-3 py-2">
           <div className="flex-1 min-w-0">
-            <span className="text-[10px] uppercase tracking-wider text-parchment-600 block">
+            <span className="text-[10px] uppercase tracking-wider text-parchment-500 block">
               Ancestry (2nd) — {ancestryData.name}
             </span>
             <span className="text-sm font-semibold text-parchment-200">
@@ -751,7 +1375,7 @@ function TraitsSection() {
       {communityData && (
         <div className="flex items-center gap-2 rounded-lg border border-burgundy-900/40 bg-slate-900/50 px-3 py-2">
           <div className="flex-1 min-w-0">
-            <span className="text-[10px] uppercase tracking-wider text-parchment-600 block">
+            <span className="text-[10px] uppercase tracking-wider text-parchment-500 block">
               Community — {communityData.name}
             </span>
             <span className="text-sm font-semibold text-parchment-200">
@@ -788,87 +1412,86 @@ export function TrackersPanel() {
         Trackers
       </h2>
 
-      {/* Damage Thresholds (read-only, derived from armor + level) */}
+      {/* Damage Thresholds — inline bar */}
       <div>
-        <h3 className="mb-3 text-xs font-medium uppercase tracking-wider text-parchment-500">
+        <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-parchment-500">
           Damage Thresholds
         </h3>
-        <p className="mb-2 text-[11px] text-parchment-600 italic">
-          Derived from armor base threshold + character level (SRD p. 3, 22). Updated by leveling and armor changes.
+        <DamageThresholdBar
+          major={damageThresholds.major}
+          severe={damageThresholds.severe}
+          armorMarked={trackers.armor.marked}
+          armorMax={trackers.armor.max}
+          characterId={characterId}
+        />
+        <p className="mt-1.5 text-[11px] text-parchment-500 italic">
+          Derived from armor base threshold + level (SRD p. 3, 22).
         </p>
-        <div className="flex gap-5">
-          <ThresholdDisplay label="Major" value={damageThresholds.major} />
-          <ThresholdDisplay label="Severe" value={damageThresholds.severe} />
-        </div>
       </div>
 
-      {/* Slot trackers — each slot click calls the actions endpoint */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <ActionableSlotTracker
-          label="Hit Points"
-          marked={trackers.hp.marked}
-          max={trackers.hp.max}
-          markActionId="mark-hp"
-          clearActionId="clear-hp"
-          characterId={characterId}
-          onMaxChange={(v) => updateTracker("hp", "max", v)}
-          colorFilled="bg-burgundy-600"
-          hardMax={12}
-        />
-        <ActionableSlotTracker
-          label="Stress"
-          marked={trackers.stress.marked}
-          max={trackers.stress.max}
-          markActionId="mark-stress"
-          clearActionId="clear-stress"
-          characterId={characterId}
-          onMaxChange={(v) => updateTracker("stress", "max", v)}
-          colorFilled="bg-gold-600"
-          hardMax={12}
-        />
-        <ActionableSlotTracker
-          label="Armor"
-          marked={trackers.armor.marked}
-          max={trackers.armor.max}
-          markActionId="mark-armor"
-          clearActionId="clear-armor"
-          characterId={characterId}
-          onMaxChange={(v) => updateTracker("armor", "max", v)}
-          colorFilled="bg-parchment-500"
-        />
+      {/* Trackers (left column) + Weapons (right column) */}
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        {/* ── Left: HP / Stress / Armor stacked + Proficiency ── */}
+        <div className="flex flex-col gap-4">
+          <ActionableSlotTracker
+            label="Hit Points"
+            marked={trackers.hp.marked}
+            max={trackers.hp.max}
+            markActionId="mark-hp"
+            clearActionId="clear-hp"
+            characterId={characterId}
+            onMaxChange={(v) => updateTracker("hp", "max", v)}
+            colorFilled="bg-burgundy-600"
+            hardMax={12}
+          />
+          <ActionableSlotTracker
+            label="Stress"
+            marked={trackers.stress.marked}
+            max={trackers.stress.max}
+            markActionId="mark-stress"
+            clearActionId="clear-stress"
+            characterId={characterId}
+            onMaxChange={(v) => updateTracker("stress", "max", v)}
+            colorFilled="bg-gold-600"
+            hardMax={12}
+          />
+          <ActionableSlotTracker
+            label="Armor"
+            marked={trackers.armor.marked}
+            max={trackers.armor.max}
+            markActionId="mark-armor"
+            clearActionId="clear-armor"
+            characterId={characterId}
+            onMaxChange={(v) => updateTracker("armor", "max", v)}
+            colorFilled="bg-parchment-500"
+          />
 
-        {/* Proficiency — read-only, set by tier achievements and advancement */}
-        <div className="flex flex-col gap-1.5">
-          <span className="text-xs font-semibold uppercase tracking-wider text-parchment-400">
-            Proficiency
-          </span>
+          {/* Hope — server-authoritative +/- */}
+          <ActionableHopeTracker characterId={characterId} />
+
+          {/* Proficiency — read-only */}
           <div className="flex items-center gap-3">
             <div
-              className="
-                h-12 w-12 rounded-lg border border-gold-800 bg-slate-900
-                flex items-center justify-center shadow-inner
-              "
+              className="h-10 w-10 rounded-lg border border-gold-800 bg-slate-900 flex items-center justify-center shadow-inner"
               aria-label={`Proficiency: ${activeCharacter.proficiency ?? 1}`}
             >
-              <span className="text-2xl font-bold text-gold-400 tabular-nums">
+              <span className="text-xl font-bold text-gold-400 tabular-nums">
                 {activeCharacter.proficiency ?? 1}
               </span>
             </div>
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-parchment-400 block">Proficiency</span>
+              <p className="text-[10px] text-parchment-500 italic">Increases at levels 2, 5, 8.</p>
+            </div>
           </div>
-          <p className="text-[10px] text-parchment-600 italic">
-            Increases at tier achievements (levels 2, 5, 8) and via advancement. Range: 1-6.
-          </p>
+        </div>
+
+        {/* ── Right: Weapons ── */}
+        <div className="flex flex-col gap-3">
+          <WeaponCard slot="primary" />
+          <WeaponCard slot="secondary" />
         </div>
       </div>
-
-      {/* Weapons */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <WeaponCard slot="primary" />
-        <WeaponCard slot="secondary" />
-      </div>
-
-      {/* Hope — server-authoritative +/- */}
-      <ActionableHopeTracker characterId={characterId} />
 
       {/* Traits (ancestry + community) */}
       <TraitsSection />

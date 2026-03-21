@@ -91,7 +91,7 @@ interface MarkdownContentProps {
 export function MarkdownContent({
   children,
   className = "",
-  linkClassName = "underline decoration-[#577399]/60 hover:decoration-[#577399] text-[#7a9fc2] hover:text-[#9bbdd4] transition-colors",
+  linkClassName = "underline decoration-[#577399]/60 hover:decoration-[#577399] text-[#8fbad6] hover:text-[#b0d0e6] transition-colors",
 }: MarkdownContentProps) {
   const processed = resolveWikiLinks(children);
 

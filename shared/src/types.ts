@@ -67,6 +67,19 @@ export interface Weapons {
   secondary: Weapon;
 }
 
+// ─── Gold ─────────────────────────────────────────────────────────────────────
+
+/**
+ * SRD page 58: Gold is tracked in three abstract tiers.
+ * 10 handfuls = 1 bag; 10 bags = 1 chest (max 1 chest).
+ * Starting value at character creation: { handfuls: 1, bags: 0, chests: 0 }.
+ */
+export interface GoldAmount {
+  handfuls: number; // 0–9
+  bags: number;     // 0–9
+  chests: number;   // 0–1
+}
+
 // ─── Experience ───────────────────────────────────────────────────────────────
 
 export interface Experience {
@@ -126,6 +139,16 @@ export interface Character extends CharacterSummary {
   notes: string | null;
   avatarKey: string | null;
   createdAt: string;
+
+  // ── Starting inventory ────────────────────────────────────────────────────
+  /** SRD page 58: Gold amount in abstract tiers. */
+  gold: GoldAmount;
+  /**
+   * Named inventory items (strings). Includes universal starting gear,
+   * the chosen potion, and the chosen class item.
+   * e.g. ["a torch", "50 feet of rope", "basic supplies", "Minor Health Potion", "A romance novel"]
+   */
+  inventory: string[];
 
   // ── Campaign mechanics ────────────────────────────────────────────────────
   /** Per-card token counts. Keys are cardIds; values are non-negative integers. */

@@ -27,8 +27,11 @@ if not exist "%ENV_FILE%" (
 for /f "usebackq tokens=1,* delims==" %%A in (`findstr /v "^#" "%ENV_FILE%"`) do (
   set "KEY=%%A"
   set "VAL=%%B"
-  :: Strip leading/trailing whitespace from key
-  set "KEY=!KEY: =!"
+  :: Strip surrounding whitespace from key/value loaded from .env.local
+  for /f "tokens=* delims= " %%K in ("!KEY!") do set "KEY=%%K"
+  for /f "tokens=* delims= " %%V in ("!VAL!") do set "VAL=%%V"
+  if defined KEY if "!KEY:~-1!"==" " set "KEY=!KEY:~0,-1!"
+  if defined VAL if "!VAL:~-1!"==" " set "VAL=!VAL:~0,-1!"
   if not "!KEY!"=="" (
     set "!KEY!=!VAL!"
   )
@@ -78,4 +81,3 @@ if errorlevel 1 (
 echo.
 echo Done.
 endlocal
-

@@ -17,6 +17,7 @@ import type {
   AncestryData,
   DomainCard,
   DomainSummary,
+  RuleEntry,
 } from "@shared/types";
 
 // ─── Cache configuration ──────────────────────────────────────────────────────
@@ -76,6 +77,10 @@ export interface DomainListData {
 export interface DomainCardsData {
   domain: string;
   cards:  DomainCard[];
+}
+
+export interface RulesListData {
+  rules: RuleEntry[];
 }
 
 // ─── Classes ──────────────────────────────────────────────────────────────────
@@ -187,6 +192,29 @@ export function useDomainCard(
         `/domains/${encodeURIComponent(domain ?? "")}/cards/${cardId}`
       ),
     enabled:   Boolean(domain) && Boolean(cardId),
+    staleTime: STALE_TIME,
+    gcTime:    GC_TIME,
+  });
+}
+
+// ─── Rules ────────────────────────────────────────────────────────────────────
+
+export function useRules(): UseQueryResult<RulesListData> {
+  return useQuery({
+    queryKey: ["rules", "list"],
+    queryFn:  () => apiClient.get<RulesListData>("/rules"),
+    staleTime: STALE_TIME,
+    gcTime:    GC_TIME,
+  });
+}
+
+export function useRule(
+  ruleId: string | undefined
+): UseQueryResult<RuleEntry> {
+  return useQuery({
+    queryKey: ["rules", "detail", ruleId ?? ""],
+    queryFn:  () => apiClient.get<RuleEntry>(`/rules/${ruleId}`),
+    enabled:   Boolean(ruleId),
     staleTime: STALE_TIME,
     gcTime:    GC_TIME,
   });

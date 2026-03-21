@@ -13,102 +13,108 @@ import { useCharacterStore } from "@/store/characterStore";
 
 // ─── Stat definitions ─────────────────────────────────────────────────────────
 
-const CORE_STATS: { name: CoreStatName; label: string; abbr: string }[] = [
-  { name: "agility",   label: "Agility",   abbr: "AGI" },
-  { name: "strength",  label: "Strength",  abbr: "STR" },
-  { name: "finesse",   label: "Finesse",   abbr: "FIN" },
-  { name: "instinct",  label: "Instinct",  abbr: "INS" },
-  { name: "presence",  label: "Presence",  abbr: "PRE" },
-  { name: "knowledge", label: "Knowledge", abbr: "KNO" },
+const CORE_STATS: { name: CoreStatName; label: string }[] = [
+  { name: "agility",   label: "Agility"   },
+  { name: "strength",  label: "Strength"  },
+  { name: "finesse",   label: "Finesse"   },
+  { name: "instinct",  label: "Instinct"  },
+  { name: "presence",  label: "Presence"  },
+  { name: "knowledge", label: "Knowledge" },
 ];
 
 // ─── StatInput ────────────────────────────────────────────────────────────────
 
 interface StatInputProps {
   label:    string;
-  abbr:     string;
   value:    number;
   onChange: (v: number) => void;
 }
 
-function StatInput({ label, abbr, value, onChange }: StatInputProps) {
+function StatInput({ label, value, onChange }: StatInputProps) {
   // SRD page 3: valid starting traits include -1; floor of -5 allows penalty modifiers.
   const decrement = () => onChange(Math.max(-5, value - 1));
   const increment = () => onChange(Math.min(8, value + 1));
 
   return (
-    <div className="group flex flex-col items-center gap-1.5">
-      {/* Dial with +/- controls */}
-      <div
-        className="
-          relative flex flex-col items-center
-          rounded-xl border border-burgundy-700 bg-slate-850
-          shadow-card
-          group-hover:border-gold-500 group-hover:shadow-glow-gold
-          transition-all duration-200 overflow-hidden
-          w-16
-        "
-      >
-        {/* Increment button */}
-        <button
-          type="button"
-          onClick={increment}
-          disabled={value >= 8}
-          aria-label={`Increase ${label}`}
+    <div className="group flex flex-col items-center">
+      {/* Dial + label as a single visually-connected unit */}
+      <div className="flex flex-col items-center w-16">
+        {/* Dial with +/- controls */}
+        <div
           className="
-            w-full py-1 text-center text-xs text-parchment-600
-            hover:bg-gold-900/20 hover:text-gold-400
-            disabled:opacity-20 disabled:cursor-not-allowed
-            transition-colors leading-none select-none
-            focus:outline-none focus:ring-2 focus:ring-inset focus:ring-gold-500
+            relative flex flex-col items-center w-full
+            rounded-t-xl border border-b-0 border-burgundy-700 bg-slate-850
+            shadow-card
+            group-hover:border-gold-500 group-hover:shadow-glow-gold
+            transition-all duration-200 overflow-hidden
           "
         >
-          ▲
-        </button>
-
-        {/* Value display */}
-        <div className="py-1 flex items-center justify-center">
-          <span
+          {/* Increment button */}
+          <button
+            type="button"
+            onClick={increment}
+            disabled={value >= 8}
+            aria-label={`Increase ${label}`}
             className="
-              text-xl font-bold text-parchment-100
-              w-8 text-center leading-none select-none
+              w-full py-1 text-center text-xs text-parchment-600
+              hover:bg-gold-900/20 hover:text-gold-400
+              disabled:opacity-20 disabled:cursor-not-allowed
+              transition-colors leading-none select-none
+              focus:outline-none focus:ring-2 focus:ring-inset focus:ring-gold-500
             "
-            aria-hidden="true"
           >
-            {value}
-          </span>
+            ▲
+          </button>
+
+          {/* Value display */}
+          <div className="py-1 flex items-center justify-center">
+            <span
+              className="
+                text-xl font-bold text-parchment-100
+                w-8 text-center leading-none select-none
+              "
+              aria-hidden="true"
+            >
+              {value}
+            </span>
+          </div>
+
+          {/* Decrement button */}
+          <button
+            type="button"
+            onClick={decrement}
+            disabled={value <= -5}
+            aria-label={`Decrease ${label}`}
+            className="
+              w-full py-1 text-center text-xs text-parchment-600
+              hover:bg-burgundy-900/30 hover:text-burgundy-300
+              disabled:opacity-20 disabled:cursor-not-allowed
+              transition-colors leading-none select-none
+              focus:outline-none focus:ring-2 focus:ring-inset focus:ring-gold-500
+            "
+          >
+            ▼
+          </button>
         </div>
 
-        {/* Decrement button */}
-        <button
-          type="button"
-          onClick={decrement}
-          disabled={value <= -5}
-          aria-label={`Decrease ${label}`}
+        {/* Label tab — visually attached to bottom of dial */}
+        <div
           className="
-            w-full py-1 text-center text-xs text-parchment-600
-            hover:bg-burgundy-900/30 hover:text-burgundy-300
-            disabled:opacity-20 disabled:cursor-not-allowed
-            transition-colors leading-none select-none
-            focus:outline-none focus:ring-2 focus:ring-inset focus:ring-gold-500
+            w-full rounded-b-xl border border-t-0 border-burgundy-700
+            bg-[#f7f7ff] px-1 py-1
+            group-hover:border-gold-500
+            transition-all duration-200
           "
+          aria-hidden="true"
         >
-          ▼
-        </button>
+          <span className="block text-center text-[10px] font-semibold text-[#0a100d] leading-tight tracking-wide">
+            {label}
+          </span>
+        </div>
       </div>
 
-      {/* Abbreviation (always visible) */}
-      <span className="text-xs font-semibold tracking-widest text-gold-600 uppercase" aria-hidden="true">
-        {abbr}
-      </span>
-
-      {/* Full label — always present for AT, visually shown on hover */}
-      <span
-        className="h-4 text-[10px] text-parchment-500 group-hover:opacity-100 opacity-0 transition-opacity duration-150"
-        aria-label={`${label}: ${value}`}
-      >
-        {label}
-      </span>
+      {/* Accessible full label for screen readers */}
+      <span className="sr-only" aria-label={`${label}: ${value}`} />
     </div>
   );
 }
@@ -166,11 +172,10 @@ export function StatsPanel() {
 
       {/* 6 stat inputs in a responsive grid */}
       <div className="grid grid-cols-3 gap-4 sm:grid-cols-6">
-        {CORE_STATS.map(({ name, label, abbr }) => (
+        {CORE_STATS.map(({ name, label }) => (
           <StatInput
             key={name}
             label={label}
-            abbr={abbr}
             value={stats[name]}
             onChange={(v) => updateStat(name, v)}
           />
@@ -182,7 +187,7 @@ export function StatsPanel() {
 
       {/* Derived stats */}
       <div>
-        <h3 className="mb-3 font-serif text-xs font-semibold uppercase tracking-widest text-gold-700">
+        <h3 className="mb-3 font-serif text-sm font-semibold uppercase tracking-widest text-gold-600">
           Derived
         </h3>
         <div className="flex gap-6">
@@ -197,7 +202,7 @@ export function StatsPanel() {
             tooltip="Armor Score: calculated from class and equipped items"
           />
         </div>
-        <p className="mt-3 text-[11px] text-parchment-600 italic">
+        <p className="mt-3 text-[11px] text-parchment-500 italic">
           Derived stats are calculated by the server based on class, level, and modifiers.
         </p>
       </div>

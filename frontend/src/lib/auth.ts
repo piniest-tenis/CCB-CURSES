@@ -133,6 +133,47 @@ export function confirmSignUp(email: string, code: string): Promise<void> {
   });
 }
 
+// ─── forgotPassword ───────────────────────────────────────────────────────────
+
+export function requestPasswordReset(email: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const pool = getUserPool();
+    const user = new CognitoUser({ Username: email, Pool: pool });
+
+    user.forgotPassword({
+      onSuccess() {
+        resolve();
+      },
+      onFailure(err: Error) {
+        reject(err);
+      },
+      inputVerificationCode() {
+        resolve();
+      },
+    });
+  });
+}
+
+export function confirmPasswordReset(
+  email: string,
+  code: string,
+  newPassword: string
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const pool = getUserPool();
+    const user = new CognitoUser({ Username: email, Pool: pool });
+
+    user.confirmPassword(code, newPassword, {
+      onSuccess() {
+        resolve();
+      },
+      onFailure(err: Error) {
+        reject(err);
+      },
+    });
+  });
+}
+
 // ─── signOut ──────────────────────────────────────────────────────────────────
 
 export async function signOut(): Promise<void> {

@@ -16,9 +16,11 @@
  * - Class feature action buttons (Veilstep, Recall, etc.)
  * - Companion panel (if character.companionState !== null)
  * - Downtime projects panel
+ * - EditSidebar for editable text fields with SRD explanations
  */
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useCharacter, useUpdateCharacter } from "@/hooks/useCharacter";
 import {
   useAncestries,
@@ -36,6 +38,8 @@ import { DowntimeProjectsPanel }    from "./DowntimeProjectsPanel";
 import { LevelUpWizard }            from "./LevelUpWizard";
 import { MarkdownContent }          from "@/components/MarkdownContent";
 import { useActionButton, InlineActionError } from "./ActionButton";
+import { EditSidebarProvider, EditableField } from "./EditSidebar";
+import { CHARACTER_NAME_FIELD, CHARACTER_NOTES_FIELD } from "./editSidebarConfig";
 import type { Character, ClassData, CustomCondition } from "@shared/types";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -57,103 +61,338 @@ const SRD_CONDITIONS = [
   "Ignited",
 ] as const;
 
-// ─── ConditionTag ─────────────────────────────────────────────────────────────
+// ─── ConditionsSidebar ────────────────────────────────────────────────────────
+// A self-contained slide-in panel for toggling conditions, separate from the
+// generic EditSidebar so it can render a checkbox list rather than a text input.
 
-interface ConditionTagProps {
-  label:    string;
-  active:   boolean;
-  onToggle: () => void;
-  /** true = custom (campaign) condition; false = SRD condition */
-  isCustom?: boolean;
-  description?: string;
+interface ConditionsSidebarProps {
+  open: boolean;
+  onClose: () => void;
+  conditions: readonly string[];
+  customConditions: CustomCondition[];
+  activeConditions: string[];
+  onToggle: (id: string) => void;
 }
 
-function ConditionTag({ label, active, onToggle, isCustom = false, description }: ConditionTagProps) {
+function ConditionsSidebar({
+  open,
+  onClose,
+  conditions,
+  customConditions,
+  activeConditions,
+  onToggle,
+}: ConditionsSidebarProps) {
+  const headingId = React.useId();
+  const panelRef  = React.useRef<HTMLDivElement>(null);
+
+  // Focus first focusable element when opened
+  React.useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => {
+      const first = panelRef.current?.querySelector<HTMLElement>(
+        'button, input, [tabindex]:not([tabindex="-1"])'
+      );
+      first?.focus();
+    }, 50);
+    return () => clearTimeout(t);
+  }, [open]);
+
+  // Escape to close
+  React.useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { e.stopPropagation(); onClose(); }
+    };
+    document.addEventListener("keydown", handler, true);
+    return () => document.removeEventListener("keydown", handler, true);
+  }, [open, onClose]);
+
   return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-pressed={active}
-      title={description}
-      className={`
-        rounded-full border px-3 py-1 text-xs font-semibold
-        transition-all duration-150 focus:outline-none focus:ring-1 focus:ring-gold-500
-        ${
-          active
-            ? isCustom
-              ? "border-[#577399] bg-[#577399]/20 text-[#f7f7ff]"
-              : "border-burgundy-500 bg-burgundy-700/70 text-parchment-100"
-            : isCustom
-            ? "border-[#577399]/40 bg-transparent text-parchment-600 hover:border-[#577399] hover:text-parchment-300"
-            : "border-burgundy-900 bg-transparent text-parchment-600 hover:border-burgundy-700 hover:text-parchment-300"
-        }
-      `}
-    >
-      {isCustom && (
-        <span aria-hidden="true" className="mr-1 text-[10px] opacity-60">✦</span>
+    <>
+      {open && (
+        <div
+          aria-hidden="true"
+          onClick={onClose}
+          className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm lg:hidden"
+        />
       )}
-      {label}
-    </button>
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={headingId}
+        aria-hidden={!open}
+        inert={!open ? ("" as unknown as boolean) : undefined}
+        className={[
+          "fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-[28rem] flex-col",
+          "border-l border-[#577399]/35 bg-[#0f1713] shadow-2xl",
+          "transition-transform duration-300 ease-in-out",
+          open ? "translate-x-0" : "translate-x-full",
+        ].join(" ")}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[#577399]/25 px-5 py-4">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.24em] sidebar-text-secondary">Character</p>
+            <h2 id={headingId} className="font-serif text-lg font-semibold text-[#f7f7ff]">Conditions</h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close conditions panel"
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#577399]/30 text-[#b9baa3] hover:bg-[#577399]/12 hover:text-[#f7f7ff] focus:outline-none focus:ring-2 focus:ring-[#577399]"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
+          {/* SRD conditions */}
+          <fieldset>
+            <legend className="text-[11px] font-semibold uppercase tracking-[0.2em] sidebar-text-secondary mb-3">
+              SRD Conditions
+            </legend>
+            <ul className="space-y-1" role="list">
+              {conditions.map((cond) => {
+                const checked = activeConditions.includes(cond);
+                const inputId = `cond-srd-${cond}`;
+                return (
+                  <li key={cond}>
+                    <label
+                      htmlFor={inputId}
+                      className={[
+                        "flex items-center gap-3 rounded-lg px-3 py-3 cursor-pointer",
+                        "border transition-colors",
+                        checked
+                          ? "border-burgundy-500 bg-burgundy-700/30 text-parchment-100"
+                          : "border-transparent hover:border-burgundy-800 hover:bg-slate-800/50 text-parchment-400",
+                      ].join(" ")}
+                    >
+                      <input
+                        id={inputId}
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => onToggle(cond)}
+                        className="h-4 w-4 rounded border-burgundy-600 bg-slate-900 accent-burgundy-500 focus:ring-2 focus:ring-gold-500"
+                      />
+                      <span className="text-sm font-medium">{cond}</span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          </fieldset>
+
+          {/* Campaign conditions */}
+          {customConditions.length > 0 && (
+            <fieldset>
+              <legend className="text-[11px] font-semibold uppercase tracking-[0.2em] sidebar-text-secondary mb-3">
+                Campaign Conditions <span className="normal-case font-normal opacity-60">(domain cards)</span>
+              </legend>
+              <ul className="space-y-1" role="list">
+                {customConditions.map((cond) => {
+                  const checked = activeConditions.includes(cond.conditionId);
+                  const inputId = `cond-custom-${cond.conditionId}`;
+                  return (
+                    <li key={cond.conditionId}>
+                      <label
+                        htmlFor={inputId}
+                        className={[
+                          "flex items-start gap-3 rounded-lg px-3 py-3 cursor-pointer",
+                          "border transition-colors",
+                          checked
+                            ? "border-[#577399] bg-[#577399]/20 text-[#f7f7ff]"
+                            : "border-transparent hover:border-[#577399]/40 hover:bg-slate-800/50 text-parchment-400",
+                        ].join(" ")}
+                      >
+                        <input
+                          id={inputId}
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => onToggle(cond.conditionId)}
+                          className="mt-0.5 h-4 w-4 rounded border-[#577399]/60 bg-slate-900 accent-[#577399] focus:ring-2 focus:ring-[#577399]"
+                        />
+                        <span className="flex flex-col gap-0.5">
+                          <span className="text-sm font-medium">
+                            <span aria-hidden="true" className="mr-1 text-[10px] sidebar-text-secondary">✦</span>
+                            {cond.name}
+                          </span>
+                          {cond.description && (
+                            <span className="text-xs sidebar-text-secondary">{cond.description}</span>
+                          )}
+                        </span>
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+            </fieldset>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-[#577399]/25 px-5 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-xl border border-[#577399]/40 bg-[#577399]/15 px-4 py-3 text-sm font-semibold text-[#f7f7ff] hover:bg-[#577399]/25 focus:outline-none focus:ring-2 focus:ring-[#577399]"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
 
 // ─── SheetHeader ─────────────────────────────────────────────────────────────
 
 interface SheetHeaderProps {
+  characterId: string;
   classData: ClassData | null | undefined;
   onLevelUp: () => void;
 }
 
-function SheetHeader({ classData, onLevelUp }: SheetHeaderProps) {
-  const { activeCharacter, updateField, toggleCondition } = useCharacterStore();
+function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
+  const router = useRouter();
+  const { activeCharacter, toggleCondition } = useCharacterStore();
   const { data: classesData }     = useClasses();
   const { data: communitiesData } = useCommunities();
   const { data: ancestriesData }  = useAncestries();
+  const [conditionsOpen, setConditionsOpen] = React.useState(false);
 
   if (!activeCharacter) return null;
 
   const customConditions: CustomCondition[] = activeCharacter.customConditions ?? [];
+  const activeConditions: string[] = activeCharacter.conditions ?? [];
+
+  // Build the kicker line: Community · Ancestry · Class
+  const communityName = communitiesData?.communities.find(
+    (c) => c.communityId === activeCharacter.communityId
+  )?.name ?? "Unknown";
+
+  const ancestryName = ancestriesData?.ancestries.find(
+    (a) => a.ancestryId === activeCharacter.ancestryId
+  )?.name ?? "Unknown";
+
+  const className = classesData?.classes.find(
+    (c) => c.classId === activeCharacter.classId
+  )?.name ?? "Unknown";
+
+  const kickerParts: string[] = [];
+  if (activeCharacter.communityId) kickerParts.push(communityName);
+  if (activeCharacter.ancestryId)  kickerParts.push(ancestryName);
+  if (activeCharacter.classId)     kickerParts.push(className);
+
+  // Conditions collapsed display
+  const activeConditionLabels = activeConditions.map((id) => {
+    const custom = customConditions.find((c) => c.conditionId === id);
+    return custom ? custom.name : id;
+  });
+  const MAX_CHIPS = 3;
+  const visibleChips   = activeConditionLabels.slice(0, MAX_CHIPS);
+  const overflowCount  = activeConditionLabels.length - MAX_CHIPS;
 
   return (
-    <div className="space-y-5">
-      {/* Name + Level row */}
-      <div className="flex flex-wrap items-center gap-3">
-        <input
-          type="text"
-          value={activeCharacter.name}
-          onChange={(e) => updateField("name", e.target.value)}
-          placeholder="Character Name"
-          aria-label="Character name"
-          className="
-            flex-1 min-w-0 rounded-lg border border-burgundy-700 bg-slate-850
-            px-4 py-2 font-serif text-2xl font-bold text-parchment-100
-            placeholder-parchment-600 focus:outline-none focus:border-gold-500
-            shadow-inner transition-colors
-          "
-        />
-        <div className="flex items-center gap-2 shrink-0">
-          <label
-            className="text-xs uppercase tracking-wider text-parchment-500 font-medium"
+    <div className="space-y-4">
+      {/* ── Name row + Conditions + Level inline ───────────────────── */}
+      <div className="flex items-start gap-3">
+        {/* Name (flex-1 so it takes remaining space) */}
+        <div className="flex-1 min-w-0 flex flex-col gap-1">
+          <EditableField
+            field={CHARACTER_NAME_FIELD}
+            activeClassName="ring-2 ring-gold-500/60 rounded-lg"
           >
-            Level
-          </label>
-          <div
-            aria-label={`Level ${activeCharacter.level}`}
+            <h1 className="text-4xl font-bold font-serif text-parchment-100 leading-tight truncate">
+              {activeCharacter.name || "Unnamed Character"}
+            </h1>
+          </EditableField>
+
+          {kickerParts.length > 0 && (
+            <p className="text-sm text-parchment-500 font-serif">
+              {kickerParts.join(" · ")}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={() => router.push(`/character/${characterId}/build`)}
             className="
-              w-16 rounded-lg border border-burgundy-700 bg-slate-850
-              px-2 py-2 text-center text-xl font-bold text-gold-400
+              mt-2 rounded-lg px-3 py-1.5 text-xs font-semibold
+              bg-gold-900/40 text-gold-300 border border-gold-800/60
+              hover:bg-gold-900/60 hover:border-gold-700
+              transition-colors
+              focus:outline-none focus:ring-2 focus:ring-gold-500
+            "
+            aria-label="Edit character class, ancestry, and community"
+          >
+            Edit Character
+          </button>
+        </div>
+
+        {/* Conditions — compact column, same width as Level */}
+        <div className="flex-shrink-0 flex flex-col items-center gap-1">
+          <span className="text-[10px] uppercase tracking-widest text-parchment-500 font-medium hidden sm:block">
+            Conditions
+          </span>
+          <button
+            type="button"
+            onClick={() => setConditionsOpen(true)}
+            aria-label={
+              activeConditions.length === 0
+                ? "Conditions: none active. Click to manage."
+                : `Active conditions: ${activeConditionLabels.join(", ")}. Click to manage.`
+            }
+            aria-haspopup="dialog"
+            aria-expanded={conditionsOpen}
+            className="
+              w-12 min-h-[2.75rem] rounded-lg border border-burgundy-700 bg-slate-850 px-1 py-1.5
+              flex flex-col items-center justify-center gap-0.5
+              hover:border-burgundy-500 hover:bg-slate-800
+              focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-1 focus:ring-offset-slate-900
+              transition-colors cursor-pointer
             "
           >
+            {activeConditions.length === 0 ? (
+              <span className="text-xl font-bold text-parchment-600 font-serif leading-none">—</span>
+            ) : (
+              <>
+                {visibleChips.map((label) => (
+                  <span
+                    key={label}
+                    className="w-full text-center truncate rounded border border-burgundy-700/60 bg-burgundy-900/40 px-1 py-px text-[10px] font-semibold text-burgundy-300 leading-tight"
+                  >
+                    {label}
+                  </span>
+                ))}
+                {overflowCount > 0 && (
+                  <span className="text-[10px] text-parchment-500 leading-tight">+{overflowCount}</span>
+                )}
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Level — flex-shrink-0 so it never wraps into the name */}
+        <div className="flex-shrink-0 flex flex-col items-center gap-1" role="group" aria-label="Character Level">
+          <span className="text-[10px] uppercase tracking-widest text-parchment-500 font-medium hidden sm:block">
+            Level
+          </span>
+          <output
+            aria-live="polite"
+            aria-label={`Level ${activeCharacter.level}`}
+            className="w-12 rounded-lg border border-burgundy-700 bg-slate-850 py-1.5 text-center text-2xl font-bold text-gold-400 font-serif leading-none"
+          >
             {activeCharacter.level}
-          </div>
+          </output>
           {activeCharacter.level < 10 && (
             <button
               type="button"
               onClick={onLevelUp}
               aria-label="Level up character"
               className="
-                rounded-lg border border-gold-800/60 bg-gold-950/20 px-3 py-2
-                text-xs font-semibold text-gold-300
+                min-h-[36px] rounded border border-gold-800/60 bg-gold-950/20 px-2 py-1
+                text-[10px] font-semibold text-gold-300 whitespace-nowrap
                 hover:bg-gold-900/30 hover:border-gold-700
                 transition-all duration-150
                 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-1 focus:ring-offset-slate-900
@@ -165,142 +404,25 @@ function SheetHeader({ classData, onLevelUp }: SheetHeaderProps) {
         </div>
       </div>
 
-      {/* Class / Subclass / Community / Ancestry row */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="flex flex-col gap-1">
-          <label
-            htmlFor="header-class"
-            className="text-[10px] uppercase tracking-widest text-parchment-500 font-medium"
-          >
-            Class
-          </label>
-          <select
-            id="header-class"
-            value={activeCharacter.classId}
-            onChange={(e) => updateField("classId", e.target.value)}
-            className="
-              rounded border border-burgundy-800 bg-slate-900 px-2 py-1.5
-              text-sm text-parchment-200 focus:outline-none focus:border-gold-500 transition-colors
-            "
-          >
-            <option value="">Select class…</option>
-            {classesData?.classes.map((c) => (
-              <option key={c.classId} value={c.classId}>{c.name}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label
-            htmlFor="header-subclass"
-            className="text-[10px] uppercase tracking-widest text-parchment-500 font-medium"
-          >
-            Subclass
-          </label>
-          <select
-            id="header-subclass"
-            value={activeCharacter.subclassId ?? ""}
-            onChange={(e) => updateField("subclassId", e.target.value || null)}
-            className="
-              rounded border border-burgundy-800 bg-slate-900 px-2 py-1.5
-              text-sm text-parchment-200 focus:outline-none focus:border-gold-500 transition-colors
-            "
-          >
-            <option value="">None</option>
-            {classData?.subclasses.map((sc) => (
-              <option key={sc.subclassId} value={sc.subclassId}>{sc.name}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label
-            htmlFor="header-community"
-            className="text-[10px] uppercase tracking-widest text-parchment-500 font-medium"
-          >
-            Community
-          </label>
-          <select
-            id="header-community"
-            value={activeCharacter.communityId ?? ""}
-            onChange={(e) => updateField("communityId", e.target.value || null)}
-            className="
-              rounded border border-burgundy-800 bg-slate-900 px-2 py-1.5
-              text-sm text-parchment-200 focus:outline-none focus:border-gold-500 transition-colors
-            "
-          >
-            <option value="">None</option>
-            {communitiesData?.communities.map((c) => (
-              <option key={c.communityId} value={c.communityId}>{c.name}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label
-            htmlFor="header-ancestry"
-            className="text-[10px] uppercase tracking-widest text-parchment-500 font-medium"
-          >
-            Ancestry
-          </label>
-          <select
-            id="header-ancestry"
-            value={activeCharacter.ancestryId ?? ""}
-            onChange={(e) => updateField("ancestryId", e.target.value || null)}
-            className="
-              rounded border border-burgundy-800 bg-slate-900 px-2 py-1.5
-              text-sm text-parchment-200 focus:outline-none focus:border-gold-500 transition-colors
-            "
-          >
-            <option value="">None</option>
-            {ancestriesData?.ancestries.map((a) => (
-              <option key={a.ancestryId} value={a.ancestryId}>{a.name}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Condition tags: SRD + custom */}
-      <div>
-        <p className="mb-2 text-[10px] uppercase tracking-widest text-parchment-500 font-medium">
-          Conditions
-        </p>
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Conditions">
-          {/* SRD conditions */}
-          {SRD_CONDITIONS.map((cond) => {
-            const active = activeCharacter.conditions?.includes(cond) ?? false;
-            return (
-              <ConditionTag
-                key={cond}
-                label={cond}
-                active={active}
-                onToggle={() => toggleCondition(cond)}
-              />
-            );
-          })}
-
-          {/* Campaign-specific custom conditions */}
-          {customConditions.map((cond) => {
-            const active = activeCharacter.conditions?.includes(cond.conditionId) ?? false;
-            return (
-              <ConditionTag
-                key={cond.conditionId}
-                label={cond.name}
-                active={active}
-                onToggle={() => toggleCondition(cond.conditionId)}
-                isCustom
-                description={cond.description}
-              />
-            );
-          })}
-        </div>
-
-        {customConditions.length > 0 && (
-          <p className="mt-1.5 text-[10px] text-parchment-700 italic">
-            ✦ Campaign conditions from domain cards
+      {/* ── Subclass ─────────────────────────────────────────────── */}
+      {!!classData?.subclasses.length && activeCharacter.subclassId && (
+        <div className="pt-2 border-t border-burgundy-900/40">
+          <p className="text-[10px] uppercase tracking-widest text-parchment-500 font-medium">Subclass</p>
+          <p className="mt-0.5 text-sm font-medium text-parchment-200">
+            {classData.subclasses.find((sc) => sc.subclassId === activeCharacter.subclassId)?.name ?? "Unknown"}
           </p>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Conditions slide-in panel */}
+      <ConditionsSidebar
+        open={conditionsOpen}
+        onClose={() => setConditionsOpen(false)}
+        conditions={SRD_CONDITIONS}
+        customConditions={customConditions}
+        activeConditions={activeConditions}
+        onToggle={toggleCondition}
+      />
     </div>
   );
 }
@@ -494,7 +616,7 @@ function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
       {/* Subclass features */}
       {activeSubclass && (
         <div className="space-y-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-gold-700">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-gold-600">
             {activeSubclass.name} — Subclass Features
           </h3>
 
@@ -590,13 +712,6 @@ function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
       <div>
         <DomainLoadout />
       </div>
-
-      {activeCharacter.domainVault.length > 0 && (
-        <p className="text-xs text-parchment-600 italic">
-          Domain vault: {activeCharacter.domainVault.length} card
-          {activeCharacter.domainVault.length !== 1 ? "s" : ""} unlocked.
-        </p>
-      )}
     </section>
   );
 }
@@ -633,7 +748,7 @@ function SaveStatus({ isDirty, isSaving }: SaveStatusProps) {
     );
   }
   return (
-    <span role="status" aria-live="polite" className="text-xs text-parchment-700">
+    <span role="status" aria-live="polite" className="text-xs text-parchment-500">
       All changes saved
     </span>
   );
@@ -730,6 +845,49 @@ export function CharacterSheet({ characterId }: CharacterSheetProps) {
   if (!activeCharacter) return null;
 
   return (
+    <EditSidebarProvider characterId={characterId}>
+      <CharacterSheetContent 
+        characterId={characterId}
+        classData={classData}
+        isDirty={isDirty}
+        isSaving={isSaving}
+        downtimeOpen={downtimeOpen}
+        setDowntimeOpen={setDowntimeOpen}
+        levelUpOpen={levelUpOpen}
+        setLevelUpOpen={setLevelUpOpen}
+      />
+    </EditSidebarProvider>
+  );
+}
+
+// ─── Inner content component (wrapped by provider) ────────────────────────────
+
+interface CharacterSheetContentProps {
+  characterId: string;
+  classData: ClassData | null | undefined;
+  isDirty: boolean;
+  isSaving: boolean;
+  downtimeOpen: boolean;
+  setDowntimeOpen: (open: boolean) => void;
+  levelUpOpen: boolean;
+  setLevelUpOpen: (open: boolean) => void;
+}
+
+function CharacterSheetContent({
+  characterId,
+  classData,
+  isDirty,
+  isSaving,
+  downtimeOpen,
+  setDowntimeOpen,
+  levelUpOpen,
+  setLevelUpOpen,
+}: CharacterSheetContentProps) {
+  const { activeCharacter } = useCharacterStore();
+
+  if (!activeCharacter) return null;
+
+  return (
     <div className="mx-auto max-w-4xl space-y-4 pb-20">
       {/* Toolbar */}
       <div className="flex items-center justify-between">
@@ -751,7 +909,7 @@ export function CharacterSheet({ characterId }: CharacterSheetProps) {
 
       {/* Header card */}
       <section className="rounded-xl border border-burgundy-900 bg-slate-900/80 p-5 shadow-card">
-        <SheetHeader classData={classData} onLevelUp={() => setLevelUpOpen(true)} />
+        <SheetHeader characterId={characterId} classData={classData} onLevelUp={() => setLevelUpOpen(true)} />
       </section>
 
       {/* Level-up wizard (modal overlay) */}
@@ -789,18 +947,25 @@ export function CharacterSheet({ characterId }: CharacterSheetProps) {
         <h2 className="mb-3 font-serif text-sm font-semibold uppercase tracking-widest text-gold-600">
           Notes
         </h2>
-        <textarea
-          rows={6}
-          value={activeCharacter.notes ?? ""}
-          onChange={(e) => updateField("notes", e.target.value)}
-          placeholder="Free-form notes, backstory, session reminders…"
-          aria-label="Character notes"
-          className="
-            w-full resize-none rounded border border-burgundy-800 bg-slate-950
-            px-3 py-2 text-sm text-parchment-300 placeholder-parchment-700
-            focus:outline-none focus:border-gold-600 transition-colors
-          "
-        />
+        <EditableField
+          field={CHARACTER_NOTES_FIELD}
+          className="block w-full text-left"
+          activeClassName="ring-2 ring-gold-500/60 rounded-lg"
+        >
+          <div
+            className="
+              w-full rounded border border-burgundy-800 bg-slate-950
+              px-3 py-2 text-sm text-parchment-300 
+              min-h-[8rem] whitespace-pre-wrap break-words
+            "
+          >
+            {activeCharacter.notes ?? (
+              <span className="text-parchment-500">
+                Free-form notes, backstory, session reminders…
+              </span>
+            )}
+          </div>
+        </EditableField>
       </section>
 
       {/* Downtime / rest modal */}

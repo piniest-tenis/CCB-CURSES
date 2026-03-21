@@ -21,14 +21,193 @@
 import React, { useState, useRef } from "react";
 import type { DomainCard } from "@shared/types";
 import { useCharacterStore } from "@/store/characterStore";
-import { useDomainCard } from "@/hooks/useGameData";
+import { useDomainCard, useClass, useDomain } from "@/hooks/useGameData";
 import { useActionButton, InlineActionError } from "./ActionButton";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Helper: parseCardId ──────────────────────────────────────────────────────
 
 function parseCardId(cardId: string): { domain: string | undefined; id: string } {
   const parts = cardId.includes("/") ? cardId.split("/") : null;
   return { domain: parts?.[0], id: parts?.[1] ?? cardId };
+}
+
+// ─── AcquireCardPicker ────────────────────────────────────────────────────────
+// Shows eligible unacquired domain cards the character can acquire.
+// Filters by:
+//   - Character's two class domains
+//   - Card level ≤ character level
+//   - Cards not already in loadout or vault
+//
+// SRD p. 22-23: "Acquire a new domain card at your level or lower from one of your class's domains"
+
+interface AcquireCardPickerProps {
+  classId:           string | undefined;
+  characterLevel:    number;
+  characterId:       string;
+  acquiredCardIds:   Set<string>;
+  loadoutIds:        string[];
+  onCardAcquired:    () => void;
+  onClose:           () => void;
+}
+
+function AcquireCardPicker({
+  classId,
+  characterLevel,
+  characterId,
+  acquiredCardIds,
+  loadoutIds,
+  onCardAcquired,
+  onClose,
+}: AcquireCardPickerProps) {
+  const { data: classData } = useClass(classId);
+  const [selectedCard, setSelectedCard] = React.useState<{ domain: string; id: string } | null>(null);
+  const [isPending, setIsPending] = React.useState(false);
+  const [actionError, setActionError] = React.useState<string | null>(null);
+
+  const { fire } = useActionButton(characterId);
+
+  // Get eligible domains from the class
+  const domains = React.useMemo(() => {
+    if (!classData) return [];
+    return classData.domains ?? [];
+  }, [classData]);
+
+  // Fetch cards for each domain
+  const domainCardsResults = domains.map((d) =>
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useDomain(d, characterLevel)
+  );
+
+  // Collect all eligible, unacquired cards
+  const eligibleCards = React.useMemo(() => {
+    const cards: (DomainCard & { domain: string })[] = [];
+    domains.forEach((domain, idx) => {
+      const result = domainCardsResults[idx];
+      if (result.data?.cards) {
+        result.data.cards
+          .filter((card) => {
+            const cardId = `${domain}/${card.cardId}`;
+            return !acquiredCardIds.has(cardId) && card.level <= characterLevel;
+          })
+          .forEach((card) => {
+            cards.push({ ...card, domain });
+          });
+      }
+    });
+    return cards.sort((a, b) => a.level - b.level || a.domain.localeCompare(b.domain) || a.name.localeCompare(b.name));
+  }, [domains, domainCardsResults, acquiredCardIds, characterLevel]);
+
+  const handleAcquire = async () => {
+    if (!selectedCard) return;
+    setActionError(null);
+    setIsPending(true);
+    try {
+      const cardId = `${selectedCard.domain}/${selectedCard.id}`;
+      await fire("acquire-domain-card", { cardId });
+      onCardAcquired();
+      setSelectedCard(null);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to acquire card.");
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  const isLoading = domainCardsResults.some((r) => r.isLoading);
+
+  return (
+    <div className="rounded-xl border border-burgundy-800 bg-slate-900/50 p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-semibold text-parchment-200">Acquire a card</h4>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close acquire card picker"
+          className="text-parchment-500 hover:text-parchment-200 focus:outline-none"
+        >
+          ✕
+        </button>
+      </div>
+
+      <p className="text-xs text-parchment-600">
+        Level {characterLevel} or below from your domains
+        {domains.length > 0 && ` (${domains.join(", ")})`}
+      </p>
+
+      {isLoading ? (
+        <p className="text-xs text-parchment-500 italic">Loading available cards…</p>
+      ) : eligibleCards.length === 0 ? (
+        <p className="text-xs text-parchment-600 italic">
+          No new cards available. Level up to unlock more!
+        </p>
+      ) : (
+        <ul className="space-y-1 max-h-48 overflow-y-auto" role="listbox" aria-label="Available domain cards">
+          {eligibleCards.map((card) => {
+            const cardId = `${card.domain}/${card.cardId}`;
+            const isSelected = selectedCard?.id === card.cardId && selectedCard?.domain === card.domain;
+            return (
+              <li key={cardId}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  onClick={() =>
+                    setSelectedCard(
+                      isSelected ? null : { domain: card.domain, id: card.cardId }
+                    )
+                  }
+                  className={[
+                    "w-full text-left rounded-lg px-3 py-2 text-sm transition-colors",
+                    "focus:outline-none focus:ring-2 focus:ring-gold-500",
+                    isSelected
+                      ? "bg-burgundy-800 text-parchment-100 border border-burgundy-600"
+                      : "border border-burgundy-900/40 text-parchment-300 hover:bg-slate-800/50 hover:border-burgundy-700",
+                  ].join(" ")}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium">{card.name}</span>
+                    <span className="flex items-center gap-1.5 flex-shrink-0">
+                      <span className="text-[10px] text-parchment-600 uppercase">{card.domain}</span>
+                      <span className="text-[10px] font-bold text-gold-600">Lv{card.level}</span>
+                    </span>
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {actionError && (
+        <p role="alert" className="text-xs text-[#fe5f55]">
+          {actionError}
+        </p>
+      )}
+
+      {selectedCard && (
+        <button
+          type="button"
+          onClick={handleAcquire}
+          disabled={isPending}
+          aria-busy={isPending}
+          className="
+            w-full rounded-lg border border-gold-800/60 bg-gold-950/20 px-3 py-2
+            text-sm font-semibold text-gold-300
+            hover:bg-gold-900/30 hover:border-gold-700
+            disabled:opacity-40 disabled:cursor-not-allowed
+            focus:outline-none focus:ring-2 focus:ring-gold-500
+            transition-colors
+          "
+        >
+          {isPending ? (
+            <span aria-hidden="true" className="inline-block h-3 w-3 animate-spin rounded-full border border-current border-t-transparent" />
+          ) : (
+            `Acquire card`
+          )}
+        </button>
+      )}
+    </div>
+  );
 }
 
 function cardHasTokens(card: DomainCard | undefined, cardTokens: Record<string, number>, cardId: string): boolean {
@@ -172,7 +351,7 @@ function AuraToggle({ cardId, cardName, characterId, isActive }: AuraToggleProps
           disabled:opacity-50 disabled:cursor-wait
           ${
             isActive
-              ? "border-[#577399] bg-[#577399]/20 text-[#577399] shadow-[0_0_8px_rgba(87,115,153,0.5)]"
+              ? "border-[#577399] bg-[#577399]/20 text-[#6a8fb5] shadow-[0_0_8px_rgba(87,115,153,0.5)]"
               : "border-slate-700 bg-transparent text-parchment-500 hover:border-slate-500 hover:text-parchment-300"
           }
         `}
@@ -185,7 +364,7 @@ function AuraToggle({ cardId, cardName, characterId, isActive }: AuraToggleProps
       </button>
 
       {isActive && (
-        <p className="text-[11px] text-[#577399] leading-snug" role="status">
+        <p className="text-[11px] text-[#6a8fb5] leading-snug" role="status">
           Aura active — when hit, make a Spellcast Roll to maintain.
         </p>
       )}
@@ -612,6 +791,7 @@ export function DomainLoadout() {
   const { activeCharacter, removeFromLoadout, reorderLoadout } =
     useCharacterStore();
   const [showPicker, setShowPicker] = useState(false);
+  const [pickerMode, setPickerMode] = useState<"swap" | "acquire">("swap");
 
   // Drag state
   const dragIndex = useRef<number | null>(null);
@@ -619,7 +799,7 @@ export function DomainLoadout() {
 
   if (!activeCharacter) return null;
 
-  const { domainLoadout, domainVault, characterId } = activeCharacter;
+  const { domainLoadout, domainVault, characterId, classId, level } = activeCharacter;
 
   const handleDragStart = (index: number) => {
     dragIndex.current = index;
@@ -638,6 +818,29 @@ export function DomainLoadout() {
     setDraggingIndex(null);
   };
 
+  // Determine which mode to show and what button text to use
+  const canSwap = domainVault.length > 0;
+  const canAcquire = classId !== undefined; // Need class to determine eligible domains
+  const isFull = domainLoadout.length >= 5;
+
+  const handleTogglePicker = () => {
+    if (showPicker) {
+      setShowPicker(false);
+    } else {
+      // If vault is empty but can acquire, start with acquire mode
+      // If vault has cards, start with swap mode
+      setPickerMode(canSwap ? "swap" : "acquire");
+      setShowPicker(true);
+    }
+  };
+
+  const handleModeSwitch = (newMode: "swap" | "acquire") => {
+    setPickerMode(newMode);
+  };
+
+  // Collected acquired card IDs (loadout + vault)
+  const acquiredCardIds = new Set(domainLoadout.concat(domainVault));
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -645,28 +848,30 @@ export function DomainLoadout() {
           Active Loadout{" "}
           <span className="text-parchment-600">({domainLoadout.length}/5)</span>
         </h3>
-        {domainVault.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setShowPicker((v) => !v)}
-            aria-expanded={showPicker}
-            aria-controls="domain-vault-picker"
-            className="
-              rounded px-2 py-0.5 text-xs font-semibold
-              bg-burgundy-800/60 text-parchment-300 border border-burgundy-700
-              hover:bg-burgundy-700 transition-colors
-              focus:outline-none focus:ring-2 focus:ring-gold-500
-            "
-          >
-            {showPicker ? "Hide Vault" : domainLoadout.length >= 5 ? "Swap Card" : "+ Add Card"}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={handleTogglePicker}
+          aria-expanded={showPicker}
+          aria-controls="domain-card-picker"
+          className="
+            rounded px-2 py-0.5 text-xs font-semibold
+            bg-burgundy-800/60 text-parchment-300 border border-burgundy-700
+            hover:bg-burgundy-700 transition-colors
+            focus:outline-none focus:ring-2 focus:ring-gold-500
+          "
+        >
+          {showPicker
+            ? "Hide"
+            : isFull && canSwap
+            ? "Swap Card"
+            : "Add Card"}
+        </button>
       </div>
 
       {/* Loadout slots */}
       {domainLoadout.length === 0 ? (
         <p className="text-xs text-parchment-600 italic">
-          No cards in loadout. Add cards from your vault above.
+          No cards in loadout.
         </p>
       ) : (
         <div role="list" className="space-y-2">
@@ -704,16 +909,74 @@ export function DomainLoadout() {
         </div>
       )}
 
-      {/* Vault picker — uses swap-loadout-card action with stress cost */}
+      {/* Card picker — toggles between Swap and Acquire modes */}
       {showPicker && (
-        <div id="domain-vault-picker">
-          <VaultPicker
-            vaultIds={domainVault}
-            loadoutIds={domainLoadout}
-            characterId={characterId}
-            characterLevel={activeCharacter.level}
-            onClose={() => setShowPicker(false)}
-          />
+        <div id="domain-card-picker">
+          {/* Mode toggle buttons */}
+          <div className="flex gap-2 mb-3">
+            {canSwap && (
+              <button
+                type="button"
+                onClick={() => handleModeSwitch("swap")}
+                aria-pressed={pickerMode === "swap"}
+                className={`
+                  flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-colors
+                  focus:outline-none focus:ring-2 focus:ring-gold-500
+                  ${
+                    pickerMode === "swap"
+                      ? "bg-gold-800/80 text-parchment-100 border border-gold-600"
+                      : "bg-slate-800 text-parchment-400 border border-slate-700 hover:bg-slate-700"
+                  }
+                `}
+              >
+                Swap from Vault ({domainVault.length})
+              </button>
+            )}
+            {canAcquire && (
+              <button
+                type="button"
+                onClick={() => handleModeSwitch("acquire")}
+                aria-pressed={pickerMode === "acquire"}
+                className={`
+                  flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-colors
+                  focus:outline-none focus:ring-2 focus:ring-gold-500
+                  ${
+                    pickerMode === "acquire"
+                      ? "bg-gold-800/80 text-parchment-100 border border-gold-600"
+                      : "bg-slate-800 text-parchment-400 border border-slate-700 hover:bg-slate-700"
+                  }
+                `}
+              >
+                Acquire New Card
+              </button>
+            )}
+          </div>
+
+          {/* Swap mode — show vault picker */}
+          {pickerMode === "swap" && canSwap && (
+            <VaultPicker
+              vaultIds={domainVault}
+              loadoutIds={domainLoadout}
+              characterId={characterId}
+              characterLevel={level}
+              onClose={() => setShowPicker(false)}
+            />
+          )}
+
+          {/* Acquire mode — show acquire picker */}
+          {pickerMode === "acquire" && classId !== undefined && (
+            <AcquireCardPicker
+              classId={classId}
+              characterLevel={level}
+              characterId={characterId}
+              acquiredCardIds={acquiredCardIds}
+              loadoutIds={domainLoadout}
+              onCardAcquired={() => {
+                setShowPicker(false);
+              }}
+              onClose={() => setShowPicker(false)}
+            />
+          )}
         </div>
       )}
     </div>

@@ -40,6 +40,7 @@ import { MarkdownContent } from "@/components/MarkdownContent";
 interface CharacterCardProps {
   character: CharacterSummary;
   onOpen: () => void;
+  onEdit: () => void;
   onDelete: () => void;
   isDeleting: boolean;
 }
@@ -47,6 +48,7 @@ interface CharacterCardProps {
 function CharacterCard({
   character,
   onOpen,
+  onEdit,
   onDelete,
   isDeleting,
 }: CharacterCardProps) {
@@ -131,6 +133,20 @@ function CharacterCard({
           "
         >
           Open Sheet
+        </button>
+
+        <button
+          onClick={onEdit}
+          aria-label={`Edit ${character.name}`}
+          className="
+            rounded-lg px-3 py-2 text-sm font-semibold
+            border border-gold-800/60 bg-gold-950/20 text-gold-300
+            hover:bg-gold-900/30 hover:border-gold-700
+            transition-colors
+            focus:outline-none focus:ring-2 focus:ring-gold-500
+          "
+        >
+          Edit
         </button>
 
         {confirmDelete ? (
@@ -670,7 +686,7 @@ function CreateCharacterModal({ onClose }: CreateModalProps) {
         { name: exp2Name.trim(), bonus: 2 },
       ],
     });
-    router.push(`/character/${char.characterId}`);
+    router.push(`/character/${char.characterId}/build`);
   };
 
   return (
@@ -1403,6 +1419,7 @@ export default function DashboardPage() {
                 key={char.characterId}
                 character={char}
                 onOpen={() => router.push(`/character/${char.characterId}`)}
+                onEdit={() => router.push(`/character/${char.characterId}/build`)}
                 onDelete={() => deleteMutation.mutate(char.characterId)}
                 isDeleting={
                   deleteMutation.isPending &&

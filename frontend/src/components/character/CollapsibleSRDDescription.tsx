@@ -55,7 +55,7 @@ export function CollapsibleSRDDescription({
           ${shouldCollapse ? "hover:bg-slate-800/30 cursor-pointer" : "cursor-default"}
         `}
       >
-        <p className="text-xs font-semibold uppercase text-[#577399] flex-1">
+        <p className="text-xs font-semibold uppercase text-[#6a8fb5] flex-1">
           {title}
         </p>
         {shouldCollapse && (
