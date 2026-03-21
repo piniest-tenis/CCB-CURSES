@@ -370,6 +370,8 @@ export interface ActionParams {
    * "long" allows Linked Curse swaps; "none" means mid-play (Recall Cost applies).
    */
   restType?: "short" | "long" | "none";
+  /** For swap-loadout-card: whether this is a Linked Curse (↔) card */
+  isLinkedCurse?: boolean;
 }
 
 /**

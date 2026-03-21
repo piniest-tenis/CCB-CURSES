@@ -454,6 +454,8 @@ function toCharacterResponse(
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
     // ── Campaign fields ───────────────────────────────────────────────────
+    gold: record.gold ?? { handfuls: 1, bags: 0, chests: 0 },
+    inventory: record.inventory ?? [],
     cardTokens: record.cardTokens ?? {},
     downtimeProjects: record.downtimeProjects ?? [],
     activeAuras: record.activeAuras ?? [],
@@ -632,6 +634,9 @@ async function createCharacter(
     avatarUrl: null,
     createdAt: now,
     updatedAt: now,
+    // ── Inventory ─────────────────────────────────────────────────────────
+    gold: { handfuls: 1, bags: 0, chests: 0 },
+    inventory: [],
     // ── Campaign fields ───────────────────────────────────────────────────
     cardTokens: {},
     downtimeProjects: [],
@@ -1138,7 +1143,7 @@ async function levelUpCharacter(
   const choices: LevelUpChoices = {
     targetLevel:     body.targetLevel,
     advancements:    body.advancements as AdvancementChoice[],
-    newDomainCardId: body.newDomainCardId,
+    newDomainCardId: body.newDomainCardId ?? null,
     exchangeCardId:  body.exchangeCardId ?? null,
   };
 

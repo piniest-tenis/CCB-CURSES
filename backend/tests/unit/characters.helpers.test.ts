@@ -42,14 +42,15 @@ function makeCharacter(overrides: Partial<Character> = {}): Character {
       hp: { max: 6, marked: 3 },
       stress: { max: 6, marked: 4 },
       armor: { max: 3, marked: 2 },
-      proficiency: { max: 2, marked: 1 },
     },
-    damageThresholds: { minor: 5, major: 10, severe: 15 },
+    damageThresholds: { major: 10, severe: 15 },
     weapons: {
-      primary: { name: "Dagger", trait: "finesse", damage: "1d6", range: "melee", type: "physical", burden: "one-handed" },
-      secondary: { name: null, trait: null, damage: null, range: null, type: null, burden: null },
+      primary: { name: "Dagger", trait: "finesse", damage: "1d6", range: "melee", type: "physical", burden: "one-handed", tier: 1, feature: null },
+      secondary: { name: null, trait: null, damage: null, range: null, type: null, burden: null, tier: null, feature: null },
     },
     hope: 3,
+    hopeMax: 6,
+    proficiency: 1,
     experiences: [],
     conditions: [],
     domainLoadout: [],
@@ -58,6 +59,14 @@ function makeCharacter(overrides: Partial<Character> = {}): Character {
     traitBonuses: {},
     notes: null,
     avatarKey: null,
+    gold: { handfuls: 1, bags: 0, chests: 0 },
+    inventory: ["torch", "rope"],
+    cardTokens: {},
+    downtimeProjects: [],
+    activeAuras: [],
+    companionState: null,
+    reputationBonuses: {},
+    customConditions: [],
     ...overrides,
   };
 }
@@ -233,16 +242,16 @@ describe("validateSrdRules", () => {
     expect(validateSrdRules({ domainLoadout: ["a", "b", "c", "d", "e"] })).toHaveLength(0);
   });
 
-  it("flags a stat < 0", () => {
+  it("flags a stat < -5", () => {
     const errors = validateSrdRules({
-      stats: { agility: -1, strength: 0, finesse: 0, instinct: 0, presence: 0, knowledge: 0 },
+      stats: { agility: -6, strength: 0, finesse: 0, instinct: 0, presence: 0, knowledge: 0 },
     });
     expect(errors).toContainEqual(expect.objectContaining({ field: "stats.agility" }));
   });
 
-  it("flags a stat > 10", () => {
+  it("flags a stat > 8", () => {
     const errors = validateSrdRules({
-      stats: { agility: 11, strength: 0, finesse: 0, instinct: 0, presence: 0, knowledge: 0 },
+      stats: { agility: 9, strength: 0, finesse: 0, instinct: 0, presence: 0, knowledge: 0 },
     });
     expect(errors).toContainEqual(expect.objectContaining({ field: "stats.agility" }));
   });
@@ -253,7 +262,6 @@ describe("validateSrdRules", () => {
         hp: { max: 6, marked: 7 },
         stress: { max: 6, marked: 0 },
         armor: { max: 3, marked: 0 },
-        proficiency: { max: 2, marked: 0 },
       },
     });
     expect(errors).toContainEqual(expect.objectContaining({ field: "trackers.hp.marked" }));
@@ -265,7 +273,6 @@ describe("validateSrdRules", () => {
         hp: { max: 6, marked: 6 },
         stress: { max: 6, marked: 6 },
         armor: { max: 3, marked: 3 },
-        proficiency: { max: 2, marked: 2 },
       },
     });
     expect(errors).toHaveLength(0);
@@ -297,14 +304,14 @@ describe("validateSrdRules", () => {
 describe("applyRest", () => {
   describe("short rest", () => {
     it("clears exactly 2 stress when stress.marked >= 2", () => {
-      const char = makeCharacter({ trackers: { hp: { max: 6, marked: 3 }, stress: { max: 6, marked: 4 }, armor: { max: 3, marked: 2 }, proficiency: { max: 2, marked: 0 } } });
+      const char = makeCharacter({ trackers: { hp: { max: 6, marked: 3 }, stress: { max: 6, marked: 4 }, armor: { max: 3, marked: 2 } } });
       const { character: result, cleared } = applyRest(char, "short");
       expect(result.trackers.stress.marked).toBe(2); // 4 - 2
       expect(cleared.stress).toBe(2);
     });
 
     it("clears all stress when stress.marked < 2", () => {
-      const char = makeCharacter({ trackers: { hp: { max: 6, marked: 3 }, stress: { max: 6, marked: 1 }, armor: { max: 3, marked: 2 }, proficiency: { max: 2, marked: 0 } } });
+      const char = makeCharacter({ trackers: { hp: { max: 6, marked: 3 }, stress: { max: 6, marked: 1 }, armor: { max: 3, marked: 2 } } });
       const { character: result, cleared } = applyRest(char, "short");
       expect(result.trackers.stress.marked).toBe(0);
       expect(cleared.stress).toBe(1);
@@ -400,10 +407,10 @@ describe("normalizeWeapons", () => {
   it("handles completely undefined slots", () => {
     const result = normalizeWeapons({});
     expect(result.primary).toEqual({
-      name: null, trait: null, damage: null, range: null, type: null, burden: null,
+      name: null, trait: null, damage: null, range: null, type: null, burden: null, tier: null, feature: null,
     });
     expect(result.secondary).toEqual({
-      name: null, trait: null, damage: null, range: null, type: null, burden: null,
+      name: null, trait: null, damage: null, range: null, type: null, burden: null, tier: null, feature: null,
     });
   });
 });
