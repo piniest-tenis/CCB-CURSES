@@ -85,6 +85,16 @@ const CreateCharacterSchema = z.object({
   communityId: z.string().optional(),
   ancestryId: z.string().optional(),
   level: z.number().int().min(1).max(10).default(1),
+  experiences: z
+    .array(
+      z.object({
+        name: z.string().min(1, "Experience name cannot be empty").max(100),
+        bonus: z.number().int().default(2),
+      })
+    )
+    .max(2, "At most 2 experiences may be provided at creation")
+    .optional()
+    .default([]),
 });
 
 const PutCharacterSchema = z.object({
@@ -134,6 +144,7 @@ const PutCharacterSchema = z.object({
     .optional(),
   notes: z.string().nullable().optional(),
   avatarKey: z.string().nullable().optional(),
+  traitBonuses: z.record(z.string(), z.number().int()).optional().default({}),
 });
 
 const PatchCharacterSchema = PutCharacterSchema.partial();
@@ -330,6 +341,7 @@ function toCharacterResponse(
     domainLoadout: record.domainLoadout ?? [],
     domainVault: record.domainVault ?? [],
     classFeatureState: record.classFeatureState ?? {},
+    traitBonuses: record.traitBonuses ?? {},
     notes: record.notes ?? null,
     avatarKey: record.avatarKey ?? null,
     avatarUrl: buildAvatarUrl(record.avatarKey),
@@ -491,12 +503,16 @@ async function createCharacter(
     trackers: defaultTrackers,
     damageThresholds: defaultDamageThresholds,
     weapons: defaultWeapons,
-    hope: 2,
-    experiences: [],
+    hope: 1,
+    experiences: (input.experiences ?? []).map((e) => ({
+      name: e.name,
+      bonus: e.bonus ?? 2,
+    })),
     conditions: [],
     domainLoadout: [],
     domainVault: [],
     classFeatureState: defaultFeatureState,
+    traitBonuses: {},
     notes: null,
     avatarKey: null,
     avatarUrl: null,

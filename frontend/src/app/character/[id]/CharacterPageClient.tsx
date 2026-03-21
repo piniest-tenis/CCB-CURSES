@@ -6,32 +6,37 @@
  * Character sheet page — protected, loads the CharacterSheet component.
  */
 
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { CharacterSheet } from "@/components/character/CharacterSheet";
 import React, { useEffect } from "react";
 import Link from "next/link";
 
 export default function CharacterPage() {
-  const params = useParams<{ id: string }>();
+  const pathname = usePathname();
+  // Extract the real character ID from the browser URL.
+  // useParams() returns "__placeholder__" in a static export because Next.js
+  // only pre-renders one HTML file per dynamic segment; usePathname() always
+  // reflects the actual browser URL path.
+  const characterId = pathname?.split("/")[2] ?? "";
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const { isAuthenticated, isLoading, isReady } = useAuthStore();
 
+  // Gate the redirect on isReady: isAuthenticated is false on initial hydration
+  // (it isn't persisted) so we must wait for initialize() to complete first.
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (isReady && !isAuthenticated) {
       router.replace("/auth/login");
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isReady, isAuthenticated, router]);
 
-  if (isLoading) {
+  if (!isReady || isLoading || !isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-burgundy-500 border-t-transparent" />
       </div>
     );
   }
-
-  if (!isAuthenticated) return null;
 
   return (
     <div className="min-h-screen bg-slate-950">
@@ -52,7 +57,7 @@ export default function CharacterPage() {
       </header>
 
       <main className="px-4 py-6">
-        <CharacterSheet characterId={params?.id ?? ""} />
+        <CharacterSheet characterId={characterId} />
       </main>
     </div>
   );

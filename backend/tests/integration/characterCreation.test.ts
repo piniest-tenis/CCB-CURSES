@@ -139,7 +139,7 @@ describe("Character creation happy path", () => {
     expect(body.data.trackers.hp.marked).toBe(0);
     expect(body.data.trackers.stress.max).toBe(6);
     expect(body.data.derivedStats.evasion).toBe(12);
-    expect(body.data.hope).toBe(2);
+    expect(body.data.hope).toBe(1);
     expect(body.data.domains).toContain("valiance");
     expect(body.data.level).toBe(1);
 

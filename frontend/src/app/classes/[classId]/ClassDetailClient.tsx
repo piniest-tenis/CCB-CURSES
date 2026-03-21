@@ -10,7 +10,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useClass } from "@/hooks/useGameData";
 import type { SubclassData, NamedFeature } from "@shared/types";
 
@@ -163,9 +163,10 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 // ---------------------------------------------------------------------------
 
 export default function ClassDetailPage() {
-  const params = useParams<{ classId: string }>();
+  const pathname = usePathname();
+  const classId = pathname?.split("/")[2] ?? "";
   const router = useRouter();
-  const { data: cls, isLoading, isError } = useClass(params?.classId ?? "");
+  const { data: cls, isLoading, isError } = useClass(classId);
 
   return (
     <div className="min-h-screen bg-slate-950">

@@ -51,13 +51,21 @@ _Ask your fellow players one of the following questions for their characters to 
 
 _Play the Siege Scholar if you want to engineer the perfect kill and deliver it with precision by knowing exactly where to hit before you swing._
 
+### Spellcast Trait
+
 Knowledge
+
+### Foundation Features
 
 _Structural Analysis_: When you use Combat Assessment to expose a weakness, gain an additional effect: anyone targeting that adversary this scene may reroll one damage die on a successful hit.
 
 _Applied Physics_: Once per rest, before making an attack, spend a moment calculating angles. The attack is made with Advantage and deals d4 additional damage using your Proficiency on a hit.
 
+### Specialization Feature
+
 **Optimal Angle**: Once per scene, when you succeed on an attack, immediately direct an ally within Close range to attack the same target as a reaction. Their attack is made with Advantage.
+
+### Mastery Feature
 
 **Calculated Strike**: Once per session, after using Combat Assessment, choose one adversary. Your next attack against them automatically hits without a roll and deals maximum damage. Reserve this for the moment you have confirmed their weakness.
 
@@ -65,14 +73,24 @@ _Applied Physics_: Once per rest, before making an attack, spend a moment calcul
 
 _Play the Front-Line Theorist if you want taking damage to make you smarter and smarter to make you hit harder._
 
+### Spellcast Trait
+
 Knowledge
+
+### Foundation Features
 
 _Pain Informs_: When you mark a Hit Point in combat, you may immediately use Combat Assessment as a free action and choose either of the first two options, without consuming your scene use.
 
 _Aggressive Adaptation_: Once per rest, after you take damage, your next attack against the source of that damage deals an additional d8 damage using your Proficiency.
 
+### Specialization Feature
+
 **Improvised Excellence**: Once per scene, when you fail a roll in combat, describe what you learned from the failure. On your next roll of the same type in the same scene, gain +3 to the result.
 
+### Mastery Feature
+
 **The Final Lesson**: Once per session, when you have been hit at least three times in a single combat, your next attack is automatically a Critical Success without a roll. Describe what you observed in this fight and how you applied it.
+
+## Mechanical Notes
 
 Combat Assessment works best when you use it at the very start of any fight. Get your chosen effect down before the chaos starts. Expose Weakness is strong but requires your party to press the advantage on the same target, so coordinate with your allies before spending it. The Siege Scholar path builds toward one devastating, perfectly positioned strike. The Front-Line Theorist path rewards staying in the thick of it and improving as you take hits. Both paths benefit from paying attention to adversary behavior between your turns.

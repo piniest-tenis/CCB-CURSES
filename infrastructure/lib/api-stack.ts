@@ -302,7 +302,12 @@ export class ApiStack extends cdk.Stack {
     // -----------------------------------------------------------------------
     const corsAllowOrigins = isProd
       ? ["https://app.daggerheart.example.com"]
-      : ["http://localhost:3000", `https://${stage}.daggerheart.example.com`];
+      : [
+          "http://localhost:3000",
+          `https://${stage}.daggerheart.example.com`,
+          // CloudFront domain for the deployed dev frontend
+          "https://dqt96kbhxdqy3.cloudfront.net",
+        ];
 
     this.httpApi = new apigwv2.HttpApi(this, "HttpApi", {
       apiName: `daggerheart-api-${stage}`,

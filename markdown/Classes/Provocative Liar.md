@@ -30,26 +30,44 @@ _Ask your fellow players one of the following questions for their characters to 
 ## **Architect of Fictions**
 _Play the Architect of Fictions if you want every lie to be part of something larger: a world of your own telling that outlasts the scene._
 
+### Spellcast Trait
+
 Presence
+
+### Foundation Features
 
 _Foundational Lie_: Once per session, at the start of a new location or social encounter, establish one foundational lie about your identity (your name, your role, your purpose). For as long as this lie is sustained, gain Advantage on all rolls to maintain it and a +1 bonus to Attitude from everyone who believes it.
 
 _Corroborating Details_: Whenever you use Narrative Collapse, you may also establish three specific true-seeming details that NPC characters will independently corroborate without being prompted.
 
+### Specialization Feature
+
 **The Second Layer**: Once per scene, when someone challenges a deception you've established, you may reveal that the exposed lie was itself cover for a deeper, true deception. The character who challenged you becomes convinced of the deeper lie instead, and gains a +1 bonus to Attitude from the sense that they've seen through you.
+
+### Mastery Feature
 
 **The Architecture Complete**: Once per session, the foundational lie of this session can be made permanent. The GM must incorporate it as true going forward if it does not directly contradict established lore. Describe what has now always been true.
 ## **Living Contradiction**
 _Play the Living Contradiction if you want reality to stop arguing with you and start agreeing._
 
+### Spellcast Trait
+
 Instinct
+
+### Foundation Features
 
 _Casual Contradiction_: Once per rest, state something false as fact in front of a character. Make a Spellcast Roll (12). On a success, the false thing becomes briefly physically real in a minor way, confirming your claim to any observer.
 
 _Unraveling_: Whenever you use Narrative Collapse, characters who actively disbelieve your lie must mark 2 Stress as contradicting realities press against each other in their minds.
 
+### Specialization Feature
+
 **The World Agrees**: Once per scene, while your class feature is active, extend the manufactured reality to include one physically impossible element: a wall appears, gravity inverts in a small space, a sound plays from no source. This element persists until the scene ends.
 
+### Mastery Feature
+
 **Reality Debt**: Once per session, collapse a truth. Choose one established fact about the current scene that a character knows. That fact becomes untrue until the end of the session. Work with your GM. This cannot affect character death, major campaign-altering facts, or player-character defining truths without consent.
+
+## Mechanical Notes
 
 Commit fully to whatever you've said; half-hearted deceptions don't generate Narrative Collapse. Establish lies boldly and early, then pay attention to what happens when they start holding. The Architect path rewards long-term planning and complex social environments; the Living Contradiction path thrives in chaotic scenes where the impossible is expected. Engage your GM before sessions about the scope of your reality manipulation so you both know where the edges are.

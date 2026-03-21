@@ -3,7 +3,7 @@
 /**
  * src/components/character/StatsPanel.tsx
  *
- * Renders the 6 core stat inputs (0–8 range, number inputs in circle frames)
+ * Renders the 6 core stat inputs (0–8 range) with +/- increment buttons
  * and derived stat displays (evasion, armor — read-only, computed server-side).
  */
 
@@ -32,37 +32,66 @@ interface StatInputProps {
 }
 
 function StatInput({ label, abbr, value, onChange }: StatInputProps) {
+  const decrement = () => onChange(Math.max(0, value - 1));
+  const increment = () => onChange(Math.min(8, value + 1));
+
   return (
     <div className="group flex flex-col items-center gap-1.5">
-      {/* Circular dial */}
+      {/* Dial with +/- controls */}
       <div
         className="
-          relative h-16 w-16 rounded-full
-          border-2 border-burgundy-700 bg-slate-850
-          flex items-center justify-center
+          relative flex flex-col items-center
+          rounded-xl border border-burgundy-700 bg-slate-850
           shadow-card
           group-hover:border-gold-500 group-hover:shadow-glow-gold
-          transition-all duration-200
+          transition-all duration-200 overflow-hidden
+          w-16
         "
       >
-        <input
-          type="number"
-          min={0}
-          max={8}
-          value={value}
-          onChange={(e) => {
-            const v = parseInt(e.target.value, 10);
-            if (!isNaN(v)) onChange(v);
-          }}
-          aria-label={label}
+        {/* Increment button */}
+        <button
+          type="button"
+          onClick={increment}
+          disabled={value >= 8}
+          aria-label={`Increase ${label}`}
           className="
-            w-10 text-center bg-transparent text-xl font-bold
-            text-parchment-100 focus:outline-none
-            [appearance:textfield]
-            [&::-webkit-inner-spin-button]:appearance-none
-            [&::-webkit-outer-spin-button]:appearance-none
+            w-full py-0.5 text-center text-xs text-parchment-600
+            hover:bg-gold-900/20 hover:text-gold-400
+            disabled:opacity-20 disabled:cursor-not-allowed
+            transition-colors leading-none select-none
           "
-        />
+        >
+          ▲
+        </button>
+
+        {/* Value display */}
+        <div className="py-1 flex items-center justify-center">
+          <span
+            className="
+              text-xl font-bold text-parchment-100
+              w-8 text-center leading-none select-none
+            "
+            aria-label={`${label}: ${value}`}
+          >
+            {value}
+          </span>
+        </div>
+
+        {/* Decrement button */}
+        <button
+          type="button"
+          onClick={decrement}
+          disabled={value <= 0}
+          aria-label={`Decrease ${label}`}
+          className="
+            w-full py-0.5 text-center text-xs text-parchment-600
+            hover:bg-burgundy-900/30 hover:text-burgundy-300
+            disabled:opacity-20 disabled:cursor-not-allowed
+            transition-colors leading-none select-none
+          "
+        >
+          ▼
+        </button>
       </div>
 
       {/* Abbreviation (always visible) */}
@@ -71,7 +100,10 @@ function StatInput({ label, abbr, value, onChange }: StatInputProps) {
       </span>
 
       {/* Full label on hover */}
-      <span className="h-4 text-[10px] text-parchment-500 group-hover:opacity-100 opacity-0 transition-opacity duration-150">
+      <span
+        className="h-4 text-[10px] text-parchment-500 group-hover:opacity-100 opacity-0 transition-opacity duration-150"
+        aria-hidden="true"
+      >
         {label}
       </span>
     </div>

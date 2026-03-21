@@ -47,13 +47,21 @@ _Ask your fellow players one of the following questions for their characters to 
 
 _Play the Waking Dream if you want your creations to press against reality until it gives way to see what comes through._
 
+### Spellcast Trait
+
 Instinct
+
+### Foundation Features
 
 _Bleed-Through_: Once per rest, the residue of an artistic act you performed creates a distraction or sensory disturbance within Far range. Make a Spellcast Roll (13). On a success, all [[Character|Characters]] in the area must mark a Stress to take any action until the end of their next turn unless they leave the area.
 
 _Persistent Impression_: Your manifestations remember what you showed them. When you activate your class feature, you choose one thing your manifestation cannot do rather than the GM choosing its limitations.
 
+### Specialization Feature
+
 **Self-Sustaining Work**: Once per scene, after you activate your class feature, your manifestation can take one independent action of your choice without further input from you, as if it were a basic adversary with your Proficiency.
+
+### Mastery Feature
 
 **The Piece Completes Itself**: Once per session, when your manifestation would dissipate, spend 2 Hope. It persists until the end of the session, acting on your behalf during scenes you describe to it. The GM can spend 2 Fear to cause it to deviate from your intent.
 
@@ -61,14 +69,24 @@ _Persistent Impression_: Your manifestations remember what you showed them. When
 
 _Play the Grand Performer if you want your art to move rooms, shape crowds, and leave people uncertain what they just witnessed._
 
+### Spellcast Trait
+
 Presence
+
+### Foundation Features
 
 _Genuine Reaction_: When you use your class feature during a social scene, the reality distortion works in your favor. Characters who observe the manifestation treat you with a +1 bonus to Attitude for the rest of the scene.
 
 _Crowd Turned_: Once per rest, when you address more than one character at once, spend 1 Hope. One character of your choice who witnessed your address must mark a Stress before taking any action against you or an ally this scene.
 
+### Specialization Feature
+
 **Center Stage**: When you perform a social action and succeed, you can immediately trigger your class feature as part of it. This does not cost Hope and the manifestation lasts until the end of the scene.
 
+### Mastery Feature
+
 **Unforgettable Work**: Once per session, when you succeed on a Presence roll, every character who witnessed your performance gains a permanent +1 bonus to Attitude toward you (until a meaningful betrayal). Additionally, your next class feature manifestation can affect an area up to Far range.
+
+## Mechanical Notes
 
 Your manifestations are intentionally open-ended. Talk with your GM before the session about what they can and can't interact with physically. Don't try to engineer perfect mechanical outcomes; let the weirdness create openings. Save Hope for the moments when you want a manifestation to stick around or do something consequential. The Waking Dream path rewards patience; the Grand Performer path rewards working the room before anything goes wrong.

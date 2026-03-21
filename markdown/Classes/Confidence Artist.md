@@ -47,13 +47,21 @@ _Ask your fellow players one of the following questions for their characters to 
 
 _Play the Long Con if you want every job to be a chapter in something larger, a fiction that outlasts the scene and has a payoff worth waiting for._
 
+### Spellcast Trait
+
 Presence
+
+### Foundation Features
 
 _Layer by Layer_: Once per session, when you establish a pre-arranged condition, also establish a secondary condition that deepens it. Both conditions can each provide a +2 bonus, but only one applies per roll.
 
 _The Face_: While maintaining a false identity this session, gain Advantage on all Presence rolls made while in character as that identity.
 
+### Specialization Feature
+
 **The Reveal**: Once per session, reveal that a setup you've been running has been considerably deeper than it appeared. Choose one outcome: a character who has been working against you realizes they were manipulated and must mark 3 Stress, or a character previously neutral to you becomes fully cooperative for the rest of the session.
+
+### Mastery Feature
 
 **The Masterwork**: Once per session, if you have sustained a deception for the entire session without it being fully exposed, it becomes permanent. The false identity, the planted evidence, the long game: the GM incorporates it as true until dedicated adversary effort dismantles it.
 
@@ -61,13 +69,23 @@ _The Face_: While maintaining a false identity this session, gain Advantage on a
 
 _Play the Quick Mark if you want clean, fast, decisive work and to be well away before anyone starts asking questions._
 
+### Spellcast Trait
+
 Finesse
+
+### Foundation Features
 
 _Immediate Opportunity_: Once per scene, use the pre-arranged condition from The Setup to enable an immediate Thievery action without a roll. The situation is already in your favor. Describe how the setup guarantees basic success. Complex or heavily contested actions may still require rolls at the GM's discretion.
 _Cover Story_: After a Thievery action, once per scene, immediately construct a brief false narrative about what just happened. The first character to question you believes the story without a roll.
 
+### Specialization Feature
+
 **In and Out**: Once per scene, after successfully completing a Thievery action, move up to Far range without a roll and gain the _Hidden_ condition.
 
+### Mastery Feature
+
 **The Perfect Crime**: Once per session, declare in advance that a Thievery action this scene cannot fail. No roll is required; you have already planned for everything. Work with your GM on what "successful" means at this level. The target must have been established via **The Setup** in your pre-arranged condition earlier in the session.
+
+## Mechanical Notes
 
 The Setup requires active engagement with your GM at the start of every relevant scene, not retroactively. The more specific and concrete your established condition, the more powerful the bonus. Vague conditions produce vague advantages. The Long Con path rewards patience and multi-session investment; the Quick Mark path rewards clean decisive action and knowing when to stop. In either case, establish the pre-arranged condition as early as possible, as it shapes the whole scene that follows.

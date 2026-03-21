@@ -51,13 +51,21 @@ _Ask your fellow players one of the following questions for their characters to 
 
 _Play the Anomalist if you want to turn every manifestation of the Creep or Etherotaxia into a weapon or a tool, and remain clear-headed where others falter._
 
+### Spellcast Trait
+
 Instinct
+
+### Foundation Features
 
 _Exploit the Exception_: Once per rest, when a manifestation of the Creep or Etherotaxia is present, spend 1 Hope to redirect its properties in your favor. The GM describes the phenomenon's current effect; you turn it toward a benefit you describe. Gain Advantage on your next roll and trigger the chosen effect.
 
 _Acclimatized_: You are immune to fear and Stress from encountering the Creep, Etherotaxia, haunts, and other corruptions of Forestdown. Allies within Very Close range gain a +1 bonus to rolls to resist the same effects.
 
+### Specialization Feature
+
 **Weaponized Paradox**: Once per scene, invoke the properties of the Creep or Etherotaxia against an adversary connected to or affected by the corruption. Describe the effect and make a Spellcast Roll. On a success, the target marks 2 Stress and gains Disadvantage on their next roll. On a failure, you mark 1 Stress instead.
+
+### Mastery Feature
 
 **Classified**: Once per session, invoke a documented Creep manifestation or Etherotaxia entry from your field catalogue. Choose any such phenomenon you have encountered this campaign or this session. It manifests fully and roughly under your direction. Work with your GM; make it significant and strange.
 
@@ -65,14 +73,24 @@ _Acclimatized_: You are immune to fear and Stress from encountering the Creep, E
 
 _Play the Exception Theorist if you want to build a working model of Forestdown's corruption — documenting, cross-referencing, and predicting what comes next._
 
+### Spellcast Trait
+
 Knowledge
+
+### Foundation Features
 
 _Build the Model_: When you successfully use Filed Under Impossible, you may forgo the immediate effect. If you do, your next Knowledge roll is made with Advantage and gains +2, representing your accumulated cross-references.
 
 _Predictive Analysis_: When you succeed on a Knowledge roll to analyze something, ask the GM one additional question about that thing's nature or history. The answer must be truthful.
 
+### Specialization Feature
+
 **Working Hypothesis**: Once per scene, declare a theory about how a Creep manifestation or Etherotaxia specimen operates. The GM tells you if you are right, partly right, or wrong. If right, all party rolls to deal with that phenomenon this scene gain Advantage. If partly right, clear 1 Stress and gain a Hope. If wrong, mark 1 Stress.
 
+### Mastery Feature
+
 **The Grand Index**: Once per session, reference your accumulated documentation on the Creep and Etherotaxia of Forestdown. Ask the GM up to three true/false questions about the current scene, encounter, or adversary. The answers must be factual. Use them however you see fit.
+
+## Mechanical Notes
 
 Your class feature rewards active engagement with the Creep, Etherotaxia encounters, haunts, and other Forestdown phenomena your GM presents. The more you lean into noticing and questioning specific manifestations in the fiction, the more Demystify, Predict, and Contextualize can do. The Anomalist path turns what would terrify others directly into offense or cover; the Exception Theorist turns documentation into reliable information advantages — and Build the Model lets you convert a Filed Under Impossible success into a boosted Knowledge roll when you need it most. Both paths get stronger the deeper into Forestdown the situation goes. Lean into the corruption.

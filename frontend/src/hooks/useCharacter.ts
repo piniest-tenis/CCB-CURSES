@@ -39,12 +39,13 @@ export interface CharacterListData {
 }
 
 export interface CreateCharacterInput {
-  name:        string;
-  classId:     string;
-  subclassId?: string;
+  name:         string;
+  classId:      string;
+  subclassId?:  string;
   communityId?: string;
-  ancestryId?: string;
-  level?:      number;
+  ancestryId?:  string;
+  level?:       number;
+  experiences?: Array<{ name: string; bonus: number }>;
 }
 
 // ─── useCharacters ────────────────────────────────────────────────────────────

@@ -178,6 +178,15 @@ export function validateSrdRules(character: Partial<Character>): SrdError[] {
     }
   }
 
+  for (const exp of character.experiences ?? []) {
+    if (!exp.name || exp.name.trim() === "") {
+      errors.push({
+        field: "experiences",
+        issue: "Experience name cannot be empty",
+      });
+    }
+  }
+
   return errors;
 }
 

@@ -10,7 +10,7 @@
 
 import React, { useState, Suspense } from "react";
 import Link from "next/link";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useDomain } from "@/hooks/useGameData";
 import type { DomainCard } from "@shared/types";
 
@@ -149,12 +149,12 @@ export default function DomainDetailPage() {
 }
 
 function DomainDetailContent() {
-  const params = useParams<{ domain: string }>();
+  const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const levelParam = searchParams?.get("level");
 
-  const domainName = decodeURIComponent(params?.domain ?? "");
+  const domainName = decodeURIComponent(pathname?.split("/")[2] ?? "");
   const levelFilter = levelParam ? Number(levelParam) : undefined;
 
   const { data, isLoading, isError } = useDomain(domainName, levelFilter);

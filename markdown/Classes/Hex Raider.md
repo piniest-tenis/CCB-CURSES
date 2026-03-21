@@ -51,13 +51,21 @@ _Ask your fellow players one of the following questions for their characters to 
 
 _Play the Relic-Marked if you want the things you've collected to change you and to wield that accumulated strangeness like an arsenal._
 
+### Spellcast Trait
+
 Instinct
+
+### Foundation Features
 
 _Resonant Collection_: When you use Cursed Procurement, you may choose to have the effect emanate from a specific named item you describe. This gives the GM license to develop that item as an ongoing story element that may begin responding to events or attracting attention.
 
 _Warded Skin_: Once per rest, before taking damage, expend the active charge of one item. Reduce that damage by d6. The item is temporarily drained and cannot be used again until your next long rest.
 
+### Specialization Feature
+
 **The Gathering**: Once per scene, spend 2 Hope. All supernatural effects in the current area (curses, wards, active Weird domain card effects) are briefly drawn toward you. Until the end of the scene, you are immune to their effects and every effect that targets you in this manner provides a +2 bonus to your Spellcast Rolls. This effect can stack.
+
+### Mastery Feature
 
 **The Marked's Inheritance**: Once per session, invoke the combined weight of everything you've ever carried. For the rest of the scene, all three effects of Cursed Procurement are active simultaneously. You carry the resonant weight of every cursed thing you've touched.
 
@@ -65,14 +73,24 @@ _Warded Skin_: Once per rest, before taking damage, expend the active charge of 
 
 _Play the Midnight Acquisitor if you want the weird to be a professional tool and nothing more: reliable, controlled, and used cleanly._
 
+### Spellcast Trait
+
 Knowledge
+
+### Foundation Features
 
 _Enabled Access_: When using Spectral Transit from your class feature, you do not alert wards, alarms, or detection effects when entering a space.
 
 _Known Risk_: Once per rest, when you are about to make a Thievery roll, describe one risk you've already accounted for using your supernatural items. That specific risk cannot be the source of failure on this roll.
 
+### Specialization Feature
+
 **Silent Approach**: Once per scene, when you use Spectral Transit from your class feature, you may take one willing ally within Very Close range with you.
 
+### Mastery Feature
+
 **The Perfect Take**: Once per session, when you use Cursed Procurement to enter a secured space, you may take anything in that space not on a Character's person without a roll, provided you have a few uninterrupted moments. Describe what you take and how the supernatural access made it possible.
+
+## Mechanical Notes
 
 Engage with the narrative of your collection. Give individual items names and histories and describe them specifically when you invoke them. The more present they are in the fiction, the more the GM can build situations around them. The Relic-Marked path treats the collection as a growing and changing supernatural inheritance; the Midnight Acquisitor uses it as reliable professional equipment. In either case, the Hope Feature is your big-moment enabler, so save it for scenes where you genuinely need both effects.

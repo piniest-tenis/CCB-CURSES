@@ -47,11 +47,17 @@ _Ask your fellow players one of the following questions for their characters to 
 
 _Play the Ethereal Stalker if you want to use your strange abilities to unleash devastating attacks from strange angles._
 
+### Spellcast Trait
+
 Instinct
+
+### Foundation Features
 
 _Best Defense_: After a successful attack you can mark a Stress to give your target and yourself the _Overwhelmed_ condition. An _Overwhelmed_ target gains a -2 penalty to Evasion and Damage Thresholds.
 
 _Gnasher_: You can make an attack roll against a target in Melee range. On a success, deal d8 damage using your Proficiency. If the target marks any hit points, any conditions currently affecting you are spread to your target.
+
+### Specialization Feature
 
 **Mind over Matter**: Mark a Stress to give yourself one of the following conditions:
 
@@ -59,13 +65,19 @@ _Gnasher_: You can make an attack roll against a target in Melee range. On a suc
 - _Enraged_: An _Enraged_ target gains a bonus to its attack rolls equal to its Proficiency. Attack rolls against an _Enraged_ target gain Advantage. This condition ends at the end of the Scene or when the target is successfully attacked.
 - _Docile_: A _Docile_ target deals no damage on attacks, gains a +2 bonus to Presence -2 penalty to Knowledge and Instinct. The _Docile_ condition ends after the affected target makes a successful attack against a [[Creature]] or [[Character]].
 
+### Mastery Feature
+
 **Fractured Reality**: Once per scene, when you apply a condition through your subclass features, choose one additional nearby target within Very Close range. That second target gains the same condition until the end of the Scene.
 
 ## **Curiosity**
 
 _Play the Curiosity if you want to lean into oddity to unlock unique social abilities._
 
+### Spellcast Trait
+
 Presence
+
+### Foundation Features
 
 _Charming Gaze_: Make a Spellcast Roll against a [[Character]]. On a success, that character gains the _Charmed_ condition and cannot tell you a lie unless they mark a Stress. After two Stress are marked in this manner, the _Charmed_ condition ends.
 
@@ -75,6 +87,10 @@ _Weave a Yarn_: When you spend a few moments recounting a story to a Character, 
 
 **Venomous Rebuke**: Once per rest, you can launch a stream of invectives at a Character that poisons their mind. Make a Spellcast Roll against your adversary. On a success, they gain the _Needled_ condition. Before a _Needled_ Character can act, they must make a Presence action roll (13). On a success, the condition ends. On a failure, they must mark a Stress.
 
+### Mastery Feature
+
 **Dreadful Fascination**: When a Character fails against _Venomous Rebuke_ or _Charming Gaze_, gain 1 Hope. Once per scene, you may spend 1 Hope to force that Character to reveal one truthful, relevant detail.
+
+## Mechanical Notes
 
 Of Two Worlds costs 2 Hope, so use it deliberately: give the Warped condition to targets you need in Melee range for specific subclass features, not as a general mobility fix. The Ethereal Stalker path rewards stacking conditions. Gnasher spreads your current conditions to targets on a hit, so enter fights with beneficial conditions already active where possible. Mind over Matter gives you control over your own condition going into an attack; choose Enraged for offense, Ethereal for escape, and Docile only when deescalation is the goal. The Curiosity path is sustained social control: apply Charmed or Needled early and let the Stress cost erode the target's ability to act freely over time. Dreadful Fascination pays out best in long social encounters where conditions have time to trigger more than once.

@@ -50,13 +50,21 @@ _Ask your fellow players one of the following questions for their characters to 
 
 _Play the Annotated Theologian if you want to build a systematic understanding of sacred phenomena and turn that understanding into irreversible advantage._
 
+### Spellcast Trait
+
 Knowledge
+
+### Foundation Features
 
 _Field Notes_: Once per rest, when you use Sacred Methodology, record the result. On subsequent uses this session against the same type of phenomenon, your roll gains a +2 bonus.
 
 _Doctrinal Clarity_: When you succeed on a Knowledge roll, you may ask the GM one yes/no question about the topic at hand. The answer must be truthful.
 
+### Specialization Feature
+
 **Contradicts the Canon**: Once per scene, when you use Sacred Methodology, you may instead declare both available effects invalid and describe what the phenomenon actually is. Work with the GM to make this a true detail of the world unless it directly contradicts established lore.
+
+### Mastery Feature
 
 **The Grand Synthesis**: Once per session, during a rest, write up your findings on a category of phenomenon. Until the end of the session, all rolls by you or your party to deal with, counter, or understand phenomena of that type gain Advantage.
 
@@ -64,14 +72,24 @@ _Doctrinal Clarity_: When you succeed on a Knowledge roll, you may ask the GM on
 
 _Play the Field Priest if you want your scholarly grounding to make your divine work more precise, more durable, and harder to dismiss._
 
+### Spellcast Trait
+
 Knowledge
+
+### Foundation Features
 
 _Informed Ministry_: When you use Sacred Methodology to invoke divine authority, you may also have the character clear 1 Stress as part of the same action.
 
 _Practical Blessing_: Once per rest, when you successfully consecrate a phenomenon using your class feature, choose one ally. They gain a +1 bonus to all rolls until the end of the scene.
 
+### Specialization Feature
+
 **Rites of Passage**: Once per scene, perform a brief ceremony for a willing character. They receive one of the following: clear 2 Hit Points, clear 2 Stress, or clear one current condition.
 
+### Mastery Feature
+
 **Divine Sanction**: Once per session, when you invoke divine authority using Sacred Methodology, you have the full organizational backing of a religious faction you are affiliated with. They will send aid, provide resources, or speak on your behalf in one meaningful way before the end of the session.
+
+## Mechanical Notes
 
 Your class feature rewards paying attention to the details your GM presents. The more you engage with specific events and phenomena in the fiction, the more clearly you can choose between the two effects. Save Hope for moments when you need both at once. The Theologian path builds information advantages that compound; the Priest path keeps your party functional under pressure. Both paths reward active curiosity and consistent engagement with the sacred and the strange.

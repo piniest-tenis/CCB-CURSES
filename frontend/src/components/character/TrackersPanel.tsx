@@ -8,12 +8,14 @@
  * - Slot trackers (HP, Stress, Armor, Proficiency) — clickable circles
  * - Primary + secondary weapon cards (full field set)
  * - Hope tracker (6 fill-from-left dots)
- * - Experiences list (add / edit / remove)
+ * - Experiences list — with +/- increment buttons, colored bonus display
+ * - Traits section (Ancestry + Community traits with incrementable bonuses)
  */
 
 import React, { useState } from "react";
 import type { CharacterTrackers, WeaponBurden, WeaponDamageType } from "@shared/types";
 import { useCharacterStore } from "@/store/characterStore";
+import { useAncestry, useCommunity } from "@/hooks/useGameData";
 
 // ─── SlotTracker ──────────────────────────────────────────────────────────────
 
@@ -274,8 +276,8 @@ function HopeTracker() {
             <button
               key={i}
               type="button"
-              // Clicking a filled dot resets to i (clear to that dot)
-              // Clicking an empty dot fills to i+1
+              // Clicking a filled dot → clear down to i (set hope = i)
+              // Clicking an empty dot → fill up to i+1 (set hope = i+1)
               onClick={() => updateHope(filled ? i : i + 1)}
               aria-label={`Hope ${i + 1} — ${filled ? "filled" : "empty"}`}
               aria-pressed={filled}
@@ -294,6 +296,75 @@ function HopeTracker() {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// ─── BonusDisplay ─────────────────────────────────────────────────────────────
+// Shared bonus display: colored +N / -N / +0
+
+function BonusDisplay({ bonus }: { bonus: number }) {
+  const label = bonus >= 0 ? `+${bonus}` : `${bonus}`;
+  const color =
+    bonus > 0
+      ? "text-emerald-400"
+      : bonus < 0
+      ? "text-red-400"
+      : "text-parchment-500";
+  return (
+    <span className={`font-bold text-sm tabular-nums min-w-[2.5rem] text-center ${color}`}>
+      {label}
+    </span>
+  );
+}
+
+// ─── IncrementControls ────────────────────────────────────────────────────────
+// Reusable +/- controls for bonus fields
+
+interface IncrementControlsProps {
+  value:    number;
+  onChange: (v: number) => void;
+  /** Optional min clamp (default: none) */
+  min?: number;
+  /** Optional max clamp (default: none) */
+  max?: number;
+  ariaLabel?: string;
+}
+
+function IncrementControls({ value, onChange, min, max, ariaLabel }: IncrementControlsProps) {
+  const canDec = min === undefined || value > min;
+  const canInc = max === undefined || value < max;
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        type="button"
+        onClick={() => onChange(value - 1)}
+        disabled={!canDec}
+        aria-label={ariaLabel ? `Decrease ${ariaLabel}` : "Decrease"}
+        className="
+          h-6 w-6 rounded border border-burgundy-800 bg-slate-900
+          text-xs text-parchment-500 hover:bg-burgundy-900/30 hover:text-parchment-200
+          disabled:opacity-25 disabled:cursor-not-allowed
+          transition-colors flex items-center justify-center leading-none select-none
+        "
+      >
+        −
+      </button>
+      <BonusDisplay bonus={value} />
+      <button
+        type="button"
+        onClick={() => onChange(value + 1)}
+        disabled={!canInc}
+        aria-label={ariaLabel ? `Increase ${ariaLabel}` : "Increase"}
+        className="
+          h-6 w-6 rounded border border-burgundy-800 bg-slate-900
+          text-xs text-parchment-500 hover:bg-gold-900/20 hover:text-gold-300
+          disabled:opacity-25 disabled:cursor-not-allowed
+          transition-colors flex items-center justify-center leading-none select-none
+        "
+      >
+        +
+      </button>
     </div>
   );
 }
@@ -326,14 +397,17 @@ function ExperiencesList() {
     );
   };
 
-  const updateExpField = (
-    index: number,
-    field: "name" | "bonus",
-    value: string | number
-  ) => {
+  const updateExpName = (index: number, value: string) => {
     updateField(
       "experiences",
-      experiences.map((exp, i) => (i === index ? { ...exp, [field]: value } : exp))
+      experiences.map((exp, i) => (i === index ? { ...exp, name: value } : exp))
+    );
+  };
+
+  const updateExpBonus = (index: number, value: number) => {
+    updateField(
+      "experiences",
+      experiences.map((exp, i) => (i === index ? { ...exp, bonus: value } : exp))
     );
   };
 
@@ -343,39 +417,37 @@ function ExperiencesList() {
         Experiences
       </span>
 
+      {experiences.length === 0 && (
+        <p className="text-xs text-parchment-600 italic">No experiences yet.</p>
+      )}
+
       {experiences.map((exp, i) => (
-        <div key={i} className="flex items-center gap-2">
+        <div
+          key={i}
+          className="flex items-center gap-2 rounded-lg border border-burgundy-900/40 bg-slate-900/50 px-3 py-2"
+        >
           <input
             type="text"
             value={exp.name}
-            onChange={(e) => updateExpField(i, "name", e.target.value)}
+            onChange={(e) => updateExpName(i, e.target.value)}
             placeholder="Experience name"
             aria-label={`Experience ${i + 1} name`}
             className="
-              flex-1 rounded bg-slate-900 px-2 py-1 text-sm text-parchment-200
-              border border-burgundy-800 focus:outline-none focus:border-gold-500
+              flex-1 rounded bg-transparent px-1 py-0 text-sm text-parchment-200
+              border-b border-transparent focus:border-gold-600 focus:outline-none
               placeholder-parchment-700 transition-colors
             "
           />
-          <input
-            type="number"
+          <IncrementControls
             value={exp.bonus}
-            onChange={(e) =>
-              updateExpField(i, "bonus", parseInt(e.target.value, 10) || 0)
-            }
-            aria-label={`Experience ${i + 1} bonus`}
-            className="
-              w-14 rounded bg-slate-900 px-2 py-1 text-sm text-center text-parchment-200
-              border border-burgundy-800 focus:outline-none focus:border-gold-500
-              [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none
-              transition-colors
-            "
+            onChange={(v) => updateExpBonus(i, v)}
+            ariaLabel={`experience ${exp.name || i + 1} bonus`}
           />
           <button
             type="button"
             onClick={() => removeExperience(i)}
             aria-label={`Remove experience: ${exp.name}`}
-            className="px-1 text-burgundy-400 hover:text-burgundy-200 transition-colors text-sm leading-none"
+            className="ml-1 h-5 w-5 flex items-center justify-center rounded text-burgundy-500 hover:text-burgundy-300 hover:bg-burgundy-900/30 transition-colors text-xs leading-none"
           >
             ✕
           </button>
@@ -392,29 +464,44 @@ function ExperiencesList() {
           placeholder="New experience…"
           aria-label="New experience name"
           className="
-            flex-1 rounded bg-slate-900 px-2 py-1 text-sm text-parchment-300
+            flex-1 rounded bg-slate-900 px-2 py-1.5 text-sm text-parchment-300
             border border-dashed border-burgundy-800 focus:outline-none
             focus:border-gold-600 placeholder-parchment-700 transition-colors
           "
         />
-        <input
-          type="number"
-          value={newBonus}
-          onChange={(e) => setNewBonus(parseInt(e.target.value, 10) || 0)}
-          aria-label="New experience bonus"
-          className="
-            w-14 rounded bg-slate-900 px-2 py-1 text-sm text-center text-parchment-300
-            border border-dashed border-burgundy-800 focus:outline-none
-            [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none
-            transition-colors
-          "
-        />
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setNewBonus((b) => b - 1)}
+            aria-label="Decrease new experience starting bonus"
+            className="
+              h-6 w-6 rounded border border-burgundy-800 bg-slate-900
+              text-xs text-parchment-600 hover:bg-burgundy-900/30
+              transition-colors flex items-center justify-center leading-none
+            "
+          >
+            −
+          </button>
+          <BonusDisplay bonus={newBonus} />
+          <button
+            type="button"
+            onClick={() => setNewBonus((b) => b + 1)}
+            aria-label="Increase new experience starting bonus"
+            className="
+              h-6 w-6 rounded border border-burgundy-800 bg-slate-900
+              text-xs text-parchment-600 hover:bg-gold-900/20
+              transition-colors flex items-center justify-center leading-none
+            "
+          >
+            +
+          </button>
+        </div>
         <button
           type="button"
           onClick={addExperience}
           disabled={!newName.trim()}
           className="
-            rounded px-2 py-1 text-xs font-semibold
+            rounded px-2.5 py-1.5 text-xs font-semibold
             bg-burgundy-800 text-parchment-200 hover:bg-burgundy-700
             disabled:opacity-40 disabled:cursor-not-allowed
             transition-colors
@@ -423,6 +510,92 @@ function ExperiencesList() {
           Add
         </button>
       </div>
+    </div>
+  );
+}
+
+// ─── TraitsSection ────────────────────────────────────────────────────────────
+// Displays ancestry + community traits with incrementable bonuses.
+// Bonuses stored in character.traitBonuses (with graceful fallback to
+// classFeatureState["trait_ancestry"] / classFeatureState["trait_community"]).
+
+function TraitsSection() {
+  const { activeCharacter, updateField } = useCharacterStore();
+
+  if (!activeCharacter) return null;
+
+  const ancestryId  = activeCharacter.ancestryId  ?? undefined;
+  const communityId = activeCharacter.communityId ?? undefined;
+
+  const { data: ancestryData  } = useAncestry(ancestryId);
+  const { data: communityData } = useCommunity(communityId);
+
+  // No traits to show if neither is set
+  if (!ancestryId && !communityId) return null;
+
+  // Helper: get trait bonus
+  const getTraitBonus = (key: string): number => {
+    // Prefer traitBonuses field (backend v2)
+    const traitBonuses = activeCharacter.traitBonuses ?? {};
+    if (key in traitBonuses) return traitBonuses[key];
+    // Fallback to classFeatureState workaround
+    const featureKey = key === "ancestry" ? "trait_ancestry" : "trait_community";
+    return activeCharacter.classFeatureState?.[featureKey]?.tokens ?? 0;
+  };
+
+  // Helper: set trait bonus
+  const setTraitBonus = (key: string, value: number) => {
+    const traitBonuses = { ...(activeCharacter.traitBonuses ?? {}) };
+    traitBonuses[key] = value;
+    updateField("traitBonuses", traitBonuses);
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-xs font-semibold uppercase tracking-wider text-parchment-400">
+        Traits
+      </span>
+      <p className="text-[11px] text-parchment-600 italic -mt-1">
+        Ancestry and community traits — increment as you level up.
+      </p>
+
+      {/* Ancestry trait */}
+      {ancestryData && (
+        <div className="flex items-center gap-2 rounded-lg border border-burgundy-900/40 bg-slate-900/50 px-3 py-2">
+          <div className="flex-1 min-w-0">
+            <span className="text-[10px] uppercase tracking-wider text-parchment-600 block">
+              Ancestry — {ancestryData.name}
+            </span>
+            <span className="text-sm font-semibold text-parchment-200">
+              {ancestryData.traitName}
+            </span>
+          </div>
+          <IncrementControls
+            value={getTraitBonus("ancestry")}
+            onChange={(v) => setTraitBonus("ancestry", v)}
+            ariaLabel="ancestry trait bonus"
+          />
+        </div>
+      )}
+
+      {/* Community trait */}
+      {communityData && (
+        <div className="flex items-center gap-2 rounded-lg border border-burgundy-900/40 bg-slate-900/50 px-3 py-2">
+          <div className="flex-1 min-w-0">
+            <span className="text-[10px] uppercase tracking-wider text-parchment-600 block">
+              Community — {communityData.name}
+            </span>
+            <span className="text-sm font-semibold text-parchment-200">
+              {communityData.traitName}
+            </span>
+          </div>
+          <IncrementControls
+            value={getTraitBonus("community")}
+            onChange={(v) => setTraitBonus("community", v)}
+            ariaLabel="community trait bonus"
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -521,6 +694,9 @@ export function TrackersPanel() {
 
       {/* Hope */}
       <HopeTracker />
+
+      {/* Traits (ancestry + community) */}
+      <TraitsSection />
 
       {/* Experiences */}
       <ExperiencesList />

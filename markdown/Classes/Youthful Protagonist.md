@@ -51,13 +51,21 @@ _Ask your fellow players one of the following questions for their characters to 
 
 _Play Reluctant Chosen if you want to be the one who didn't ask for any of this and somehow can't stop stepping up anyway._
 
+### Spellcast Trait
+
 Agility
+
+### Foundation Features
 
 _Anybody Else Would Have Stopped_: Once per rest, when you use Not Done Yet, you can immediately clear 1 Stress after marking it. You pushed through something that should have ended you.
 
 _Always in the Way_: Once per rest, when an ally within Very Close range would mark a Hit Point, you may step in front and mark it instead. When you do, clear 1 Stress.
 
+### Specialization Feature
+
 **Just This Once**: Once per scene, until the start of your next turn any attack that would target an ally within Close range targets you instead. Attack rolls against you during this time gain Disadvantage.
+
+### Mastery Feature
 
 **The Part Where I Don't Give Up**: Once per session, activate Not Done Yet without needing to take damage to trigger it. While active, you may intercept one hit per round from any ally within Close range. The effect lasts for the rest of the scene.
 
@@ -65,14 +73,24 @@ _Always in the Way_: Once per rest, when an ally within Very Close range would m
 
 _Play Burning Conviction if you want every blow you take to be paid back tenfold by the ones who hurt people you cared about._
 
+### Spellcast Trait
+
 Presence
+
+### Foundation Features
 
 _It's Making Me Stronger_: When you use Not Done Yet and mark a Stress instead of a Hit Point, your next attack deals +d8 additional damage. This bonus stacks once per use of Not Done Yet per scene.
 
 _Running on Something_: When more than half your Hit Points are marked, gain a bonus to all damage rolls equal to the number of marked Hit Points.
 
+### Specialization Feature
+
 **Spite as a Strategy**: When Not Done Yet is active, your attacks against any adversary who has targeted you during this scene gain Advantage. Add your Level to damage dealt.
 
+### Mastery Feature
+
 **I Told You So**: Once per session, when you have used Not Done Yet at least twice in a single combat, your next attack is automatically a Critical Success. Describe what you were thinking about during this fight that made you refuse to stop.
+
+## Mechanical Notes
 
 Not Done Yet is an active decision: you must choose to use it when damage is declared, not before or after. It rewards knowing when protecting yourself through Stress is worth it versus letting a Hit Point land. The Reluctant Chosen path rewards staying close to your allies and making your body a wall between them and harm; the Burning Conviction path rewards staying in the thick of it and converting every wound into momentum. Both paths require careful Stress management. Don't trigger Not Done Yet when you're near your Stress limit, or the thing that keeps you going will be the thing that ends you.

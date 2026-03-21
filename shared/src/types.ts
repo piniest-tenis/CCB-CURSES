@@ -114,6 +114,7 @@ export interface Character extends CharacterSummary {
   domainLoadout: string[]; // cardIds, max 5
   domainVault: string[];   // all unlocked cardIds
   classFeatureState: ClassFeatureState;
+  traitBonuses: Record<string, number>;
   notes: string | null;
   avatarKey: string | null;
   createdAt: string;

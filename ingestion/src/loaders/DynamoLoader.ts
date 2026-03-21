@@ -23,6 +23,8 @@ import {
   BatchWriteCommand,
   type BatchWriteCommandInput,
   PutCommand,
+  ScanCommand,
+  type ScanCommandInput,
 } from "@aws-sdk/lib-dynamodb";
 
 // ─── Client singleton ─────────────────────────────────────────────────────────
@@ -256,4 +258,169 @@ export async function upsertItem(
     );
     throw err;
   }
+}
+
+// ─── scanAllKeys ──────────────────────────────────────────────────────────────
+
+/**
+ * Scan a DynamoDB table and return all PK+SK pairs that match an optional
+ * filter expression.  Uses pagination to handle tables larger than 1 MB.
+ *
+ * @param tableName        Target DynamoDB table name.
+ * @param filterExpression Optional DynamoDB filter expression string.
+ * @param expressionAttributeValues Optional map of expression attribute values.
+ * @returns Array of `{ PK, SK }` objects.
+ */
+export async function scanAllKeys(
+  tableName: string,
+  filterExpression?: string,
+  expressionAttributeValues?: Record<string, unknown>
+): Promise<Array<{ PK: string; SK: string }>> {
+  const client = getClient();
+  const keys: Array<{ PK: string; SK: string }> = [];
+  let lastEvaluatedKey: Record<string, unknown> | undefined;
+
+  do {
+    const input: ScanCommandInput = {
+      TableName: tableName,
+      ProjectionExpression: "PK, SK",
+      ...(filterExpression ? { FilterExpression: filterExpression } : {}),
+      ...(expressionAttributeValues
+        ? { ExpressionAttributeValues: expressionAttributeValues }
+        : {}),
+      ...(lastEvaluatedKey ? { ExclusiveStartKey: lastEvaluatedKey } : {}),
+    };
+
+    const response = await client.send(new ScanCommand(input));
+    for (const item of response.Items ?? []) {
+      if (typeof item["PK"] === "string" && typeof item["SK"] === "string") {
+        keys.push({ PK: item["PK"] as string, SK: item["SK"] as string });
+      }
+    }
+    lastEvaluatedKey = response.LastEvaluatedKey as
+      | Record<string, unknown>
+      | undefined;
+  } while (lastEvaluatedKey);
+
+  return keys;
+}
+
+// ─── batchDelete ─────────────────────────────────────────────────────────────
+
+/**
+ * Batch-delete items from a DynamoDB table by PK+SK key pairs.
+ *
+ * Mirrors `batchUpsert` in chunking and retry behaviour.
+ *
+ * @param tableName  Target DynamoDB table name.
+ * @param keys       Array of `{ PK, SK }` key pairs to delete.
+ * @returns          A `LoadResult` describing success/failure counts.
+ */
+export async function batchDelete(
+  tableName: string,
+  keys: Array<{ PK: string; SK: string }>
+): Promise<LoadResult> {
+  const client = getClient();
+  const result: LoadResult = {
+    tableName,
+    totalItems: keys.length,
+    successCount: 0,
+    errorCount: 0,
+    errors: [],
+  };
+
+  if (keys.length === 0) {
+    console.log(`[DynamoLoader] No items to delete from "${tableName}".`);
+    return result;
+  }
+
+  console.log(
+    `[DynamoLoader] Deleting ${keys.length} item(s) from "${tableName}" ` +
+      `in batches of 25...`
+  );
+
+  const MAX_ATTEMPTS = 6;
+  const BASE_DELAY_MS = 100;
+
+  type DeleteRequestItem = {
+    DeleteRequest: { Key: { PK: string; SK: string } };
+  };
+
+  const batches = chunk(keys, 25);
+
+  for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
+    const batchNum = batchIdx + 1;
+    let pending: DeleteRequestItem[] = batches[batchIdx].map((key) => ({
+      DeleteRequest: { Key: key },
+    }));
+
+    let attempt = 0;
+
+    while (pending.length > 0 && attempt < MAX_ATTEMPTS) {
+      if (attempt > 0) {
+        const delayMs = BASE_DELAY_MS * Math.pow(2, attempt - 1);
+        console.log(
+          `[DynamoLoader] Delete batch ${batchNum}/${batches.length}: ` +
+            `retrying ${pending.length} unprocessed item(s) ` +
+            `(attempt ${attempt + 1}/${MAX_ATTEMPTS}, wait ${delayMs} ms)...`
+        );
+        await sleep(delayMs);
+      }
+
+      const input: BatchWriteCommandInput = {
+        RequestItems: {
+          [tableName]: pending,
+        },
+      };
+
+      try {
+        const response = await client.send(new BatchWriteCommand(input));
+        const unprocessed =
+          (response.UnprocessedItems?.[tableName] as
+            | DeleteRequestItem[]
+            | undefined) ?? [];
+
+        const processedCount = pending.length - unprocessed.length;
+        result.successCount += processedCount;
+        pending = unprocessed;
+
+        if (pending.length === 0) {
+          console.log(
+            `[DynamoLoader] Delete batch ${batchNum}/${batches.length}: ` +
+              `${processedCount} item(s) deleted successfully.`
+          );
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(
+          `[DynamoLoader] BatchDelete error on batch ${batchNum}, ` +
+            `attempt ${attempt + 1}: ${message}`
+        );
+        result.errorCount += pending.length;
+        result.errors.push(
+          `Batch ${batchNum} attempt ${attempt + 1}: ${message}`
+        );
+        pending = [];
+        break;
+      }
+
+      attempt++;
+    }
+
+    if (pending.length > 0) {
+      const msg =
+        `Delete batch ${batchNum}: ${pending.length} item(s) failed ` +
+        `after ${MAX_ATTEMPTS} attempts`;
+      console.error(`[DynamoLoader] ${msg}`);
+      result.errorCount += pending.length;
+      result.errors.push(msg);
+    }
+  }
+
+  console.log(
+    `[DynamoLoader] "${tableName}": ` +
+      `${result.successCount} deleted, ${result.errorCount} failed.`
+  );
+
+  return result;
 }

@@ -53,7 +53,7 @@ import {
   validateRule,
 } from "./validators/IngestionValidator";
 
-import { batchUpsert } from "./loaders/DynamoLoader";
+import { batchUpsert, batchDelete, scanAllKeys } from "./loaders/DynamoLoader";
 
 import type {
   ClassData,
@@ -268,6 +268,56 @@ async function runClasses(opts: CliOptions): Promise<CategorySummary> {
   const allClassItems = [...metadataItems, ...subclassItems];
 
   if (!opts.dryRun && allClassItems.length > 0) {
+    // ── Stale-record cleanup ────────────────────────────────────────────────
+    // Scan DynamoDB for all CLASS# METADATA records.  Any whose classId is NOT
+    // in the current set of markdown files is orphaned and should be deleted
+    // (along with all its SUBCLASS# children).
+    const existingMetaKeys = await scanAllKeys(
+      TABLE_CLASSES,
+      "begins_with(PK, :prefix) AND SK = :sk",
+      { ":prefix": "CLASS#", ":sk": "METADATA" }
+    );
+
+    const currentClassIds = new Set(
+      metadataItems.map((item) => (item["classId"] as string) ?? "")
+    );
+
+    const staleClassPKs = existingMetaKeys
+      .map((k) => k.PK)
+      .filter((pk) => {
+        const classId = pk.replace(/^CLASS#/, "");
+        return !currentClassIds.has(classId);
+      });
+
+    if (staleClassPKs.length > 0) {
+      console.log(
+        `[classes] Found ${staleClassPKs.length} stale class PK(s) — scanning for all related items...`
+      );
+
+      // Fetch all items (METADATA + SUBCLASS#*) for each stale PK.
+      // scanAllKeys with a filter on PK is a scan — for small tables this is fine.
+      const staleKeys: Array<{ PK: string; SK: string }> = [];
+      for (const pk of staleClassPKs) {
+        const relatedKeys = await scanAllKeys(
+          TABLE_CLASSES,
+          "PK = :pk",
+          { ":pk": pk }
+        );
+        staleKeys.push(...relatedKeys);
+        console.log(
+          `[classes]   Stale PK "${pk}": ${relatedKeys.length} item(s) to delete`
+        );
+      }
+
+      const dr = await batchDelete(TABLE_CLASSES, staleKeys);
+      console.log(
+        `[classes] Stale-record cleanup: deleted ${dr.successCount}/${dr.totalItems} item(s).`
+      );
+    } else {
+      console.log("[classes] No stale records found — nothing to delete.");
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
     const lr = await batchUpsert(TABLE_CLASSES, allClassItems);
     summary.loaded = lr.successCount;
   } else if (opts.dryRun) {

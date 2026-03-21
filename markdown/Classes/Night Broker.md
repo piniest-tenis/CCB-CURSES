@@ -47,13 +47,21 @@ _Ask your fellow players one of the following questions for their characters to 
 
 _Play the Fold-Walker if you want to treat the space between places as your territory and use it to move in ways no one can follow._
 
+### Spellcast Trait
+
 Instinct
+
+### Foundation Features
 
 _Spatial Memory_: You know when a space you've previously entered via Between Places has been changed, entered by others, or disturbed. You do not need to be present to know; you simply become aware of it.
 
 _Between Moments_: Once per rest after you use Between Places, you may remain in the _Hidden_ condition even after taking a non-attack action. An attack or a failed roll to stay hidden ends the condition.
 
+### Specialization Feature
+
 **Fold Point**: The first time you use Fold Point in a scene, designate a location within Far range as a fold point. Once per scene hereafter, you may teleport to that point as an immediate action, including as a reaction to being targeted by an attack, which then resolves with Disadvantage against you. You may otherwise move to that location as an Action until the end of the scene.
+
+### Mastery Feature
 
 **Unmappable**: Once per session, while using Between Places, you may take one willing ally into the space between places. In this space, time does not pass for either of you, no damage can reach you, and you can observe the scene around you without being perceived. You must both emerge after a brief period (no longer than you can hold your breath).
 
@@ -61,14 +69,24 @@ _Between Moments_: Once per rest after you use Between Places, you may remain in
 
 _Play the Acquisitor if you want impossible access to be the foundation of a very efficient criminal practice._
 
+### Spellcast Trait
+
 Finesse
+
+### Foundation Features
 
 _Clean Hands_: Whenever you use Between Places to enter a space, you may take one item from that space that is not actively held by a character. Describe what you take. If it is not secured or locked, no additional roll is required.
 
 _Quick Exit_: Once per rest immediately after a Thievery action, you may use Between Places as a reaction, even if you've already used it this scene.
 
+### Specialization Feature
+
 **Perfect Access**: Once per scene, when you use Between Places to enter a secured space, you have uninterrupted time to act within that space before anyone notices you entered. Describe one thing you accomplish fully before the scene resumes.
 
+### Mastery Feature
+
 **The Take**: Once per session, plan and execute a theft without requiring a separate downtime project. State what you intend to take and where it is. The GM tells you the difficulty. Make a Finesse roll against that difficulty. On a success, you have it.
+
+## Mechanical Notes
 
 Between Places is a positioning tool first. Use it to set up advantages, not just as an escape hatch. The Fold-Walker path rewards long-term spatial planning and treating locations as relationships; the Acquisitor path is about decisive, irreversible action with clean recovery. In either case, use your class feature every scene; the class loses much of its power if you hold Between Places in reserve indefinitely.

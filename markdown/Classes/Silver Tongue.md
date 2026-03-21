@@ -47,13 +47,21 @@ _Ask your fellow players one of the following questions for their characters to 
 
 _Play the Dazzler if you want the crowd watching you to be the whole point, with everything else happening in that perfect moment of distraction._
 
+### Spellcast Trait
+
 Presence
+
+### Foundation Features
 
 _Captive Audience_: Once per rest, when you perform for a group of at least two characters, make a Spellcast Roll (13). On a success, all witnesses are _Stunned_ for one round unless they choose to mark a Stress to shake free. This cannot affect adversaries who are already alert to your criminal intent.
 
 _Beguiling Act_: When you use your class feature, your distraction is so convincing that even suspicious characters become momentarily fixed on you. Gain Advantage on any Presence roll made in the same scene where you've activated your class feature.
 
+### Specialization Feature
+
 **The Only Show in Town**: Once per scene, choose a target who has witnessed you perform. Until the end of the scene, all rolls made by that target to notice anything other than you are made with Disadvantage.
+
+### Mastery Feature
 
 **Standing Ovation**: Once per session, after a significant performance, spend 2 Hope. Every character who witnessed it will speak favorably about you to anyone who asks for the rest of the session, potentially opening doors your reputation would normally close.
 
@@ -61,14 +69,24 @@ _Beguiling Act_: When you use your class feature, your distraction is so convinc
 
 _Play the Quiet Hand if you want to be genuinely hard to catch, using just enough charm to keep people looking the wrong way._
 
+### Spellcast Trait
+
 Finesse
+
+### Foundation Features
 
 _Practiced Grace_: When you use your class feature, you may also choose to leave something behind without detection. Useful for marking, planting, or quietly altering a [[Character|Character's]] inventory.
 
 _Slipped Away_: Once per rest, after using your class feature against a target, you may immediately move up to Far range without a roll.
 
+### Specialization Feature
+
 **Clean Job**: Once per scene, when you succeed on a Thievery roll using your class feature, treat the result as a Critical Success.
 
+### Mastery Feature
+
 **Ghost of the Night**: Once per session, when you activate your class feature, you may use it against up to three different targets in the same scene. Each attempt benefits from the cover established by the previous success.
+
+## Mechanical Notes
 
 The distraction always comes before the action. Your class feature depends on the social moment landing first. Work to set it up in every scene with a social element before the situation turns. Your Thievery actions become considerably more reliable when attached to this feature, so think beyond objects in pockets: information, planted items, and quiet access all count. The Dazzler path rewards patience and planning; the Quiet Hand path rewards opportunism and clean exits.

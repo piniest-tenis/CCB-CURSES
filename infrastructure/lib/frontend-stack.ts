@@ -107,6 +107,63 @@ export class FrontendStack extends cdk.Stack {
     );
 
     // -----------------------------------------------------------------------
+    // CloudFront Function — rewrite clean URLs to S3 object keys
+    //
+    // Next.js static export with trailingSlash:true produces files like
+    // dashboard/index.html, character/[id]/index.html, etc.
+    // CloudFront's defaultRootObject only handles the bare root ("/");
+    // for every other path it requests the URI verbatim from S3, so
+    // "/dashboard/" yields a 403 (no such key).
+    //
+    // This viewer-request function rewrites:
+    //   /dashboard/   → /dashboard/index.html
+    //   /dashboard    → /dashboard/index.html
+    //   /             → /index.html          (redundant but harmless)
+    // Static asset paths (/_next/…) pass through unchanged.
+    // -----------------------------------------------------------------------
+    const urlRewriteFunction = new cloudfront.Function(
+      this,
+      "UrlRewriteFunction",
+      {
+        functionName: `daggerheart-url-rewrite-${stage}`,
+        comment: "Rewrite trailing-slash and clean URLs to S3 index.html keys",
+        code: cloudfront.FunctionCode.fromInline(`
+function handler(event) {
+  var request = event.request;
+  var uri = request.uri;
+
+  // Rewrite dynamic Next.js static-export routes to their __placeholder__ file.
+  // The static export only generates one HTML file per dynamic segment; the
+  // client-side router handles the actual param at runtime.
+  var dynamicRoutes = [
+    { pattern: /^\\/character\\/[^/]+\\/view(\\/)?$/, target: "/character/__placeholder__/view/index.html" },
+    { pattern: /^\\/character\\/[^/]+(\\/)?$/, target: "/character/__placeholder__/index.html" },
+    { pattern: /^\\/classes\\/[^/]+(\\/)?$/, target: "/classes/__placeholder__/index.html" },
+    { pattern: /^\\/domains\\/[^/]+(\\/)?$/, target: "/domains/__placeholder__/index.html" },
+  ];
+
+  for (var i = 0; i < dynamicRoutes.length; i++) {
+    if (dynamicRoutes[i].pattern.test(uri)) {
+      request.uri = dynamicRoutes[i].target;
+      return request;
+    }
+  }
+
+  // For static paths: append index.html when the URI ends with "/" or has no file extension
+  if (uri.endsWith("/")) {
+    request.uri = uri + "index.html";
+  } else if (!uri.includes(".", uri.lastIndexOf("/"))) {
+    request.uri = uri + "/index.html";
+  }
+
+  return request;
+}
+        `.trim()),
+        runtime: cloudfront.FunctionRuntime.JS_2_0,
+      }
+    );
+
+    // -----------------------------------------------------------------------
     // CloudFront Distribution
     // -----------------------------------------------------------------------
     this.distribution = new cloudfront.Distribution(
@@ -129,6 +186,12 @@ export class FrontendStack extends cdk.Stack {
           compress: true,
           allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
           cachedMethods: cloudfront.CachedMethods.CACHE_GET_HEAD_OPTIONS,
+          functionAssociations: [
+            {
+              function: urlRewriteFunction,
+              eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+            },
+          ],
         },
 
         // Additional cache behavior for static assets — long TTL

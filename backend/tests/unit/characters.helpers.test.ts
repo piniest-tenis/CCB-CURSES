@@ -55,6 +55,7 @@ function makeCharacter(overrides: Partial<Character> = {}): Character {
     domainLoadout: [],
     domainVault: [],
     classFeatureState: {},
+    traitBonuses: {},
     notes: null,
     avatarKey: null,
     ...overrides,

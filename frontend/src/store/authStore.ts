@@ -20,6 +20,8 @@ interface AuthState {
   idToken: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  /** True once initialize() has finished its first run. */
+  isReady: boolean;
 }
 
 interface AuthActions {
@@ -58,6 +60,7 @@ export const useAuthStore = create<AuthStore>()(
         idToken:         null,
         isLoading:       false,
         isAuthenticated: false,
+        isReady:         false,
 
         // ── initialize ────────────────────────────────────────────────────
         initialize: async () => {
@@ -94,7 +97,7 @@ export const useAuthStore = create<AuthStore>()(
           } catch {
             set({ user: null, idToken: null, isAuthenticated: false });
           } finally {
-            set({ isLoading: false });
+            set({ isLoading: false, isReady: true });
           }
         },
 

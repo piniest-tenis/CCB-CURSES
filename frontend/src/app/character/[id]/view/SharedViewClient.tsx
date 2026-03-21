@@ -10,7 +10,7 @@
 
 import React, { Suspense } from "react";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 import type { Character, CoreStatName } from "@shared/types";
@@ -113,12 +113,12 @@ export default function SharedCharacterViewPage() {
 }
 
 function SharedCharacterViewContent() {
-  const params = useParams<{ id: string }>();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const token = searchParams?.get("token");
 
   const { data: character, isLoading, isError, error } = useSharedCharacter(
-    params?.id ?? "",
+    pathname?.split("/")[2] ?? "",
     token ?? null
   );
 
