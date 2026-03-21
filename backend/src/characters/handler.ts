@@ -646,6 +646,15 @@ async function createCharacter(
     customConditions: [],
   };
 
+  // ── SRD Validation ─────────────────────────────────────────────────────────
+  // Validate the created character against SRD rules before persisting.
+  // This is the basic validation layer; full campaign frame validation would
+  // require loading all allowed classes/domains/ancestries/communities.
+  const srdErrors = validateSrdRules(character as Partial<Character>);
+  if (srdErrors.length > 0) {
+    throw AppError.srdViolation("Character violates SRD rules", srdErrors);
+  }
+
   await putItem({
     TableName: CHARACTERS_TABLE,
     Item: character,
@@ -1161,6 +1170,13 @@ async function levelUpCharacter(
     SK: existing.SK,
     updatedAt: new Date().toISOString(),
   };
+
+  // ── SRD Validation ─────────────────────────────────────────────────────────
+  // Validate the updated character against SRD rules before persisting.
+  const srdErrors = validateSrdRules(updatedCharacter as Partial<Character>);
+  if (srdErrors.length > 0) {
+    throw AppError.srdViolation("Level-up violates SRD rules", srdErrors);
+  }
 
   await putItem({
     TableName: CHARACTERS_TABLE,
