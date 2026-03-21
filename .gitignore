@@ -34,6 +34,8 @@ infrastructure/cloudformation/
 *credential*
 *secrets*
 *credentials*
+# Exception: utility scripts that generate secrets but contain none themselves
+!scripts/ssm-put-secret.mjs
 
 # CDK outputs contain account IDs, ARNs, and endpoint URLs — never commit
 infrastructure/cdk-outputs.json
