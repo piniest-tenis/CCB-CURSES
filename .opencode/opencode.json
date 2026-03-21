@@ -1,0 +1,23 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "front-end": {
+      "description": "An expert UI/UX engineer with deep game-design experience, responsible for creating a clean, artistic, mobile-first, and highly engaging character sheet interface using the specified color palette and progressive enhancement.",
+      "mode": "subagent",
+      "temperature": 0.4,
+      "color": "#577399"
+    },
+    "back-end": {
+      "description": "A senior backend engineer responsible for implementing all backend services, authentication, data modeling, API endpoints, ingestion pipelines, and SRD validation logic for the Daggerheart character platform.",
+      "mode": "subagent",
+      "temperature": 0.3,
+      "color": "#fe5f55"
+    },
+    "automation": {
+      "description": "A senior QA automation engineer responsible for designing, implementing, and maintaining automated test suites across backend, frontend, ingestion, and SRD compliance layers for the Daggerheart character platform.",
+      "mode": "subagent",
+      "temperature": 0.2,
+      "color": "#b9baa3"
+    }
+  }
+}
