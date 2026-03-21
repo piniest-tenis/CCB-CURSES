@@ -147,40 +147,30 @@ function ActionableSlotTracker({
   );
 }
 
-// ─── ThresholdInput ───────────────────────────────────────────────────────────
+// ─── ThresholdDisplay (read-only) ─────────────────────────────────────────────
+// SRD p.3/22: Damage thresholds = armor base threshold + character level.
+// These are derived values, not user-editable.
 
-interface ThresholdInputProps {
-  label:    string;
-  value:    number;
-  onChange: (v: number) => void;
+interface ThresholdDisplayProps {
+  label: string;
+  value: number;
 }
 
-function ThresholdInput({ label, value, onChange }: ThresholdInputProps) {
-  const inputId = `threshold-${label.toLowerCase()}`;
+function ThresholdDisplay({ label, value }: ThresholdDisplayProps) {
   return (
     <div className="flex flex-col items-center gap-1">
-      <input
-        id={inputId}
-        type="number"
-        min={0}
-        max={99}
-        value={value}
-        onChange={(e) => {
-          const v = parseInt(e.target.value, 10);
-          if (!isNaN(v) && v >= 0) onChange(v);
-        }}
-        aria-label={`${label} damage threshold`}
+      <div
         className="
-          h-10 w-14 rounded border border-burgundy-700 bg-slate-850
-          text-center text-lg font-bold text-parchment-200
-          focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500 transition-colors
-          [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none
-          [&::-webkit-outer-spin-button]:appearance-none
+          h-10 w-14 rounded border border-burgundy-700 bg-slate-900
+          flex items-center justify-center shadow-inner
         "
-      />
-      <label htmlFor={inputId} className="text-[10px] uppercase tracking-widest text-parchment-500 cursor-pointer">
+        aria-label={`${label} damage threshold: ${value}`}
+      >
+        <span className="text-lg font-bold text-parchment-200">{value}</span>
+      </div>
+      <span className="text-[10px] uppercase tracking-widest text-parchment-500">
         {label}
-      </label>
+      </span>
     </div>
   );
 }
@@ -798,25 +788,17 @@ export function TrackersPanel() {
         Trackers
       </h2>
 
-      {/* Damage Thresholds */}
+      {/* Damage Thresholds (read-only, derived from armor + level) */}
       <div>
         <h3 className="mb-3 text-xs font-medium uppercase tracking-wider text-parchment-500">
           Damage Thresholds
         </h3>
         <p className="mb-2 text-[11px] text-parchment-600 italic">
-          Formula: armor base threshold + character level (SRD p. 20).
+          Derived from armor base threshold + character level (SRD p. 3, 22). Updated by leveling and armor changes.
         </p>
         <div className="flex gap-5">
-          <ThresholdInput
-            label="Major"
-            value={damageThresholds.major}
-            onChange={(v) => updateField("damageThresholds.major", v)}
-          />
-          <ThresholdInput
-            label="Severe"
-            value={damageThresholds.severe}
-            onChange={(v) => updateField("damageThresholds.severe", v)}
-          />
+          <ThresholdDisplay label="Major" value={damageThresholds.major} />
+          <ThresholdDisplay label="Severe" value={damageThresholds.severe} />
         </div>
       </div>
 
@@ -855,45 +837,26 @@ export function TrackersPanel() {
           colorFilled="bg-parchment-500"
         />
 
-        {/* Proficiency — scalar integer, not a slot resource */}
+        {/* Proficiency — read-only, set by tier achievements and advancement */}
         <div className="flex flex-col gap-1.5">
           <span className="text-xs font-semibold uppercase tracking-wider text-parchment-400">
             Proficiency
           </span>
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                const v = Math.max(1, (activeCharacter.proficiency ?? 1) - 1);
-                updateField("proficiency", v);
-              }}
-              disabled={(activeCharacter.proficiency ?? 1) <= 1}
-              aria-label="Decrease proficiency"
-              className="h-9 w-9 rounded border border-burgundy-800 bg-slate-900 text-xs text-parchment-500 hover:bg-burgundy-900/30 disabled:opacity-25 disabled:cursor-not-allowed transition-colors flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-gold-500"
-            >
-              −
-            </button>
-            <span
-              className="text-2xl font-bold text-parchment-100 w-8 text-center tabular-nums"
+            <div
+              className="
+                h-12 w-12 rounded-lg border border-gold-800 bg-slate-900
+                flex items-center justify-center shadow-inner
+              "
               aria-label={`Proficiency: ${activeCharacter.proficiency ?? 1}`}
             >
-              {activeCharacter.proficiency ?? 1}
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                const v = Math.min(4, (activeCharacter.proficiency ?? 1) + 1);
-                updateField("proficiency", v);
-              }}
-              disabled={(activeCharacter.proficiency ?? 1) >= 4}
-              aria-label="Increase proficiency"
-              className="h-9 w-9 rounded border border-burgundy-800 bg-slate-900 text-xs text-parchment-500 hover:bg-gold-900/20 hover:text-gold-300 disabled:opacity-25 disabled:cursor-not-allowed transition-colors flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-gold-500"
-            >
-              +
-            </button>
+              <span className="text-2xl font-bold text-gold-400 tabular-nums">
+                {activeCharacter.proficiency ?? 1}
+              </span>
+            </div>
           </div>
           <p className="text-[10px] text-parchment-600 italic">
-            Starts at 1; increases at tiers 2, 3, 4.
+            Increases at tier achievements (levels 2, 5, 8) and via advancement. Range: 1-6.
           </p>
         </div>
       </div>

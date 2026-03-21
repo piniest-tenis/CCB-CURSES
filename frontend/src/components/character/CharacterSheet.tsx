@@ -33,6 +33,7 @@ import { DomainLoadout }            from "./DomainLoadout";
 import { DowntimeModal }            from "./DowntimeModal";
 import { CompanionPanel }           from "./CompanionPanel";
 import { DowntimeProjectsPanel }    from "./DowntimeProjectsPanel";
+import { LevelUpWizard }            from "./LevelUpWizard";
 import { MarkdownContent }          from "@/components/MarkdownContent";
 import { useActionButton, InlineActionError } from "./ActionButton";
 import type { Character, ClassData, CustomCondition } from "@shared/types";
@@ -100,9 +101,10 @@ function ConditionTag({ label, active, onToggle, isCustom = false, description }
 
 interface SheetHeaderProps {
   classData: ClassData | null | undefined;
+  onLevelUp: () => void;
 }
 
-function SheetHeader({ classData }: SheetHeaderProps) {
+function SheetHeader({ classData, onLevelUp }: SheetHeaderProps) {
   const { activeCharacter, updateField, toggleCondition } = useCharacterStore();
   const { data: classesData }     = useClasses();
   const { data: communitiesData } = useCommunities();
@@ -131,29 +133,35 @@ function SheetHeader({ classData }: SheetHeaderProps) {
         />
         <div className="flex items-center gap-2 shrink-0">
           <label
-            htmlFor="character-level"
             className="text-xs uppercase tracking-wider text-parchment-500 font-medium"
           >
             Level
           </label>
-          <input
-            id="character-level"
-            type="number"
-            min={1}
-            max={10}
-            value={activeCharacter.level}
-            onChange={(e) => {
-              const v = parseInt(e.target.value, 10);
-              if (!isNaN(v) && v >= 1 && v <= 10) updateField("level", v);
-            }}
+          <div
+            aria-label={`Level ${activeCharacter.level}`}
             className="
               w-16 rounded-lg border border-burgundy-700 bg-slate-850
               px-2 py-2 text-center text-xl font-bold text-gold-400
-              focus:outline-none focus:border-gold-500 transition-colors
-              [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none
-              [&::-webkit-outer-spin-button]:appearance-none
             "
-          />
+          >
+            {activeCharacter.level}
+          </div>
+          {activeCharacter.level < 10 && (
+            <button
+              type="button"
+              onClick={onLevelUp}
+              aria-label="Level up character"
+              className="
+                rounded-lg border border-gold-800/60 bg-gold-950/20 px-3 py-2
+                text-xs font-semibold text-gold-300
+                hover:bg-gold-900/30 hover:border-gold-700
+                transition-all duration-150
+                focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-1 focus:ring-offset-slate-900
+              "
+            >
+              Level Up
+            </button>
+          )}
         </div>
       </div>
 
@@ -652,6 +660,7 @@ export function CharacterSheet({ characterId }: CharacterSheetProps) {
   } = useCharacterStore();
 
   const [downtimeOpen, setDowntimeOpen] = useState(false);
+  const [levelUpOpen,  setLevelUpOpen]  = useState(false);
 
   // Pull class data for the header subclass selector + features panel
   const { data: classData } = useClass(activeCharacter?.classId ?? undefined);
@@ -742,8 +751,20 @@ export function CharacterSheet({ characterId }: CharacterSheetProps) {
 
       {/* Header card */}
       <section className="rounded-xl border border-burgundy-900 bg-slate-900/80 p-5 shadow-card">
-        <SheetHeader classData={classData} />
+        <SheetHeader classData={classData} onLevelUp={() => setLevelUpOpen(true)} />
       </section>
+
+      {/* Level-up wizard (modal overlay) */}
+      {levelUpOpen && activeCharacter && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <LevelUpWizard
+              character={activeCharacter}
+              onClose={() => setLevelUpOpen(false)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Core stats */}
       <StatsPanel />

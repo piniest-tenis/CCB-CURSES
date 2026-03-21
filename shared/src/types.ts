@@ -433,3 +433,59 @@ export interface ValidationResult {
     message: string;
   }>;
 }
+
+// ─── Level-Up System ──────────────────────────────────────────────────────────
+
+/**
+ * Advancement types available in the Tier 2/3/4 advancement pool (SRD p.22).
+ * "proficiency-increase" costs both advancement slots.
+ * "multiclass" costs both advancement slots (Tier 3+ only).
+ */
+export type AdvancementType =
+  | "trait-bonus"          // +1 to a chosen stat (marks it; cleared at next tier achievement)
+  | "hp-slot"              // +1 HP slot (max 12)
+  | "stress-slot"          // +1 Stress slot (max 12)
+  | "experience-bonus"     // +1 to a chosen experience
+  | "new-experience"       // Add a new Experience at +2
+  | "evasion"              // +1 Evasion (permanent)
+  | "additional-domain-card" // Take an additional domain card (level ≤ current)
+  | "subclass-upgrade"     // Upgrade subclass: Foundation → Specialization
+  | "proficiency-increase" // +1 Proficiency (costs both slots)
+  | "multiclass";          // Multiclass (costs both slots; Tier 3+ only)
+
+export interface AdvancementChoice {
+  type: AdvancementType;
+  /**
+   * Depending on type:
+   * - trait-bonus: stat name (CoreStatName)
+   * - experience-bonus: experience name string
+   * - new-experience: experience name string
+   * - additional-domain-card: cardId
+   * - subclass-upgrade: "specialization" | "mastery"
+   * - multiclass: classId of the new class
+   * All others: no detail needed.
+   */
+  detail?: string;
+}
+
+/**
+ * The full set of choices a player makes when leveling up to a specific level.
+ * Sent to POST /characters/{id}/levelup.
+ */
+export interface LevelUpChoices {
+  /** The target level (must equal character.level + 1). */
+  targetLevel: number;
+  /** Exactly 2 advancement slots worth of choices. Double-slot advancements count as 2. */
+  advancements: AdvancementChoice[];
+  /**
+   * The cardId of the domain card acquired this level.
+   * Must be in character's domainVault at level ≤ targetLevel.
+   * If the card is newly available (not yet in vault), the backend adds it to the vault first.
+   */
+  newDomainCardId: string | null;
+  /**
+   * If provided, exchange this existing card for the new one (card must be in vault,
+   * new card level ≤ exchanged card level; SRD p.22).
+   */
+  exchangeCardId?: string | null;
+}

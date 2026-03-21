@@ -14,7 +14,7 @@ import {
 } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 import { useCharacterStore } from "@/store/characterStore";
-import type { Character, CharacterSummary } from "@shared/types";
+import type { Character, CharacterSummary, LevelUpChoices } from "@shared/types";
 
 // ─── Query keys ───────────────────────────────────────────────────────────────
 
@@ -144,31 +144,66 @@ export interface CharacterActionInput {
   params?: Record<string, unknown>;
 }
 
-export interface CharacterActionResult {
-  character: Character;
-}
-
 /**
  * Mutation hook for POST /characters/{id}/actions.
  * On success, syncs the updated character into both the TanStack Query cache
  * and the Zustand character store so all UI reflects the server state immediately.
+ *
+ * The backend returns the enriched Character directly through the standard
+ * { data: T } envelope, which apiClient.post unwraps to just Character.
  */
 export function useCharacterAction(
   characterId: string
-): UseMutationResult<CharacterActionResult, Error, CharacterActionInput> {
+): UseMutationResult<Character, Error, CharacterActionInput> {
   const queryClient = useQueryClient();
   const { setCharacter } = useCharacterStore();
 
   return useMutation({
     mutationFn: ({ actionId, params }: CharacterActionInput) =>
-      apiClient.post<CharacterActionResult>(
+      apiClient.post<Character>(
         `/characters/${characterId}/actions`,
         { actionId, ...(params ? { params } : {}) }
       ),
-    onSuccess: (result) => {
+    onSuccess: (updated) => {
       // Sync both caches with authoritative server state
-      queryClient.setQueryData(characterKeys.detail(characterId), result.character);
-      setCharacter(result.character);
+      queryClient.setQueryData(characterKeys.detail(characterId), updated);
+      setCharacter(updated);
+    },
+  });
+}
+
+// ─── useCharacterLevelUp ──────────────────────────────────────────────────────
+
+export interface LevelUpInput {
+  targetLevel: number;
+  advancements: LevelUpChoices["advancements"];
+  newDomainCardId: string | null;
+  exchangeCardId?: string | null;
+  newSubclassId?: string | null;
+  newClassId?: string | null;
+}
+
+/**
+ * Mutation hook for POST /characters/{id}/levelup.
+ * On success, syncs the updated character into both the TanStack Query cache
+ * and the Zustand character store.
+ */
+export function useCharacterLevelUp(
+  characterId: string
+): UseMutationResult<Character, Error, LevelUpInput> {
+  const queryClient = useQueryClient();
+  const { setCharacter } = useCharacterStore();
+
+  return useMutation({
+    mutationFn: (input: LevelUpInput) =>
+      apiClient.post<Character>(
+        `/characters/${characterId}/levelup`,
+        input
+      ),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(characterKeys.detail(characterId), updated);
+      setCharacter(updated);
+      queryClient.invalidateQueries({ queryKey: characterKeys.lists() });
     },
   });
 }

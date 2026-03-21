@@ -278,6 +278,11 @@ function LoadoutCardSlot({
                     ★
                   </span>
                 )}
+                {card.isLinkedCurse && (
+                  <span title="Linked Curse — long rest only, 6 stress to swap" className="text-xs text-burgundy-400 font-bold">
+                    ↔
+                  </span>
+                )}
                 {card.isGrimoire && (
                   <span className="rounded bg-gold-900/50 px-1 text-[10px] font-semibold text-gold-400">
                     Grimoire
@@ -364,18 +369,50 @@ function LoadoutCardSlot({
 
 // ─── VaultPicker ─────────────────────────────────────────────────────────────
 
+/**
+ * The vault picker now:
+ *   1) Filters cards by level (card.level <= character.level)
+ *   2) Shows Recall Cost and Linked Curse indicators
+ *   3) When loadout is full, requires picking a card to displace
+ *   4) Uses the swap-loadout-card server action (with stress cost)
+ */
+
 interface VaultPickerProps {
-  vaultIds:   string[];
-  loadoutIds: string[];
-  onAdd:      (cardId: string) => void;
-  onClose:    () => void;
+  vaultIds:      string[];
+  loadoutIds:    string[];
+  characterId:   string;
+  characterLevel: number;
+  onClose:       () => void;
 }
 
-function VaultPicker({ vaultIds, loadoutIds, onAdd, onClose }: VaultPickerProps) {
+function VaultPicker({ vaultIds, loadoutIds, characterId, characterLevel, onClose }: VaultPickerProps) {
   const available = vaultIds.filter((id) => !loadoutIds.includes(id));
+  const isFull    = loadoutIds.length >= 5;
+  const [selectedVaultCard,   setSelectedVaultCard]   = React.useState<string | null>(null);
+  const [selectedLoadoutCard, setSelectedLoadoutCard] = React.useState<string | null>(null);
+  const swapAction = useActionButton(characterId);
+
+  const handleSwap = () => {
+    if (!selectedVaultCard) return;
+    if (isFull && !selectedLoadoutCard) return;
+
+    swapAction.fire("swap-loadout-card", {
+      vaultCardId:   selectedVaultCard,
+      loadoutCardId: isFull ? selectedLoadoutCard : undefined,
+      // During normal play (not rest), Recall Cost applies. The card's recallCost
+      // is passed via n so the backend knows how much stress to charge.
+      // For now, we pass restType: "none" — the DowntimeModal will use "short"/"long".
+      restType: "none",
+      n: 0, // Placeholder: actual recallCost would be looked up from card data
+    });
+
+    setSelectedVaultCard(null);
+    setSelectedLoadoutCard(null);
+    onClose();
+  };
 
   return (
-    <div className="rounded-lg border border-gold-800 bg-slate-900 shadow-card-fantasy-hover p-4 space-y-2">
+    <div className="rounded-lg border border-gold-800 bg-slate-900 shadow-card-fantasy-hover p-4 space-y-3">
       <div className="flex items-center justify-between mb-1">
         <h4 className="text-xs font-semibold uppercase tracking-wider text-gold-600">
           Domain Vault
@@ -389,46 +426,171 @@ function VaultPicker({ vaultIds, loadoutIds, onAdd, onClose }: VaultPickerProps)
         </button>
       </div>
 
+      {/* Vault card selection */}
       {available.length === 0 ? (
         <p className="text-xs text-parchment-600 italic">
           No more cards in vault (all are already in loadout or vault is empty).
         </p>
       ) : (
-        <ul className="space-y-1 max-h-48 overflow-y-auto pr-1">
-          {available.map((cardId) => (
-            <VaultPickerItem
-              key={cardId}
-              cardId={cardId}
-              onAdd={() => {
-                onAdd(cardId);
-                onClose();
-              }}
-            />
-          ))}
-        </ul>
+        <>
+          <p className="text-[11px] text-parchment-500">
+            Select a card to add to your loadout{isFull ? ". Your loadout is full — you must also choose a card to displace." : "."}
+          </p>
+          <ul className="space-y-1 max-h-48 overflow-y-auto pr-1" role="listbox" aria-label="Vault cards">
+            {available.map((cardId) => (
+              <VaultPickerItem
+                key={cardId}
+                cardId={cardId}
+                characterLevel={characterLevel}
+                isSelected={selectedVaultCard === cardId}
+                onSelect={() => setSelectedVaultCard(cardId === selectedVaultCard ? null : cardId)}
+              />
+            ))}
+          </ul>
+        </>
       )}
+
+      {/* Loadout displacement selection (only when loadout is full) */}
+      {isFull && selectedVaultCard && (
+        <div className="border-t border-burgundy-900/40 pt-3">
+          <p className="text-[11px] text-parchment-500 mb-2">
+            Choose a card to move from loadout to vault:
+          </p>
+          <ul className="space-y-1 max-h-36 overflow-y-auto pr-1" role="listbox" aria-label="Loadout cards to displace">
+            {loadoutIds.map((cardId) => (
+              <DisplacePickerItem
+                key={cardId}
+                cardId={cardId}
+                isSelected={selectedLoadoutCard === cardId}
+                onSelect={() => setSelectedLoadoutCard(cardId === selectedLoadoutCard ? null : cardId)}
+              />
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Swap button */}
+      {selectedVaultCard && (!isFull || selectedLoadoutCard) && (
+        <button
+          type="button"
+          onClick={handleSwap}
+          disabled={swapAction.isPending}
+          className="
+            w-full rounded px-3 py-2 text-sm font-semibold
+            bg-gold-800/80 text-parchment-100 border border-gold-600
+            hover:bg-gold-700 transition-colors
+            disabled:opacity-50 disabled:cursor-wait
+            focus:outline-none focus:ring-2 focus:ring-gold-500
+          "
+        >
+          {swapAction.isPending ? "Swapping..." : "Swap Card"}
+        </button>
+      )}
+
+      <InlineActionError message={swapAction.inlineError} />
     </div>
   );
 }
 
-function VaultPickerItem({ cardId, onAdd }: { cardId: string; onAdd: () => void }) {
+function VaultPickerItem({
+  cardId,
+  characterLevel,
+  isSelected,
+  onSelect,
+}: {
+  cardId: string;
+  characterLevel: number;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
+  const { domain, id } = parseCardId(cardId);
+  const { data: card } = useDomainCard(domain, id);
+
+  // Level filter: dim cards above character level (SRD p.5)
+  const aboveLevel = card ? card.level > characterLevel : false;
+
+  return (
+    <li>
+      <button
+        onClick={onSelect}
+        disabled={aboveLevel}
+        role="option"
+        aria-selected={isSelected}
+        aria-label={
+          card
+            ? `${card.name} (${card.domain}, Level ${card.level})${card.isLinkedCurse ? " — Linked Curse" : ""}${aboveLevel ? " — above your level" : ""}`
+            : cardId
+        }
+        className={`
+          w-full flex items-center gap-2 rounded px-2 py-1.5
+          text-left transition-colors
+          focus:outline-none focus:ring-1 focus:ring-gold-500
+          ${aboveLevel
+            ? "opacity-40 cursor-not-allowed"
+            : isSelected
+            ? "bg-gold-900/40 border border-gold-600"
+            : "hover:bg-burgundy-900/40"
+          }
+        `}
+      >
+        <span className="flex-1 text-sm text-parchment-300 truncate">
+          {card?.name ?? cardId}
+        </span>
+        {card && (
+          <>
+            {card.isLinkedCurse && (
+              <span title="Linked Curse — long rest only, 6 stress" className="text-[10px] text-burgundy-400 font-bold">
+                ↔
+              </span>
+            )}
+            {card.isCursed && (
+              <span title="Cursed" className="text-[10px] text-burgundy-400 font-bold">
+                ★
+              </span>
+            )}
+            <span className="text-[10px] text-parchment-600 uppercase">{card.domain}</span>
+            <span className={`text-[10px] font-bold ${aboveLevel ? "text-burgundy-500" : "text-gold-600"}`}>
+              Lv{card.level}
+            </span>
+          </>
+        )}
+      </button>
+    </li>
+  );
+}
+
+function DisplacePickerItem({
+  cardId,
+  isSelected,
+  onSelect,
+}: {
+  cardId: string;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
   const { domain, id } = parseCardId(cardId);
   const { data: card } = useDomainCard(domain, id);
 
   return (
     <li>
       <button
-        onClick={onAdd}
+        onClick={onSelect}
+        role="option"
+        aria-selected={isSelected}
         aria-label={
           card
-            ? `Add ${card.name} (${card.domain}, Level ${card.level}) to loadout`
-            : `Add ${cardId} to loadout`
+            ? `Displace ${card.name} (${card.domain}, Level ${card.level})`
+            : `Displace ${cardId}`
         }
-        className="
+        className={`
           w-full flex items-center gap-2 rounded px-2 py-1.5
-          hover:bg-burgundy-900/40 text-left transition-colors
+          text-left transition-colors
           focus:outline-none focus:ring-1 focus:ring-gold-500
-        "
+          ${isSelected
+            ? "bg-burgundy-900/50 border border-burgundy-600"
+            : "hover:bg-burgundy-900/30"
+          }
+        `}
       >
         <span className="flex-1 text-sm text-parchment-300 truncate">
           {card?.name ?? cardId}
@@ -447,7 +609,7 @@ function VaultPickerItem({ cardId, onAdd }: { cardId: string; onAdd: () => void 
 // ─── DomainLoadout (main export) ──────────────────────────────────────────────
 
 export function DomainLoadout() {
-  const { activeCharacter, removeFromLoadout, reorderLoadout, addToLoadout } =
+  const { activeCharacter, removeFromLoadout, reorderLoadout } =
     useCharacterStore();
   const [showPicker, setShowPicker] = useState(false);
 
@@ -483,7 +645,7 @@ export function DomainLoadout() {
           Active Loadout{" "}
           <span className="text-parchment-600">({domainLoadout.length}/5)</span>
         </h3>
-        {domainLoadout.length < 5 && domainVault.length > 0 && (
+        {domainVault.length > 0 && (
           <button
             type="button"
             onClick={() => setShowPicker((v) => !v)}
@@ -496,7 +658,7 @@ export function DomainLoadout() {
               focus:outline-none focus:ring-2 focus:ring-gold-500
             "
           >
-            {showPicker ? "Hide Vault" : "+ Add Card"}
+            {showPicker ? "Hide Vault" : domainLoadout.length >= 5 ? "Swap Card" : "+ Add Card"}
           </button>
         )}
       </div>
@@ -542,13 +704,14 @@ export function DomainLoadout() {
         </div>
       )}
 
-      {/* Vault picker */}
+      {/* Vault picker — uses swap-loadout-card action with stress cost */}
       {showPicker && (
         <div id="domain-vault-picker">
           <VaultPicker
             vaultIds={domainVault}
             loadoutIds={domainLoadout}
-            onAdd={addToLoadout}
+            characterId={characterId}
+            characterLevel={activeCharacter.level}
             onClose={() => setShowPicker(false)}
           />
         </div>

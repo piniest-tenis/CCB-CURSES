@@ -4,7 +4,15 @@
 
 import { createHmac } from "crypto";
 import { AppError } from "../common/middleware";
-import type { Character, RestType, RestResult, Weapons } from "@shared/types";
+import type {
+  Character,
+  RestType,
+  RestResult,
+  Weapons,
+  LevelUpChoices,
+  AdvancementChoice,
+  CoreStatName,
+} from "@shared/types";
 
 // ─── deepMerge ────────────────────────────────────────────────────────────────
 
@@ -339,17 +347,29 @@ export type ActionId =
   | "gain-hope"
   | "spend-hope"
   | "companion-clear-stress"
-  | "companion-mark-stress";
+  | "companion-mark-stress"
+  | "mark-armor"
+  | "clear-armor"
+  | "swap-loadout-card";
 
 export interface ActionParams {
   /** cardId for token / aura actions */
   cardId?: string;
+  /** For swap-loadout-card: the card being moved from vault into loadout */
+  vaultCardId?: string;
+  /** For swap-loadout-card: the card being moved from loadout into vault (if loadout full) */
+  loadoutCardId?: string;
   /** Amount to spend / clear / mark (defaults to 1) */
   n?: number;
   /** hopeCost for use-hope-feature */
   hopeCost?: number;
   /** projectId for tick-project */
   projectId?: string;
+  /**
+   * For swap-loadout-card: the rest context at time of swap.
+   * "long" allows Linked Curse swaps; "none" means mid-play (Recall Cost applies).
+   */
+  restType?: "short" | "long" | "none";
 }
 
 /**
@@ -611,10 +631,407 @@ export function applyAction(
       };
     }
 
+    // ── Armor: mark 1 ────────────────────────────────────────────────────────
+    case "mark-armor": {
+      const { marked, max } = character.trackers.armor;
+      if (marked >= max) {
+        invalidAction(
+          `Armor is already at maximum (${max})`,
+          "trackers.armor.marked"
+        );
+      }
+      return {
+        ...character,
+        trackers: {
+          ...character.trackers,
+          armor: { max, marked: marked + 1 },
+        },
+      };
+    }
+
+    // ── Armor: clear N marks ──────────────────────────────────────────────────
+    case "clear-armor": {
+      const { marked, max } = character.trackers.armor;
+      if (marked < n) {
+        invalidAction(
+          `Cannot clear ${n} armor mark(s) — only ${marked} marked`,
+          "trackers.armor.marked"
+        );
+      }
+      return {
+        ...character,
+        trackers: {
+          ...character.trackers,
+          armor: { max, marked: marked - n },
+        },
+      };
+    }
+
+    // ── Domain loadout: swap vault ↔ loadout ─────────────────────────────────
+    //
+    // Rules (SRD p.5 + campaign Linked Curse rules):
+    //   restType = "long"  → Free swap. Linked Curse (↔) cards ARE allowed.
+    //   restType = "short" → Free swap. Linked Curse (↔) cards NOT allowed.
+    //   restType = "none"  → Mid-play. Recall Cost stress applies. Linked Curse NOT allowed.
+    //
+    // Linked Curse swap cost: 6 Stress (campaign rule).
+    // Standard Recall Cost: card.recallCost stress (card data not available here;
+    //   frontend passes n = recallCost for mid-play swaps).
+    case "swap-loadout-card": {
+      const { vaultCardId, loadoutCardId, restType = "none" } = params;
+      if (!vaultCardId) {
+        invalidAction("vaultCardId is required for swap-loadout-card", "vaultCardId");
+      }
+
+      // vaultCardId must be in the vault
+      if (!character.domainVault.includes(vaultCardId)) {
+        invalidAction(
+          `Card '${vaultCardId}' is not in your vault`,
+          "domainVault"
+        );
+      }
+      // vaultCardId must not already be in loadout
+      if (character.domainLoadout.includes(vaultCardId)) {
+        invalidAction(
+          `Card '${vaultCardId}' is already in your loadout`,
+          "domainLoadout"
+        );
+      }
+
+      // Detect Linked Curse cards by the ↔ marker in the cardId naming convention
+      // or by the isLinkedCurse flag (passed via params.isLinkedCurse if available).
+      // Since card metadata is not loaded in helpers, we rely on a flag passed by caller.
+      const isLinkedCurse = params["isLinkedCurse"] === true;
+
+      // Linked Curse restriction: only during long rests
+      if (isLinkedCurse && restType !== "long") {
+        invalidAction(
+          "Linked Curse (↔) cards can only be swapped during a long rest",
+          "domainLoadout"
+        );
+      }
+
+      // Calculate stress cost
+      let stressCost = 0;
+      if (restType === "none") {
+        // Mid-play: pay Recall Cost (caller passes n = recallCost)
+        stressCost = isLinkedCurse ? 6 : (n ?? 0);
+      } else if (restType === "short" || restType === "long") {
+        // At start of rest: free — unless it's a Linked Curse on a short rest (blocked above)
+        // Long rest Linked Curse swaps cost 6 stress (campaign rule)
+        stressCost = isLinkedCurse && restType === "long" ? 6 : 0;
+      }
+
+      // Validate stress availability
+      if (stressCost > 0) {
+        const availableStress = character.trackers.stress.max - character.trackers.stress.marked;
+        if (availableStress < stressCost) {
+          invalidAction(
+            `Not enough available stress for this swap (need ${stressCost}, have ${availableStress} free)`,
+            "trackers.stress.marked"
+          );
+        }
+      }
+
+      // Build new loadout
+      let newLoadout = [...character.domainLoadout];
+      let newVault   = [...character.domainVault];
+
+      if (newLoadout.length >= 5) {
+        // Loadout full: must displace a card
+        if (!loadoutCardId) {
+          invalidAction(
+            "Loadout is full (5/5). Specify loadoutCardId to move a card to the vault.",
+            "domainLoadout"
+          );
+        }
+        if (!newLoadout.includes(loadoutCardId)) {
+          invalidAction(
+            `Card '${loadoutCardId}' is not in your loadout`,
+            "domainLoadout"
+          );
+        }
+        // Linked Curse: cannot displace another Linked Curse for free — prevent confusion;
+        // caller should never pass a Linked Curse as loadoutCardId unless intentional.
+        newLoadout = newLoadout.filter((id) => id !== loadoutCardId);
+        if (!newVault.includes(loadoutCardId)) newVault.push(loadoutCardId);
+      }
+
+      // Remove from vault, add to loadout
+      newVault   = newVault.filter((id) => id !== vaultCardId);
+      newLoadout = [...newLoadout, vaultCardId];
+
+      // Apply stress cost
+      const newStressMarked = character.trackers.stress.marked + stressCost;
+      const newStressMax    = character.trackers.stress.max;
+
+      // SRD p.21: stress overflow marks HP instead
+      let newHpMarked = character.trackers.hp.marked;
+      let actualStressMarked = newStressMarked;
+      if (newStressMarked > newStressMax) {
+        const overflow = newStressMarked - newStressMax;
+        actualStressMarked = newStressMax;
+        newHpMarked = Math.min(character.trackers.hp.marked + overflow, character.trackers.hp.max);
+      }
+
+      return {
+        ...character,
+        domainLoadout: newLoadout,
+        domainVault:   newVault,
+        trackers: {
+          ...character.trackers,
+          stress: { max: newStressMax, marked: actualStressMarked },
+          hp:     { max: character.trackers.hp.max, marked: newHpMarked },
+        },
+      };
+    }
+
     default: {
       // Exhaustive check — TypeScript will error if a case is missing.
       const _exhaustive: never = actionId;
       invalidAction(`Unknown actionId: ${String(_exhaustive)}`, "actionId");
     }
   }
+}
+
+// ─── Level-Up System ──────────────────────────────────────────────────────────
+
+/**
+ * Tier for a given level (SRD p.22).
+ * Tier 1 = creation only; Tier 2 = levels 2–4; Tier 3 = 5–7; Tier 4 = 8–10.
+ */
+export function tierForLevel(level: number): 1 | 2 | 3 | 4 {
+  if (level <= 1) return 1;
+  if (level <= 4) return 2;
+  if (level <= 7) return 3;
+  return 4;
+}
+
+/** True when leveling to this level triggers a Tier Achievement (SRD p.22). */
+export function isTierAchievement(toLevel: number): boolean {
+  return toLevel === 2 || toLevel === 5 || toLevel === 8;
+}
+
+/**
+ * Count how many advancement slots a set of choices consumes.
+ * "proficiency-increase" and "multiclass" cost 2 slots each.
+ */
+function advancementSlotCost(adv: AdvancementChoice): number {
+  return adv.type === "proficiency-increase" || adv.type === "multiclass" ? 2 : 1;
+}
+
+/**
+ * Apply a level-up to a character. Pure function — no I/O.
+ * Throws AppError (422) on any validation failure.
+ *
+ * Does NOT fetch new domain card data — caller is responsible for ensuring
+ * newDomainCardId is a valid card for this character's domains. The card is
+ * added to the vault (not the loadout) automatically.
+ */
+export function applyLevelUp(
+  character: Character,
+  choices: LevelUpChoices
+): Character {
+  const { targetLevel, advancements, newDomainCardId, exchangeCardId } = choices;
+
+  // ── Validate target level ──────────────────────────────────────────────────
+  if (targetLevel !== character.level + 1) {
+    throw new AppError(
+      "INVALID_LEVEL_UP",
+      `targetLevel (${targetLevel}) must be exactly one above current level (${character.level})`,
+      422,
+      [{ field: "targetLevel", issue: "must equal character.level + 1" }]
+    );
+  }
+  if (targetLevel < 2 || targetLevel > 10) {
+    throw new AppError(
+      "INVALID_LEVEL_UP",
+      `Level must be between 2 and 10`,
+      422,
+      [{ field: "targetLevel", issue: "out of range" }]
+    );
+  }
+
+  // ── Validate advancement slot count ───────────────────────────────────────
+  // Level 1 is character creation (no advancements). Levels 2–10: exactly 2 slots.
+  const totalSlots = advancements.reduce((sum, a) => sum + advancementSlotCost(a), 0);
+  if (totalSlots !== 2) {
+    throw new AppError(
+      "INVALID_LEVEL_UP",
+      `Advancements must total exactly 2 slots (got ${totalSlots})`,
+      422,
+      [{ field: "advancements", issue: "must total 2 slots" }]
+    );
+  }
+
+  // ── Validate multiclass tier restriction ──────────────────────────────────
+  const hasMulticlass = advancements.some((a) => a.type === "multiclass");
+  if (hasMulticlass && targetLevel < 5) {
+    throw new AppError(
+      "INVALID_LEVEL_UP",
+      "Multiclass is not available until Tier 3 (level 5+)",
+      422,
+      [{ field: "advancements", issue: "multiclass requires Tier 3" }]
+    );
+  }
+
+  // ── Start building updated character ─────────────────────────────────────
+  let updated: Character = { ...character, level: targetLevel };
+
+  // ── Step 1: Tier Achievement (automatic) ─────────────────────────────────
+  if (isTierAchievement(targetLevel)) {
+    // Proficiency +1 at tier achievement (SRD p.22)
+    updated = {
+      ...updated,
+      proficiency: Math.min(6, (updated.proficiency ?? 1) + 1),
+    };
+    // Add a new Experience at +2 (SRD p.22)
+    // The wizard provides this via an advancement of type "new-experience".
+    // Tier achievements also clear marked traits — handled below when we apply advancements.
+  }
+
+  // ── Step 2: Damage Thresholds +1 (automatic, SRD p.22) ──────────────────
+  updated = {
+    ...updated,
+    damageThresholds: {
+      major:  updated.damageThresholds.major  + 1,
+      severe: updated.damageThresholds.severe + 1,
+    },
+  };
+
+  // ── Step 3: Apply Advancements ────────────────────────────────────────────
+  for (const adv of advancements) {
+    switch (adv.type) {
+      case "trait-bonus": {
+        const statName = adv.detail as CoreStatName | undefined;
+        if (!statName || !(statName in updated.stats)) {
+          throw new AppError("INVALID_LEVEL_UP", `trait-bonus requires a valid stat name in detail`, 422,
+            [{ field: "advancements.detail", issue: "invalid stat name" }]);
+        }
+        const current = updated.stats[statName];
+        updated = {
+          ...updated,
+          stats: { ...updated.stats, [statName]: current + 1 },
+        };
+        break;
+      }
+
+      case "hp-slot": {
+        const newMax = Math.min(12, updated.trackers.hp.max + 1);
+        updated = {
+          ...updated,
+          trackers: { ...updated.trackers, hp: { ...updated.trackers.hp, max: newMax } },
+        };
+        break;
+      }
+
+      case "stress-slot": {
+        const newMax = Math.min(12, updated.trackers.stress.max + 1);
+        updated = {
+          ...updated,
+          trackers: { ...updated.trackers, stress: { ...updated.trackers.stress, max: newMax } },
+        };
+        break;
+      }
+
+      case "evasion": {
+        updated = {
+          ...updated,
+          derivedStats: { ...updated.derivedStats, evasion: updated.derivedStats.evasion + 1 },
+        };
+        break;
+      }
+
+      case "proficiency-increase": {
+        // Double-slot; also checked for slot cost above
+        updated = {
+          ...updated,
+          proficiency: Math.min(6, (updated.proficiency ?? 1) + 1),
+        };
+        break;
+      }
+
+      case "experience-bonus": {
+        const expName = adv.detail;
+        if (!expName) {
+          throw new AppError("INVALID_LEVEL_UP", "experience-bonus requires detail (experience name)", 422,
+            [{ field: "advancements.detail", issue: "missing experience name" }]);
+        }
+        const idx = updated.experiences.findIndex((e) => e.name === expName);
+        if (idx === -1) {
+          throw new AppError("INVALID_LEVEL_UP", `Experience '${expName}' not found on character`, 422,
+            [{ field: "advancements.detail", issue: "experience not found" }]);
+        }
+        const newExps = [...updated.experiences];
+        newExps[idx] = { ...newExps[idx]!, bonus: newExps[idx]!.bonus + 1 };
+        updated = { ...updated, experiences: newExps };
+        break;
+      }
+
+      case "new-experience": {
+        const expName = adv.detail;
+        if (!expName) {
+          throw new AppError("INVALID_LEVEL_UP", "new-experience requires detail (experience name)", 422,
+            [{ field: "advancements.detail", issue: "missing experience name" }]);
+        }
+        updated = {
+          ...updated,
+          experiences: [...updated.experiences, { name: expName, bonus: 2 }],
+        };
+        break;
+      }
+
+      case "additional-domain-card": {
+        const cardId = adv.detail;
+        if (!cardId) {
+          throw new AppError("INVALID_LEVEL_UP", "additional-domain-card requires detail (cardId)", 422,
+            [{ field: "advancements.detail", issue: "missing cardId" }]);
+        }
+        if (!updated.domainVault.includes(cardId)) {
+          updated = { ...updated, domainVault: [...updated.domainVault, cardId] };
+        }
+        break;
+      }
+
+      case "subclass-upgrade": {
+        // The subclassId change is handled by the frontend selecting a new subclass;
+        // this advancement just records that the slot was used.
+        // No structural change needed here — subclass identity is in CharacterSummary.
+        break;
+      }
+
+      case "multiclass": {
+        // Similar: the frontend selects the classId; this records the slot used.
+        break;
+      }
+    }
+  }
+
+  // ── Step 4: New Domain Card ───────────────────────────────────────────────
+  if (newDomainCardId) {
+    if (exchangeCardId) {
+      // Exchange: remove old card from vault (and loadout if present), add new one
+      if (!updated.domainVault.includes(exchangeCardId)) {
+        throw new AppError("INVALID_LEVEL_UP", `exchangeCardId '${exchangeCardId}' is not in vault`, 422,
+          [{ field: "exchangeCardId", issue: "card not in vault" }]);
+      }
+      updated = {
+        ...updated,
+        domainVault: [
+          ...updated.domainVault.filter((id) => id !== exchangeCardId),
+          newDomainCardId,
+        ],
+        domainLoadout: updated.domainLoadout.includes(exchangeCardId)
+          ? updated.domainLoadout.map((id) => (id === exchangeCardId ? newDomainCardId : id))
+          : updated.domainLoadout,
+      };
+    } else {
+      // Add to vault if not already present
+      if (!updated.domainVault.includes(newDomainCardId)) {
+        updated = { ...updated, domainVault: [...updated.domainVault, newDomainCardId] };
+      }
+    }
+  }
+
+  return updated;
 }

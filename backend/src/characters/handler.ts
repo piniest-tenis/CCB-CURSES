@@ -29,6 +29,7 @@ import {
   applyRest,
   normalizeWeapons,
   applyAction,
+  applyLevelUp,
   type ActionId,
 } from "./helpers";
 import {
@@ -53,6 +54,8 @@ import type {
   DowntimeAction,
   RestResult,
   DowntimeProject,
+  LevelUpChoices,
+  AdvancementChoice,
 } from "@shared/types";
 
 // ─── Zod Schemas ──────────────────────────────────────────────────────────────
@@ -245,6 +248,9 @@ const ActionSchema = z.object({
     "spend-hope",
     "companion-clear-stress",
     "companion-mark-stress",
+    "mark-armor",
+    "clear-armor",
+    "swap-loadout-card",
   ] as const),
   params: z.record(z.unknown()).optional().default({}),
 });
@@ -1051,10 +1057,16 @@ async function executeAction(
 
   // Normalise raw params from the schema's Record<string, unknown> to ActionParams
   const actionParams = {
-    cardId: typeof params["cardId"] === "string" ? params["cardId"] : undefined,
-    n: typeof params["n"] === "number" ? params["n"] : undefined,
-    hopeCost: typeof params["hopeCost"] === "number" ? params["hopeCost"] : undefined,
-    projectId: typeof params["projectId"] === "string" ? params["projectId"] : undefined,
+    cardId:        typeof params["cardId"] === "string"        ? params["cardId"]        : undefined,
+    vaultCardId:   typeof params["vaultCardId"] === "string"   ? params["vaultCardId"]   : undefined,
+    loadoutCardId: typeof params["loadoutCardId"] === "string" ? params["loadoutCardId"] : undefined,
+    n:             typeof params["n"] === "number"             ? params["n"]             : undefined,
+    hopeCost:      typeof params["hopeCost"] === "number"      ? params["hopeCost"]      : undefined,
+    projectId:     typeof params["projectId"] === "string"     ? params["projectId"]     : undefined,
+    restType:      (["short", "long", "none"] as const).includes(params["restType"] as never)
+                     ? (params["restType"] as "short" | "long" | "none")
+                     : undefined,
+    isLinkedCurse: params["isLinkedCurse"] === true,
   };
 
   // applyAction throws AppError(422) on validity failure
@@ -1063,6 +1075,80 @@ async function executeAction(
     actionId as ActionId,
     actionParams
   );
+
+  const updatedRecord: CharacterRecord = {
+    ...(updatedCharacter as unknown as CharacterRecord),
+    PK: existing.PK,
+    SK: existing.SK,
+    updatedAt: new Date().toISOString(),
+  };
+
+  await putItem({
+    TableName: CHARACTERS_TABLE,
+    Item: updatedRecord,
+    ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)",
+  });
+
+  const response = await enrichCharacter(updatedRecord);
+  return createSuccessResponse(response);
+}
+
+// ─── Level-Up Schema & Route Handler ─────────────────────────────────────────
+
+const AdvancementChoiceSchema = z.object({
+  type: z.enum([
+    "trait-bonus",
+    "hp-slot",
+    "stress-slot",
+    "experience-bonus",
+    "new-experience",
+    "evasion",
+    "additional-domain-card",
+    "subclass-upgrade",
+    "proficiency-increase",
+    "multiclass",
+  ]),
+  detail: z.string().optional(),
+});
+
+const LevelUpSchema = z.object({
+  targetLevel:     z.number().int().min(2).max(10),
+  advancements:    z.array(AdvancementChoiceSchema).min(1).max(4),
+  newDomainCardId: z.string().nullable().default(null),
+  exchangeCardId:  z.string().nullable().optional(),
+  newSubclassId:   z.string().nullable().optional(),
+  newClassId:      z.string().nullable().optional(),
+});
+
+async function levelUpCharacter(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<APIGatewayProxyResultV2> {
+  const userId      = extractUserId(event);
+  const characterId = requirePathParam(event, "characterId");
+
+  const existing = await getItem<CharacterRecord>({
+    TableName: CHARACTERS_TABLE,
+    Key: keys.character(userId, characterId),
+  });
+  if (!existing) throw AppError.notFound("Character", characterId);
+  if (existing.userId !== userId) throw AppError.forbidden();
+
+  const body = parseBody(event, LevelUpSchema);
+
+  const choices: LevelUpChoices = {
+    targetLevel:     body.targetLevel,
+    advancements:    body.advancements as AdvancementChoice[],
+    newDomainCardId: body.newDomainCardId,
+    exchangeCardId:  body.exchangeCardId ?? null,
+  };
+
+  // applyLevelUp throws AppError(422) on validation failures
+  let updatedCharacter = applyLevelUp(existing as unknown as Character, choices);
+
+  // Apply optional identity changes from advancement choices
+  if (body.newSubclassId) {
+    updatedCharacter = { ...updatedCharacter, subclassId: body.newSubclassId };
+  }
 
   const updatedRecord: CharacterRecord = {
     ...(updatedCharacter as unknown as CharacterRecord),
@@ -1117,6 +1203,8 @@ export const handler = withErrorHandling(
         return deleteProject(event);
       case "POST /characters/{characterId}/actions":
         return executeAction(event);
+      case "POST /characters/{characterId}/levelup":
+        return levelUpCharacter(event);
       default:
         return createErrorResponse("NOT_FOUND", "Route not found", 404);
     }
