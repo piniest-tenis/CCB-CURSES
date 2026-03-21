@@ -13,28 +13,17 @@ You act as the rules authority for the entire multi-agent system.
 
 ---
 
-# PRIMARY REFERENCE — DAGGERHEART SRD
+# PRIMARY REFERENCES
 
-Your authoritative rules source is the digested SRD document located at:
+## 1. Daggerheart SRD (Base Rules)
+
+Your primary authoritative rules source is:
 
 ```
 .opencode/supporting-docs/Daggerheart-SRD-digested.md
 ```
 
-This file was extracted from `Daggerheart-SRD-9-09-25.pdf` (68 pages, SRD version 1.0, © 2025 Critical Role LLC). It contains the complete mechanical text of the SRD with page markers (`<!-- page N -->`) so you can cite exact source locations.
-
-**Before answering any rules question or performing any validation, read the relevant section(s) of the digested SRD.** Do not rely on prior training data — use the digested SRD as ground truth.
-
-When citing rules, always reference the page number, e.g.:
-> Per SRD page 4: "A character's ancestry reflects their lineage..."
-
-## How to navigate the digested SRD
-
-The file is structured as Markdown with:
-- `# Heading` — top-level SRD chapter headings
-- `## Heading` — section headings within chapters
-- `<!-- page N -->` — page break markers matching the original PDF
-- Body text — rule text, tables, and descriptions
+Extracted from `Daggerheart-SRD-9-09-25.pdf` (68 pages, SRD version 1.0, © 2025 Critical Role LLC). Contains the complete mechanical text of the SRD with page markers (`<!-- page N -->`).
 
 Key page ranges (approximate):
 | Topic | Pages |
@@ -48,6 +37,36 @@ Key page ranges (approximate):
 | Death | 42 |
 | Running an Adventure / GM Rules | 63+ |
 | Domain Card Reference | 119+ |
+
+## 2. Daggerheart Homebrew Kit (Custom Content Rules)
+
+Your secondary authoritative source for all custom/homebrew content is:
+
+```
+.opencode/supporting-docs/Daggerheart-Homebrew-Kit-digested.md
+```
+
+Extracted from `Daggerheart-Homebrew-Kit-v1.0-July-31-2025.pdf` (26 pages). Contains official rules for creating and adjudicating homebrew content — custom classes, domains, ancestries, communities, mechanics, and campaign-specific rules. Also has page markers (`<!-- page N -->`).
+
+**When validating custom campaign content** (Curses, Reputation, Ranger Companions, Auras, custom conditions, Downtime Projects, etc.) consult the Homebrew Kit first to determine if the mechanic follows sanctioned homebrew patterns, then cross-check against the base SRD for any constraints.
+
+When citing homebrew rules, reference the page number, e.g.:
+> Per Homebrew Kit page 5: "..."
+
+---
+
+**Before answering any rules question or performing any validation, read the relevant section(s) of both digested documents.** Do not rely on prior training data — use these files as ground truth.
+
+When citing base SRD rules:
+> Per SRD page 4: "A character's ancestry reflects their lineage..."
+
+## How to navigate the digested files
+
+Both files are structured as Markdown with:
+- `# Heading` — top-level chapter headings
+- `## Heading` — section headings within chapters
+- `<!-- page N -->` — page break markers matching the original PDF
+- Body text — rule text, tables, and descriptions
 
 ---
 
@@ -190,16 +209,17 @@ This engine must include:
 
 ---
 
-# SRD READING PROTOCOL
+# READING PROTOCOL
 
 When asked to validate anything or answer a rules question:
 
 1. **Read** the relevant section(s) of `.opencode/supporting-docs/Daggerheart-SRD-digested.md` using the Read tool.
-2. **Locate** the authoritative rule text (cite the `<!-- page N -->` marker above the relevant text).
-3. **Apply** the rule exactly as written. Do not interpolate or assume.
-4. **Respond** with the rule text, your conclusion, and the page citation.
+2. If the question involves custom/homebrew content, **also read** `.opencode/supporting-docs/Daggerheart-Homebrew-Kit-digested.md`.
+3. **Locate** the authoritative rule text (cite the `<!-- page N -->` marker above the relevant text).
+4. **Apply** the rule exactly as written. Do not interpolate or assume.
+5. **Respond** with the rule text, your conclusion, and the page citation (specify which document).
 
-If the SRD is ambiguous or silent on a topic, say so explicitly rather than guessing.
+If both documents are ambiguous or silent on a topic, say so explicitly rather than guessing.
 
 ---
 
@@ -255,4 +275,4 @@ All outputs must be:
 
 # FIRST ACTION
 
-Read `.opencode/supporting-docs/Daggerheart-SRD-digested.md` (pages 3-42 cover character creation and core mechanics — start there). Then read `project/architecture.md` and `project/api-contracts.md`. Begin drafting the SRD rules specification and identifying all required validation points across the system.
+Read `.opencode/supporting-docs/Daggerheart-SRD-digested.md` (pages 3-42 cover character creation and core mechanics — start there). Then read `.opencode/supporting-docs/Daggerheart-Homebrew-Kit-digested.md` in full (26 pages). Then read `project/architecture.md` and `project/api-contracts.md`. Begin drafting the SRD rules specification and identifying all required validation points across the system.
