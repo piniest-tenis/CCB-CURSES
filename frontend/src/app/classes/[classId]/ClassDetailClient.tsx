@@ -89,13 +89,16 @@ function FeatureBlock({ name, description }: NamedFeature) {
 
 function SubclassPanel({ subclass }: { subclass: SubclassData }) {
   const [open, setOpen] = useState(false);
+  const panelId = `subclass-panel-${subclass.subclassId}`;
 
   return (
     <div className="rounded-xl border border-burgundy-900 bg-slate-900/60">
       {/* Header / toggle */}
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-850/30 transition-colors rounded-xl"
+        aria-expanded={open}
+        aria-controls={panelId}
+        className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-850/30 transition-colors rounded-xl focus:outline-none focus:ring-2 focus:ring-inset focus:ring-gold-500"
       >
         <div>
           <h4 className="font-serif text-base font-semibold text-parchment-100">
@@ -110,14 +113,14 @@ function SubclassPanel({ subclass }: { subclass: SubclassData }) {
           <span className="hidden sm:block text-sm text-parchment-600 uppercase tracking-wider">
             Spellcast: {subclass.spellcastTrait}
           </span>
-          <span className="text-parchment-600 text-lg leading-none select-none">
+          <span aria-hidden="true" className="text-parchment-600 text-lg leading-none select-none">
             {open ? "▲" : "▼"}
           </span>
         </div>
       </button>
 
       {open && (
-        <div className="px-5 pb-5 space-y-4 border-t border-burgundy-900/40">
+        <div id={panelId} className="px-5 pb-5 space-y-4 border-t border-burgundy-900/40">
           {subclass.description && (
             <MarkdownContent className="pt-4 text-base text-parchment-400 italic">{subclass.description}</MarkdownContent>
           )}
@@ -200,12 +203,13 @@ export default function ClassDetailPage() {
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-4">
           <button
             onClick={() => router.back()}
-            className="text-parchment-600 hover:text-parchment-300 text-sm transition-colors"
+            aria-label="Go back"
+            className="text-parchment-600 hover:text-parchment-300 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500 rounded"
           >
             ← Back
           </button>
           <span className="text-burgundy-800 select-none">/</span>
-          <Link href="/classes" className="text-sm text-parchment-500 hover:text-parchment-300 transition-colors">
+          <Link href="/classes" className="text-sm text-parchment-500 hover:text-parchment-300 transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500 rounded">
             Classes
           </Link>
           {cls && (
@@ -243,20 +247,23 @@ export default function ClassDetailPage() {
             border: 6px solid transparent;
             border-bottom-color: #1e293b;
           }
-          .domain-badge-tip:hover .domain-tip-popup { opacity: 1; }
+          .domain-badge-tip:hover .domain-tip-popup,
+          .domain-badge-tip:focus .domain-tip-popup,
+          .domain-badge-tip:focus-within .domain-tip-popup { opacity: 1; }
         `}</style>
         {/* Loading */}
         {isLoading && (
-          <div className="flex items-center justify-center py-20">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-burgundy-500 border-t-transparent" />
+          <div role="status" className="flex items-center justify-center py-20">
+            <div aria-hidden="true" className="h-8 w-8 animate-spin rounded-full border-2 border-burgundy-500 border-t-transparent" />
+            <span className="sr-only">Loading class…</span>
           </div>
         )}
 
         {/* Error */}
         {isError && !isLoading && (
-          <div className="rounded-xl border border-burgundy-700 bg-slate-900 p-8 text-center">
+          <div role="alert" className="rounded-xl border border-burgundy-700 bg-slate-900 p-8 text-center">
             <p className="text-burgundy-300">Class not found.</p>
-            <Link href="/classes" className="mt-3 inline-block text-sm text-gold-500 hover:text-gold-400">
+            <Link href="/classes" className="mt-3 inline-block text-sm text-gold-500 hover:text-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-500 rounded">
               Back to classes
             </Link>
           </div>

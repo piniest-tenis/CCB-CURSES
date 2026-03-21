@@ -17,10 +17,26 @@ cdk.context.json
 infrastructure/cloudformation/
 
 # ─── Environment & secrets ───────────────────────────────────────────────────
-# Keep .env.example (safe template); ignore everything else
+# Keep only the example/template files; ignore everything that may hold real values.
 .env
 .env.*
+*.env
 !.env.example
+!*.env.example
+!*.env.local.example
+
+# Named env files used by ingestion and other tooling
+.env.ingestion
+*.env.ingestion
+
+# Catch-all patterns for files named with "secret" or "credential" anywhere
+*secret*
+*credential*
+*secrets*
+*credentials*
+
+# CDK outputs contain account IDs, ARNs, and endpoint URLs — never commit
+infrastructure/cdk-outputs.json
 
 # ─── Test coverage ───────────────────────────────────────────────────────────
 coverage/

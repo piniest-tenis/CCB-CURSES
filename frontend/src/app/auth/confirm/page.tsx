@@ -105,8 +105,8 @@ function ConfirmForm() {
         <div className="rounded-xl border border-burgundy-900 bg-slate-900 p-7 shadow-card-fantasy">
           {isSubmitSuccessful ? (
             /* Success state */
-            <div className="space-y-3 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-gold-600 text-gold-400 text-xl">
+            <div role="status" className="space-y-3 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-gold-600 text-gold-400 text-xl" aria-hidden="true">
                 ✓
               </div>
               <p className="font-semibold text-parchment-200">Email confirmed!</p>
@@ -121,7 +121,7 @@ function ConfirmForm() {
 
               {/* Root error */}
               {errors.root && (
-                <div className="rounded-lg border border-burgundy-700 bg-burgundy-950/40 px-4 py-3 text-sm text-burgundy-300">
+                <div role="alert" className="rounded-lg border border-burgundy-700 bg-burgundy-950/40 px-4 py-3 text-sm text-burgundy-300">
                   {errors.root.message}
                 </div>
               )}
@@ -138,21 +138,23 @@ function ConfirmForm() {
                   id="email"
                   type="email"
                   autoComplete="email"
+                  aria-invalid={!!errors.email}
+                  aria-describedby={errors.email ? "email-error" : undefined}
                   {...register("email")}
                   className={`
                     w-full rounded-lg border bg-slate-850 px-3 py-2.5
                     text-sm text-parchment-200 placeholder-parchment-700
-                    focus:outline-none transition-colors
+                    focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-slate-900 transition-colors
                     ${
                       errors.email
-                        ? "border-burgundy-600 focus:border-burgundy-500"
-                        : "border-burgundy-800 focus:border-gold-500"
+                        ? "border-burgundy-600 focus:border-burgundy-500 focus:ring-burgundy-500"
+                        : "border-burgundy-800 focus:border-gold-500 focus:ring-gold-500"
                     }
                   `}
                   placeholder="you@example.com"
                 />
                 {errors.email && (
-                  <p className="text-xs text-burgundy-400">{errors.email.message}</p>
+                  <p id="email-error" role="alert" className="text-xs text-burgundy-400">{errors.email.message}</p>
                 )}
               </div>
 
@@ -170,22 +172,24 @@ function ConfirmForm() {
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   maxLength={6}
+                  aria-invalid={!!errors.code}
+                  aria-describedby={errors.code ? "code-error" : undefined}
                   {...register("code")}
                   className={`
                     w-full rounded-lg border bg-slate-850 px-3 py-2.5
                     text-center text-lg font-mono tracking-[0.5em]
                     text-parchment-200 placeholder-parchment-700
-                    focus:outline-none transition-colors
+                    focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-slate-900 transition-colors
                     ${
                       errors.code
-                        ? "border-burgundy-600 focus:border-burgundy-500"
-                        : "border-burgundy-800 focus:border-gold-500"
+                        ? "border-burgundy-600 focus:border-burgundy-500 focus:ring-burgundy-500"
+                        : "border-burgundy-800 focus:border-gold-500 focus:ring-gold-500"
                     }
                   `}
                   placeholder="000000"
                 />
                 {errors.code && (
-                  <p className="text-xs text-burgundy-400">{errors.code.message}</p>
+                  <p id="code-error" role="alert" className="text-xs text-burgundy-400">{errors.code.message}</p>
                 )}
               </div>
 
@@ -198,6 +202,7 @@ function ConfirmForm() {
                   bg-burgundy-700 text-parchment-100
                   hover:bg-burgundy-600 disabled:opacity-50 disabled:cursor-not-allowed
                   transition-colors shadow-glow-burgundy
+                  focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-2 focus:ring-offset-slate-900
                 "
               >
                 {isSubmitting ? "Confirming…" : "Confirm Email"}
@@ -212,7 +217,7 @@ function ConfirmForm() {
             Already confirmed?{" "}
             <Link
               href="/auth/login"
-              className="text-gold-500 hover:text-gold-400 transition-colors font-medium"
+              className="text-gold-500 hover:text-gold-400 transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-gold-500 rounded"
             >
               Sign in
             </Link>
@@ -221,7 +226,7 @@ function ConfirmForm() {
             Didn&apos;t receive a code?{" "}
             <Link
               href="/auth/register"
-              className="hover:text-parchment-500 transition-colors"
+              className="hover:text-parchment-500 transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500 rounded"
             >
               Try registering again
             </Link>
@@ -236,8 +241,9 @@ export default function ConfirmPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-slate-950">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-burgundy-500 border-t-transparent" />
+        <div role="status" className="flex min-h-screen items-center justify-center bg-slate-950">
+          <div aria-hidden="true" className="h-8 w-8 animate-spin rounded-full border-2 border-burgundy-500 border-t-transparent" />
+          <span className="sr-only">Loading…</span>
         </div>
       }
     >

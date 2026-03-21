@@ -98,13 +98,13 @@ export default function DomainsPage() {
       {/* Top bar */}
       <header className="border-b border-burgundy-900/50 bg-slate-900/80 backdrop-blur-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <Link href="/dashboard" className="font-serif text-xl font-bold text-parchment-100 hover:text-gold-300 transition-colors">
+          <Link href="/dashboard" className="font-serif text-xl font-bold text-parchment-100 hover:text-gold-300 transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500 rounded">
             Daggerheart
           </Link>
-          <nav className="flex gap-5 text-sm text-parchment-500">
-            <Link href="/classes" className="hover:text-parchment-300 transition-colors">Classes</Link>
-            <Link href="/domains" className="text-parchment-200 font-medium">Domains</Link>
-            <Link href="/dashboard" className="hover:text-parchment-300 transition-colors">My Characters</Link>
+          <nav aria-label="Site navigation" className="flex gap-5 text-sm text-parchment-500">
+            <Link href="/classes" className="hover:text-parchment-300 transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500 rounded">Classes</Link>
+            <Link href="/domains" aria-current="page" className="text-parchment-200 font-medium focus:outline-none focus:ring-2 focus:ring-gold-500 rounded">Domains</Link>
+            <Link href="/dashboard" className="hover:text-parchment-300 transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500 rounded">My Characters</Link>
           </nav>
         </div>
       </header>
@@ -120,14 +120,15 @@ export default function DomainsPage() {
 
         {/* Loading */}
         {isLoading && (
-          <div className="flex items-center justify-center py-20">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-burgundy-500 border-t-transparent" />
+          <div role="status" className="flex items-center justify-center py-20">
+            <div aria-hidden="true" className="h-8 w-8 animate-spin rounded-full border-2 border-burgundy-500 border-t-transparent" />
+            <span className="sr-only">Loading domains…</span>
           </div>
         )}
 
         {/* Error */}
         {isError && !isLoading && (
-          <div className="rounded-xl border border-burgundy-700 bg-slate-900 p-8 text-center">
+          <div role="alert" className="rounded-xl border border-burgundy-700 bg-slate-900 p-8 text-center">
             <p className="text-burgundy-300">Failed to load domains.</p>
           </div>
         )}

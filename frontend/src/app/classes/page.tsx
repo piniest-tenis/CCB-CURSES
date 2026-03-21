@@ -126,13 +126,13 @@ export default function ClassesPage() {
       {/* Top bar */}
       <header className="border-b border-burgundy-900/50 bg-slate-900/80 backdrop-blur-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <Link href="/dashboard" className="font-serif text-xl font-bold text-parchment-100 hover:text-gold-300 transition-colors">
+          <Link href="/dashboard" className="font-serif text-xl font-bold text-parchment-100 hover:text-gold-300 transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500 rounded">
             Daggerheart
           </Link>
-          <nav className="flex gap-5 text-sm text-parchment-500">
-            <Link href="/classes" className="text-parchment-200 font-medium">Classes</Link>
-            <Link href="/domains" className="hover:text-parchment-300 transition-colors">Domains</Link>
-            <Link href="/dashboard" className="hover:text-parchment-300 transition-colors">My Characters</Link>
+          <nav aria-label="Site navigation" className="flex gap-5 text-sm text-parchment-500">
+            <Link href="/classes" aria-current="page" className="text-parchment-200 font-medium focus:outline-none focus:ring-2 focus:ring-gold-500 rounded">Classes</Link>
+            <Link href="/domains" className="hover:text-parchment-300 transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500 rounded">Domains</Link>
+            <Link href="/dashboard" className="hover:text-parchment-300 transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500 rounded">My Characters</Link>
           </nav>
         </div>
       </header>
@@ -148,7 +148,9 @@ export default function ClassesPage() {
 
         {/* Filters */}
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <label htmlFor="class-search" className="sr-only">Search classes</label>
           <input
+            id="class-search"
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -156,16 +158,18 @@ export default function ClassesPage() {
             className="
               w-full sm:w-64 rounded-lg border border-burgundy-800 bg-slate-900
               px-3 py-2 text-sm text-parchment-200 placeholder-parchment-700
-              focus:outline-none focus:border-gold-500
+              focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500
             "
           />
+          <label htmlFor="domain-filter" className="sr-only">Filter by domain</label>
           <select
+            id="domain-filter"
             value={filterDomain}
             onChange={(e) => setFilterDomain(e.target.value)}
             className="
               rounded-lg border border-burgundy-800 bg-slate-900
               px-3 py-2 text-sm text-parchment-200
-              focus:outline-none focus:border-gold-500
+              focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500
             "
           >
             <option value="">All domains</option>
@@ -175,27 +179,29 @@ export default function ClassesPage() {
           </select>
           {(search || filterDomain) && (
             <button
+              type="button"
               onClick={() => { setSearch(""); setFilterDomain(""); }}
-              className="text-xs text-parchment-600 hover:text-parchment-400 transition-colors"
+              className="text-xs text-parchment-600 hover:text-parchment-400 transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500 rounded"
             >
               Clear filters
             </button>
           )}
-          <span className="text-xs text-parchment-600 sm:ml-auto">
+          <span aria-live="polite" aria-atomic="true" className="text-xs text-parchment-600 sm:ml-auto">
             {filtered.length} result{filtered.length !== 1 ? "s" : ""}
           </span>
         </div>
 
         {/* Loading */}
         {isLoading && (
-          <div className="flex items-center justify-center py-20">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-burgundy-500 border-t-transparent" />
+          <div role="status" className="flex items-center justify-center py-20">
+            <div aria-hidden="true" className="h-8 w-8 animate-spin rounded-full border-2 border-burgundy-500 border-t-transparent" />
+            <span className="sr-only">Loading classes…</span>
           </div>
         )}
 
         {/* Error */}
         {isError && !isLoading && (
-          <div className="rounded-xl border border-burgundy-700 bg-slate-900 p-8 text-center">
+          <div role="alert" className="rounded-xl border border-burgundy-700 bg-slate-900 p-8 text-center">
             <p className="text-burgundy-300">Failed to load classes.</p>
           </div>
         )}

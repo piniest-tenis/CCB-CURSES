@@ -108,7 +108,7 @@ export default function RegisterPage() {
           <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
             {/* Root error */}
             {errors.root && (
-              <div className="rounded-lg border border-burgundy-700 bg-burgundy-950/40 px-4 py-3 text-sm text-burgundy-300">
+              <div role="alert" className="rounded-lg border border-burgundy-700 bg-burgundy-950/40 px-4 py-3 text-sm text-burgundy-300">
                 {errors.root.message}
               </div>
             )}
@@ -125,21 +125,23 @@ export default function RegisterPage() {
                 id="displayName"
                 type="text"
                 autoComplete="name"
+                aria-invalid={!!errors.displayName}
+                aria-describedby={errors.displayName ? "displayName-error" : undefined}
                 {...register("displayName")}
                 className={`
                   w-full rounded-lg border bg-slate-850 px-3 py-2.5
                   text-sm text-parchment-200 placeholder-parchment-700
-                  focus:outline-none transition-colors
+                  focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-slate-900 transition-colors
                   ${
                     errors.displayName
-                      ? "border-burgundy-600 focus:border-burgundy-500"
-                      : "border-burgundy-800 focus:border-gold-500"
+                      ? "border-burgundy-600 focus:border-burgundy-500 focus:ring-burgundy-500"
+                      : "border-burgundy-800 focus:border-gold-500 focus:ring-gold-500"
                   }
                 `}
                 placeholder="Aldric Stormweave"
               />
               {errors.displayName && (
-                <p className="text-xs text-burgundy-400">{errors.displayName.message}</p>
+                <p id="displayName-error" role="alert" className="text-xs text-burgundy-400">{errors.displayName.message}</p>
               )}
             </div>
 
@@ -155,21 +157,23 @@ export default function RegisterPage() {
                 id="email"
                 type="email"
                 autoComplete="email"
+                aria-invalid={!!errors.email}
+                aria-describedby={errors.email ? "email-error" : undefined}
                 {...register("email")}
                 className={`
                   w-full rounded-lg border bg-slate-850 px-3 py-2.5
                   text-sm text-parchment-200 placeholder-parchment-700
-                  focus:outline-none transition-colors
+                  focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-slate-900 transition-colors
                   ${
                     errors.email
-                      ? "border-burgundy-600 focus:border-burgundy-500"
-                      : "border-burgundy-800 focus:border-gold-500"
+                      ? "border-burgundy-600 focus:border-burgundy-500 focus:ring-burgundy-500"
+                      : "border-burgundy-800 focus:border-gold-500 focus:ring-gold-500"
                   }
                 `}
                 placeholder="you@example.com"
               />
               {errors.email && (
-                <p className="text-xs text-burgundy-400">{errors.email.message}</p>
+                <p id="email-error" role="alert" className="text-xs text-burgundy-400">{errors.email.message}</p>
               )}
             </div>
 
@@ -185,24 +189,26 @@ export default function RegisterPage() {
                 id="password"
                 type="password"
                 autoComplete="new-password"
+                aria-invalid={!!errors.password}
+                aria-describedby={errors.password ? "password-error" : "password-hint"}
                 {...register("password")}
                 className={`
                   w-full rounded-lg border bg-slate-850 px-3 py-2.5
                   text-sm text-parchment-200 placeholder-parchment-700
-                  focus:outline-none transition-colors
+                  focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-slate-900 transition-colors
                   ${
                     errors.password
-                      ? "border-burgundy-600 focus:border-burgundy-500"
-                      : "border-burgundy-800 focus:border-gold-500"
+                      ? "border-burgundy-600 focus:border-burgundy-500 focus:ring-burgundy-500"
+                      : "border-burgundy-800 focus:border-gold-500 focus:ring-gold-500"
                   }
                 `}
                 placeholder="••••••••••••"
               />
               {errors.password && (
-                <p className="text-xs text-burgundy-400">{errors.password.message}</p>
+                <p id="password-error" role="alert" className="text-xs text-burgundy-400">{errors.password.message}</p>
               )}
               {!errors.password && (
-                <p className="text-xs text-parchment-700">
+                <p id="password-hint" className="text-xs text-parchment-700">
                   12+ characters, upper &amp; lowercase, and a number
                 </p>
               )}
@@ -220,21 +226,23 @@ export default function RegisterPage() {
                 id="confirmPassword"
                 type="password"
                 autoComplete="new-password"
+                aria-invalid={!!errors.confirmPassword}
+                aria-describedby={errors.confirmPassword ? "confirmPassword-error" : undefined}
                 {...register("confirmPassword")}
                 className={`
                   w-full rounded-lg border bg-slate-850 px-3 py-2.5
                   text-sm text-parchment-200 placeholder-parchment-700
-                  focus:outline-none transition-colors
+                  focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-slate-900 transition-colors
                   ${
                     errors.confirmPassword
-                      ? "border-burgundy-600 focus:border-burgundy-500"
-                      : "border-burgundy-800 focus:border-gold-500"
+                      ? "border-burgundy-600 focus:border-burgundy-500 focus:ring-burgundy-500"
+                      : "border-burgundy-800 focus:border-gold-500 focus:ring-gold-500"
                   }
                 `}
                 placeholder="••••••••••••"
               />
               {errors.confirmPassword && (
-                <p className="text-xs text-burgundy-400">{errors.confirmPassword.message}</p>
+                <p id="confirmPassword-error" role="alert" className="text-xs text-burgundy-400">{errors.confirmPassword.message}</p>
               )}
             </div>
 
@@ -247,6 +255,7 @@ export default function RegisterPage() {
                 bg-burgundy-700 text-parchment-100
                 hover:bg-burgundy-600 disabled:opacity-50 disabled:cursor-not-allowed
                 transition-colors shadow-glow-burgundy
+                focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-2 focus:ring-offset-slate-900
               "
             >
               {isSubmitting ? "Creating account…" : "Create Account"}
@@ -259,7 +268,7 @@ export default function RegisterPage() {
           Already have an account?{" "}
           <Link
             href="/auth/login"
-            className="text-gold-500 hover:text-gold-400 transition-colors font-medium"
+            className="text-gold-500 hover:text-gold-400 transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-gold-500 rounded"
           >
             Sign in
           </Link>

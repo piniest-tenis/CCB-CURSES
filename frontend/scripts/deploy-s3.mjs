@@ -3,39 +3,40 @@
  * Syncs the Next.js static export (`out/`) to S3 and invalidates CloudFront.
  * Run via: node scripts/deploy-s3.mjs
  *
- * Required env vars — set in frontend/.env.local for local use:
- *   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
- *   CF_DISTRIBUTION_ID (optional, defaults to the dev distribution)
+ * Required env vars — set in frontend/.env.local (or repo-root .env) for local use:
+ *   AWS_ACCESS_KEY_ID       — IAM deploy user access key
+ *   AWS_SECRET_ACCESS_KEY   — IAM deploy user secret key
+ *   AWS_REGION              — AWS region (e.g. us-east-2)
+ *   FRONTEND_S3_BUCKET      — S3 bucket name for the static export
+ *   CF_DISTRIBUTION_ID      — CloudFront distribution ID (for cache invalidation)
+ *
+ * In CI/CD these come from the runner's IAM role or injected secrets — never hardcode them.
+ * See .env.example at the repo root for documentation on every variable.
  */
 
 import { S3Client, PutObjectCommand, ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { CloudFrontClient, CreateInvalidationCommand } from "@aws-sdk/client-cloudfront";
 import { readFileSync, readdirSync, statSync } from "fs";
 import { join, relative } from "path";
-import { lookup } from "node:dns"; // not used, just for reference
 import { fileURLToPath } from "url";
 import { dirname } from "path";
+import { requireEnv, assertEnv } from "../../scripts/load-env.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// ── Config ────────────────────────────────────────────────────────────────────
-const BUCKET = "daggerheart-frontend-dev-625693792690";
-const DISTRIBUTION_ID = process.env.CF_DISTRIBUTION_ID ?? "E12V8PHM7C7JBP";
-const REGION = "us-east-2";
-const OUT_DIR = join(__dirname, "..", "out");
+// ── Validate required env vars up front ───────────────────────────────────────
+assertEnv(["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "FRONTEND_S3_BUCKET", "CF_DISTRIBUTION_ID"]);
 
-// Credentials — read from environment variables only.
-// Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in frontend/.env.local for local use.
-// In CI/CD these come from the runner's IAM role or injected secrets.
-if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
-  console.error("ERROR: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be set in environment.");
-  console.error("Add them to frontend/.env.local for local deployments.");
-  process.exit(1);
-}
+// ── Config ────────────────────────────────────────────────────────────────────
+const BUCKET          = requireEnv("FRONTEND_S3_BUCKET");
+const DISTRIBUTION_ID = requireEnv("CF_DISTRIBUTION_ID");
+const REGION          = requireEnv("AWS_REGION", "us-east-2");
+const OUT_DIR         = join(__dirname, "..", "out");
+
 const credentials = {
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  accessKeyId:     requireEnv("AWS_ACCESS_KEY_ID"),
+  secretAccessKey: requireEnv("AWS_SECRET_ACCESS_KEY"),
 };
 
 const s3 = new S3Client({ region: REGION, credentials });

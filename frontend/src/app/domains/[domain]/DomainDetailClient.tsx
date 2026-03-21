@@ -39,6 +39,7 @@ const DOMAIN_COLOUR: Record<string, string> = {
 
 function CardTile({ card }: { card: DomainCard }) {
   const [expanded, setExpanded] = useState(false);
+  const bodyId = `card-body-${card.cardId}`;
 
   const badges: React.ReactNode[] = [];
   if (card.isCursed) {
@@ -73,7 +74,9 @@ function CardTile({ card }: { card: DomainCard }) {
       {/* Card header */}
       <button
         onClick={() => setExpanded((e) => !e)}
-        className="w-full flex items-start justify-between gap-3 px-4 py-3 text-left hover:bg-slate-850/30 transition-colors"
+        aria-expanded={expanded}
+        aria-controls={bodyId}
+        className="w-full flex items-start justify-between gap-3 px-4 py-3 text-left hover:bg-slate-850/30 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-gold-500"
       >
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-1.5 mb-1">
@@ -81,12 +84,12 @@ function CardTile({ card }: { card: DomainCard }) {
             {badges}
           </div>
         </div>
-        <span className="shrink-0 text-parchment-700 select-none">{expanded ? "▲" : "▼"}</span>
+        <span aria-hidden="true" className="shrink-0 text-parchment-700 select-none">{expanded ? "▲" : "▼"}</span>
       </button>
 
       {/* Expanded body */}
       {expanded && (
-        <div className="px-4 pb-4 space-y-3 border-t border-slate-700/40">
+        <div id={bodyId} className="px-4 pb-4 space-y-3 border-t border-slate-700/40">
           {/* Simple description */}
           {!card.isGrimoire && card.description && (
             <MarkdownContent className="text-sm text-parchment-400 leading-relaxed pt-3">
@@ -142,8 +145,9 @@ export default function DomainDetailPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-slate-950">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-burgundy-500 border-t-transparent" />
+        <div role="status" className="flex min-h-screen items-center justify-center bg-slate-950">
+          <div aria-hidden="true" className="h-8 w-8 animate-spin rounded-full border-2 border-burgundy-500 border-t-transparent" />
+          <span className="sr-only">Loading domain…</span>
         </div>
       }
     >
@@ -196,12 +200,13 @@ function DomainDetailContent() {
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-4">
           <button
             onClick={() => router.back()}
-            className="text-parchment-600 hover:text-parchment-300 text-sm transition-colors"
+            aria-label="Go back"
+            className="text-parchment-600 hover:text-parchment-300 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500 rounded"
           >
             ← Back
           </button>
           <span className="text-burgundy-800 select-none">/</span>
-          <Link href="/domains" className="text-sm text-parchment-500 hover:text-parchment-300 transition-colors">
+          <Link href="/domains" className="text-sm text-parchment-500 hover:text-parchment-300 transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500 rounded">
             Domains
           </Link>
           <span className="text-burgundy-800 select-none">/</span>
@@ -223,16 +228,17 @@ function DomainDetailContent() {
 
         {/* Loading */}
         {isLoading && (
-          <div className="flex items-center justify-center py-20">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-burgundy-500 border-t-transparent" />
+          <div role="status" className="flex items-center justify-center py-20">
+            <div aria-hidden="true" className="h-8 w-8 animate-spin rounded-full border-2 border-burgundy-500 border-t-transparent" />
+            <span className="sr-only">Loading domain cards…</span>
           </div>
         )}
 
         {/* Error */}
         {isError && !isLoading && (
-          <div className="rounded-xl border border-burgundy-700 bg-slate-900 p-8 text-center">
+          <div role="alert" className="rounded-xl border border-burgundy-700 bg-slate-900 p-8 text-center">
             <p className="text-burgundy-300">Domain not found or failed to load.</p>
-            <Link href="/domains" className="mt-3 inline-block text-sm text-gold-500 hover:text-gold-400">
+            <Link href="/domains" className="mt-3 inline-block text-sm text-gold-500 hover:text-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-500 rounded">
               Back to domains
             </Link>
           </div>
@@ -242,7 +248,9 @@ function DomainDetailContent() {
           <>
             {/* Search + level filter */}
             <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <label htmlFor="card-search" className="sr-only">Search cards</label>
               <input
+                id="card-search"
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -250,13 +258,15 @@ function DomainDetailContent() {
                 className="
                   w-full sm:w-64 rounded-lg border border-burgundy-800 bg-slate-900
                   px-3 py-2 text-sm text-parchment-200 placeholder-parchment-700
-                  focus:outline-none focus:border-gold-500
+                  focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500
                 "
               />
-              <div className="flex gap-2 flex-wrap">
+              <div role="group" aria-label="Filter by level" className="flex gap-2 flex-wrap">
                 <button
+                  type="button"
                   onClick={() => router.push(`/domains/${encodeURIComponent(domainName)}`)}
-                  className={`rounded px-3 py-1.5 text-xs font-medium transition-colors ${
+                  aria-pressed={levelFilter === undefined}
+                  className={`rounded px-3 py-1.5 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500 ${
                     levelFilter === undefined
                       ? "bg-burgundy-700 text-parchment-100"
                       : "border border-burgundy-800 text-parchment-500 hover:text-parchment-300"
@@ -267,10 +277,12 @@ function DomainDetailContent() {
                 {levels.map((l) => (
                   <button
                     key={l}
+                    type="button"
                     onClick={() =>
                       router.push(`/domains/${encodeURIComponent(domainName)}?level=${l}`)
                     }
-                    className={`rounded px-3 py-1.5 text-xs font-medium transition-colors ${
+                    aria-pressed={levelFilter === l}
+                    className={`rounded px-3 py-1.5 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500 ${
                       levelFilter === l
                         ? "bg-burgundy-700 text-parchment-100"
                         : "border border-burgundy-800 text-parchment-500 hover:text-parchment-300"
