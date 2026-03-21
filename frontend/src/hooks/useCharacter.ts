@@ -13,7 +13,8 @@ import {
   type UseMutationResult,
 } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
-import type { Character, CharacterSummary, RestResult } from "@shared/types";
+import { useCharacterStore } from "@/store/characterStore";
+import type { Character, CharacterSummary } from "@shared/types";
 
 // ─── Query keys ───────────────────────────────────────────────────────────────
 
@@ -136,24 +137,38 @@ export function useDeleteCharacter(): UseMutationResult<void, Error, string> {
   });
 }
 
-// ─── useRest ──────────────────────────────────────────────────────────────────
+// ─── useCharacterAction ───────────────────────────────────────────────────────
 
-export function useRest(
+export interface CharacterActionInput {
+  actionId: string;
+  params?: Record<string, unknown>;
+}
+
+export interface CharacterActionResult {
+  character: Character;
+}
+
+/**
+ * Mutation hook for POST /characters/{id}/actions.
+ * On success, syncs the updated character into both the TanStack Query cache
+ * and the Zustand character store so all UI reflects the server state immediately.
+ */
+export function useCharacterAction(
   characterId: string
-): UseMutationResult<RestResult, Error, "short" | "long"> {
+): UseMutationResult<CharacterActionResult, Error, CharacterActionInput> {
   const queryClient = useQueryClient();
+  const { setCharacter } = useCharacterStore();
 
   return useMutation({
-    mutationFn: (restType: "short" | "long") =>
-      apiClient.post<RestResult>(`/characters/${characterId}/rest`, {
-        restType,
-      }),
+    mutationFn: ({ actionId, params }: CharacterActionInput) =>
+      apiClient.post<CharacterActionResult>(
+        `/characters/${characterId}/actions`,
+        { actionId, ...(params ? { params } : {}) }
+      ),
     onSuccess: (result) => {
-      // Update the detail cache with the post-rest character state
-      queryClient.setQueryData(
-        characterKeys.detail(characterId),
-        result.character
-      );
+      // Sync both caches with authoritative server state
+      queryClient.setQueryData(characterKeys.detail(characterId), result.character);
+      setCharacter(result.character);
     },
   });
 }

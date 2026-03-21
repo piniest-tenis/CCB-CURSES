@@ -5,19 +5,22 @@
  * Sets up: QueryClientProvider, auth initialization on mount, dark-mode class.
  */
 
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "Curses! Custom Character Builder",
   description: "Create and manage your character for the Tidwell campaign.",
-  themeColor: "#0f1219",
   icons: {
     icon: "/images/curses-favicon-tilt.png",
     shortcut: "/images/curses-favicon-tilt.png",
     apple: "/images/curses-favicon-tilt.png",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0f1219",
 };
 
 export default function RootLayout({

@@ -126,6 +126,23 @@ export interface Character extends CharacterSummary {
   notes: string | null;
   avatarKey: string | null;
   createdAt: string;
+
+  // ── Campaign mechanics ────────────────────────────────────────────────────
+  /** Per-card token counts. Keys are cardIds; values are non-negative integers. */
+  cardTokens: Record<string, number>;
+  /** Active downtime projects. */
+  downtimeProjects: DowntimeProject[];
+  /** cardIds of auras that are currently toggled on. */
+  activeAuras: string[];
+  /** Companion state for Wraithcaller / Herder subclasses, or null. */
+  companionState: CompanionState | null;
+  /**
+   * Per-character additive reputation bonuses keyed by factionId.
+   * Stacked on top of the GM-tracked party score.
+   */
+  reputationBonuses: Record<string, number>;
+  /** Conditions beyond SRD's Hidden / Restrained / Vulnerable. */
+  customConditions: CustomCondition[];
 }
 
 // ─── Class & Subclass ─────────────────────────────────────────────────────────
@@ -312,6 +329,55 @@ export interface ApiError {
     details?: ApiErrorDetail[];
   };
   meta: ApiMeta;
+}
+
+// ─── Campaign Mechanics ───────────────────────────────────────────────────────
+
+/**
+ * A single active downtime project tracked on a character sheet.
+ * countdownCurrent counts ticks completed; when >= countdownMax the project is
+ * marked completed automatically by the `tick-project` action.
+ */
+export interface DowntimeProject {
+  projectId: string;
+  /** cardId that granted this project, or null for class-feature grants. */
+  cardId: string | null;
+  name: string;
+  countdownMax: number;
+  countdownCurrent: number;
+  repeatable: boolean;
+  completed: boolean;
+  completedAt: string | null;
+  notes: string | null;
+}
+
+/**
+ * Slot-tracker + experiences for a companion (Wraithcaller / Herder subclasses).
+ */
+export interface CompanionState {
+  name: string;
+  /** Starting evasion is 10; updated via levelup choices. */
+  evasion: number;
+  stress: SlotTracker;
+  experiences: Experience[];
+  attackDescription: string;
+  /** e.g. "d6", "d8" */
+  damagedie: string;
+  damageType: "physical" | "magic";
+  range: string;
+  /** Chosen options from the companion levelup list. */
+  levelupChoices: string[];
+}
+
+/**
+ * A campaign-specific condition beyond the SRD set (Hidden / Restrained / Vulnerable).
+ */
+export interface CustomCondition {
+  conditionId: string;
+  name: string;
+  description: string;
+  /** The cardId that inflicted / defined this condition, if any. */
+  sourceCardId: string | null;
 }
 
 // ─── Rest / Downtime ──────────────────────────────────────────────────────────

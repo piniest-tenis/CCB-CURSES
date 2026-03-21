@@ -5,11 +5,14 @@
  * Supports dot-notation field updates, tracker mutations, condition toggles,
  * loadout management (max 5), vault management, and debounced auto-save
  * via PATCH /characters/{id}.
+ *
+ * Also exposes applyAction() which calls POST /characters/{id}/actions
+ * and merges the returned character state into the store.
  */
 
 import { create } from "zustand";
 import type { Character, CoreStatName, CharacterTrackers } from "@shared/types";
-import { apiClient } from "@/lib/api";
+import { apiClient, ApiError } from "@/lib/api";
 
 // ─── Dot-notation deep setter ─────────────────────────────────────────────────
 // Supports paths like "stats.agility", "weapons.primary.name", etc.
@@ -32,6 +35,21 @@ function setNestedValue(
   current[parts[parts.length - 1]] = value;
   return result;
 }
+
+// ─── Action result ────────────────────────────────────────────────────────────
+
+export interface ActionResult {
+  /** The updated character returned by the server after the action. */
+  character: Character;
+}
+
+/**
+ * The discriminated-union result type returned by `applyAction`.
+ * Callers can use `if (result.ok)` to branch without catching exceptions.
+ */
+export type ApplyActionResult =
+  | { ok: true }
+  | { ok: false; message: string };
 
 // ─── Interface ────────────────────────────────────────────────────────────────
 
@@ -77,6 +95,19 @@ export interface CharacterStore {
   // ── Vault management ───────────────────────────────────────────────────────
   /** Add a card to the domain vault (no-op if already present). */
   addToVault: (cardId: string) => void;
+
+  // ── Server actions ─────────────────────────────────────────────────────────
+  /**
+   * POST /characters/{characterId}/actions with { actionId, params }.
+   * On success:  merges the returned character into the store and returns { ok: true }.
+   * On 422 / any error: returns { ok: false, message } — never re-throws.
+   * This lets callers display inline errors without a try/catch.
+   */
+  applyAction: (
+    characterId: string,
+    actionId: string,
+    params?: Record<string, unknown>
+  ) => Promise<ApplyActionResult>;
 
   // ── Persistence ────────────────────────────────────────────────────────────
   /** PATCH the character to the server with the full current state. */
@@ -274,6 +305,35 @@ export const useCharacterStore = create<CharacterStore>()((set, get) => ({
       set({ activeCharacter: updated, isDirty: false });
     } finally {
       set({ isSaving: false });
+    }
+  },
+
+  // ── applyAction ──────────────────────────────────────────────────────────────
+  applyAction: async (
+    characterId: string,
+    actionId: string,
+    params?: Record<string, unknown>
+  ): Promise<ApplyActionResult> => {
+    try {
+      // POST the action — on success the server returns { character: Character }
+      const result = await apiClient.post<ActionResult>(
+        `/characters/${characterId}/actions`,
+        { actionId, ...(params ? { params } : {}) }
+      );
+      // Merge the authoritative server state back into the store.
+      // We do NOT mark isDirty=true here because the server is the source of truth.
+      set({ activeCharacter: result.character, isDirty: false });
+      return { ok: true };
+    } catch (err) {
+      // Return a structured error instead of re-throwing, so callers can
+      // display inline errors without a try/catch.
+      if (err instanceof ApiError) {
+        return { ok: false, message: err.message };
+      }
+      if (err instanceof Error) {
+        return { ok: false, message: err.message };
+      }
+      return { ok: false, message: "An unexpected error occurred." };
     }
   },
 }));

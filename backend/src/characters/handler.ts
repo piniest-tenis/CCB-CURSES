@@ -28,6 +28,8 @@ import {
   validateSrdRules,
   applyRest,
   normalizeWeapons,
+  applyAction,
+  type ActionId,
 } from "./helpers";
 import {
   CHARACTERS_TABLE,
@@ -48,9 +50,9 @@ import type {
   DamageThresholds,
   Weapons,
   ClassFeatureState,
-  RestType,
   DowntimeAction,
   RestResult,
+  DowntimeProject,
 } from "@shared/types";
 
 // ─── Zod Schemas ──────────────────────────────────────────────────────────────
@@ -82,6 +84,43 @@ const SlotTrackerSchema = z.object({
   max: z.number().int().min(0),
   marked: z.number().int().min(0),
 });
+
+// ── Campaign Mechanics Schemas ─────────────────────────────────────────────────
+
+const DowntimeProjectSchema = z.object({
+  projectId: z.string().uuid(),
+  cardId: z.string().nullable(),
+  name: z.string().min(1).max(120),
+  countdownMax: z.number().int().min(1),
+  countdownCurrent: z.number().int().min(0),
+  repeatable: z.boolean(),
+  completed: z.boolean(),
+  completedAt: z.string().nullable(),
+  notes: z.string().nullable(),
+});
+
+const CompanionStateSchema = z.object({
+  name: z.string().min(1).max(80),
+  evasion: z.number().int().min(0),
+  stress: SlotTrackerSchema,
+  experiences: z.array(
+    z.object({ name: z.string(), bonus: z.number().int() })
+  ),
+  attackDescription: z.string(),
+  damagedie: z.string().regex(/^d\d+$/, "Must be a die notation like d6 or d8"),
+  damageType: z.enum(["physical", "magic"]),
+  range: z.string(),
+  levelupChoices: z.array(z.string()),
+});
+
+const CustomConditionSchema = z.object({
+  conditionId: z.string(),
+  name: z.string().min(1).max(60),
+  description: z.string(),
+  sourceCardId: z.string().nullable(),
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const CreateCharacterSchema = z.object({
   name: z.string().min(1, "Name is required").max(60, "Name must be 60 characters or fewer"),
@@ -153,12 +192,61 @@ const PutCharacterSchema = z.object({
   notes: z.string().nullable().optional(),
   avatarKey: z.string().nullable().optional(),
   traitBonuses: z.record(z.string(), z.number().int()).optional().default({}),
+  // ── Campaign fields ───────────────────────────────────────────────────────
+  cardTokens: z.record(z.string(), z.number().int().min(0)).optional().default({}),
+  downtimeProjects: z.array(DowntimeProjectSchema).optional().default([]),
+  activeAuras: z.array(z.string()).optional().default([]),
+  companionState: CompanionStateSchema.nullable().optional().default(null),
+  reputationBonuses: z.record(z.string(), z.number().int()).optional().default({}),
+  customConditions: z.array(CustomConditionSchema).optional().default([]),
 });
 
 const PatchCharacterSchema = PutCharacterSchema.partial();
 
 const RestSchema = z.object({
   restType: z.enum(["short", "long"]),
+});
+
+// ── Downtime Project Schemas ──────────────────────────────────────────────────
+
+const CreateProjectSchema = z.object({
+  cardId: z.string().nullable().optional().default(null),
+  name: z.string().min(1).max(120),
+  countdownMax: z.number().int().min(1),
+  repeatable: z.boolean().optional().default(false),
+  notes: z.string().nullable().optional().default(null),
+});
+
+const PatchProjectSchema = z.object({
+  /** Tick the countdown by 1. */
+  tick: z.boolean().optional(),
+  /** Manually set countdownCurrent (clamped to [0, countdownMax]). */
+  countdownCurrent: z.number().int().min(0).optional(),
+  /** Mark as completed. */
+  completed: z.boolean().optional(),
+  notes: z.string().nullable().optional(),
+});
+
+// ── Action Schema ─────────────────────────────────────────────────────────────
+
+const ActionSchema = z.object({
+  actionId: z.enum([
+    "use-hope-feature",
+    "spend-token",
+    "add-token",
+    "clear-tokens",
+    "toggle-aura",
+    "tick-project",
+    "clear-stress",
+    "clear-hp",
+    "mark-stress",
+    "mark-hp",
+    "gain-hope",
+    "spend-hope",
+    "companion-clear-stress",
+    "companion-mark-stress",
+  ] as const),
+  params: z.record(z.unknown()).optional().default({}),
 });
 
 // ─── DynamoDB Record Shape ────────────────────────────────────────────────────
@@ -359,6 +447,13 @@ function toCharacterResponse(
     avatarUrl: buildAvatarUrl(record.avatarKey),
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
+    // ── Campaign fields ───────────────────────────────────────────────────
+    cardTokens: record.cardTokens ?? {},
+    downtimeProjects: record.downtimeProjects ?? [],
+    activeAuras: record.activeAuras ?? [],
+    companionState: record.companionState ?? null,
+    reputationBonuses: record.reputationBonuses ?? {},
+    customConditions: record.customConditions ?? [],
   };
 }
 
@@ -531,6 +626,13 @@ async function createCharacter(
     avatarUrl: null,
     createdAt: now,
     updatedAt: now,
+    // ── Campaign fields ───────────────────────────────────────────────────
+    cardTokens: {},
+    downtimeProjects: [],
+    activeAuras: [],
+    companionState: null,
+    reputationBonuses: {},
+    customConditions: [],
   };
 
   await putItem({
@@ -792,6 +894,193 @@ async function getSharedCharacter(
   return createSuccessResponse(response);
 }
 
+// ─── Downtime Project Route Handlers ─────────────────────────────────────────
+
+async function createProject(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<APIGatewayProxyResultV2> {
+  const userId = extractUserId(event);
+  const characterId = requirePathParam(event, "characterId");
+
+  const existing = await getItem<CharacterRecord>({
+    TableName: CHARACTERS_TABLE,
+    Key: keys.character(userId, characterId),
+  });
+  if (!existing) throw AppError.notFound("Character", characterId);
+  if (existing.userId !== userId) throw AppError.forbidden();
+
+  const input = parseBody(event, CreateProjectSchema);
+  const now = new Date().toISOString();
+
+  const project: DowntimeProject = {
+    projectId: uuidv4(),
+    cardId: input.cardId ?? null,
+    name: input.name,
+    countdownMax: input.countdownMax,
+    countdownCurrent: 0,
+    repeatable: input.repeatable ?? false,
+    completed: false,
+    completedAt: null,
+    notes: input.notes ?? null,
+  };
+
+  const updatedRecord: CharacterRecord = {
+    ...existing,
+    downtimeProjects: [...(existing.downtimeProjects ?? []), project],
+    updatedAt: now,
+  };
+
+  await putItem({
+    TableName: CHARACTERS_TABLE,
+    Item: updatedRecord,
+    ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)",
+  });
+
+  const response = await enrichCharacter(updatedRecord);
+  return createSuccessResponse(response, 201);
+}
+
+async function patchProject(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<APIGatewayProxyResultV2> {
+  const userId = extractUserId(event);
+  const characterId = requirePathParam(event, "characterId");
+  const projectId = requirePathParam(event, "projectId");
+
+  const existing = await getItem<CharacterRecord>({
+    TableName: CHARACTERS_TABLE,
+    Key: keys.character(userId, characterId),
+  });
+  if (!existing) throw AppError.notFound("Character", characterId);
+  if (existing.userId !== userId) throw AppError.forbidden();
+
+  const input = parseBody(event, PatchProjectSchema);
+  const projects = existing.downtimeProjects ?? [];
+  const idx = projects.findIndex((p) => p.projectId === projectId);
+  if (idx === -1) throw AppError.notFound("DowntimeProject", projectId);
+
+  const project = projects[idx]!;
+  const now = new Date().toISOString();
+
+  let updated = { ...project };
+
+  if (input.notes !== undefined) updated.notes = input.notes;
+  if (input.countdownCurrent !== undefined) {
+    updated.countdownCurrent = Math.min(input.countdownCurrent, project.countdownMax);
+  }
+  if (input.tick === true) {
+    updated.countdownCurrent = Math.min(updated.countdownCurrent + 1, project.countdownMax);
+  }
+  // Auto-complete if current reached max, or explicit flag
+  const nowCompleted =
+    input.completed === true || updated.countdownCurrent >= updated.countdownMax;
+  if (nowCompleted && !updated.completed) {
+    updated.completed = true;
+    updated.completedAt = now;
+  }
+
+  const updatedProjects = [...projects];
+  updatedProjects[idx] = updated;
+
+  const updatedRecord: CharacterRecord = {
+    ...existing,
+    downtimeProjects: updatedProjects,
+    updatedAt: now,
+  };
+
+  await putItem({
+    TableName: CHARACTERS_TABLE,
+    Item: updatedRecord,
+    ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)",
+  });
+
+  const response = await enrichCharacter(updatedRecord);
+  return createSuccessResponse(response);
+}
+
+async function deleteProject(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<APIGatewayProxyResultV2> {
+  const userId = extractUserId(event);
+  const characterId = requirePathParam(event, "characterId");
+  const projectId = requirePathParam(event, "projectId");
+
+  const existing = await getItem<CharacterRecord>({
+    TableName: CHARACTERS_TABLE,
+    Key: keys.character(userId, characterId),
+  });
+  if (!existing) throw AppError.notFound("Character", characterId);
+  if (existing.userId !== userId) throw AppError.forbidden();
+
+  const projects = existing.downtimeProjects ?? [];
+  const idx = projects.findIndex((p) => p.projectId === projectId);
+  if (idx === -1) throw AppError.notFound("DowntimeProject", projectId);
+
+  const updatedRecord: CharacterRecord = {
+    ...existing,
+    downtimeProjects: projects.filter((p) => p.projectId !== projectId),
+    updatedAt: new Date().toISOString(),
+  };
+
+  await putItem({
+    TableName: CHARACTERS_TABLE,
+    Item: updatedRecord,
+    ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)",
+  });
+
+  return { statusCode: 204, body: "" };
+}
+
+// ─── Actions Route Handler ────────────────────────────────────────────────────
+
+async function executeAction(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<APIGatewayProxyResultV2> {
+  const userId = extractUserId(event);
+  const characterId = requirePathParam(event, "characterId");
+
+  const existing = await getItem<CharacterRecord>({
+    TableName: CHARACTERS_TABLE,
+    Key: keys.character(userId, characterId),
+  });
+  if (!existing) throw AppError.notFound("Character", characterId);
+  if (existing.userId !== userId) throw AppError.forbidden();
+
+  const { actionId, params: rawParams } = parseBody(event, ActionSchema);
+  const params = rawParams ?? {};
+
+  // Normalise raw params from the schema's Record<string, unknown> to ActionParams
+  const actionParams = {
+    cardId: typeof params["cardId"] === "string" ? params["cardId"] : undefined,
+    n: typeof params["n"] === "number" ? params["n"] : undefined,
+    hopeCost: typeof params["hopeCost"] === "number" ? params["hopeCost"] : undefined,
+    projectId: typeof params["projectId"] === "string" ? params["projectId"] : undefined,
+  };
+
+  // applyAction throws AppError(422) on validity failure
+  const updatedCharacter = applyAction(
+    existing as unknown as Character,
+    actionId as ActionId,
+    actionParams
+  );
+
+  const updatedRecord: CharacterRecord = {
+    ...(updatedCharacter as unknown as CharacterRecord),
+    PK: existing.PK,
+    SK: existing.SK,
+    updatedAt: new Date().toISOString(),
+  };
+
+  await putItem({
+    TableName: CHARACTERS_TABLE,
+    Item: updatedRecord,
+    ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)",
+  });
+
+  const response = await enrichCharacter(updatedRecord);
+  return createSuccessResponse(response);
+}
+
 // ─── Route Dispatcher ─────────────────────────────────────────────────────────
 
 export const handler = withErrorHandling(
@@ -819,6 +1108,15 @@ export const handler = withErrorHandling(
         return getShareToken(event);
       case "GET /characters/{characterId}/view":
         return getSharedCharacter(event);
+      // ── Campaign mechanics ──────────────────────────────────────────────
+      case "POST /characters/{characterId}/projects":
+        return createProject(event);
+      case "PATCH /characters/{characterId}/projects/{projectId}":
+        return patchProject(event);
+      case "DELETE /characters/{characterId}/projects/{projectId}":
+        return deleteProject(event);
+      case "POST /characters/{characterId}/actions":
+        return executeAction(event);
       default:
         return createErrorResponse("NOT_FOUND", "Route not found", 404);
     }

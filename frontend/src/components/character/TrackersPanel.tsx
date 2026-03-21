@@ -5,42 +5,79 @@
  *
  * Renders:
  * - Damage threshold inputs (Major / Severe only — SRD page 20)
- * - Slot trackers (HP, Stress, Armor) — clickable circles
- * - Proficiency display — scalar integer, not a slot tracker (SRD page 3/22)
- * - Primary + secondary weapon cards (full field set including tier and feature)
- * - Hope tracker (data-driven from hopeMax — SRD page 20)
- * - Experiences list — with +/- increment buttons, colored bonus display
- * - Traits section (Ancestry × 2 + Community traits with incrementable bonuses)
+ * - Slot trackers (HP, Stress, Armor) — clickable circles, each click
+ *   calls POST /characters/{id}/actions with mark-hp / clear-hp / etc.
+ * - Proficiency display — scalar integer (SRD page 3/22)
+ * - Primary + secondary weapon cards (full field set)
+ * - Hope tracker — +/- buttons call gain-hope / spend-hope
+ * - Experiences list
+ * - Traits section (Ancestry × 2 + Community traits)
+ *
+ * Action wiring:
+ *   Slot click (mark)   → mark-hp / mark-stress / mark-armor   { n: 1 }
+ *   Slot click (clear)  → clear-hp / clear-stress / clear-armor { n: 1 }
+ *   Hope + button       → gain-hope  { n: 1 }
+ *   Hope - button       → spend-hope { n: 1 }
+ *
+ * Inline errors (role="alert") appear directly below the tracker group,
+ * never as toasts. Buttons are never disabled preemptively.
  */
 
 import React, { useState } from "react";
 import type { CharacterTrackers, WeaponBurden, WeaponDamageType } from "@shared/types";
 import { useCharacterStore } from "@/store/characterStore";
 import { useAncestry, useCommunity } from "@/hooks/useGameData";
+import { useActionButton, InlineActionError } from "./ActionButton";
 
-// ─── SlotTracker ──────────────────────────────────────────────────────────────
+// ─── Props helper: characterId is provided by TrackersPanel from the store ────
 
-interface SlotTrackerProps {
-  label:        string;
-  marked:       number;
-  max:          number;
-  /** Called with the slot index that was clicked. */
-  onToggle:     (index: number) => void;
-  onMaxChange:  (value: number) => void;
-  colorFilled?: string;
-  /** Hard cap enforced by the SRD (e.g. 12 for HP and Stress). */
-  hardMax?: number;
+function useCharacterId(): string {
+  const { activeCharacter } = useCharacterStore();
+  return activeCharacter?.characterId ?? "";
 }
 
-function SlotTracker({
+// ─── ActionableSlotTracker ────────────────────────────────────────────────────
+// Like SlotTracker but each circle click fires a server action.
+
+interface ActionableSlotTrackerProps {
+  label:         string;
+  marked:        number;
+  max:           number;
+  /** Action fired when clicking an empty slot (marking) */
+  markActionId:  string;
+  /** Action fired when clicking a filled slot (clearing) */
+  clearActionId: string;
+  characterId:   string;
+  onMaxChange:   (value: number) => void;
+  colorFilled?:  string;
+  hardMax?:      number;
+}
+
+function ActionableSlotTracker({
   label,
   marked,
   max,
-  onToggle,
+  markActionId,
+  clearActionId,
+  characterId,
   onMaxChange,
   colorFilled = "bg-burgundy-600",
   hardMax,
-}: SlotTrackerProps) {
+}: ActionableSlotTrackerProps) {
+  const { fire, isPending, inlineError } = useActionButton(characterId);
+  const errorId = React.useId();
+
+  const handleToggle = async (index: number) => {
+    const isFilled = index < marked;
+    if (isFilled) {
+      // Clear down to this index: n = marked - index
+      await fire(clearActionId, { n: marked - index });
+    } else {
+      // Mark up to index + 1: n = index + 1 - marked
+      await fire(markActionId, { n: index + 1 - marked });
+    }
+  };
+
   return (
     <div className="flex flex-col gap-1.5">
       {/* Header row: label + marked/max counter */}
@@ -75,19 +112,26 @@ function SlotTracker({
       </div>
 
       {/* Slot circles */}
-      <div className="flex flex-wrap gap-1.5" role="group" aria-label={`${label} slots`}>
+      <div
+        className="flex flex-wrap gap-1.5"
+        role="group"
+        aria-label={`${label} slots`}
+        aria-describedby={inlineError ? errorId : undefined}
+      >
         {Array.from({ length: max }, (_, i) => {
           const filled = i < marked;
           return (
             <button
               key={i}
               type="button"
-              onClick={() => onToggle(i)}
+              onClick={() => handleToggle(i)}
+              disabled={isPending}
               aria-label={`${label} slot ${i + 1} — ${filled ? "marked" : "empty"}`}
               aria-pressed={filled}
               className={`
                 h-8 w-8 rounded-full border-2 transition-all duration-150
                 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-1 focus:ring-offset-slate-900
+                disabled:opacity-60 disabled:cursor-wait
                 ${
                   filled
                     ? `${colorFilled} border-transparent shadow-sm`
@@ -98,6 +142,7 @@ function SlotTracker({
           );
         })}
       </div>
+      <InlineActionError message={inlineError} id={errorId} />
     </div>
   );
 }
@@ -262,7 +307,7 @@ function WeaponCard({ slot }: WeaponCardProps) {
           ))}
         </select>
 
-        {/* Tier — SRD page 23: weapons have a tier; cannot equip above character tier */}
+        {/* Tier — SRD page 23 */}
         <div className="flex items-center gap-2">
           <label htmlFor={tierId} className="text-[10px] uppercase tracking-wider text-parchment-600 shrink-0">
             Tier
@@ -287,7 +332,7 @@ function WeaponCard({ slot }: WeaponCardProps) {
           </select>
         </div>
 
-        {/* Feature — SRD page 23: optional weapon feature text */}
+        {/* Feature — SRD page 23 */}
         <input
           type="text"
           placeholder="Feature (e.g. Reliable)"
@@ -305,54 +350,125 @@ function WeaponCard({ slot }: WeaponCardProps) {
   );
 }
 
-// ─── HopeTracker ──────────────────────────────────────────────────────────────
+// ─── ActionableHopeTracker ────────────────────────────────────────────────────
+// Hope +/- buttons call gain-hope / spend-hope via the actions endpoint.
 
-function HopeTracker() {
-  const { activeCharacter, updateHope } = useCharacterStore();
+function ActionableHopeTracker({ characterId }: { characterId: string }) {
+  const { activeCharacter } = useCharacterStore();
   if (!activeCharacter) return null;
 
   const { hope } = activeCharacter;
-  // SRD page 20: base max Hope is 6; reduced by scars (death table).
+  // SRD page 20: base max Hope is 6; reduced by scars.
   const hopeMax = activeCharacter.hopeMax ?? 6;
+
+  return (
+    <HopeTrackerInner
+      hope={hope}
+      hopeMax={hopeMax}
+      characterId={characterId}
+    />
+  );
+}
+
+function HopeTrackerInner({
+  hope,
+  hopeMax,
+  characterId,
+}: {
+  hope: number;
+  hopeMax: number;
+  characterId: string;
+}) {
+  const gainAction  = useActionButton(characterId);
+  const spendAction = useActionButton(characterId);
+  const errorId = React.useId();
+
+  // Merge errors from both actions
+  const combinedError = gainAction.inlineError ?? spendAction.inlineError;
+  const isPending     = gainAction.isPending || spendAction.isPending;
 
   return (
     <div className="flex flex-col gap-1.5">
       <span className="text-xs font-semibold uppercase tracking-wider text-parchment-400">
         Hope
       </span>
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Hope tracker">
-        {Array.from({ length: hopeMax }, (_, i) => {
-          const filled = i < hope;
-          return (
-            <button
-              key={i}
-              type="button"
-              // Clicking a filled dot → clear down to i (set hope = i)
-              // Clicking an empty dot → fill up to i+1 (set hope = i+1)
-              onClick={() => updateHope(filled ? i : i + 1)}
-              aria-label={`Hope ${i + 1} — ${filled ? "filled" : "empty"}`}
-              aria-pressed={filled}
-              className={`
-                h-10 w-10 rounded-full border-2 transition-all duration-150 text-xs font-bold
-                focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-1 focus:ring-offset-slate-900
-                ${
-                  filled
-                    ? "bg-gold-500 border-gold-400 text-slate-900 shadow-glow-gold"
-                    : "border-gold-800 bg-transparent text-gold-700 hover:border-gold-500 hover:text-gold-400"
-                }
-              `}
-            >
-              {i + 1}
-            </button>
-          );
-        })}
+
+      {/* +/- controls */}
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => spendAction.fire("spend-hope", { n: 1 })}
+          disabled={isPending}
+          aria-label="Spend 1 Hope"
+          className="
+            h-9 w-9 rounded border border-burgundy-800 bg-slate-900
+            text-sm text-parchment-500 hover:bg-burgundy-900/30 hover:text-parchment-200
+            disabled:opacity-50 disabled:cursor-wait
+            transition-colors flex items-center justify-center
+            focus:outline-none focus:ring-2 focus:ring-gold-500
+          "
+        >
+          −
+        </button>
+
+        {/* Hope pips (read-only visual; mutations are handled by +/-) */}
+        <div
+          className="flex flex-wrap gap-2"
+          role="meter"
+          aria-valuenow={hope}
+          aria-valuemin={0}
+          aria-valuemax={hopeMax}
+          aria-label={`Hope: ${hope} of ${hopeMax}`}
+        >
+          {Array.from({ length: hopeMax }, (_, i) => {
+            const filled = i < hope;
+            return (
+              <span
+                key={i}
+                aria-hidden="true"
+                className={`
+                  h-8 w-8 rounded-full border-2 text-xs font-bold
+                  flex items-center justify-center select-none
+                  transition-all duration-150
+                  ${
+                    filled
+                      ? "bg-gold-500 border-gold-400 text-slate-900 shadow-glow-gold"
+                      : "border-gold-800 bg-transparent text-gold-700"
+                  }
+                `}
+              >
+                {i + 1}
+              </span>
+            );
+          })}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => gainAction.fire("gain-hope", { n: 1 })}
+          disabled={isPending}
+          aria-label="Gain 1 Hope"
+          className="
+            h-9 w-9 rounded border border-gold-800 bg-slate-900
+            text-sm text-gold-600 hover:bg-gold-900/20 hover:text-gold-300
+            disabled:opacity-50 disabled:cursor-wait
+            transition-colors flex items-center justify-center
+            focus:outline-none focus:ring-2 focus:ring-gold-500
+          "
+        >
+          +
+        </button>
       </div>
+
+      <InlineActionError
+        message={combinedError}
+        id={errorId}
+      />
     </div>
   );
 }
 
 // ─── BonusDisplay ─────────────────────────────────────────────────────────────
-// Shared bonus display: colored +N / -N / +0
 
 function BonusDisplay({ bonus }: { bonus: number }) {
   const label = bonus >= 0 ? `+${bonus}` : `${bonus}`;
@@ -370,14 +486,11 @@ function BonusDisplay({ bonus }: { bonus: number }) {
 }
 
 // ─── IncrementControls ────────────────────────────────────────────────────────
-// Reusable +/- controls for bonus fields
 
 interface IncrementControlsProps {
   value:    number;
   onChange: (v: number) => void;
-  /** Optional min clamp (default: none) */
   min?: number;
-  /** Optional max clamp (default: none) */
   max?: number;
   ariaLabel?: string;
 }
@@ -573,9 +686,6 @@ function ExperiencesList() {
 }
 
 // ─── TraitsSection ────────────────────────────────────────────────────────────
-// Displays ancestry + community traits with incrementable bonuses.
-// Bonuses stored in character.traitBonuses (with graceful fallback to
-// classFeatureState["trait_ancestry"] / classFeatureState["trait_community"]).
 
 function TraitsSection() {
   const { activeCharacter, updateField } = useCharacterStore();
@@ -588,20 +698,15 @@ function TraitsSection() {
   const { data: ancestryData  } = useAncestry(ancestryId);
   const { data: communityData } = useCommunity(communityId);
 
-  // No traits to show if neither is set
   if (!ancestryId && !communityId) return null;
 
-  // Helper: get trait bonus
   const getTraitBonus = (key: string): number => {
-    // Prefer traitBonuses field (backend v2)
     const traitBonuses = activeCharacter.traitBonuses ?? {};
     if (key in traitBonuses) return traitBonuses[key];
-    // Fallback to classFeatureState workaround
     const featureKey = key === "ancestry" ? "trait_ancestry" : "trait_community";
     return activeCharacter.classFeatureState?.[featureKey]?.tokens ?? 0;
   };
 
-  // Helper: set trait bonus
   const setTraitBonus = (key: string, value: number) => {
     const traitBonuses = { ...(activeCharacter.traitBonuses ?? {}) };
     traitBonuses[key] = value;
@@ -617,7 +722,6 @@ function TraitsSection() {
         Ancestry and community traits — increment as you level up.
       </p>
 
-      {/* First ancestry trait */}
       {ancestryData && (
         <div className="flex items-center gap-2 rounded-lg border border-burgundy-900/40 bg-slate-900/50 px-3 py-2">
           <div className="flex-1 min-w-0">
@@ -636,7 +740,6 @@ function TraitsSection() {
         </div>
       )}
 
-      {/* Second ancestry trait — SRD page 3: ancestry grants two features */}
       {ancestryData?.secondTraitName && (
         <div className="flex items-center gap-2 rounded-lg border border-burgundy-900/40 bg-slate-900/50 px-3 py-2">
           <div className="flex-1 min-w-0">
@@ -655,7 +758,6 @@ function TraitsSection() {
         </div>
       )}
 
-      {/* Community trait */}
       {communityData && (
         <div className="flex items-center gap-2 rounded-lg border border-burgundy-900/40 bg-slate-900/50 px-3 py-2">
           <div className="flex-1 min-w-0">
@@ -681,18 +783,11 @@ function TraitsSection() {
 
 export function TrackersPanel() {
   const { activeCharacter, updateTracker, updateField } = useCharacterStore();
+  const characterId = useCharacterId();
 
   if (!activeCharacter) return null;
 
   const { trackers, damageThresholds } = activeCharacter;
-
-  const handleTrackerToggle = (key: keyof CharacterTrackers, index: number) => {
-    const current = trackers[key].marked;
-    // Clicking a filled slot → unmark down to that index
-    // Clicking an empty slot → mark up to index + 1
-    const next = index < current ? index : index + 1;
-    updateTracker(key, "marked", Math.min(next, trackers[key].max));
-  };
 
   return (
     <section
@@ -703,7 +798,7 @@ export function TrackersPanel() {
         Trackers
       </h2>
 
-      {/* Damage Thresholds — SRD page 20: only Major and Severe are defined numerically */}
+      {/* Damage Thresholds */}
       <div>
         <h3 className="mb-3 text-xs font-medium uppercase tracking-wider text-parchment-500">
           Damage Thresholds
@@ -725,35 +820,42 @@ export function TrackersPanel() {
         </div>
       </div>
 
-      {/* Slot trackers — SRD page 20: HP and Stress max out at 12 */}
+      {/* Slot trackers — each slot click calls the actions endpoint */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <SlotTracker
+        <ActionableSlotTracker
           label="Hit Points"
           marked={trackers.hp.marked}
           max={trackers.hp.max}
-          onToggle={(i) => handleTrackerToggle("hp", i)}
+          markActionId="mark-hp"
+          clearActionId="clear-hp"
+          characterId={characterId}
           onMaxChange={(v) => updateTracker("hp", "max", v)}
           colorFilled="bg-burgundy-600"
           hardMax={12}
         />
-        <SlotTracker
+        <ActionableSlotTracker
           label="Stress"
           marked={trackers.stress.marked}
           max={trackers.stress.max}
-          onToggle={(i) => handleTrackerToggle("stress", i)}
+          markActionId="mark-stress"
+          clearActionId="clear-stress"
+          characterId={characterId}
           onMaxChange={(v) => updateTracker("stress", "max", v)}
           colorFilled="bg-gold-600"
           hardMax={12}
         />
-        <SlotTracker
+        <ActionableSlotTracker
           label="Armor"
           marked={trackers.armor.marked}
           max={trackers.armor.max}
-          onToggle={(i) => handleTrackerToggle("armor", i)}
+          markActionId="mark-armor"
+          clearActionId="clear-armor"
+          characterId={characterId}
           onMaxChange={(v) => updateTracker("armor", "max", v)}
           colorFilled="bg-parchment-500"
         />
-        {/* Proficiency — SRD page 3/22: scalar integer, not a spendable slot resource */}
+
+        {/* Proficiency — scalar integer, not a slot resource */}
         <div className="flex flex-col gap-1.5">
           <span className="text-xs font-semibold uppercase tracking-wider text-parchment-400">
             Proficiency
@@ -802,8 +904,8 @@ export function TrackersPanel() {
         <WeaponCard slot="secondary" />
       </div>
 
-      {/* Hope */}
-      <HopeTracker />
+      {/* Hope — server-authoritative +/- */}
+      <ActionableHopeTracker characterId={characterId} />
 
       {/* Traits (ancestry + community) */}
       <TraitsSection />
