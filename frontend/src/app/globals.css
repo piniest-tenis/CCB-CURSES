@@ -49,6 +49,34 @@
     @apply bg-background text-foreground;
   }
 
+  /*
+   * Global focus-visible fallback safety net.
+   * Any element that receives keyboard focus but has outline suppressed
+   * without a replacement ring will show this fallback ring.
+   * Components that provide their own focus ring (focus:ring-*) will
+   * override this naturally.
+   */
+  *:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  /* warbler-deck small-caps — applied to every element using the serif stack */
+  .font-serif,
+  [class*="font-serif"] {
+    font-variant: small-caps;
+    font-feature-settings: "smcp";
+    font-size: calc(1em * 1.25);
+  }
+
+  /* jetsam-collection-basilea display font — no small-caps, same size boost */
+  .font-display,
+  [class*="font-display"] {
+    font-variant: normal;
+    font-feature-settings: normal;
+    font-size: calc(1em * 1.25);
+  }
+
   /* Scrollbar styling */
   ::-webkit-scrollbar {
     width: 6px;
@@ -63,5 +91,18 @@
   }
   ::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground));
+  }
+
+  /* Screen reader utility — ensure sr-only is always available */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
   }
 }

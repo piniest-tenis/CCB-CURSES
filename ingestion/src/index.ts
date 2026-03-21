@@ -447,6 +447,8 @@ async function runAncestries(opts: CliOptions): Promise<CategorySummary> {
         flavorText: data.flavorText,
         traitName: data.traitName,
         traitDescription: data.traitDescription,
+        secondTraitName: data.secondTraitName,
+        secondTraitDescription: data.secondTraitDescription,
         source: data.source,
       });
     } catch (err) {
@@ -493,6 +495,31 @@ async function runDomains(opts: CliOptions): Promise<CategorySummary> {
 
   for (const { name: domain, dir } of domainDirs) {
     const allFiles = await glob("*.md", { cwd: dir, absolute: true });
+
+    // Parse the domain index file (e.g. Artistry.md) for a description.
+    // The description is the text block that follows the Waypoint block.
+    const indexFile = allFiles.find(
+      (f) => path.basename(f, ".md").toLowerCase() === domain.toLowerCase()
+    );
+    let domainDescription: string | null = null;
+    if (indexFile) {
+      const raw = fs.readFileSync(indexFile, "utf-8");
+      const waypointEnd = raw.indexOf("%% End Waypoint %%");
+      if (waypointEnd >= 0) {
+        const afterWaypoint = raw.slice(waypointEnd + "%% End Waypoint %%".length).trim();
+        if (afterWaypoint.length > 0) {
+          domainDescription = afterWaypoint;
+        }
+      }
+    }
+
+    // Store the domain metadata record (description)
+    items.push({
+      PK: `DOMAIN#${domain}`,
+      SK: "METADATA",
+      domain,
+      description: domainDescription,
+    });
 
     // Only process card files — filenames must start with "(Level N)"
     const cardFiles = allFiles.filter((f) =>

@@ -33,7 +33,10 @@ export const DOMAIN_CARDS_TABLE =
 export const MEDIA_TABLE = process.env["MEDIA_TABLE"] ?? "DaggerheartMedia";
 export const USERS_TABLE = process.env["USERS_TABLE"] ?? "DaggerheartUsers";
 
-// ─── Client Singleton ─────────────────────────────────────────────────────────
+export const CMS_TABLE =
+  process.env["CMS_TABLE"] ?? "daggerheart-cms-dev";
+
+
 
 const rawClient = new DynamoDBClient({
   region: process.env["DYNAMODB_REGION"] ?? process.env["AWS_REGION"] ?? "us-east-1",
@@ -392,5 +395,16 @@ export const keys = {
   user: (userId: string) => ({
     PK: `USER#${userId}`,
     SK: "PROFILE",
+  }),
+
+  /** Key for a CMS content item. */
+  cmsItem: (type: string, id: string) => ({
+    PK: `CMS#${type}`,
+    SK: `ITEM#${id}`,
+  }),
+
+  /** PK prefix for querying all CMS items of a given type. */
+  cmsByType: (type: string) => ({
+    PK: `CMS#${type}`,
   }),
 };

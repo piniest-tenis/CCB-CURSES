@@ -14,6 +14,7 @@ export class DataStack extends cdk.Stack {
   public readonly domainCardsTable: dynamodb.Table;
   public readonly mediaTable: dynamodb.Table;
   public readonly usersTable: dynamodb.Table;
+  public readonly cmsTable: dynamodb.Table;
 
   constructor(scope: Construct, id: string, props: DataStackProps) {
     super(scope, id, props);
@@ -145,6 +146,20 @@ export class DataStack extends cdk.Stack {
     });
 
     // -----------------------------------------------------------------------
+    // 7. CMS Table
+    //    PK: CMS#{type} (HASH)   SK: ITEM#{id} (RANGE)
+    //    e.g. PK="CMS#interstitial", SK="ITEM#<uuid>"
+    // -----------------------------------------------------------------------
+    this.cmsTable = new dynamodb.Table(this, "CmsTable", {
+      tableName: `daggerheart-cms-${stage}`,
+      partitionKey: { name: "PK", type: dynamodb.AttributeType.STRING },
+      sortKey: { name: "SK", type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      pointInTimeRecoverySpecification,
+      removalPolicy,
+    });
+
+    // -----------------------------------------------------------------------
     // CloudFormation Outputs — table names and ARNs
     // -----------------------------------------------------------------------
     const tables: Array<{ table: dynamodb.Table; name: string }> = [
@@ -154,6 +169,7 @@ export class DataStack extends cdk.Stack {
       { table: this.domainCardsTable, name: "DomainCards" },
       { table: this.mediaTable, name: "Media" },
       { table: this.usersTable, name: "Users" },
+      { table: this.cmsTable, name: "Cms" },
     ];
 
     for (const { table, name } of tables) {

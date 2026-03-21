@@ -17,17 +17,17 @@ import type { DomainSummary } from "@shared/types";
 // ---------------------------------------------------------------------------
 
 const DOMAIN_META: Record<string, { colour: string; description: string }> = {
-  Artistry:  { colour: "border-purple-700 bg-purple-950/20 text-purple-300 hover:border-purple-500", description: "Creation, inspiration, and the power of imagination" },
-  Charm:     { colour: "border-pink-700   bg-pink-950/20   text-pink-300   hover:border-pink-500",   description: "Social grace, persuasion, and force of personality" },
-  Creature:  { colour: "border-green-700  bg-green-950/20  text-green-300  hover:border-green-500",  description: "Beasts, nature, and the wild world" },
-  Faithful:  { colour: "border-yellow-700 bg-yellow-950/20 text-yellow-300 hover:border-yellow-500", description: "Divine connection, devotion, and holy power" },
-  Oddity:    { colour: "border-teal-700   bg-teal-950/20   text-teal-300   hover:border-teal-500",   description: "Strange magic, anomalies, and the bizarre" },
-  Study:     { colour: "border-blue-700   bg-blue-950/20   text-blue-300   hover:border-blue-500",   description: "Scholarship, arcana, and accumulated knowledge" },
-  Thievery:  { colour: "border-orange-700 bg-orange-950/20 text-orange-300 hover:border-orange-500", description: "Stealth, cunning, and precision" },
-  Trickery:  { colour: "border-lime-700   bg-lime-950/20   text-lime-300   hover:border-lime-500",   description: "Illusions, misdirection, and clever deception" },
-  Valiance:  { colour: "border-red-700    bg-red-950/20    text-red-300    hover:border-red-500",    description: "Heroic deeds, courage, and bold action" },
-  Violence:  { colour: "border-rose-800   bg-rose-950/20   text-rose-300   hover:border-rose-500",   description: "Martial prowess, aggression, and raw force" },
-  Weird:     { colour: "border-indigo-700 bg-indigo-950/20 text-indigo-300 hover:border-indigo-500", description: "Eldritch power, the unknown, and forbidden magic" },
+  Artistry:  { colour: "border-purple-700 bg-purple-950/20 text-purple-300 hover:border-purple-500", description: "Uses performance, craft, and influence to shape how others feel and act." },
+  Charm:     { colour: "border-pink-700   bg-pink-950/20   text-pink-300   hover:border-pink-500",   description: "Gets things done through social leverage — flattery, deception, and presence." },
+  Creature:  { colour: "border-green-700  bg-green-950/20  text-green-300  hover:border-green-500",  description: "Leans into raw instinct — keen senses, physical toughness, and predatory cunning." },
+  Faithful:  { colour: "border-yellow-700 bg-yellow-950/20 text-yellow-300 hover:border-yellow-500", description: "Draws power from devotion — divine grace, sacred oaths, and the weight of belief." },
+  Oddity:    { colour: "border-teal-700   bg-teal-950/20   text-teal-300   hover:border-teal-500",   description: "Reflects bodies and minds that don't work like everyone else's." },
+  Study:     { colour: "border-blue-700   bg-blue-950/20   text-blue-300   hover:border-blue-500",   description: "Applies research, invention, and analysis to solve problems." },
+  Thievery:  { colour: "border-orange-700 bg-orange-950/20 text-orange-300 hover:border-orange-500", description: "Covers burglary, pickpocketing, infiltration, and targeted takedowns." },
+  Trickery:  { colour: "border-lime-700   bg-lime-950/20   text-lime-300   hover:border-lime-500",   description: "Cons, misdirection, and social sabotage." },
+  Valiance:  { colour: "border-red-700    bg-red-950/20    text-red-300    hover:border-red-500",    description: "Projects courage and moral authority — inspiring allies and standing firm when others break." },
+  Violence:  { colour: "border-rose-800   bg-rose-950/20   text-rose-300   hover:border-rose-500",   description: "About fighting dirty, fighting hard, and not stopping." },
+  Weird:     { colour: "border-indigo-700 bg-indigo-950/20 text-indigo-300 hover:border-indigo-500", description: "Taps into magic that doesn't follow the rules — conjured weapons, psychic abilities, and spectral forces." },
 };
 
 // ---------------------------------------------------------------------------
@@ -39,6 +39,8 @@ function DomainCard({ summary }: { summary: DomainSummary }) {
     colour: "border-burgundy-800 bg-slate-900/50 text-parchment-300 hover:border-burgundy-600",
     description: "",
   };
+
+    const description = summary.description ?? meta.description;
 
   const levelEntries = Object.entries(summary.cardsByLevel)
     .map(([level, count]) => ({ level: Number(level), count }))
@@ -62,8 +64,8 @@ function DomainCard({ summary }: { summary: DomainSummary }) {
         </span>
       </div>
 
-      {meta.description && (
-        <p className="text-xs opacity-60 mb-3">{meta.description}</p>
+      {description && (
+        <p className="text-xs opacity-60 mb-3">{description}</p>
       )}
 
       {/* Per-level breakdown */}

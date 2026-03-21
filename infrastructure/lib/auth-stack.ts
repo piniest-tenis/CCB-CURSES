@@ -9,11 +9,14 @@ export interface AuthStackProps extends cdk.StackProps {
 export class AuthStack extends cdk.Stack {
   public readonly userPool: cognito.UserPool;
   public readonly userPoolClient: cognito.UserPoolClient;
+  public readonly cmsUserPoolClient: cognito.UserPoolClient;
 
   /** Cognito User Pool ID, exposed for cross-stack referencing */
   public readonly userPoolId: string;
   /** Cognito User Pool Client ID, exposed for cross-stack referencing */
   public readonly userPoolClientId: string;
+  /** Cognito App Client ID for the CMS (Google SSO only) */
+  public readonly cmsUserPoolClientId: string;
 
   constructor(scope: Construct, id: string, props: AuthStackProps) {
     super(scope, id, props);
@@ -168,6 +171,73 @@ export class AuthStack extends cdk.Stack {
     this.userPoolClientId = this.userPoolClient.userPoolClientId;
 
     // -----------------------------------------------------------------------
+    // Google Identity Provider
+    // -----------------------------------------------------------------------
+    const googleIdp = new cognito.UserPoolIdentityProviderGoogle(this, "GoogleIdp", {
+      userPool: this.userPool,
+      clientId: "REDACTED_GOOGLE_CLIENT_ID",
+      clientSecretValue: cdk.SecretValue.unsafePlainText(
+        "REDACTED_GOOGLE_CLIENT_SECRET"
+      ),
+      scopes: ["email", "profile", "openid"],
+      attributeMapping: {
+        email: cognito.ProviderAttribute.GOOGLE_EMAIL,
+        fullname: cognito.ProviderAttribute.GOOGLE_NAME,
+      },
+    });
+
+    // -----------------------------------------------------------------------
+    // Cognito Hosted UI Domain
+    // -----------------------------------------------------------------------
+    const hostedDomain = new cognito.UserPoolDomain(this, "HostedDomain", {
+      userPool: this.userPool,
+      cognitoDomain: {
+        domainPrefix: `daggerheart-${stage}`,
+      },
+    });
+
+    // -----------------------------------------------------------------------
+    // CMS App Client (Google SSO only — no password auth)
+    // -----------------------------------------------------------------------
+    this.cmsUserPoolClient = new cognito.UserPoolClient(this, "CmsUserPoolClient", {
+      userPool: this.userPool,
+      userPoolClientName: `daggerheart-cms-client-${stage}`,
+      generateSecret: false,
+      supportedIdentityProviders: [
+        cognito.UserPoolClientIdentityProvider.GOOGLE,
+      ],
+      authFlows: {},
+      accessTokenValidity: cdk.Duration.hours(1),
+      idTokenValidity: cdk.Duration.hours(1),
+      refreshTokenValidity: cdk.Duration.days(1),
+      preventUserExistenceErrors: true,
+      oAuth: {
+        flows: {
+          authorizationCodeGrant: true,
+        },
+        scopes: [
+          cognito.OAuthScope.EMAIL,
+          cognito.OAuthScope.OPENID,
+          cognito.OAuthScope.PROFILE,
+        ],
+        callbackUrls: isProd
+          ? ["https://cms.daggerheart.example.com/auth/callback"]
+          : [
+              "http://localhost:3001/auth/callback",
+            ],
+        logoutUrls: isProd
+          ? ["https://cms.daggerheart.example.com/auth/logout"]
+          : [
+              "http://localhost:3001/",
+            ],
+      },
+    });
+    // Ensure the IdP is created before the client that references it
+    this.cmsUserPoolClient.node.addDependency(googleIdp);
+
+    this.cmsUserPoolClientId = this.cmsUserPoolClient.userPoolClientId;
+
+    // -----------------------------------------------------------------------
     // CloudFormation Outputs
     // -----------------------------------------------------------------------
     new cdk.CfnOutput(this, "UserPoolIdOutput", {
@@ -192,6 +262,18 @@ export class AuthStack extends cdk.Stack {
       exportName: `DaggerheartCognitoIssuer-${stage}`,
       value: `https://cognito-idp.${this.region}.amazonaws.com/${this.userPool.userPoolId}`,
       description: "JWT issuer URL for API Gateway JWT Authorizer",
+    });
+
+    new cdk.CfnOutput(this, "CmsUserPoolClientIdOutput", {
+      exportName: `DaggerheartCmsUserPoolClientId-${stage}`,
+      value: this.cmsUserPoolClient.userPoolClientId,
+      description: "Cognito App Client ID for the CMS (Google SSO only)",
+    });
+
+    new cdk.CfnOutput(this, "CognitoHostedDomain", {
+      exportName: `DaggerheartCognitoHostedDomain-${stage}`,
+      value: `daggerheart-${stage}.auth.${this.region}.amazoncognito.com`,
+      description: "Cognito Hosted UI domain for OAuth redirects",
     });
   }
 }

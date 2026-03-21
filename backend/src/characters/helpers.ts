@@ -135,9 +135,11 @@ export interface SrdError {
 export function validateSrdRules(character: Partial<Character>): SrdError[] {
   const errors: SrdError[] = [];
 
+  // SRD page 20: Hope is 0–hopeMax (default 6).
   if (character.hope !== undefined) {
-    if (character.hope < 0 || character.hope > 6) {
-      errors.push({ field: "hope", issue: "Hope must be between 0 and 6" });
+    const hopeMax = character.hopeMax ?? 6;
+    if (character.hope < 0 || character.hope > hopeMax) {
+      errors.push({ field: "hope", issue: `Hope must be between 0 and ${hopeMax}` });
     }
   }
 
@@ -150,12 +152,13 @@ export function validateSrdRules(character: Partial<Character>): SrdError[] {
     }
   }
 
+  // SRD page 3: starting traits range from -1 to +2; allow -5 floor for penalty modifiers.
   if (character.stats) {
     for (const [stat, val] of Object.entries(character.stats)) {
-      if (val < 0 || val > 10) {
+      if (val < -5 || val > 8) {
         errors.push({
           field: `stats.${stat}`,
-          issue: "Stat value must be between 0 and 10",
+          issue: "Stat value must be between -5 and 8",
         });
       }
     }
@@ -167,6 +170,13 @@ export function validateSrdRules(character: Partial<Character>): SrdError[] {
         errors.push({
           field: `trackers.${key}.marked`,
           issue: `Marked slots (${tracker.marked}) cannot exceed max (${tracker.max})`,
+        });
+      }
+      // SRD page 20: HP and Stress cannot exceed 12.
+      if ((key === "hp" || key === "stress") && tracker.max > 12) {
+        errors.push({
+          field: `trackers.${key}.max`,
+          issue: `${key === "hp" ? "Hit Point" : "Stress"} max cannot exceed 12 (SRD page 20)`,
         });
       }
     }
@@ -219,6 +229,7 @@ export function applyRest(
     cleared.hp = character.trackers.hp.marked;
     cleared.stress = character.trackers.stress.marked;
     cleared.armor = character.trackers.armor.marked;
+    const hopeMax = character.hopeMax ?? 6;
     return {
       character: {
         ...character,
@@ -228,7 +239,7 @@ export function applyRest(
           stress: { ...character.trackers.stress, marked: 0 },
           armor: { ...character.trackers.armor, marked: 0 },
         },
-        hope: Math.min(character.hope + 1, 6),
+        hope: Math.min(character.hope + 1, hopeMax),
         updatedAt: new Date().toISOString(),
       },
       cleared,
@@ -251,6 +262,8 @@ export function normalizeWeapons(raw: {
     range: slot?.range ?? null,
     type: slot?.type ?? null,
     burden: slot?.burden ?? null,
+    tier: slot?.tier ?? null,
+    feature: slot?.feature ?? null,
   });
 
   return {

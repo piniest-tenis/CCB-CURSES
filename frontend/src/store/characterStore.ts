@@ -117,7 +117,8 @@ export const useCharacterStore = create<CharacterStore>()((set, get) => ({
     const { activeCharacter } = get();
     if (!activeCharacter) return;
 
-    const clamped = Math.max(0, Math.min(8, value));
+    // SRD page 3: starting traits range from -1 to +2; -5 floor allows penalty modifiers.
+    const clamped = Math.max(-5, Math.min(8, value));
     set({
       activeCharacter: {
         ...activeCharacter,
@@ -165,7 +166,8 @@ export const useCharacterStore = create<CharacterStore>()((set, get) => ({
     const { activeCharacter } = get();
     if (!activeCharacter) return;
 
-    const clamped = Math.max(0, Math.min(6, value));
+    const hopeMax = activeCharacter.hopeMax ?? 6;
+    const clamped = Math.max(0, Math.min(hopeMax, value));
     set({
       activeCharacter: { ...activeCharacter, hope: clamped },
       isDirty: true,

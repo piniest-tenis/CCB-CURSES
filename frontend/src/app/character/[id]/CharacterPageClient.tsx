@@ -9,6 +9,8 @@
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { CharacterSheet } from "@/components/character/CharacterSheet";
+import { LoadingInterstitial } from "@/components/LoadingInterstitial";
+import { useCharacter } from "@/hooks/useCharacter";
 import React, { useEffect } from "react";
 import Link from "next/link";
 
@@ -30,16 +32,28 @@ export default function CharacterPage() {
     }
   }, [isReady, isAuthenticated, router]);
 
+  // Character data loading state — used to drive the interstitial overlay.
+  const { isLoading: charLoading } = useCharacter(
+    isAuthenticated ? characterId : undefined
+  );
+
+  // Show the interstitial while auth is still resolving OR character is loading.
+  const showInterstitial = !isReady || isLoading || charLoading;
+
   if (!isReady || isLoading || !isAuthenticated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-burgundy-500 border-t-transparent" />
-      </div>
+      <>
+        <div className="min-h-screen bg-[#0a100d]" />
+        <LoadingInterstitial isVisible={showInterstitial} />
+      </>
     );
   }
 
   return (
     <div className="min-h-screen bg-slate-950">
+      {/* Lore interstitial while the character sheet data loads */}
+      <LoadingInterstitial isVisible={charLoading} />
+
       {/* Nav bar */}
       <header className="border-b border-burgundy-900/50 bg-slate-900/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="mx-auto flex max-w-4xl items-center gap-4 px-4 py-3">

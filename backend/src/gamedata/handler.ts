@@ -84,6 +84,8 @@ interface GameDataRecord {
   flavorText: string;
   traitName: string;
   traitDescription: string;
+  secondTraitName?: string;
+  secondTraitDescription?: string;
   body: string;
   source: "homebrew" | "srd";
 }
@@ -173,6 +175,8 @@ function toAncestryData(record: GameDataRecord): AncestryData {
     flavorText: record.flavorText ?? "",
     traitName: record.traitName ?? "",
     traitDescription: record.traitDescription ?? "",
+    secondTraitName: record.secondTraitName ?? "",
+    secondTraitDescription: record.secondTraitDescription ?? "",
     source: record.source,
   };
 }
@@ -359,20 +363,32 @@ async function listDomains(
   _event: APIGatewayProxyEventV2
 ): Promise<APIGatewayProxyResultV2> {
   // Scan entire DomainCards table projecting only the fields we need
-  const items = await scanItems<{ domain: string; level: number }>(
+  const items = await scanItems<{ PK: string; SK: string; domain: string; level: number; description?: string }>(
     DOMAIN_CARDS_TABLE,
     undefined,
     undefined,
-    "#domain, #level",
-    { "#domain": "domain", "#level": "level" }
+    "#domain, #level, #pk, #sk, #description",
+    { "#domain": "domain", "#level": "level", "#pk": "PK", "#sk": "SK", "#description": "description" }
   );
+
+  // Separate METADATA items (domain descriptions) from CARD items
+  const metadataMap = new Map<string, string | null>();
+  const cardItems: { domain: string; level: number }[] = [];
+
+  for (const item of items) {
+    if (item.SK === "METADATA") {
+      metadataMap.set(item.domain, item.description ?? null);
+    } else {
+      cardItems.push(item);
+    }
+  }
 
   const domainMap = new Map<
     string,
     { cardCount: number; cardsByLevel: Record<string, number> }
   >();
 
-  for (const item of items) {
+  for (const item of cardItems) {
     if (!item.domain) continue;
     if (!domainMap.has(item.domain)) {
       domainMap.set(item.domain, { cardCount: 0, cardsByLevel: {} });
@@ -384,7 +400,11 @@ async function listDomains(
   }
 
   const domains: DomainSummary[] = Array.from(domainMap.entries())
-    .map(([domain, agg]) => ({ domain, ...agg }))
+    .map(([domain, agg]) => ({
+      domain,
+      description: metadataMap.get(domain) ?? null,
+      ...agg,
+    }))
     .sort((a, b) => a.domain.localeCompare(b.domain));
 
   return createSuccessResponse({ domains });

@@ -55,7 +55,7 @@ function ClassCard({ cls }: { cls: ClassSummary }) {
       "
     >
       <div className="flex items-start justify-between gap-3 mb-3">
-        <h3 className="font-serif text-lg font-semibold text-parchment-100 group-hover:text-gold-300 transition-colors">
+        <h3 className="font-serif text-xl font-semibold text-parchment-100 group-hover:text-gold-300 transition-colors">
           {cls.name}
         </h3>
         <span className="shrink-0 rounded border border-gold-800 bg-gold-950/20 px-2 py-0.5 text-xs font-bold text-gold-400">
@@ -71,14 +71,14 @@ function ClassCard({ cls }: { cls: ClassSummary }) {
       </div>
 
       {/* Starting stats */}
-      <div className="flex gap-4 text-xs text-parchment-500">
+      <div className="flex gap-4 text-sm text-parchment-400">
         <span>
-          <span className="text-parchment-700 uppercase tracking-wider mr-1">EVA</span>
-          <span className="font-semibold text-parchment-300">{cls.startingEvasion}</span>
+          <span className="text-parchment-600 uppercase tracking-wider mr-1 text-xs">EVA</span>
+          <span className="font-semibold text-parchment-200">{cls.startingEvasion}</span>
         </span>
         <span>
-          <span className="text-parchment-700 uppercase tracking-wider mr-1">HP</span>
-          <span className="font-semibold text-parchment-300">{cls.startingHitPoints}</span>
+          <span className="text-parchment-600 uppercase tracking-wider mr-1 text-xs">HP</span>
+          <span className="font-semibold text-parchment-200">{cls.startingHitPoints}</span>
         </span>
       </div>
 
@@ -88,7 +88,7 @@ function ClassCard({ cls }: { cls: ClassSummary }) {
           <p className="text-xs text-parchment-700 mb-1.5 uppercase tracking-wider">
             Subclasses
           </p>
-          <p className="text-xs text-parchment-500 line-clamp-1">
+          <p className="text-sm text-parchment-500 line-clamp-1">
             {cls.subclasses.map((s) => s.name).join(" · ")}
           </p>
         </div>

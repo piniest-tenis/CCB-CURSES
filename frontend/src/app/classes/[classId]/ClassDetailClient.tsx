@@ -13,6 +13,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useClass } from "@/hooks/useGameData";
 import type { SubclassData, NamedFeature } from "@shared/types";
+import { MarkdownContent } from "@/components/MarkdownContent";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -32,14 +33,39 @@ const DOMAIN_COLOURS: Record<string, string> = {
   Weird:     "border-indigo-700  bg-indigo-950/40  text-indigo-300",
 };
 
+const DOMAIN_DESCRIPTIONS: Record<string, string> = {
+  Artistry:  "Uses performance, craft, and influence to shape how others feel and act.",
+  Charm:     "Gets things done through social leverage — flattery, deception, and presence.",
+  Creature:  "Leans into raw instinct — keen senses, physical toughness, and predatory cunning.",
+  Faithful:  "Draws power from devotion — divine grace, sacred oaths, and the weight of belief.",
+  Oddity:    "Reflects bodies and minds that don't work like everyone else's.",
+  Study:     "Applies research, invention, and analysis to solve problems.",
+  Thievery:  "Covers burglary, pickpocketing, infiltration, and targeted takedowns.",
+  Trickery:  "Cons, misdirection, and social sabotage.",
+  Valiance:  "Projects courage and moral authority — inspiring allies and standing firm when others break.",
+  Violence:  "About fighting dirty, fighting hard, and not stopping.",
+  Weird:     "Taps into magic that doesn't follow the rules — conjured weapons, psychic abilities, and spectral forces.",
+};
+
 function DomainBadge({ domain }: { domain: string }) {
   const colour = DOMAIN_COLOURS[domain] ?? "border-burgundy-800 bg-burgundy-950/30 text-burgundy-400";
+  const description = DOMAIN_DESCRIPTIONS[domain];
   return (
     <Link
       href={`/domains/${encodeURIComponent(domain)}`}
-      className={`inline-block rounded border px-2.5 py-0.5 text-sm font-medium hover:opacity-80 transition-opacity ${colour}`}
+      className={`domain-badge-tip inline-block rounded border px-2.5 py-0.5 text-sm font-medium hover:opacity-80 transition-opacity ${colour}`}
     >
       {domain}
+      {description && (
+        <span className="domain-tip-popup" aria-hidden="true">
+          <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-[#577399] mb-1">
+            Domain Scope
+          </span>
+          <span className="block text-xs text-[#b9baa3] leading-relaxed">
+            {description}
+          </span>
+        </span>
+      )}
     </Link>
   );
 }
@@ -51,8 +77,8 @@ function DomainBadge({ domain }: { domain: string }) {
 function FeatureBlock({ name, description }: NamedFeature) {
   return (
     <div className="rounded-lg border border-burgundy-900/60 bg-slate-850/50 px-4 py-3">
-      <p className="text-sm font-semibold text-parchment-200 mb-1">{name}</p>
-      <p className="text-sm text-parchment-400 leading-relaxed whitespace-pre-wrap">{description}</p>
+      <p className="text-base font-semibold text-parchment-200 mb-1">{name}</p>
+      <MarkdownContent className="text-base text-parchment-400 leading-relaxed">{description}</MarkdownContent>
     </div>
   );
 }
@@ -75,14 +101,13 @@ function SubclassPanel({ subclass }: { subclass: SubclassData }) {
           <h4 className="font-serif text-base font-semibold text-parchment-100">
             {subclass.name}
           </h4>
-          {subclass.description && (
-            <p className="mt-0.5 text-xs text-parchment-500 line-clamp-1">
+          {subclass.description && !open && (
+            <p className="mt-0.5 text-sm text-parchment-500 line-clamp-1">
               {subclass.description}
             </p>
-          )}
-        </div>
+          )}        </div>
         <div className="flex items-center gap-3 shrink-0">
-          <span className="hidden sm:block text-xs text-parchment-600 uppercase tracking-wider">
+          <span className="hidden sm:block text-sm text-parchment-600 uppercase tracking-wider">
             Spellcast: {subclass.spellcastTrait}
           </span>
           <span className="text-parchment-600 text-lg leading-none select-none">
@@ -94,10 +119,10 @@ function SubclassPanel({ subclass }: { subclass: SubclassData }) {
       {open && (
         <div className="px-5 pb-5 space-y-4 border-t border-burgundy-900/40">
           {subclass.description && (
-            <p className="pt-4 text-sm text-parchment-400 italic">{subclass.description}</p>
+            <MarkdownContent className="pt-4 text-base text-parchment-400 italic">{subclass.description}</MarkdownContent>
           )}
 
-          <p className="text-xs text-parchment-600 uppercase tracking-wider pt-2">
+          <p className="text-sm text-parchment-600 uppercase tracking-wider pt-2">
             Spellcast Trait:{" "}
             <span className="text-parchment-400 normal-case tracking-normal font-medium">
               {subclass.spellcastTrait}
@@ -150,7 +175,7 @@ function SubclassPanel({ subclass }: { subclass: SubclassData }) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="mb-3 font-serif text-xl font-semibold text-parchment-100 border-b border-burgundy-900/50 pb-2">
+      <h2 className="mb-3 font-serif text-2xl font-semibold text-parchment-100 border-b border-burgundy-900/50 pb-2">
         {title}
       </h2>
       {children}
@@ -193,6 +218,33 @@ export default function ClassDetailPage() {
       </header>
 
       <main className="mx-auto max-w-4xl px-4 py-8">
+        <style>{`
+          .domain-badge-tip { position: relative; }
+          .domain-badge-tip .domain-tip-popup {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            z-index: 50;
+            width: 220px;
+            background: #1e293b;
+            border: 1px solid rgba(87,115,153,0.35);
+            border-radius: 8px;
+            padding: 8px 10px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+          }
+          .domain-badge-tip .domain-tip-popup::before {
+            content: "";
+            position: absolute;
+            bottom: 100%;
+            left: 14px;
+            border: 6px solid transparent;
+            border-bottom-color: #1e293b;
+          }
+          .domain-badge-tip:hover .domain-tip-popup { opacity: 1; }
+        `}</style>
         {/* Loading */}
         {isLoading && (
           <div className="flex items-center justify-center py-20">
@@ -253,7 +305,7 @@ export default function ClassDetailPage() {
               <Section title="Class Items">
                 <ul className="space-y-1">
                   {cls.classItems.map((item, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-parchment-400">
+                    <li key={i} className="flex items-start gap-2 text-base text-parchment-400">
                       <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-gold-700" />
                       {item}
                     </li>
@@ -271,25 +323,21 @@ export default function ClassDetailPage() {
                     {cls.hopeFeature.hopeCost} Hope
                   </span>
                 </div>
-                <p className="text-sm text-parchment-400 leading-relaxed whitespace-pre-wrap">
-                  {cls.hopeFeature.description}
-                </p>
+                <MarkdownContent className="text-base text-parchment-400 leading-relaxed">{cls.hopeFeature.description}</MarkdownContent>
               </div>
             </Section>
 
             {/* Class Feature */}
             <Section title="Class Feature">
               <div className="rounded-lg border border-burgundy-900/60 bg-slate-850/50 px-4 py-4 space-y-2">
-                <p className="text-sm font-semibold text-parchment-200">{cls.classFeature.name}</p>
-                <p className="text-sm text-parchment-400 leading-relaxed whitespace-pre-wrap">
-                  {cls.classFeature.description}
-                </p>
+                <p className="text-base font-semibold text-parchment-200">{cls.classFeature.name}</p>
+                <MarkdownContent className="text-base text-parchment-400 leading-relaxed">{cls.classFeature.description}</MarkdownContent>
                 {cls.classFeature.options.length > 0 && (
                   <ul className="mt-2 space-y-1">
                     {cls.classFeature.options.map((opt, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-parchment-500">
+                      <li key={i} className="flex items-start gap-2 text-base text-parchment-500">
                         <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-burgundy-600" />
-                        {opt}
+                        <MarkdownContent className="inline">{opt}</MarkdownContent>
                       </li>
                     ))}
                   </ul>
@@ -308,16 +356,29 @@ export default function ClassDetailPage() {
               </Section>
             )}
 
+            {/* How to Play */}
+            {cls.mechanicalNotes && (
+              <aside
+                aria-label={`How to Play ${cls.name}`}
+                className="rounded-xl border border-[#577399]/30 bg-slate-900/70 px-5 py-4 space-y-2"
+              >
+                <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-[#577399]">
+                  How to Play {cls.name}
+                </h2>
+                <MarkdownContent className="text-sm text-parchment-400 leading-relaxed">{cls.mechanicalNotes}</MarkdownContent>
+              </aside>
+            )}
+
             {/* Background Questions */}
             {cls.backgroundQuestions.length > 0 && (
               <Section title="Background Questions">
                 <ol className="space-y-2 list-none">
                   {cls.backgroundQuestions.map((q, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm text-parchment-400">
-                      <span className="shrink-0 rounded border border-burgundy-800 bg-slate-900 w-5 h-5 flex items-center justify-center text-xs font-bold text-parchment-600">
+                    <li key={i} className="flex items-start gap-3 text-base text-parchment-400">
+                      <span className="shrink-0 rounded border border-burgundy-800 bg-slate-900 w-6 h-6 flex items-center justify-center text-sm font-bold text-parchment-600">
                         {i + 1}
                       </span>
-                      {q}
+                      <MarkdownContent className="text-base text-parchment-400">{q}</MarkdownContent>
                     </li>
                   ))}
                 </ol>
@@ -329,25 +390,14 @@ export default function ClassDetailPage() {
               <Section title="Connection Questions">
                 <ol className="space-y-2 list-none">
                   {cls.connectionQuestions.map((q, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm text-parchment-400">
-                      <span className="shrink-0 rounded border border-burgundy-800 bg-slate-900 w-5 h-5 flex items-center justify-center text-xs font-bold text-parchment-600">
+                    <li key={i} className="flex items-start gap-3 text-base text-parchment-400">
+                      <span className="shrink-0 rounded border border-burgundy-800 bg-slate-900 w-6 h-6 flex items-center justify-center text-sm font-bold text-parchment-600">
                         {i + 1}
                       </span>
-                      {q}
+                      <MarkdownContent className="text-base text-parchment-400">{q}</MarkdownContent>
                     </li>
                   ))}
                 </ol>
-              </Section>
-            )}
-
-            {/* Mechanical Notes */}
-            {cls.mechanicalNotes && (
-              <Section title="Mechanical Notes">
-                <div className="rounded-lg border border-burgundy-900/40 bg-slate-900/50 px-4 py-3">
-                  <p className="text-sm text-parchment-500 italic leading-relaxed whitespace-pre-wrap">
-                    {cls.mechanicalNotes}
-                  </p>
-                </div>
               </Section>
             )}
           </div>

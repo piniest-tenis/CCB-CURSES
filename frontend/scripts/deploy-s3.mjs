@@ -3,8 +3,9 @@
  * Syncs the Next.js static export (`out/`) to S3 and invalidates CloudFront.
  * Run via: node scripts/deploy-s3.mjs
  *
- * Required env vars (or set inline below for local use):
- *   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION
+ * Required env vars — set in frontend/.env.local for local use:
+ *   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+ *   CF_DISTRIBUTION_ID (optional, defaults to the dev distribution)
  */
 
 import { S3Client, PutObjectCommand, ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
@@ -24,12 +25,17 @@ const DISTRIBUTION_ID = process.env.CF_DISTRIBUTION_ID ?? "E12V8PHM7C7JBP";
 const REGION = "us-east-2";
 const OUT_DIR = join(__dirname, "..", "out");
 
-// Credentials — pulled from env first, with fallback to ingestion creds for local use.
-// The secret key contains special chars (/, +) that can be mangled by shell env passing,
-// so we hard-code the fallback here rather than rely on cmd.exe escaping.
+// Credentials — read from environment variables only.
+// Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in frontend/.env.local for local use.
+// In CI/CD these come from the runner's IAM role or injected secrets.
+if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+  console.error("ERROR: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be set in environment.");
+  console.error("Add them to frontend/.env.local for local deployments.");
+  process.exit(1);
+}
 const credentials = {
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID ?? "REDACTED_AWS_KEY_ID",
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? "REDACTED_AWS_SECRET",
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
 };
 
 const s3 = new S3Client({ region: REGION, credentials });

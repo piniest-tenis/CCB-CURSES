@@ -14,3 +14,5 @@
 - [[(Level 5) Logomancy ★]]
 
 %% End Waypoint %%
+
+Charm cards get things done through social leverage — flattery, deception, presence, and the right word at the right moment. Good for characters who survive on personality alone.

@@ -12,3 +12,5 @@
 - [[(Level 5) Investigator ★ ↔]]
 
 %% End Waypoint %%
+
+Study cards apply research, invention, and analysis to solve problems. Good for characters who prepare obsessively and win by knowing more than anyone else in the room.

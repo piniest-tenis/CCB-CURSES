@@ -37,11 +37,11 @@ export interface CharacterTrackers {
   hp: SlotTracker;
   stress: SlotTracker;
   armor: SlotTracker;
-  proficiency: SlotTracker;
 }
 
+// SRD page 20: only Major and Severe thresholds are defined numerically.
+// Formula: threshold = armor base threshold + character level.
 export interface DamageThresholds {
-  minor: number;
   major: number;
   severe: number;
 }
@@ -56,6 +56,10 @@ export interface Weapon {
   range: string | null;
   type: WeaponDamageType | null;
   burden: WeaponBurden | null;
+  /** SRD page 23: weapons have a tier; characters cannot equip weapons above their tier. */
+  tier: number | null;
+  /** SRD page 23: optional weapon feature (e.g. "Reliable", "Massive"). */
+  feature: string | null;
 }
 
 export interface Weapons {
@@ -109,6 +113,10 @@ export interface Character extends CharacterSummary {
   damageThresholds: DamageThresholds;
   weapons: Weapons;
   hope: number;
+  /** SRD page 20: base Hope maximum is 6; can be reduced by scars (death table). */
+  hopeMax: number;
+  /** SRD page 3 / 22: Proficiency is a scalar integer starting at 1, not a slot resource. */
+  proficiency: number;
   experiences: Experience[];
   conditions: string[];
   domainLoadout: string[]; // cardIds, max 5
@@ -186,6 +194,8 @@ export interface AncestryData {
   flavorText: string;
   traitName: string;
   traitDescription: string;
+  secondTraitName: string;
+  secondTraitDescription: string;
   source: CharacterSource;
 }
 
@@ -213,6 +223,7 @@ export interface DomainCard {
 
 export interface DomainSummary {
   domain: string;
+  description: string | null;
   cardCount: number;
   cardsByLevel: Record<string, number>;
 }
@@ -323,6 +334,23 @@ export interface RestResult {
     armor: number;
   };
   character: Character;
+}
+
+// ─── CMS Content ─────────────────────────────────────────────────────────────
+
+export type CmsContentType = "interstitial" | "splash";
+
+export interface CmsContent {
+  id: string;
+  type: CmsContentType;
+  title: string;
+  body: string;
+  imageKey: string | null;
+  imageUrl: string | null;
+  active: boolean;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ─── SRD Validation ───────────────────────────────────────────────────────────

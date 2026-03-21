@@ -4,12 +4,13 @@
  * src/components/character/TrackersPanel.tsx
  *
  * Renders:
- * - Damage threshold inputs (Minor / Major / Severe)
- * - Slot trackers (HP, Stress, Armor, Proficiency) — clickable circles
- * - Primary + secondary weapon cards (full field set)
- * - Hope tracker (6 fill-from-left dots)
+ * - Damage threshold inputs (Major / Severe only — SRD page 20)
+ * - Slot trackers (HP, Stress, Armor) — clickable circles
+ * - Proficiency display — scalar integer, not a slot tracker (SRD page 3/22)
+ * - Primary + secondary weapon cards (full field set including tier and feature)
+ * - Hope tracker (data-driven from hopeMax — SRD page 20)
  * - Experiences list — with +/- increment buttons, colored bonus display
- * - Traits section (Ancestry + Community traits with incrementable bonuses)
+ * - Traits section (Ancestry × 2 + Community traits with incrementable bonuses)
  */
 
 import React, { useState } from "react";
@@ -27,6 +28,8 @@ interface SlotTrackerProps {
   onToggle:     (index: number) => void;
   onMaxChange:  (value: number) => void;
   colorFilled?: string;
+  /** Hard cap enforced by the SRD (e.g. 12 for HP and Stress). */
+  hardMax?: number;
 }
 
 function SlotTracker({
@@ -36,6 +39,7 @@ function SlotTracker({
   onToggle,
   onMaxChange,
   colorFilled = "bg-burgundy-600",
+  hardMax,
 }: SlotTrackerProps) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -50,20 +54,23 @@ function SlotTracker({
           <input
             type="number"
             min={1}
-            max={20}
+            max={hardMax ?? 20}
             value={max}
             onChange={(e) => {
               const v = parseInt(e.target.value, 10);
-              if (!isNaN(v) && v > 0) onMaxChange(v);
+              if (!isNaN(v) && v > 0) onMaxChange(hardMax ? Math.min(v, hardMax) : v);
             }}
             aria-label={`${label} max slots`}
             className="
               w-8 bg-transparent text-center text-parchment-300
-              border-b border-burgundy-800 focus:outline-none focus:border-gold-500
+              border-b border-burgundy-800 focus:outline-none focus:ring-1 focus:ring-gold-500 focus:border-gold-500
               [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none
               transition-colors
             "
           />
+          {hardMax && (
+            <span className="text-parchment-700 text-[10px]">/{hardMax}</span>
+          )}
         </div>
       </div>
 
@@ -79,8 +86,8 @@ function SlotTracker({
               aria-label={`${label} slot ${i + 1} — ${filled ? "marked" : "empty"}`}
               aria-pressed={filled}
               className={`
-                h-6 w-6 rounded-full border-2 transition-all duration-150
-                focus:outline-none focus:ring-1 focus:ring-gold-500
+                h-8 w-8 rounded-full border-2 transition-all duration-150
+                focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-1 focus:ring-offset-slate-900
                 ${
                   filled
                     ? `${colorFilled} border-transparent shadow-sm`
@@ -104,9 +111,11 @@ interface ThresholdInputProps {
 }
 
 function ThresholdInput({ label, value, onChange }: ThresholdInputProps) {
+  const inputId = `threshold-${label.toLowerCase()}`;
   return (
     <div className="flex flex-col items-center gap-1">
       <input
+        id={inputId}
         type="number"
         min={0}
         max={99}
@@ -119,14 +128,14 @@ function ThresholdInput({ label, value, onChange }: ThresholdInputProps) {
         className="
           h-10 w-14 rounded border border-burgundy-700 bg-slate-850
           text-center text-lg font-bold text-parchment-200
-          focus:outline-none focus:border-gold-500 transition-colors
+          focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500 transition-colors
           [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none
           [&::-webkit-outer-spin-button]:appearance-none
         "
       />
-      <span className="text-[10px] uppercase tracking-widest text-parchment-500">
+      <label htmlFor={inputId} className="text-[10px] uppercase tracking-widest text-parchment-500 cursor-pointer">
         {label}
-      </span>
+      </label>
     </div>
   );
 }
@@ -146,6 +155,7 @@ function WeaponCard({ slot }: WeaponCardProps) {
 
   const weapon = activeCharacter.weapons[slot];
   const base   = `weapons.${slot}`;
+  const tierId = `${slot}-weapon-tier`;
 
   return (
     <div className="rounded-lg border border-burgundy-800 bg-slate-850 p-3 shadow-card space-y-2">
@@ -162,7 +172,7 @@ function WeaponCard({ slot }: WeaponCardProps) {
         aria-label={`${slot} weapon name`}
         className="
           w-full rounded bg-slate-900 px-2 py-1 text-sm text-parchment-200
-          border border-burgundy-800 focus:outline-none focus:border-gold-500
+          border border-burgundy-800 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500
           placeholder-parchment-700 transition-colors
         "
       />
@@ -177,7 +187,7 @@ function WeaponCard({ slot }: WeaponCardProps) {
           aria-label={`${slot} weapon trait`}
           className="
             rounded bg-slate-900 px-2 py-1 text-xs text-parchment-300
-            border border-burgundy-800 focus:outline-none focus:border-gold-500
+            border border-burgundy-800 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500
             placeholder-parchment-700 transition-colors
           "
         />
@@ -191,7 +201,7 @@ function WeaponCard({ slot }: WeaponCardProps) {
           aria-label={`${slot} weapon damage`}
           className="
             rounded bg-slate-900 px-2 py-1 text-xs text-parchment-300
-            border border-burgundy-800 focus:outline-none focus:border-gold-500
+            border border-burgundy-800 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500
             placeholder-parchment-700 transition-colors
           "
         />
@@ -205,7 +215,7 @@ function WeaponCard({ slot }: WeaponCardProps) {
           aria-label={`${slot} weapon range`}
           className="
             rounded bg-slate-900 px-2 py-1 text-xs text-parchment-300
-            border border-burgundy-800 focus:outline-none focus:border-gold-500
+            border border-burgundy-800 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500
             placeholder-parchment-700 transition-colors
           "
         />
@@ -219,7 +229,7 @@ function WeaponCard({ slot }: WeaponCardProps) {
           aria-label={`${slot} weapon type`}
           className="
             rounded bg-slate-900 px-2 py-1 text-xs text-parchment-300
-            border border-burgundy-800 focus:outline-none focus:border-gold-500
+            border border-burgundy-800 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500
             transition-colors
           "
         >
@@ -240,7 +250,7 @@ function WeaponCard({ slot }: WeaponCardProps) {
           aria-label={`${slot} weapon burden`}
           className="
             col-span-2 rounded bg-slate-900 px-2 py-1 text-xs text-parchment-300
-            border border-burgundy-800 focus:outline-none focus:border-gold-500
+            border border-burgundy-800 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500
             transition-colors
           "
         >
@@ -251,6 +261,45 @@ function WeaponCard({ slot }: WeaponCardProps) {
             </option>
           ))}
         </select>
+
+        {/* Tier — SRD page 23: weapons have a tier; cannot equip above character tier */}
+        <div className="flex items-center gap-2">
+          <label htmlFor={tierId} className="text-[10px] uppercase tracking-wider text-parchment-600 shrink-0">
+            Tier
+          </label>
+          <select
+            id={tierId}
+            value={weapon.tier ?? ""}
+            onChange={(e) =>
+              updateField(`${base}.tier`, e.target.value ? parseInt(e.target.value, 10) : null)
+            }
+            aria-label={`${slot} weapon tier`}
+            className="
+              flex-1 rounded bg-slate-900 px-2 py-1 text-xs text-parchment-300
+              border border-burgundy-800 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500
+              transition-colors
+            "
+          >
+            <option value="">—</option>
+            {[1, 2, 3, 4].map((t) => (
+              <option key={t} value={t}>Tier {t}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Feature — SRD page 23: optional weapon feature text */}
+        <input
+          type="text"
+          placeholder="Feature (e.g. Reliable)"
+          value={weapon.feature ?? ""}
+          onChange={(e) => updateField(`${base}.feature`, e.target.value || null)}
+          aria-label={`${slot} weapon feature`}
+          className="
+            rounded bg-slate-900 px-2 py-1 text-xs text-parchment-300
+            border border-burgundy-800 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500
+            placeholder-parchment-700 transition-colors
+          "
+        />
       </div>
     </div>
   );
@@ -263,14 +312,16 @@ function HopeTracker() {
   if (!activeCharacter) return null;
 
   const { hope } = activeCharacter;
+  // SRD page 20: base max Hope is 6; reduced by scars (death table).
+  const hopeMax = activeCharacter.hopeMax ?? 6;
 
   return (
     <div className="flex flex-col gap-1.5">
       <span className="text-xs font-semibold uppercase tracking-wider text-parchment-400">
         Hope
       </span>
-      <div className="flex gap-2" role="group" aria-label="Hope tracker">
-        {Array.from({ length: 6 }, (_, i) => {
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Hope tracker">
+        {Array.from({ length: hopeMax }, (_, i) => {
           const filled = i < hope;
           return (
             <button
@@ -282,8 +333,8 @@ function HopeTracker() {
               aria-label={`Hope ${i + 1} — ${filled ? "filled" : "empty"}`}
               aria-pressed={filled}
               className={`
-                h-8 w-8 rounded-full border-2 transition-all duration-150 text-xs font-bold
-                focus:outline-none focus:ring-1 focus:ring-gold-500
+                h-10 w-10 rounded-full border-2 transition-all duration-150 text-xs font-bold
+                focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-1 focus:ring-offset-slate-900
                 ${
                   filled
                     ? "bg-gold-500 border-gold-400 text-slate-900 shadow-glow-gold"
@@ -342,10 +393,11 @@ function IncrementControls({ value, onChange, min, max, ariaLabel }: IncrementCo
         disabled={!canDec}
         aria-label={ariaLabel ? `Decrease ${ariaLabel}` : "Decrease"}
         className="
-          h-6 w-6 rounded border border-burgundy-800 bg-slate-900
+          h-9 w-9 rounded border border-burgundy-800 bg-slate-900
           text-xs text-parchment-500 hover:bg-burgundy-900/30 hover:text-parchment-200
           disabled:opacity-25 disabled:cursor-not-allowed
           transition-colors flex items-center justify-center leading-none select-none
+          focus:outline-none focus:ring-2 focus:ring-gold-500
         "
       >
         −
@@ -357,10 +409,11 @@ function IncrementControls({ value, onChange, min, max, ariaLabel }: IncrementCo
         disabled={!canInc}
         aria-label={ariaLabel ? `Increase ${ariaLabel}` : "Increase"}
         className="
-          h-6 w-6 rounded border border-burgundy-800 bg-slate-900
+          h-9 w-9 rounded border border-burgundy-800 bg-slate-900
           text-xs text-parchment-500 hover:bg-gold-900/20 hover:text-gold-300
           disabled:opacity-25 disabled:cursor-not-allowed
           transition-colors flex items-center justify-center leading-none select-none
+          focus:outline-none focus:ring-2 focus:ring-gold-500
         "
       >
         +
@@ -446,8 +499,8 @@ function ExperiencesList() {
           <button
             type="button"
             onClick={() => removeExperience(i)}
-            aria-label={`Remove experience: ${exp.name}`}
-            className="ml-1 h-5 w-5 flex items-center justify-center rounded text-burgundy-500 hover:text-burgundy-300 hover:bg-burgundy-900/30 transition-colors text-xs leading-none"
+            aria-label={`Remove experience: ${exp.name || `#${i + 1}`}`}
+            className="ml-1 h-9 w-9 flex items-center justify-center rounded text-burgundy-500 hover:text-burgundy-300 hover:bg-burgundy-900/30 transition-colors text-xs leading-none focus:outline-none focus:ring-2 focus:ring-burgundy-500"
           >
             ✕
           </button>
@@ -466,18 +519,21 @@ function ExperiencesList() {
           className="
             flex-1 rounded bg-slate-900 px-2 py-1.5 text-sm text-parchment-300
             border border-dashed border-burgundy-800 focus:outline-none
-            focus:border-gold-600 placeholder-parchment-700 transition-colors
+            focus:ring-2 focus:ring-gold-500 focus:border-gold-600 placeholder-parchment-700 transition-colors
           "
         />
         <div className="flex items-center gap-1">
           <button
             type="button"
-            onClick={() => setNewBonus((b) => b - 1)}
+            onClick={() => setNewBonus((b) => Math.max(2, b - 1))}
+            disabled={newBonus <= 2}
             aria-label="Decrease new experience starting bonus"
             className="
-              h-6 w-6 rounded border border-burgundy-800 bg-slate-900
+              h-9 w-9 rounded border border-burgundy-800 bg-slate-900
               text-xs text-parchment-600 hover:bg-burgundy-900/30
+              disabled:opacity-25 disabled:cursor-not-allowed
               transition-colors flex items-center justify-center leading-none
+              focus:outline-none focus:ring-2 focus:ring-gold-500
             "
           >
             −
@@ -488,9 +544,10 @@ function ExperiencesList() {
             onClick={() => setNewBonus((b) => b + 1)}
             aria-label="Increase new experience starting bonus"
             className="
-              h-6 w-6 rounded border border-burgundy-800 bg-slate-900
+              h-9 w-9 rounded border border-burgundy-800 bg-slate-900
               text-xs text-parchment-600 hover:bg-gold-900/20
               transition-colors flex items-center justify-center leading-none
+              focus:outline-none focus:ring-2 focus:ring-gold-500
             "
           >
             +
@@ -500,11 +557,12 @@ function ExperiencesList() {
           type="button"
           onClick={addExperience}
           disabled={!newName.trim()}
+          aria-label="Add experience"
           className="
-            rounded px-2.5 py-1.5 text-xs font-semibold
+            rounded px-2.5 py-2 text-xs font-semibold
             bg-burgundy-800 text-parchment-200 hover:bg-burgundy-700
             disabled:opacity-40 disabled:cursor-not-allowed
-            transition-colors
+            transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500
           "
         >
           Add
@@ -559,7 +617,7 @@ function TraitsSection() {
         Ancestry and community traits — increment as you level up.
       </p>
 
-      {/* Ancestry trait */}
+      {/* First ancestry trait */}
       {ancestryData && (
         <div className="flex items-center gap-2 rounded-lg border border-burgundy-900/40 bg-slate-900/50 px-3 py-2">
           <div className="flex-1 min-w-0">
@@ -574,6 +632,25 @@ function TraitsSection() {
             value={getTraitBonus("ancestry")}
             onChange={(v) => setTraitBonus("ancestry", v)}
             ariaLabel="ancestry trait bonus"
+          />
+        </div>
+      )}
+
+      {/* Second ancestry trait — SRD page 3: ancestry grants two features */}
+      {ancestryData?.secondTraitName && (
+        <div className="flex items-center gap-2 rounded-lg border border-burgundy-900/40 bg-slate-900/50 px-3 py-2">
+          <div className="flex-1 min-w-0">
+            <span className="text-[10px] uppercase tracking-wider text-parchment-600 block">
+              Ancestry (2nd) — {ancestryData.name}
+            </span>
+            <span className="text-sm font-semibold text-parchment-200">
+              {ancestryData.secondTraitName}
+            </span>
+          </div>
+          <IncrementControls
+            value={getTraitBonus("ancestry2")}
+            onChange={(v) => setTraitBonus("ancestry2", v)}
+            ariaLabel="second ancestry trait bonus"
           />
         </div>
       )}
@@ -626,17 +703,15 @@ export function TrackersPanel() {
         Trackers
       </h2>
 
-      {/* Damage Thresholds */}
+      {/* Damage Thresholds — SRD page 20: only Major and Severe are defined numerically */}
       <div>
         <h3 className="mb-3 text-xs font-medium uppercase tracking-wider text-parchment-500">
           Damage Thresholds
         </h3>
+        <p className="mb-2 text-[11px] text-parchment-600 italic">
+          Formula: armor base threshold + character level (SRD p. 20).
+        </p>
         <div className="flex gap-5">
-          <ThresholdInput
-            label="Minor"
-            value={damageThresholds.minor}
-            onChange={(v) => updateField("damageThresholds.minor", v)}
-          />
           <ThresholdInput
             label="Major"
             value={damageThresholds.major}
@@ -650,7 +725,7 @@ export function TrackersPanel() {
         </div>
       </div>
 
-      {/* Slot trackers */}
+      {/* Slot trackers — SRD page 20: HP and Stress max out at 12 */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <SlotTracker
           label="Hit Points"
@@ -659,6 +734,7 @@ export function TrackersPanel() {
           onToggle={(i) => handleTrackerToggle("hp", i)}
           onMaxChange={(v) => updateTracker("hp", "max", v)}
           colorFilled="bg-burgundy-600"
+          hardMax={12}
         />
         <SlotTracker
           label="Stress"
@@ -667,6 +743,7 @@ export function TrackersPanel() {
           onToggle={(i) => handleTrackerToggle("stress", i)}
           onMaxChange={(v) => updateTracker("stress", "max", v)}
           colorFilled="bg-gold-600"
+          hardMax={12}
         />
         <SlotTracker
           label="Armor"
@@ -676,14 +753,47 @@ export function TrackersPanel() {
           onMaxChange={(v) => updateTracker("armor", "max", v)}
           colorFilled="bg-parchment-500"
         />
-        <SlotTracker
-          label="Proficiency"
-          marked={trackers.proficiency.marked}
-          max={trackers.proficiency.max}
-          onToggle={(i) => handleTrackerToggle("proficiency", i)}
-          onMaxChange={(v) => updateTracker("proficiency", "max", v)}
-          colorFilled="bg-burgundy-400"
-        />
+        {/* Proficiency — SRD page 3/22: scalar integer, not a spendable slot resource */}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs font-semibold uppercase tracking-wider text-parchment-400">
+            Proficiency
+          </span>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                const v = Math.max(1, (activeCharacter.proficiency ?? 1) - 1);
+                updateField("proficiency", v);
+              }}
+              disabled={(activeCharacter.proficiency ?? 1) <= 1}
+              aria-label="Decrease proficiency"
+              className="h-9 w-9 rounded border border-burgundy-800 bg-slate-900 text-xs text-parchment-500 hover:bg-burgundy-900/30 disabled:opacity-25 disabled:cursor-not-allowed transition-colors flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-gold-500"
+            >
+              −
+            </button>
+            <span
+              className="text-2xl font-bold text-parchment-100 w-8 text-center tabular-nums"
+              aria-label={`Proficiency: ${activeCharacter.proficiency ?? 1}`}
+            >
+              {activeCharacter.proficiency ?? 1}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                const v = Math.min(4, (activeCharacter.proficiency ?? 1) + 1);
+                updateField("proficiency", v);
+              }}
+              disabled={(activeCharacter.proficiency ?? 1) >= 4}
+              aria-label="Increase proficiency"
+              className="h-9 w-9 rounded border border-burgundy-800 bg-slate-900 text-xs text-parchment-500 hover:bg-gold-900/20 hover:text-gold-300 disabled:opacity-25 disabled:cursor-not-allowed transition-colors flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-gold-500"
+            >
+              +
+            </button>
+          </div>
+          <p className="text-[10px] text-parchment-600 italic">
+            Starts at 1; increases at tiers 2, 3, 4.
+          </p>
+        </div>
       </div>
 
       {/* Weapons */}

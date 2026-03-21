@@ -12,6 +12,7 @@ import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@ta
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useAuthStore } from "@/store/authStore";
 import { ApiError } from "@/lib/api";
+import { LoadingInterstitial } from "@/components/LoadingInterstitial";
 
 // ── Global 403 handler ───────────────────────────────────────────────────────
 // A 403 means the server is actively refusing the request for this user
@@ -45,12 +46,20 @@ const queryClient = new QueryClient({
 
 function AuthInitializer({ children }: { children: React.ReactNode }) {
   const initialize = useAuthStore((s) => s.initialize);
+  const isReady    = useAuthStore((s) => s.isReady);
 
   useEffect(() => {
     initialize();
   }, [initialize]);
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      {/* Full-screen lore interstitial while auth is initialising.
+          Fades out automatically once isReady becomes true. */}
+      <LoadingInterstitial isVisible={!isReady} />
+    </>
+  );
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {

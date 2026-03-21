@@ -103,9 +103,13 @@ const config: Config = {
         },
       },
       fontFamily: {
-        serif: ["Georgia", "Cambria", '"Times New Roman"', "Times", "serif"],
-        sans:  ["Inter", "system-ui", "sans-serif"],
-        mono:  ['"JetBrains Mono"', '"Fira Code"', "monospace"],
+        // warbler-deck — small-caps header font (Adobe Typekit)
+        serif:   ['"warbler-deck"', "Georgia", "Cambria", "serif"],
+        // sofia-pro-narrow — default body/UI font (Adobe Typekit)
+        sans:    ['"sofia-pro-narrow"', "Inter", "system-ui", "sans-serif"],
+        // jetsam-collection-basilea — attention-getting display font (Adobe Typekit)
+        display: ['"jetsam-collection-basilea"', '"warbler-deck"', "Georgia", "serif"],
+        mono:    ['"JetBrains Mono"', '"Fira Code"', "monospace"],
       },
       boxShadow: {
         card:      "0 2px 8px rgba(0,0,0,0.55), 0 0 0 1px rgba(74,10,20,0.35)",

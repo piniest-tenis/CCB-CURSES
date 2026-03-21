@@ -23,6 +23,7 @@ import { StatsPanel }     from "./StatsPanel";
 import { TrackersPanel }  from "./TrackersPanel";
 import { DomainLoadout }  from "./DomainLoadout";
 import { DowntimeModal }  from "./DowntimeModal";
+import { MarkdownContent } from "@/components/MarkdownContent";
 import type { Character, ClassData } from "@shared/types";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -33,13 +34,16 @@ interface CharacterSheetProps {
 
 // ─── SheetHeader ─────────────────────────────────────────────────────────────
 
+// SRD page 21: three standard conditions are Hidden, Restrained, Vulnerable.
+// Additional conditions below appear in domain card / adversary text.
 const CONDITIONS = [
-  "Stunned",
-  "Shamed",
-  "Blind",
-  "Crushed",
-  "Trauma",
   "Hidden",
+  "Restrained",
+  "Vulnerable",
+  "Stunned",
+  "Cursed",
+  "Poisoned",
+  "Ignited",
 ] as const;
 
 interface SheetHeaderProps {
@@ -260,7 +264,9 @@ function FeaturesPanel({ classData }: FeaturesPanelProps) {
     (sc) => sc.subclassId === activeCharacter.subclassId
   );
   const level = activeCharacter.level;
-  const tier  = level >= 7 ? 3 : level >= 4 ? 2 : 1;
+  // SRD page 22: Tier 1 = level 1, Tier 2 = levels 2-4, Tier 3 = levels 5-7, Tier 4 = levels 8-10.
+  // Specialization unlocks at Tier 2 (level 2+); Mastery unlocks at Tier 3 (level 5+).
+  const tier  = level >= 8 ? 4 : level >= 5 ? 3 : level >= 2 ? 2 : 1;
 
   return (
     <section
@@ -277,14 +283,14 @@ function FeaturesPanel({ classData }: FeaturesPanelProps) {
           <h3 className="mb-1 font-serif text-sm font-semibold text-parchment-200">
             {classData.classFeature.name}
           </h3>
-          <p className="text-xs text-parchment-400 leading-relaxed">
+          <MarkdownContent className="text-xs text-parchment-400 leading-relaxed">
             {classData.classFeature.description}
-          </p>
+          </MarkdownContent>
           {classData.classFeature.options.length > 0 && (
             <ul className="mt-2 space-y-0.5 list-disc list-inside">
               {classData.classFeature.options.map((opt) => (
                 <li key={opt} className="text-xs text-parchment-500">
-                  {opt}
+                  <MarkdownContent className="inline">{opt}</MarkdownContent>
                 </li>
               ))}
             </ul>
@@ -303,9 +309,9 @@ function FeaturesPanel({ classData }: FeaturesPanelProps) {
               {classData.hopeFeature.hopeCost} Hope
             </span>
           </div>
-          <p className="text-xs text-parchment-400 leading-relaxed">
+          <MarkdownContent className="text-xs text-parchment-400 leading-relaxed">
             {classData.hopeFeature.description}
-          </p>
+          </MarkdownContent>
         </div>
       )}
 
@@ -324,9 +330,9 @@ function FeaturesPanel({ classData }: FeaturesPanelProps) {
               <p className="text-sm font-medium text-parchment-200">
                 {feat.name}
               </p>
-              <p className="mt-0.5 text-xs text-parchment-500 leading-relaxed">
+              <MarkdownContent className="mt-0.5 text-xs text-parchment-500 leading-relaxed">
                 {feat.description}
-              </p>
+              </MarkdownContent>
             </div>
           ))}
 
@@ -340,9 +346,9 @@ function FeaturesPanel({ classData }: FeaturesPanelProps) {
                   Specialization
                 </span>
               </div>
-              <p className="text-xs text-parchment-500 leading-relaxed">
+              <MarkdownContent className="text-xs text-parchment-500 leading-relaxed">
                 {activeSubclass.specializationFeature.description}
-              </p>
+              </MarkdownContent>
             </div>
           )}
 
@@ -356,9 +362,9 @@ function FeaturesPanel({ classData }: FeaturesPanelProps) {
                   Mastery
                 </span>
               </div>
-              <p className="text-xs text-parchment-500 leading-relaxed">
+              <MarkdownContent className="text-xs text-parchment-500 leading-relaxed">
                 {activeSubclass.masteryFeature.description}
-              </p>
+              </MarkdownContent>
             </div>
           )}
         </div>
@@ -389,19 +395,31 @@ interface SaveStatusProps {
 function SaveStatus({ isDirty, isSaving }: SaveStatusProps) {
   if (isSaving) {
     return (
-      <span className="flex items-center gap-1.5 text-xs text-parchment-500">
-        <span className="h-2 w-2 animate-spin rounded-full border border-parchment-600 border-t-transparent" />
+      <span
+        role="status"
+        aria-live="polite"
+        aria-label="Saving character"
+        className="flex items-center gap-1.5 text-xs text-parchment-500"
+      >
+        <span
+          aria-hidden="true"
+          className="h-2 w-2 animate-spin rounded-full border border-parchment-600 border-t-transparent"
+        />
         Saving…
       </span>
     );
   }
   if (isDirty) {
     return (
-      <span className="text-xs text-gold-600">Unsaved changes</span>
+      <span role="status" aria-live="polite" className="text-xs text-gold-600">
+        Unsaved changes
+      </span>
     );
   }
   return (
-    <span className="text-xs text-parchment-700">All changes saved</span>
+    <span role="status" aria-live="polite" className="text-xs text-parchment-700">
+      All changes saved
+    </span>
   );
 }
 
@@ -459,9 +477,16 @@ export function CharacterSheet({ characterId }: CharacterSheetProps) {
   // ── Loading ──────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="flex min-h-[24rem] items-center justify-center">
+      <div
+        role="status"
+        aria-label="Loading character"
+        className="flex min-h-[24rem] items-center justify-center"
+      >
         <div className="space-y-3 text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-burgundy-500 border-t-transparent" />
+          <div
+            aria-hidden="true"
+            className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-burgundy-500 border-t-transparent"
+          />
           <p className="text-sm text-parchment-500">Loading character…</p>
         </div>
       </div>
@@ -471,7 +496,10 @@ export function CharacterSheet({ characterId }: CharacterSheetProps) {
   // ── Error ────────────────────────────────────────────────────────────────
   if (isError) {
     return (
-      <div className="rounded-xl border border-burgundy-700 bg-slate-900 p-8 text-center">
+      <div
+        role="alert"
+        className="rounded-xl border border-burgundy-700 bg-slate-900 p-8 text-center"
+      >
         <p className="font-serif text-lg text-burgundy-300">
           Failed to load character
         </p>
@@ -492,10 +520,12 @@ export function CharacterSheet({ characterId }: CharacterSheetProps) {
         <button
           type="button"
           onClick={() => setDowntimeOpen(true)}
+          aria-haspopup="dialog"
           className="
             rounded-lg border border-burgundy-700 bg-burgundy-800/40 px-4 py-1.5
             text-sm font-semibold text-parchment-200
             hover:bg-burgundy-700 transition-colors shadow-card
+            focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-2 focus:ring-offset-slate-950
           "
         >
           Downtime / Rest

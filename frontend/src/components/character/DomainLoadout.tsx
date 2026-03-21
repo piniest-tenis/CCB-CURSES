@@ -57,6 +57,8 @@ function LoadoutCardSlot({
       onDragStart={onDragStart}
       onDragEnter={onDragEnter}
       onDragEnd={onDragEnd}
+      role="listitem"
+      aria-label={card ? `${card.name}, domain card` : cardId}
       className={`
         relative flex items-center gap-3 rounded-lg border p-3 cursor-grab active:cursor-grabbing
         transition-all duration-150
@@ -123,9 +125,10 @@ function LoadoutCardSlot({
           disabled={index === 0}
           className="
             text-parchment-600 hover:text-gold-400 disabled:opacity-20
-            transition-colors text-xs px-1
+            transition-colors text-xs px-1 py-1
+            focus:outline-none focus:ring-1 focus:ring-gold-500 rounded
           "
-          aria-label="Move card up"
+          aria-label={`Move ${card?.name ?? cardId} up`}
         >
           ▲
         </button>
@@ -134,9 +137,10 @@ function LoadoutCardSlot({
           disabled={index === total - 1}
           className="
             text-parchment-600 hover:text-gold-400 disabled:opacity-20
-            transition-colors text-xs px-1
+            transition-colors text-xs px-1 py-1
+            focus:outline-none focus:ring-1 focus:ring-gold-500 rounded
           "
-          aria-label="Move card down"
+          aria-label={`Move ${card?.name ?? cardId} down`}
         >
           ▼
         </button>
@@ -146,8 +150,8 @@ function LoadoutCardSlot({
       <button
         onClick={onRemove}
         className="
-          ml-1 rounded p-1 text-burgundy-500 hover:bg-burgundy-900/40 hover:text-burgundy-300
-          transition-colors
+          ml-1 rounded p-2 text-burgundy-500 hover:bg-burgundy-900/40 hover:text-burgundy-300
+          transition-colors focus:outline-none focus:ring-2 focus:ring-burgundy-500
         "
         aria-label={`Remove ${card?.name ?? cardId} from loadout`}
       >
@@ -184,7 +188,8 @@ function VaultPicker({ vaultIds, loadoutIds, onAdd, onClose }: VaultPickerProps)
         </h4>
         <button
           onClick={onClose}
-          className="text-parchment-600 hover:text-parchment-300 text-xs"
+          aria-label="Close domain vault picker"
+          className="text-parchment-600 hover:text-parchment-300 text-xs focus:outline-none focus:ring-1 focus:ring-gold-500 rounded px-1"
         >
           Close
         </button>
@@ -228,9 +233,11 @@ function VaultPickerItem({
     <li>
       <button
         onClick={onAdd}
+        aria-label={card ? `Add ${card.name} (${card.domain}, Level ${card.level}) to loadout` : `Add ${cardId} to loadout`}
         className="
           w-full flex items-center gap-2 rounded px-2 py-1.5
           hover:bg-burgundy-900/40 text-left transition-colors
+          focus:outline-none focus:ring-1 focus:ring-gold-500
         "
       >
         <span className="flex-1 text-sm text-parchment-300 truncate">
@@ -292,14 +299,18 @@ export function DomainLoadout() {
         </h3>
         {domainLoadout.length < 5 && domainVault.length > 0 && (
           <button
+            type="button"
             onClick={() => setShowPicker((v) => !v)}
+            aria-expanded={showPicker}
+            aria-controls="domain-vault-picker"
             className="
               rounded px-2 py-0.5 text-xs font-semibold
               bg-burgundy-800/60 text-parchment-300 border border-burgundy-700
               hover:bg-burgundy-700 transition-colors
+              focus:outline-none focus:ring-2 focus:ring-gold-500
             "
           >
-            + Add Card
+            {showPicker ? "Hide Vault" : "+ Add Card"}
           </button>
         )}
       </div>
@@ -310,7 +321,7 @@ export function DomainLoadout() {
           No cards in loadout. Add cards from your vault above.
         </p>
       ) : (
-        <div className="space-y-2">
+        <div role="list" className="space-y-2">
           {domainLoadout.map((cardId, index) => (
             <LoadoutCardSlot
               key={`${cardId}-${index}`}
@@ -349,12 +360,14 @@ export function DomainLoadout() {
 
       {/* Vault picker */}
       {showPicker && (
-        <VaultPicker
-          vaultIds={domainVault}
-          loadoutIds={domainLoadout}
-          onAdd={addToLoadout}
-          onClose={() => setShowPicker(false)}
-        />
+        <div id="domain-vault-picker">
+          <VaultPicker
+            vaultIds={domainVault}
+            loadoutIds={domainLoadout}
+            onAdd={addToLoadout}
+            onClose={() => setShowPicker(false)}
+          />
+        </div>
       )}
     </div>
   );

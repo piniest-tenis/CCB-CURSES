@@ -18,6 +18,12 @@
       "mode": "subagent",
       "temperature": 0.2,
       "color": "#b9baa3"
+    },
+    "srd-compliance": {
+      "description": "A rules engineer and system validator responsible for ensuring every part of the Daggerheart character platform strictly adheres to the Daggerheart SRD. Has access to the full digested SRD text and acts as the final authority on character legality, progression correctness, domain/class interactions, and damage/resource calculations.",
+      "mode": "subagent",
+      "temperature": 0.1,
+      "color": "#37afdb"
     }
   }
 }

@@ -61,6 +61,7 @@ export class ApiStack extends cdk.Stack {
         DOMAINCARDS_TABLE: dataStack.domainCardsTable.tableName,
         MEDIA_TABLE: dataStack.mediaTable.tableName,
         USERS_TABLE: dataStack.usersTable.tableName,
+        CMS_TABLE: dataStack.cmsTable.tableName,
       },
     };
 
@@ -298,12 +299,43 @@ export class ApiStack extends cdk.Stack {
     );
 
     // -----------------------------------------------------------------------
+    // 8. CMS Lambda
+    //    Handles: GET|POST|PUT|DELETE /cms/*
+    //    Public: GET /cms/{type}
+    //    Protected: all admin mutations + GET /cms/{type}/all
+    // -----------------------------------------------------------------------
+    const cmsHandler = new lambda.Function(
+      this,
+      "CmsHandler",
+      {
+        ...commonLambdaProps,
+        functionName: `daggerheart-cms-${stage}`,
+        description: "CMS content management (interstitials, splash screens)",
+        handler: "index.handler",
+        code: lambda.Code.fromAsset("../backend/dist/cms-handler"),
+        logGroup: makeLambdaLogGroup("cms"),
+      } as lambda.FunctionProps
+    );
+
+    dataStack.cmsTable.grantReadWriteData(cmsHandler);
+
+    // CMS images are stored under cms/images/ in the media bucket.
+    cmsHandler.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ["s3:PutObject"],
+        resources: [storageStack.mediaBucket.arnForObjects("cms/*")],
+      })
+    );
+
+    // -----------------------------------------------------------------------
     // HTTP API Gateway v2
     // -----------------------------------------------------------------------
     const corsAllowOrigins = isProd
       ? ["https://app.daggerheart.example.com"]
       : [
           "http://localhost:3000",
+          "http://localhost:3001",
           `https://${stage}.daggerheart.example.com`,
           // CloudFront domain for the deployed dev frontend
           "https://dqt96kbhxdqy3.cloudfront.net",
@@ -372,7 +404,10 @@ export class ApiStack extends cdk.Stack {
       `https://cognito-idp.${this.region}.amazonaws.com/${authStack.userPool.userPoolId}`,
       {
         authorizerName: "CognitoJWT",
-        jwtAudience: [authStack.userPoolClient.userPoolClientId],
+        jwtAudience: [
+          authStack.userPoolClient.userPoolClientId,
+          authStack.cmsUserPoolClient.userPoolClientId,
+        ],
         identitySource: ["$request.header.Authorization"],
       }
     );
@@ -409,6 +444,10 @@ export class ApiStack extends cdk.Stack {
         "IngestionAdminIntegration",
         ingestionAdminHandler
       );
+    const cmsIntegration = new apigwv2Integrations.HttpLambdaIntegration(
+      "CmsIntegration",
+      cmsHandler
+    );
 
     // -----------------------------------------------------------------------
     // Routes — PUBLIC (no auth required)
@@ -455,6 +494,14 @@ export class ApiStack extends cdk.Stack {
       methods: [apigwv2.HttpMethod.GET],
       integration: charactersIntegration,
       // No JWT authorizer — share token validated in-handler
+    });
+
+    // CMS public route — active items (read-only, no auth required)
+    this.httpApi.addRoutes({
+      path: "/cms/{type}",
+      methods: [apigwv2.HttpMethod.GET],
+      integration: cmsIntegration,
+      // No JWT authorizer — public read
     });
 
     // -----------------------------------------------------------------------
@@ -592,6 +639,29 @@ export class ApiStack extends cdk.Stack {
       });
     }
 
+    // CMS Admin — protected content management
+    const cmsAdminRoutes: Array<{
+      method: apigwv2.HttpMethod;
+      path: string;
+    }> = [
+      { method: apigwv2.HttpMethod.POST, path: "/cms/presign" },
+      { method: apigwv2.HttpMethod.GET, path: "/cms/{type}/all" },
+      { method: apigwv2.HttpMethod.POST, path: "/cms/{type}" },
+      { method: apigwv2.HttpMethod.PUT, path: "/cms/{type}/{id}" },
+      { method: apigwv2.HttpMethod.DELETE, path: "/cms/{type}/{id}" },
+      { method: apigwv2.HttpMethod.POST, path: "/cms/{type}/{id}/activate" },
+      { method: apigwv2.HttpMethod.POST, path: "/cms/{type}/{id}/deactivate" },
+    ];
+
+    for (const route of cmsAdminRoutes) {
+      this.httpApi.addRoutes({
+        path: route.path,
+        methods: [route.method],
+        integration: cmsIntegration,
+        authorizer: jwtAuthorizer,
+      });
+    }
+
     this.apiUrl = `${this.httpApi.apiEndpoint}/${stage}`;
 
     // -----------------------------------------------------------------------
@@ -647,6 +717,11 @@ export class ApiStack extends cdk.Stack {
     new cdk.CfnOutput(this, "IngestionJobsTableName", {
       exportName: `DaggerheartIngestionJobsTableName-${stage}`,
       value: ingestionJobsTable.tableName,
+    });
+
+    new cdk.CfnOutput(this, "CmsHandlerArn", {
+      exportName: `DaggerheartCmsHandlerArn-${stage}`,
+      value: cmsHandler.functionArn,
     });
   }
 }

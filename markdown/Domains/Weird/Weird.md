@@ -14,3 +14,5 @@
 - [[(Level 5) Theoretical Magic]]
 
 %% End Waypoint %%
+
+Weird cards tap into magic that doesn't follow the rules — conjured weapons, psychic abilities, spectral entities, and forces most people pretend don't exist. Good for characters who live in the margins of what's possible.

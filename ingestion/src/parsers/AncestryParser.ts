@@ -42,6 +42,8 @@ export function parseAncestryFile(
       flavorText: "",
       traitName: "",
       traitDescription: "",
+      secondTraitName: "",
+      secondTraitDescription: "",
       source: "homebrew",
     };
   }
@@ -72,26 +74,32 @@ export function parseAncestryFile(
     break;
   }
 
-  // ── Trait ──────────────────────────────────────────────────────────────────
-  let traitName = "";
-  let traitDescription = "";
-  let traitFound = false;
+  // ── Traits ─────────────────────────────────────────────────────────────────
+  // Collect all **Name**: description lines after the flavor text.
+  const traits: Array<{ name: string; description: string }> = [];
 
   for (let i = Math.max(flavorIdx + 1, 0); i < lines.length; i++) {
     const l = lines[i];
     if (l.length === 0) continue;
+    // Skip section headings like "# Ancestry"
+    if (/^#+\s/.test(l)) continue;
 
     // **TraitName**: description (colon may be inside or outside bold span)
     const boldMatch = l.match(/^\*\*([^*]+?)\*\*:?\s*(.*)$/);
     if (boldMatch) {
-      traitName = boldMatch[1].replace(/:$/, "").trim();
-      traitDescription = boldMatch[2].trim();
-      traitFound = true;
-      break;
+      traits.push({
+        name: boldMatch[1].replace(/:$/, "").trim(),
+        description: boldMatch[2].trim(),
+      });
     }
   }
 
-  if (!traitFound) {
+  const traitName        = traits[0]?.name        ?? "";
+  const traitDescription = traits[0]?.description ?? "";
+  const secondTraitName        = traits[1]?.name        ?? "";
+  const secondTraitDescription = traits[1]?.description ?? "";
+
+  if (traits.length === 0) {
     console.warn(
       `[AncestryParser] No trait line found in ${path.basename(filePath)} — ` +
         `traitName and traitDescription will be empty.`
@@ -104,6 +112,8 @@ export function parseAncestryFile(
     flavorText,
     traitName,
     traitDescription,
+    secondTraitName,
+    secondTraitDescription,
     source: "homebrew",
   };
 }

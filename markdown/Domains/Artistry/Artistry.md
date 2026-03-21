@@ -14,3 +14,5 @@
 - [[(Level 5) Sow Discontent]]
 
 %% End Waypoint %%
+
+Artistry cards use performance, craft, and influence to shape how others feel and act. Good for characters who lead through beauty, spectacle, or the power of a well-timed word.

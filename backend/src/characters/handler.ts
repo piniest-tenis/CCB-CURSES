@@ -62,15 +62,20 @@ const WeaponSchema = z.object({
   range: z.string().nullable().default(null),
   type: z.enum(["physical", "magic"]).nullable().default(null),
   burden: z.enum(["one-handed", "two-handed"]).nullable().default(null),
+  // SRD page 23: weapons have a tier; characters cannot equip weapons above their tier.
+  tier: z.number().int().min(1).max(4).nullable().default(null),
+  // SRD page 23: optional weapon feature text.
+  feature: z.string().nullable().default(null),
 });
 
+// SRD page 3: starting trait range is -1 to +2; allow -5 for penalty modifiers, up to +8 via advancement.
 const CoreStatsSchema = z.object({
-  agility: z.number().int().min(0).max(10),
-  strength: z.number().int().min(0).max(10),
-  finesse: z.number().int().min(0).max(10),
-  instinct: z.number().int().min(0).max(10),
-  presence: z.number().int().min(0).max(10),
-  knowledge: z.number().int().min(0).max(10),
+  agility: z.number().int().min(-5).max(8),
+  strength: z.number().int().min(-5).max(8),
+  finesse: z.number().int().min(-5).max(8),
+  instinct: z.number().int().min(-5).max(8),
+  presence: z.number().int().min(-5).max(8),
+  knowledge: z.number().int().min(-5).max(8),
 });
 
 const SlotTrackerSchema = z.object({
@@ -113,10 +118,9 @@ const PutCharacterSchema = z.object({
     hp: SlotTrackerSchema,
     stress: SlotTrackerSchema,
     armor: SlotTrackerSchema,
-    proficiency: SlotTrackerSchema,
   }),
   damageThresholds: z.object({
-    minor: z.number().int().min(0),
+    // SRD page 20: only Major and Severe thresholds are defined numerically.
     major: z.number().int().min(0),
     severe: z.number().int().min(0),
   }),
@@ -126,7 +130,11 @@ const PutCharacterSchema = z.object({
       secondary: WeaponSchema,
     })
     .optional(),
+  // SRD page 20: hope is capped at hopeMax (default 6); hopeMax can be reduced by death scars.
   hope: z.number().int().min(0).max(6),
+  hopeMax: z.number().int().min(0).max(6).optional().default(6),
+  // SRD page 3/22: Proficiency is a scalar integer starting at 1, max 4.
+  proficiency: z.number().int().min(1).max(4).optional().default(1),
   experiences: z
     .array(z.object({ name: z.string(), bonus: z.number().int() }))
     .optional(),
@@ -195,6 +203,8 @@ function emptyWeapon(): Weapons["primary"] {
     range: null,
     type: null,
     burden: null,
+    tier: null,
+    feature: null,
   };
 }
 
@@ -336,6 +346,8 @@ function toCharacterResponse(
     damageThresholds: record.damageThresholds,
     weapons: record.weapons,
     hope: record.hope,
+    hopeMax: record.hopeMax ?? 6,
+    proficiency: record.proficiency ?? 1,
     experiences: record.experiences ?? [],
     conditions: record.conditions ?? [],
     domainLoadout: record.domainLoadout ?? [],
@@ -461,11 +473,10 @@ async function createCharacter(
     hp: { max: classRecord.startingHitPoints, marked: 0 },
     stress: { max: 6, marked: 0 },
     armor: { max: 3, marked: 0 },
-    proficiency: { max: 2, marked: 0 },
   };
 
   const defaultDamageThresholds: DamageThresholds = {
-    minor: 0,
+    // SRD page 20: only Major and Severe defined; user fills in based on armor + level.
     major: 0,
     severe: 0,
   };
@@ -503,7 +514,9 @@ async function createCharacter(
     trackers: defaultTrackers,
     damageThresholds: defaultDamageThresholds,
     weapons: defaultWeapons,
-    hope: 1,
+    hope: 2,
+    hopeMax: 6,
+    proficiency: 1,
     experiences: (input.experiences ?? []).map((e) => ({
       name: e.name,
       bonus: e.bonus ?? 2,

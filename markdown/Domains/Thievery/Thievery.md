@@ -12,3 +12,5 @@
 - [[(Level 5) Ambitious Score]]
 
 %% End Waypoint %%
+
+Thievery cards cover burglary, pickpocketing, infiltration, and targeted takedowns. Good for characters who get in, get what they need, and get out before anyone notices.

@@ -13,6 +13,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useDomain } from "@/hooks/useGameData";
 import type { DomainCard } from "@shared/types";
+import { MarkdownContent } from "@/components/MarkdownContent";
 
 // ---------------------------------------------------------------------------
 // Domain colours
@@ -88,9 +89,9 @@ function CardTile({ card }: { card: DomainCard }) {
         <div className="px-4 pb-4 space-y-3 border-t border-slate-700/40">
           {/* Simple description */}
           {!card.isGrimoire && card.description && (
-            <p className="text-sm text-parchment-400 leading-relaxed whitespace-pre-wrap pt-3">
+            <MarkdownContent className="text-sm text-parchment-400 leading-relaxed pt-3">
               {card.description}
-            </p>
+            </MarkdownContent>
           )}
 
           {/* Grimoire sub-abilities */}
@@ -99,9 +100,9 @@ function CardTile({ card }: { card: DomainCard }) {
               {card.grimoire.map((ability) => (
                 <div key={ability.name} className="rounded border border-teal-900/50 bg-teal-950/10 px-3 py-2">
                   <p className="text-xs font-semibold text-teal-300 mb-1">{ability.name}</p>
-                  <p className="text-sm text-parchment-400 leading-relaxed whitespace-pre-wrap">
+                  <MarkdownContent className="text-sm text-parchment-400 leading-relaxed">
                     {ability.description}
-                  </p>
+                  </MarkdownContent>
                 </div>
               ))}
             </div>
@@ -111,9 +112,12 @@ function CardTile({ card }: { card: DomainCard }) {
           {card.isCursed && card.curseText && (
             <div className="rounded border border-burgundy-800/60 bg-burgundy-950/20 px-3 py-2">
               <p className="text-xs font-semibold text-burgundy-400 mb-1">Curse</p>
-              <p className="text-sm text-burgundy-300 leading-relaxed whitespace-pre-wrap">
+              <MarkdownContent
+                className="text-sm text-burgundy-300 leading-relaxed"
+                linkClassName="underline decoration-burgundy-500/60 hover:decoration-burgundy-400 text-burgundy-200 hover:text-burgundy-100 transition-colors"
+              >
                 {card.curseText}
-              </p>
+              </MarkdownContent>
             </div>
           )}
 

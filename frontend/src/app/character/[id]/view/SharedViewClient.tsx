@@ -14,6 +14,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 import type { Character, CoreStatName } from "@shared/types";
+import { MarkdownContent } from "@/components/MarkdownContent";
 
 // ---------------------------------------------------------------------------
 // Fetch helper — bypasses JWT, passes token as query param
@@ -56,9 +57,12 @@ const CORE_STATS: CoreStatName[] = [
 
 function StatBadge({ label, value }: { label: string; value: number }) {
   return (
-    <div className="flex flex-col items-center rounded-lg border border-burgundy-800 bg-slate-900 px-3 py-2.5 min-w-[64px]">
-      <span className="text-xs uppercase tracking-wider text-parchment-600 mb-1">{label.slice(0, 3)}</span>
-      <span className="text-xl font-bold text-parchment-100">{value >= 0 ? `+${value}` : value}</span>
+    <div
+      className="flex flex-col items-center rounded-lg border border-burgundy-800 bg-slate-900 px-3 py-2.5 min-w-[64px]"
+      aria-label={`${label}: ${value >= 0 ? `+${value}` : value}`}
+    >
+      <span className="text-xs uppercase tracking-wider text-parchment-600 mb-1" aria-hidden="true">{label.slice(0, 3)}</span>
+      <span className="text-xl font-bold text-parchment-100" aria-hidden="true">{value >= 0 ? `+${value}` : value}</span>
     </div>
   );
 }
@@ -75,10 +79,11 @@ function SlotRow({
   return (
     <div className="flex items-center gap-3">
       <span className="w-24 text-xs text-parchment-500 uppercase tracking-wider">{label}</span>
-      <div className="flex gap-1">
+      <div className="flex gap-1" role="group" aria-label={`${label}: ${marked} of ${max} marked`}>
         {Array.from({ length: max }).map((_, i) => (
           <span
             key={i}
+            aria-label={i < marked ? `${label} slot ${i + 1} marked` : `${label} slot ${i + 1} empty`}
             className={`h-4 w-4 rounded-sm border ${
               i < marked
                 ? "bg-burgundy-600 border-burgundy-500"
@@ -87,7 +92,7 @@ function SlotRow({
           />
         ))}
       </div>
-      <span className="text-xs text-parchment-600">
+      <span className="text-xs text-parchment-600" aria-hidden="true">
         {marked}/{max}
       </span>
     </div>
@@ -102,8 +107,13 @@ export default function SharedCharacterViewPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-slate-950">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-burgundy-500 border-t-transparent" />
+        <div
+          role="status"
+          aria-label="Loading character sheet"
+          className="flex min-h-screen items-center justify-center bg-slate-950"
+        >
+          <div aria-hidden="true" className="h-8 w-8 animate-spin rounded-full border-2 border-burgundy-500 border-t-transparent" />
+          <span className="sr-only">Loading character sheet…</span>
         </div>
       }
     >
@@ -156,8 +166,13 @@ function SharedCharacterViewContent() {
       <main className="mx-auto max-w-4xl px-4 py-6">
         {/* Loading */}
         {isLoading && (
-          <div className="flex items-center justify-center py-20">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-burgundy-500 border-t-transparent" />
+          <div
+            role="status"
+            aria-label="Loading character"
+            className="flex items-center justify-center py-20"
+          >
+            <div aria-hidden="true" className="h-8 w-8 animate-spin rounded-full border-2 border-burgundy-500 border-t-transparent" />
+            <span className="sr-only">Loading character…</span>
           </div>
         )}
 
@@ -316,20 +331,21 @@ function SharedCharacterViewContent() {
                   marked={character.trackers.armor.marked}
                   max={character.trackers.armor.max}
                 />
-                <SlotRow
-                  label="Proficiency"
-                  marked={character.trackers.proficiency.marked}
-                  max={character.trackers.proficiency.max}
-                />
+                {/* Proficiency — scalar integer */}
+                <div className="flex items-center gap-3">
+                  <span className="text-xs uppercase tracking-wider text-parchment-600 w-24">Proficiency</span>
+                  <span className="font-bold text-parchment-200">{character.proficiency ?? 1}</span>
+                </div>
               </div>
 
               {/* Hope */}
               <div className="mt-4 flex items-center gap-3">
                 <span className="text-xs uppercase tracking-wider text-parchment-600 w-24">Hope</span>
-                <div className="flex gap-1">
-                  {Array.from({ length: 6 }).map((_, i) => (
+                <div className="flex gap-1" role="group" aria-label={`Hope: ${character.hope} of ${character.hopeMax ?? 6}`}>
+                  {Array.from({ length: character.hopeMax ?? 6 }).map((_, i) => (
                     <span
                       key={i}
+                      aria-label={i < character.hope ? `Hope ${i + 1} filled` : `Hope ${i + 1} empty`}
                       className={`h-4 w-4 rounded-full border ${
                         i < character.hope
                           ? "bg-gold-600 border-gold-500"
@@ -338,15 +354,11 @@ function SharedCharacterViewContent() {
                     />
                   ))}
                 </div>
-                <span className="text-xs text-parchment-600">{character.hope}/6</span>
+                <span className="text-xs text-parchment-600" aria-hidden="true">{character.hope}/{character.hopeMax ?? 6}</span>
               </div>
 
-              {/* Damage thresholds */}
+              {/* Damage thresholds — SRD page 20: only Major and Severe */}
               <div className="mt-4 flex flex-wrap gap-4">
-                <div className="text-center">
-                  <p className="text-xs uppercase tracking-wider text-parchment-600">Minor</p>
-                  <p className="font-bold text-parchment-200">{character.damageThresholds.minor}</p>
-                </div>
                 <div className="text-center">
                   <p className="text-xs uppercase tracking-wider text-parchment-600">Major</p>
                   <p className="font-bold text-parchment-200">{character.damageThresholds.major}</p>
@@ -402,9 +414,9 @@ function SharedCharacterViewContent() {
                 <h2 className="mb-3 font-serif text-lg font-semibold text-parchment-200">
                   Notes
                 </h2>
-                <p className="text-sm text-parchment-400 leading-relaxed whitespace-pre-wrap">
+                <MarkdownContent className="text-sm text-parchment-400 leading-relaxed">
                   {character.notes}
-                </p>
+                </MarkdownContent>
               </div>
             )}
 

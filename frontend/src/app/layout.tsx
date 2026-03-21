@@ -10,9 +10,14 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "Daggerheart Character Platform",
-  description: "Create and manage your Daggerheart character sheets.",
+  title: "Curses! Custom Character Builder",
+  description: "Create and manage your character for the Tidwell campaign.",
   themeColor: "#0f1219",
+  icons: {
+    icon: "/images/curses-favicon-tilt.png",
+    shortcut: "/images/curses-favicon-tilt.png",
+    apple: "/images/curses-favicon-tilt.png",
+  },
 };
 
 export default function RootLayout({
@@ -22,6 +27,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
+      <head>
+        <link rel="stylesheet" href="https://use.typekit.net/zko4lko.css" />
+      </head>
       <body className="min-h-screen bg-slate-950 text-parchment-200 antialiased font-sans">
         <Providers>{children}</Providers>
       </body>

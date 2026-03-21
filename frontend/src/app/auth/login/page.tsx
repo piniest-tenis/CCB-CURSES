@@ -95,7 +95,11 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
             {/* Root error */}
             {errors.root && (
-              <div className="rounded-lg border border-burgundy-700 bg-burgundy-950/40 px-4 py-3 text-sm text-burgundy-300">
+              <div
+                role="alert"
+                aria-live="assertive"
+                className="rounded-lg border border-burgundy-700 bg-burgundy-950/40 px-4 py-3 text-sm text-burgundy-300"
+              >
                 {errors.root.message}
               </div>
             )}
@@ -113,20 +117,22 @@ export default function LoginPage() {
                 type="email"
                 autoComplete="email"
                 {...register("email")}
+                aria-describedby={errors.email ? "email-error" : undefined}
+                aria-invalid={errors.email ? "true" : undefined}
                 className={`
                   w-full rounded-lg border bg-slate-850 px-3 py-2.5
                   text-sm text-parchment-200 placeholder-parchment-700
-                  focus:outline-none transition-colors
+                  focus:outline-none focus:ring-2 transition-colors
                   ${
                     errors.email
-                      ? "border-burgundy-600 focus:border-burgundy-500"
-                      : "border-burgundy-800 focus:border-gold-500"
+                      ? "border-burgundy-600 focus:ring-burgundy-500 focus:border-burgundy-500"
+                      : "border-burgundy-800 focus:ring-gold-500 focus:border-gold-500"
                   }
                 `}
                 placeholder="you@example.com"
               />
               {errors.email && (
-                <p className="text-xs text-burgundy-400">{errors.email.message}</p>
+                <p id="email-error" role="alert" className="text-xs text-burgundy-400">{errors.email.message}</p>
               )}
             </div>
 
@@ -143,20 +149,22 @@ export default function LoginPage() {
                 type="password"
                 autoComplete="current-password"
                 {...register("password")}
+                aria-describedby={errors.password ? "password-error" : undefined}
+                aria-invalid={errors.password ? "true" : undefined}
                 className={`
                   w-full rounded-lg border bg-slate-850 px-3 py-2.5
                   text-sm text-parchment-200 placeholder-parchment-700
-                  focus:outline-none transition-colors
+                  focus:outline-none focus:ring-2 transition-colors
                   ${
                     errors.password
-                      ? "border-burgundy-600 focus:border-burgundy-500"
-                      : "border-burgundy-800 focus:border-gold-500"
+                      ? "border-burgundy-600 focus:ring-burgundy-500 focus:border-burgundy-500"
+                      : "border-burgundy-800 focus:ring-gold-500 focus:border-gold-500"
                   }
                 `}
                 placeholder="••••••••••••"
               />
               {errors.password && (
-                <p className="text-xs text-burgundy-400">{errors.password.message}</p>
+                <p id="password-error" role="alert" className="text-xs text-burgundy-400">{errors.password.message}</p>
               )}
             </div>
 
@@ -169,6 +177,7 @@ export default function LoginPage() {
                 bg-burgundy-700 text-parchment-100
                 hover:bg-burgundy-600 disabled:opacity-50 disabled:cursor-not-allowed
                 transition-colors shadow-glow-burgundy
+                focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-2 focus:ring-offset-slate-900
               "
             >
               {isLoading ? "Signing in…" : "Sign In"}

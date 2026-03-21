@@ -3,7 +3,7 @@
 /**
  * src/components/character/StatsPanel.tsx
  *
- * Renders the 6 core stat inputs (0–8 range) with +/- increment buttons
+ * Renders the 6 core stat inputs (−5 to +8 range) with +/- increment buttons
  * and derived stat displays (evasion, armor — read-only, computed server-side).
  */
 
@@ -32,7 +32,8 @@ interface StatInputProps {
 }
 
 function StatInput({ label, abbr, value, onChange }: StatInputProps) {
-  const decrement = () => onChange(Math.max(0, value - 1));
+  // SRD page 3: valid starting traits include -1; floor of -5 allows penalty modifiers.
+  const decrement = () => onChange(Math.max(-5, value - 1));
   const increment = () => onChange(Math.min(8, value + 1));
 
   return (
@@ -55,10 +56,11 @@ function StatInput({ label, abbr, value, onChange }: StatInputProps) {
           disabled={value >= 8}
           aria-label={`Increase ${label}`}
           className="
-            w-full py-0.5 text-center text-xs text-parchment-600
+            w-full py-1 text-center text-xs text-parchment-600
             hover:bg-gold-900/20 hover:text-gold-400
             disabled:opacity-20 disabled:cursor-not-allowed
             transition-colors leading-none select-none
+            focus:outline-none focus:ring-2 focus:ring-inset focus:ring-gold-500
           "
         >
           ▲
@@ -71,7 +73,7 @@ function StatInput({ label, abbr, value, onChange }: StatInputProps) {
               text-xl font-bold text-parchment-100
               w-8 text-center leading-none select-none
             "
-            aria-label={`${label}: ${value}`}
+            aria-hidden="true"
           >
             {value}
           </span>
@@ -81,13 +83,14 @@ function StatInput({ label, abbr, value, onChange }: StatInputProps) {
         <button
           type="button"
           onClick={decrement}
-          disabled={value <= 0}
+          disabled={value <= -5}
           aria-label={`Decrease ${label}`}
           className="
-            w-full py-0.5 text-center text-xs text-parchment-600
+            w-full py-1 text-center text-xs text-parchment-600
             hover:bg-burgundy-900/30 hover:text-burgundy-300
             disabled:opacity-20 disabled:cursor-not-allowed
             transition-colors leading-none select-none
+            focus:outline-none focus:ring-2 focus:ring-inset focus:ring-gold-500
           "
         >
           ▼
@@ -95,14 +98,14 @@ function StatInput({ label, abbr, value, onChange }: StatInputProps) {
       </div>
 
       {/* Abbreviation (always visible) */}
-      <span className="text-xs font-semibold tracking-widest text-gold-600 uppercase">
+      <span className="text-xs font-semibold tracking-widest text-gold-600 uppercase" aria-hidden="true">
         {abbr}
       </span>
 
-      {/* Full label on hover */}
+      {/* Full label — always present for AT, visually shown on hover */}
       <span
         className="h-4 text-[10px] text-parchment-500 group-hover:opacity-100 opacity-0 transition-opacity duration-150"
-        aria-hidden="true"
+        aria-label={`${label}: ${value}`}
       >
         {label}
       </span>
@@ -123,6 +126,7 @@ function DerivedStatDisplay({ label, value, tooltip }: DerivedStatDisplayProps) 
     <div
       className="flex flex-col items-center gap-1.5"
       title={tooltip}
+      aria-label={tooltip ?? `${label}: ${value}`}
     >
       <div
         className="
@@ -131,10 +135,11 @@ function DerivedStatDisplay({ label, value, tooltip }: DerivedStatDisplayProps) 
           flex items-center justify-center
           shadow-inner
         "
+        aria-hidden="true"
       >
         <span className="text-2xl font-bold text-gold-400">{value}</span>
       </div>
-      <span className="text-xs font-medium text-parchment-400 uppercase tracking-wide">
+      <span className="text-xs font-medium text-parchment-400 uppercase tracking-wide" aria-hidden="true">
         {label}
       </span>
     </div>

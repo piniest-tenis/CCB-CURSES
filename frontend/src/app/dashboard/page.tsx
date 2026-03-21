@@ -13,6 +13,7 @@
  */
 
 import React, { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuthStore } from "@/store/authStore";
@@ -20,6 +21,8 @@ import { useCharacters, useCreateCharacter, useDeleteCharacter } from "@/hooks/u
 import type { CharacterSummary, AncestryData, CommunityData } from "@shared/types";
 import { useClasses, useClass, useAncestries, useCommunities } from "@/hooks/useGameData";
 import type { SubclassData, NamedFeature } from "@shared/types";
+import { useCmsContent } from "@/hooks/useCmsContent";
+import { MarkdownContent } from "@/components/MarkdownContent";
 
 // ---------------------------------------------------------------------------
 // Color palette constants (matching the design system)
@@ -119,10 +122,12 @@ function CharacterCard({
       <div className="flex gap-2 pt-1">
         <button
           onClick={onOpen}
+          aria-label={`Open character sheet for ${character.name}`}
           className="
             flex-1 rounded-lg py-2 text-sm font-semibold
             bg-[#577399] text-[#f7f7ff] hover:bg-[#577399]/80
             transition-colors shadow-sm
+            focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2 focus:ring-offset-slate-900
           "
         >
           Open Sheet
@@ -136,20 +141,24 @@ function CharacterCard({
                 setConfirmDelete(false);
               }}
               disabled={isDeleting}
+              aria-label={`Confirm delete ${character.name}`}
               className="
                 rounded-lg px-3 py-2 text-xs font-semibold
                 bg-[#fe5f55]/20 text-[#fe5f55] hover:bg-[#fe5f55]/30
                 disabled:opacity-50 transition-colors
+                focus:outline-none focus:ring-2 focus:ring-[#fe5f55]
               "
             >
               {isDeleting ? "…" : "Confirm"}
             </button>
             <button
               onClick={() => setConfirmDelete(false)}
+              aria-label="Cancel delete"
               className="
                 rounded-lg px-3 py-2 text-xs
                 bg-slate-800 text-[#b9baa3]/60 hover:bg-slate-700
                 transition-colors
+                focus:outline-none focus:ring-2 focus:ring-slate-500
               "
             >
               Cancel
@@ -163,8 +172,9 @@ function CharacterCard({
               border border-slate-700 text-[#b9baa3]/50
               hover:border-[#fe5f55]/50 hover:text-[#fe5f55]/70
               transition-colors
+              focus:outline-none focus:ring-2 focus:ring-[#fe5f55]/50
             "
-            aria-label="Delete character"
+            aria-label={`Delete ${character.name}`}
           >
             Delete
           </button>
@@ -192,15 +202,44 @@ const DOMAIN_COLOURS: Record<string, string> = {
   Weird:     "border-indigo-700  bg-indigo-950/40  text-indigo-300",
 };
 
+const DOMAIN_DESCRIPTIONS: Record<string, string> = {
+  Artistry:  "Uses performance, craft, and influence to shape how others feel and act.",
+  Charm:     "Gets things done through social leverage — flattery, deception, and presence.",
+  Creature:  "Leans into raw instinct — keen senses, physical toughness, and predatory cunning.",
+  Faithful:  "Draws power from devotion — divine grace, sacred oaths, and the weight of belief.",
+  Oddity:    "Reflects bodies and minds that don't work like everyone else's.",
+  Study:     "Applies research, invention, and analysis to solve problems.",
+  Thievery:  "Covers burglary, pickpocketing, infiltration, and targeted takedowns.",
+  Trickery:  "Cons, misdirection, and social sabotage.",
+  Valiance:  "Projects courage and moral authority — inspiring allies and standing firm when others break.",
+  Violence:  "About fighting dirty, fighting hard, and not stopping.",
+  Weird:     "Taps into magic that doesn't follow the rules — conjured weapons, psychic abilities, and spectral forces.",
+};
+
 function ModalDomainBadge({ domain }: { domain: string }) {
   const colour =
     DOMAIN_COLOURS[domain] ??
     "border-[#577399]/50 bg-[#577399]/10 text-[#577399]";
+  const description = DOMAIN_DESCRIPTIONS[domain];
+  const tipId = `domain-tip-${domain.toLowerCase()}`;
   return (
     <span
-      className={`inline-block rounded border px-2.5 py-0.5 text-sm font-medium ${colour}`}
+      className={`domain-badge-tip inline-block rounded border px-2.5 py-0.5 text-sm font-medium cursor-default ${colour}`}
+      tabIndex={0}
+      role="button"
+      aria-describedby={description ? tipId : undefined}
     >
       {domain}
+      {description && (
+        <span id={tipId} className="domain-tip-popup" role="tooltip">
+          <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-[#577399] mb-1">
+            Domain Scope
+          </span>
+          <span className="block text-xs text-[#b9baa3] leading-relaxed">
+            {description}
+          </span>
+        </span>
+      )}
     </span>
   );
 }
@@ -208,29 +247,35 @@ function ModalDomainBadge({ domain }: { domain: string }) {
 function ModalFeatureBlock({ name, description }: NamedFeature) {
   return (
     <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3">
-      <p className="text-sm font-semibold text-[#f7f7ff]/90 mb-1">{name}</p>
-      <p className="text-sm text-[#b9baa3]/70 leading-relaxed whitespace-pre-wrap">
+      <p className="text-base font-semibold text-[#f7f7ff]/90 mb-1">{name}</p>
+      <MarkdownContent
+        className="text-base text-[#b9baa3]/70 leading-relaxed"
+        linkClassName="underline decoration-[#577399]/60 hover:decoration-[#577399] text-[#7a9fc2] hover:text-[#9bbdd4] transition-colors"
+      >
         {description}
-      </p>
+      </MarkdownContent>
     </div>
   );
 }
 
 function ModalSubclassPanel({ subclass }: { subclass: SubclassData }) {
   const [open, setOpen] = useState(false);
+  const panelId = `subclass-panel-${subclass.subclassId}`;
 
   return (
     <div className="rounded-xl border border-slate-700/60 bg-slate-900/60">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-850/30 transition-colors rounded-xl"
+        aria-expanded={open}
+        aria-controls={panelId}
+        className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-850/30 transition-colors rounded-xl focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-inset"
       >
         <div>
           <h4 className="font-serif text-base font-semibold text-[#f7f7ff]">
             {subclass.name}
           </h4>
-          {subclass.description && (
+          {subclass.description && !open && (
             <p className="mt-0.5 text-xs text-[#b9baa3]/50 line-clamp-1">
               {subclass.description}
             </p>
@@ -240,18 +285,21 @@ function ModalSubclassPanel({ subclass }: { subclass: SubclassData }) {
           <span className="hidden sm:block text-xs text-[#b9baa3]/40 uppercase tracking-wider">
             Spellcast: {subclass.spellcastTrait}
           </span>
-          <span className="text-[#b9baa3]/40 text-lg leading-none select-none">
+          <span className="text-[#b9baa3]/40 text-lg leading-none select-none" aria-hidden="true">
             {open ? "▲" : "▼"}
           </span>
         </div>
       </button>
 
       {open && (
-        <div className="px-5 pb-5 space-y-4 border-t border-slate-700/30">
+        <div id={panelId} className="px-5 pb-5 space-y-4 border-t border-slate-700/30">
           {subclass.description && (
-            <p className="pt-4 text-sm text-[#b9baa3]/60 italic">
+            <MarkdownContent
+              className="pt-4 text-sm text-[#b9baa3]/60 italic"
+              linkClassName="underline decoration-[#577399]/60 hover:decoration-[#577399] text-[#7a9fc2] hover:text-[#9bbdd4] transition-colors"
+            >
               {subclass.description}
-            </p>
+            </MarkdownContent>
           )}
 
           <p className="text-xs text-[#b9baa3]/40 uppercase tracking-wider pt-2">
@@ -302,13 +350,13 @@ function ModalSubclassPanel({ subclass }: { subclass: SubclassData }) {
 interface ClassListRowProps {
   classId: string;
   name: string;
+  subclassNames: string[];
   selected: boolean;
   onClick: () => void;
 }
 
-function ClassListRow({ classId, name, selected, onClick }: ClassListRowProps) {
-  const { data: cls, isLoading: clsLoading } = useClass(classId);
-
+function ClassListRow({ name, subclassNames, selected, onClick }: ClassListRowProps) {
+  const preview = subclassNames.join(" · ");
   return (
     <button
       type="button"
@@ -325,13 +373,11 @@ function ClassListRow({ classId, name, selected, onClick }: ClassListRowProps) {
       <p className="text-sm font-semibold text-[#f7f7ff] leading-snug">
         {name}
       </p>
-      <p className="text-xs italic text-[#b9baa3]/50 mt-0.5 line-clamp-2 leading-snug">
-        {clsLoading ? (
-          <span className="inline-block h-3 w-32 rounded bg-slate-700 animate-pulse align-middle" />
-        ) : (
-          cls?.mechanicalNotes || "\u00a0"
-        )}
-      </p>
+      {preview && (
+        <p className="text-xs italic text-[#b9baa3]/50 mt-0.5 line-clamp-1 leading-snug">
+          {preview}
+        </p>
+      )}
     </button>
   );
 }
@@ -351,16 +397,11 @@ function ClassPreviewPanel({ classId }: { classId: string }) {
 
   return (
     <div className="space-y-6">
-      {/* Name + mechanical notes blurb */}
+      {/* Name */}
       <div>
         <h3 className="font-serif text-2xl font-bold text-[#f7f7ff] mb-1">
           {cls.name}
         </h3>
-        {cls.mechanicalNotes && (
-          <p className="text-sm italic text-[#b9baa3]/60 leading-relaxed">
-            {cls.mechanicalNotes}
-          </p>
-        )}
       </div>
 
       {/* Stats */}
@@ -398,23 +439,31 @@ function ClassPreviewPanel({ classId }: { classId: string }) {
           Class Feature
         </h2>
         <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-4 space-y-2">
-          <p className="text-sm font-semibold text-[#f7f7ff]/90">
+          <p className="text-base font-semibold text-[#f7f7ff]/90">
             {cls.classFeature.name}
           </p>
-          <p className="text-sm text-[#b9baa3]/70 leading-relaxed whitespace-pre-wrap">
-            {cls.classFeature.description}
-          </p>
-          {cls.classFeature.options.length > 0 && (
-            <ul className="mt-2 space-y-1">
-              {cls.classFeature.options.map((opt, i) => (
-                <li
-                  key={i}
-                  className="flex items-start gap-2 text-sm text-[#b9baa3]/60"
-                >
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#577399]" />
-                  {opt}
-                </li>
-              ))}
+          <MarkdownContent
+              className="text-base text-[#b9baa3]/70 leading-relaxed"
+              linkClassName="underline decoration-[#577399]/60 hover:decoration-[#577399] text-[#7a9fc2] hover:text-[#9bbdd4] transition-colors"
+            >
+              {cls.classFeature.description}
+            </MarkdownContent>
+            {cls.classFeature.options.length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {cls.classFeature.options.map((opt, i) => (
+                  <li
+                    key={i}
+                    className="flex items-start gap-2 text-base text-[#b9baa3]/60"
+                  >
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#577399]" />
+                    <MarkdownContent
+                      className="inline"
+                      linkClassName="underline decoration-[#577399]/60 hover:decoration-[#577399] text-[#7a9fc2] hover:text-[#9bbdd4] transition-colors"
+                    >
+                      {opt}
+                    </MarkdownContent>
+                  </li>
+                ))}
             </ul>
           )}
         </div>
@@ -433,6 +482,24 @@ function ClassPreviewPanel({ classId }: { classId: string }) {
           </div>
         </section>
       )}
+
+      {/* How to Play */}
+      {cls.mechanicalNotes && (
+        <aside
+          aria-label={`How to Play ${cls.name}`}
+          className="rounded-xl border border-[#577399]/30 bg-slate-900/70 px-5 py-4 space-y-2"
+        >
+          <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-[#577399]">
+            How to Play {cls.name}
+          </h2>
+          <MarkdownContent
+              className="text-sm text-[#b9baa3]/80 leading-relaxed"
+              linkClassName="underline decoration-[#577399]/60 hover:decoration-[#577399] text-[#7a9fc2] hover:text-[#9bbdd4] transition-colors"
+            >
+              {cls.mechanicalNotes}
+            </MarkdownContent>
+        </aside>
+      )}
     </div>
   );
 }
@@ -442,7 +509,7 @@ function ClassPreviewPanel({ classId }: { classId: string }) {
 // ---------------------------------------------------------------------------
 
 interface StepIndicatorProps {
-  currentStep: 1 | 2 | 3;
+  currentStep: 0 | 1 | 2 | 3;
 }
 
 const STEPS = [
@@ -453,11 +520,11 @@ const STEPS = [
 
 function StepIndicator({ currentStep }: StepIndicatorProps) {
   return (
-    <div className="flex items-center gap-0 shrink-0">
+    <div className="flex items-center gap-0 shrink-0" role="list" aria-label="Creation steps">
       {STEPS.map((step, idx) => (
         <React.Fragment key={step.n}>
           {/* Step bubble */}
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center" role="listitem">
             <div
               className={`
                 h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold
@@ -470,14 +537,22 @@ function StepIndicator({ currentStep }: StepIndicatorProps) {
                     : "bg-slate-800 text-[#b9baa3]/40 border border-slate-700"
                 }
               `}
+              aria-label={
+                currentStep > step.n
+                  ? `${step.label} — completed`
+                  : currentStep === step.n
+                  ? `${step.label} — current step`
+                  : `${step.label} — upcoming`
+              }
             >
-              {currentStep > step.n ? "✓" : step.n}
+              <span aria-hidden="true">{currentStep > step.n ? "✓" : step.n}</span>
             </div>
             <span
               className={`
                 mt-1 text-[10px] font-medium uppercase tracking-wider whitespace-nowrap
                 ${currentStep === step.n ? "text-[#577399]" : "text-[#b9baa3]/40"}
               `}
+              aria-hidden="true"
             >
               {step.label}
             </span>
@@ -485,6 +560,7 @@ function StepIndicator({ currentStep }: StepIndicatorProps) {
           {/* Connector line */}
           {idx < STEPS.length - 1 && (
             <div
+              aria-hidden="true"
               className={`
                 h-px w-12 mx-1 mb-4 transition-colors duration-200
                 ${currentStep > step.n ? "bg-[#577399]/50" : "bg-slate-700"}
@@ -518,7 +594,12 @@ function TraitCard({
         </span>
         <span className="font-semibold text-sm text-[#f7f7ff]">{traitName}</span>
       </div>
-      <p className="text-xs text-[#b9baa3]/70 leading-relaxed">{traitDescription}</p>
+      <MarkdownContent
+        className="text-xs text-[#b9baa3]/70 leading-relaxed"
+        linkClassName="underline decoration-[#577399]/60 hover:decoration-[#577399] text-[#7a9fc2] hover:text-[#9bbdd4] transition-colors"
+      >
+        {traitDescription}
+      </MarkdownContent>
     </div>
   );
 }
@@ -532,7 +613,7 @@ interface CreateModalProps {
 }
 
 function CreateCharacterModal({ onClose }: CreateModalProps) {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<0 | 1 | 2 | 3>(0);
 
   // Step 1 state
   const [classId, setClassId] = useState("");
@@ -541,10 +622,15 @@ function CreateCharacterModal({ onClose }: CreateModalProps) {
   const [name, setName] = useState("");
   const [ancestryId, setAncestryId] = useState("");
   const [communityId, setCommunityId] = useState("");
+  const [heritageTab, setHeritageTab] = useState<"ancestry" | "community">("ancestry");
 
   // Step 3 state
   const [exp1Name, setExp1Name] = useState("");
   const [exp2Name, setExp2Name] = useState("");
+
+  // CMS splash content
+  const { data: splashItems } = useCmsContent("splash");
+  const splashItem = splashItems?.[0] ?? null;
 
   const createMutation = useCreateCharacter();
   const { data: classesData, isLoading: classesLoading, isError: classesError } = useClasses();
@@ -563,6 +649,15 @@ function CreateCharacterModal({ onClose }: CreateModalProps) {
   const canGoNext2 = Boolean(name.trim()) && Boolean(ancestryId) && Boolean(communityId);
   const canCreate  = Boolean(exp1Name.trim()) && Boolean(exp2Name.trim());
 
+  // Close on Escape key
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   const handleCreate = async () => {
     if (!canCreate || createMutation.isPending) return;
     const char = await createMutation.mutateAsync({
@@ -579,8 +674,15 @@ function CreateCharacterModal({ onClose }: CreateModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4"
+      role="presentation"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-modal-title"
         className="
           w-full max-w-4xl rounded-2xl border border-slate-700/60
           bg-[#0a100d] shadow-2xl flex flex-col
@@ -591,33 +693,123 @@ function CreateCharacterModal({ onClose }: CreateModalProps) {
         {/* ── Modal Header ────────────────────────────────────────────── */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700/40 shrink-0">
           <div className="flex flex-col gap-0.5">
-            <h2 className="font-serif text-xl font-semibold text-[#f7f7ff]">
+            <h2 id="create-modal-title" className="font-serif text-xl font-semibold text-[#f7f7ff]">
               New Character
             </h2>
             <p className="text-xs text-[#b9baa3]/40">
-              Step {step} of 3
+              {step === 0 ? "Campaign Introduction" : `Step ${step} of 3`}
             </p>
           </div>
 
-          {/* Step indicator */}
-          <div className="hidden sm:flex">
-            <StepIndicator currentStep={step} />
-          </div>
+          {/* Step indicator — only show from step 1 onwards */}
+          {step > 0 && (
+            <div className="hidden sm:flex">
+              <StepIndicator currentStep={step} />
+            </div>
+          )}
 
           <button
             type="button"
             onClick={onClose}
-            className="text-[#b9baa3]/40 hover:text-[#b9baa3] text-2xl leading-none transition-colors ml-4"
+            className="text-[#b9baa3]/40 hover:text-[#b9baa3] text-2xl leading-none transition-colors ml-4 focus:outline-none focus:ring-2 focus:ring-[#577399] rounded"
             aria-label="Close"
           >
             ×
           </button>
         </div>
 
-        {/* Mobile step indicator */}
-        <div className="sm:hidden flex justify-center py-3 border-b border-slate-700/30 shrink-0">
-          <StepIndicator currentStep={step} />
-        </div>
+        {/* Mobile step indicator — only from step 1 */}
+        {step > 0 && (
+          <div className="sm:hidden flex justify-center py-3 border-b border-slate-700/30 shrink-0">
+            <StepIndicator currentStep={step} />
+          </div>
+        )}
+
+        {/* ── Step 0: Campaign Frame Splash ────────────────────────────── */}
+        {step === 0 && (
+          <div className="flex-1 overflow-y-auto flex flex-col">
+            {/* Steel-blue top accent line */}
+            <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-[#577399] to-transparent shrink-0" />
+
+            {/* Atmospheric image or decorative banner — unified container */}
+            <div
+              className="relative w-full shrink-0 overflow-hidden flex items-end px-8 pb-6"
+              style={{
+                height: "200px",
+                background:
+                  "linear-gradient(170deg, #0d1f17 0%, #0a100d 45%, #0f1a10 80%, #0c1408 100%)",
+              }}
+            >
+              {splashItem?.imageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={splashItem.imageUrl}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 w-full h-full object-cover"
+                  style={{ objectPosition: "center 20%" }}
+                />
+              )}
+              {/* Semi-transparent gradient scrim */}
+              <div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    "linear-gradient(170deg, #0d1f17cc 0%, #0a100d99 45%, #0f1a10cc 80%, #0c1408e6 100%)",
+                }}
+              />
+              {/* Title text — always over the scrim */}
+              <div className="relative space-y-1">
+                <p
+                  className="text-[10px] uppercase tracking-[0.3em] font-semibold select-none"
+                  style={{
+                    color: "#577399",
+                    textShadow: "0 1px 4px #0a100d, 0 0 12px #0a100d",
+                  }}
+                >
+                  Campaign Setting
+                </p>
+                <h3
+                  className="font-display text-3xl font-bold leading-tight"
+                  style={{
+                    color: splashItem?.imageUrl ? "#f7f7ff" : "#b9baa3cc",
+                    textShadow: splashItem?.imageUrl
+                      ? "0 1px 6px #0a100d, 0 2px 20px #0a100d"
+                      : undefined,
+                  }}
+                >
+                  {splashItem?.title ?? "Welcome"}
+                </h3>
+              </div>
+            </div>
+
+            {/* Text body */}
+            <div className="flex-1 px-8 py-6 space-y-4">
+
+              {splashItem ? (
+                <div className="max-w-prose space-y-4">
+                  <MarkdownContent
+                    className="text-[#f7f7ff]/85 text-sm leading-[1.85] tracking-[0.01em]"
+                    linkClassName="text-[#7a9fc2] underline decoration-[#577399]/60 hover:text-[#9bbddb]"
+                  >
+                    {splashItem.body}
+                  </MarkdownContent>
+                </div>
+              ) : (
+                /* Skeleton while CMS loads */
+                <div className="space-y-3 max-w-prose">
+                  {[100, 90, 95, 85, 70].map((w, i) => (
+                    <div
+                      key={i}
+                      className="h-3.5 rounded bg-slate-800 animate-pulse"
+                      style={{ width: `${w}%` }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* ── Step 1: Choose Class ─────────────────────────────────────── */}
         {step === 1 && (
@@ -645,6 +837,7 @@ function CreateCharacterModal({ onClose }: CreateModalProps) {
                     key={c.classId}
                     classId={c.classId}
                     name={c.name}
+                    subclassNames={c.subclasses.map((s) => s.name)}
                     selected={classId === c.classId}
                     onClick={() => setClassId(c.classId)}
                   />
@@ -672,23 +865,14 @@ function CreateCharacterModal({ onClose }: CreateModalProps) {
 
         {/* ── Step 2: Heritage ─────────────────────────────────────────── */}
         {step === 2 && (
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="max-w-xl mx-auto space-y-6">
-              {/* Section heading */}
-              <div>
-                <h3 className="font-serif text-xl font-semibold text-[#f7f7ff]">
-                  Who are you?
-                </h3>
-                <p className="mt-1 text-sm text-[#b9baa3]/50">
-                  Give your character a name, choose their ancestry and the community that shaped them.
-                </p>
-              </div>
-
-              {/* Character name */}
-              <div className="space-y-1.5">
+          <div className="flex flex-1 min-h-0">
+            {/* Left pane: name + tab switcher + list */}
+            <div className="w-64 sm:w-72 shrink-0 border-r border-slate-700/40 flex flex-col">
+              {/* Name input */}
+              <div className="px-4 pt-4 pb-3 shrink-0 border-b border-slate-700/30">
                 <label
                   htmlFor="char-name"
-                  className="block text-xs font-semibold uppercase tracking-wider text-[#b9baa3]/60"
+                  className="block text-[10px] font-semibold uppercase tracking-widest text-[#b9baa3]/50 mb-1.5"
                 >
                   Character Name <span className="text-[#fe5f55]">*</span>
                 </label>
@@ -697,89 +881,150 @@ function CreateCharacterModal({ onClose }: CreateModalProps) {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter your character's name…"
+                  placeholder="Enter a name…"
                   maxLength={60}
                   autoFocus
                   className="
                     w-full rounded-lg border border-slate-700/60 bg-slate-900
-                    px-4 py-3 font-serif text-xl text-[#f7f7ff]
+                    px-3 py-2 font-serif text-base text-[#f7f7ff]
                     placeholder-[#b9baa3]/30
                     focus:outline-none focus:border-[#577399] transition-colors
                   "
                 />
               </div>
 
-              {/* Ancestry */}
-              <div className="space-y-2">
-                <label
-                  htmlFor="char-ancestry"
-                  className="block text-xs font-semibold uppercase tracking-wider text-[#b9baa3]/60"
-                >
-                  Ancestry <span className="text-[#fe5f55]">*</span>
-                </label>
-                <select
-                  id="char-ancestry"
-                  value={ancestryId}
-                  onChange={(e) => setAncestryId(e.target.value)}
-                  className="
-                    w-full rounded-lg border border-slate-700/60 bg-slate-900
-                    px-3 py-2.5 text-sm text-[#f7f7ff]
-                    focus:outline-none focus:border-[#577399] transition-colors
-                    appearance-none
-                  "
-                >
-                  <option value="">Select ancestry…</option>
-                  {ancestriesData?.ancestries.map((a) => (
-                    <option key={a.ancestryId} value={a.ancestryId}>
-                      {a.name}
-                    </option>
-                  ))}
-                </select>
-
-                {selectedAncestry && (
-                  <TraitCard
-                    label="Ancestry"
-                    traitName={selectedAncestry.traitName}
-                    traitDescription={selectedAncestry.traitDescription}
-                  />
-                )}
+              {/* Tab switcher */}
+              <div className="flex shrink-0 border-b border-slate-700/30">
+                {(["ancestry", "community"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setHeritageTab(tab)}
+                    className={`
+                      flex-1 py-2 text-xs font-semibold uppercase tracking-wider transition-colors
+                      ${heritageTab === tab
+                        ? "text-[#577399] border-b-2 border-[#577399]"
+                        : "text-[#b9baa3]/40 hover:text-[#b9baa3]/70 border-b-2 border-transparent"
+                      }
+                    `}
+                  >
+                    {tab === "ancestry" ? "Ancestry" : "Community"}
+                    {tab === "ancestry" && ancestryId && (
+                      <span className="ml-1.5 text-[#577399]">✓</span>
+                    )}
+                    {tab === "community" && communityId && (
+                      <span className="ml-1.5 text-[#577399]">✓</span>
+                    )}
+                  </button>
+                ))}
               </div>
 
-              {/* Community */}
-              <div className="space-y-2">
-                <label
-                  htmlFor="char-community"
-                  className="block text-xs font-semibold uppercase tracking-wider text-[#b9baa3]/60"
-                >
-                  Community <span className="text-[#fe5f55]">*</span>
-                </label>
-                <select
-                  id="char-community"
-                  value={communityId}
-                  onChange={(e) => setCommunityId(e.target.value)}
-                  className="
-                    w-full rounded-lg border border-slate-700/60 bg-slate-900
-                    px-3 py-2.5 text-sm text-[#f7f7ff]
-                    focus:outline-none focus:border-[#577399] transition-colors
-                    appearance-none
-                  "
-                >
-                  <option value="">Select community…</option>
-                  {communitiesData?.communities.map((c) => (
-                    <option key={c.communityId} value={c.communityId}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-
-                {selectedCommunity && (
-                  <TraitCard
-                    label="Community"
-                    traitName={selectedCommunity.traitName}
-                    traitDescription={selectedCommunity.traitDescription}
-                  />
-                )}
+              {/* List */}
+              <div className="flex-1 overflow-y-auto">
+                {heritageTab === "ancestry" && ancestriesData?.ancestries.map((a) => (
+                  <button
+                    key={a.ancestryId}
+                    type="button"
+                    onClick={() => setAncestryId(a.ancestryId)}
+                    className={`
+                      w-full text-left px-4 py-3 transition-colors
+                      ${ancestryId === a.ancestryId
+                        ? "bg-[#577399]/20 border-l-2 border-[#577399]"
+                        : "border-l-2 border-transparent hover:bg-slate-800/60"
+                      }
+                    `}
+                  >
+                    <p className="text-sm font-semibold text-[#f7f7ff] leading-snug">{a.name}</p>
+                    {a.traitName && (
+                      <p className="text-xs italic text-[#b9baa3]/50 mt-0.5 line-clamp-1 leading-snug">
+                        {a.traitName}{a.secondTraitName ? ` · ${a.secondTraitName}` : ""}
+                      </p>
+                    )}
+                  </button>
+                ))}
+                {heritageTab === "community" && communitiesData?.communities.map((c) => (
+                  <button
+                    key={c.communityId}
+                    type="button"
+                    onClick={() => setCommunityId(c.communityId)}
+                    className={`
+                      w-full text-left px-4 py-3 transition-colors
+                      ${communityId === c.communityId
+                        ? "bg-[#577399]/20 border-l-2 border-[#577399]"
+                        : "border-l-2 border-transparent hover:bg-slate-800/60"
+                      }
+                    `}
+                  >
+                    <p className="text-sm font-semibold text-[#f7f7ff] leading-snug">{c.name}</p>
+                    {c.traitName && (
+                      <p className="text-xs italic text-[#b9baa3]/50 mt-0.5 line-clamp-1 leading-snug">
+                        {c.traitName}
+                      </p>
+                    )}
+                  </button>
+                ))}
               </div>
+            </div>
+
+            {/* Right pane: detail panel */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {heritageTab === "ancestry" && !ancestryId && (
+                <div className="flex h-full items-center justify-center">
+                  <div className="text-center space-y-3">
+                    <div className="text-4xl opacity-20">🌿</div>
+                    <p className="text-sm text-[#b9baa3]/40 italic">Select an ancestry to see details</p>
+                  </div>
+                </div>
+              )}
+              {heritageTab === "community" && !communityId && (
+                <div className="flex h-full items-center justify-center">
+                  <div className="text-center space-y-3">
+                    <div className="text-4xl opacity-20">🏘️</div>
+                    <p className="text-sm text-[#b9baa3]/40 italic">Select a community to see details</p>
+                  </div>
+                </div>
+              )}
+              {heritageTab === "ancestry" && selectedAncestry && (
+                <div className="space-y-5 max-w-prose">
+                  <div>
+                    <h3 className="font-serif text-2xl font-bold text-[#f7f7ff]">{selectedAncestry.name}</h3>
+                    {selectedAncestry.flavorText && (
+                      <MarkdownContent
+                        className="mt-2 text-sm italic text-[#b9baa3]/60 leading-relaxed"
+                        linkClassName="underline decoration-[#577399]/60 hover:text-[#9bbddb] text-[#7a9fc2]"
+                      >
+                        {selectedAncestry.flavorText}
+                      </MarkdownContent>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[#577399]">Ancestry Traits</p>
+                    <ModalFeatureBlock name={selectedAncestry.traitName} description={selectedAncestry.traitDescription} />
+                    {selectedAncestry.secondTraitName && (
+                      <ModalFeatureBlock name={selectedAncestry.secondTraitName} description={selectedAncestry.secondTraitDescription} />
+                    )}
+                  </div>
+                </div>
+              )}
+              {heritageTab === "community" && selectedCommunity && (
+                <div className="space-y-5 max-w-prose">
+                  <div>
+                    <h3 className="font-serif text-2xl font-bold text-[#f7f7ff]">{selectedCommunity.name}</h3>
+                    {selectedCommunity.flavorText && (
+                      <MarkdownContent
+                        className="mt-2 text-sm italic text-[#b9baa3]/60 leading-relaxed"
+                        linkClassName="underline decoration-[#577399]/60 hover:text-[#9bbddb] text-[#7a9fc2]"
+                      >
+                        {selectedCommunity.flavorText}
+                      </MarkdownContent>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[#577399]">Community Trait</p>
+                    <ModalFeatureBlock name={selectedCommunity.traitName} description={selectedCommunity.traitDescription} />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -804,26 +1049,29 @@ function CreateCharacterModal({ onClose }: CreateModalProps) {
               {/* Experience rows */}
               <div className="space-y-4">
                 {[
-                  { value: exp1Name, setter: setExp1Name, label: "First Experience" },
-                  { value: exp2Name, setter: setExp2Name, label: "Second Experience" },
-                ].map(({ value, setter, label }, idx) => (
+                  { value: exp1Name, setter: setExp1Name, label: "First Experience", inputId: "exp-1" },
+                  { value: exp2Name, setter: setExp2Name, label: "Second Experience", inputId: "exp-2" },
+                ].map(({ value, setter, label, inputId }, idx) => (
                   <div key={idx} className="space-y-1.5">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#b9baa3]/60">
-                      {label} <span className="text-[#fe5f55]">*</span>
+                    <label htmlFor={inputId} className="block text-xs font-semibold uppercase tracking-wider text-[#b9baa3]/60">
+                      {label} <span className="text-[#fe5f55]" aria-hidden="true">*</span>
+                      <span className="sr-only">(required)</span>
                     </label>
                     <div className="flex items-center gap-3">
                       <input
+                        id={inputId}
                         type="text"
                         value={value}
                         onChange={(e) => setter(e.target.value)}
                         placeholder="e.g. Sailor, Scholar, Street Fighter…"
                         maxLength={60}
                         autoFocus={idx === 0}
+                        required
                         className="
                           flex-1 rounded-lg border border-slate-700/60 bg-slate-900
                           px-4 py-2.5 text-sm text-[#f7f7ff]
                           placeholder-[#b9baa3]/30
-                          focus:outline-none focus:border-[#577399] transition-colors
+                          focus:outline-none focus:ring-2 focus:ring-[#577399] focus:border-[#577399] transition-colors
                         "
                       />
                       {/* Fixed +2 badge */}
@@ -875,7 +1123,10 @@ function CreateCharacterModal({ onClose }: CreateModalProps) {
               )}
 
               {createMutation.isError && (
-                <div className="rounded-lg border border-[#fe5f55]/40 bg-[#fe5f55]/10 px-4 py-3">
+                <div
+                  role="alert"
+                  className="rounded-lg border border-[#fe5f55]/40 bg-[#fe5f55]/10 px-4 py-3"
+                >
                   <p className="text-sm text-[#fe5f55]">
                     {createMutation.error?.message ?? "Failed to create character. Please try again."}
                   </p>
@@ -887,13 +1138,14 @@ function CreateCharacterModal({ onClose }: CreateModalProps) {
 
         {/* ── Footer nav ───────────────────────────────────────────────── */}
         <div className="shrink-0 border-t border-slate-700/40 px-6 py-4 flex items-center justify-between gap-4">
+          {/* Back / Cancel button */}
           <button
             type="button"
             onClick={() => {
-              if (step === 1) {
+              if (step === 0) {
                 onClose();
               } else {
-                setStep((s) => (s - 1) as 1 | 2 | 3);
+                setStep((s) => (s - 1) as 0 | 1 | 2 | 3);
               }
             }}
             className="
@@ -903,27 +1155,46 @@ function CreateCharacterModal({ onClose }: CreateModalProps) {
               transition-colors
             "
           >
-            {step === 1 ? "Cancel" : "← Back"}
+            {step === 0 ? "Cancel" : "← Back"}
           </button>
 
           <div className="flex items-center gap-3">
-            {/* Step dots (mobile only) */}
-            <div className="flex gap-1.5 sm:hidden">
-              {[1, 2, 3].map((n) => (
-                <div
-                  key={n}
-                  className={`h-1.5 rounded-full transition-all ${
-                    step === n
-                      ? "w-4 bg-[#577399]"
-                      : step > n
-                      ? "w-1.5 bg-[#577399]/40"
-                      : "w-1.5 bg-slate-700"
-                  }`}
-                />
-              ))}
-            </div>
+            {/* Step dots — show on step 1-3 on mobile */}
+            {step > 0 && (
+              <div className="flex gap-1.5 sm:hidden">
+                {[1, 2, 3].map((n) => (
+                  <div
+                    key={n}
+                    className={`h-1.5 rounded-full transition-all ${
+                      step === n
+                        ? "w-4 bg-[#577399]"
+                        : step > n
+                        ? "w-1.5 bg-[#577399]/40"
+                        : "w-1.5 bg-slate-700"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
 
-            {step < 3 ? (
+            {/* Step 0: Begin button */}
+            {step === 0 && (
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="
+                  rounded-lg px-8 py-2.5 font-semibold text-sm
+                  bg-[#577399] text-[#f7f7ff]
+                  hover:bg-[#577399]/80
+                  transition-colors shadow-sm
+                "
+              >
+                Begin →
+              </button>
+            )}
+
+            {/* Steps 1-2: Next button */}
+            {step >= 1 && step < 3 && (
               <button
                 type="button"
                 onClick={() => setStep((s) => (s + 1) as 1 | 2 | 3)}
@@ -938,7 +1209,10 @@ function CreateCharacterModal({ onClose }: CreateModalProps) {
               >
                 Next →
               </button>
-            ) : (
+            )}
+
+            {/* Step 3: Create button */}
+            {step === 3 && (
               <button
                 type="button"
                 onClick={handleCreate}
@@ -997,15 +1271,49 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[#0a100d]">
+      <style>{`
+        .domain-badge-tip { position: relative; }
+        .domain-badge-tip .domain-tip-popup {
+          position: absolute;
+          top: calc(100% + 8px);
+          left: 0;
+          pointer-events: none;
+          opacity: 0;
+          transition: opacity 0.15s ease;
+          z-index: 50;
+          width: 220px;
+          background: #1e293b;
+          border: 1px solid rgba(87,115,153,0.35);
+          border-radius: 8px;
+          padding: 8px 10px;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+        }
+        .domain-badge-tip .domain-tip-popup::before {
+          content: "";
+          position: absolute;
+          bottom: 100%;
+          left: 14px;
+          border: 6px solid transparent;
+          border-bottom-color: #1e293b;
+        }
+        .domain-badge-tip:hover .domain-tip-popup,
+        .domain-badge-tip:focus .domain-tip-popup,
+        .domain-badge-tip:focus-within .domain-tip-popup { opacity: 1; }
+      `}</style>
       {/* Top bar */}
       <header
         className="border-b border-slate-800/60 sticky top-0 z-10 backdrop-blur-sm"
         style={{ backgroundColor: "rgba(10,16,13,0.90)" }}
       >
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <h1 className="font-serif text-xl font-bold text-[#f7f7ff]">
-            ✦ Daggerheart
-          </h1>
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+          <Image
+            src="/images/curses-isolated-logo.png"
+            alt="Curses! Custom Character Builder"
+            width={140}
+            height={40}
+            className="object-contain"
+            priority
+          />
           {user && (
             <span className="text-sm text-[#b9baa3]/50">
               {user.displayName || user.email}
@@ -1110,6 +1418,33 @@ export default function DashboardPage() {
       {showCreate && (
         <CreateCharacterModal onClose={() => setShowCreate(false)} />
       )}
+
+      {/* Footer */}
+      <footer className="mt-16 border-t border-slate-800/40 py-6">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4">
+          <button
+            type="button"
+            onClick={() => alert("Then ask Josh in Discord, you nerd. You thought this would actually do something?")}
+            className="text-xs text-[#b9baa3]/30 hover:text-[#b9baa3]/60 transition-colors"
+          >
+            Need Help?
+          </button>
+          <a
+            href="https://maninjumpsuit.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="opacity-30 hover:opacity-60 transition-opacity"
+          >
+            <Image
+              src="/images/man-in-jumpsuit-logo-white-transparent.png"
+              alt="Man in Jumpsuit Productions"
+              width={80}
+              height={24}
+              className="object-contain"
+            />
+          </a>
+        </div>
+      </footer>
     </div>
   );
 }

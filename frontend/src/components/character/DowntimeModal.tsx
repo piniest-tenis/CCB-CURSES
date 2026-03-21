@@ -34,13 +34,21 @@ interface RestTypeToggleProps {
 
 function RestTypeToggle({ value, onChange }: RestTypeToggleProps) {
   return (
-    <div className="flex rounded-lg border border-burgundy-800 overflow-hidden">
+    <div
+      className="flex rounded-lg border border-burgundy-800 overflow-hidden"
+      role="radiogroup"
+      aria-label="Rest type"
+    >
       {(["short", "long"] as const).map((type) => (
         <button
           key={type}
+          type="button"
+          role="radio"
+          aria-checked={value === type}
           onClick={() => onChange(type)}
           className={`
             flex-1 py-2 text-sm font-semibold capitalize transition-colors
+            focus:outline-none focus:ring-2 focus:ring-inset focus:ring-gold-500
             ${
               value === type
                 ? "bg-burgundy-700 text-parchment-100"
@@ -225,22 +233,40 @@ export function DowntimeModal({ characterId, open, onClose }: DowntimeModalProps
                 <RestTypeToggle value={restType} onChange={setRestType} />
 
                 {/* Explanation */}
-                <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-3 text-xs text-parchment-400 space-y-1">
+                <div id="downtime-description" className="rounded-lg border border-slate-700 bg-slate-800/50 p-3 text-xs text-parchment-400 space-y-1">
                   {restType === "short" ? (
                     <>
-                      <p className="font-medium text-parchment-300">Short Rest</p>
-                      <p>Clear all Stress. Take any available short rest downtime actions.</p>
+                      <p className="font-medium text-parchment-300">Short Rest (~1 hour)</p>
+                      <p>Choose 2 downtime moves (can repeat the same move):</p>
+                      <ul className="mt-1 list-disc list-inside space-y-0.5 text-parchment-500">
+                        <li>Tend to Wounds — clear 1d4+Tier HP for yourself or an ally</li>
+                        <li>Clear Stress — clear 1d4+Tier Stress</li>
+                        <li>Repair Armor — clear 1d4+Tier Armor Slots</li>
+                        <li>Prepare — gain 1 Hope (or 2 with an ally)</li>
+                      </ul>
+                      <p className="mt-1">Domain cards can be freely swapped between loadout and vault.</p>
                     </>
                   ) : (
                     <>
-                      <p className="font-medium text-parchment-300">Long Rest</p>
-                      <p>Clear all HP, Stress, and Armor slots. Take available long rest downtime actions.</p>
+                      <p className="font-medium text-parchment-300">Long Rest (several hours)</p>
+                      <p>Choose 2 downtime moves (can repeat the same move):</p>
+                      <ul className="mt-1 list-disc list-inside space-y-0.5 text-parchment-500">
+                        <li>Tend to All Wounds — clear all HP for yourself or an ally</li>
+                        <li>Clear All Stress — clear all Stress</li>
+                        <li>Repair All Armor — clear all Armor Slots</li>
+                        <li>Prepare — gain 1 Hope (or 2 with an ally)</li>
+                        <li>Work on a Project — GM approval required</li>
+                      </ul>
+                      <p className="mt-1">Domain cards can be freely swapped between loadout and vault.</p>
                     </>
                   )}
                 </div>
 
                 {restMutation.isError && (
-                  <div className="rounded border border-burgundy-600 bg-burgundy-950/40 px-3 py-2 text-xs text-burgundy-300">
+                  <div
+                    role="alert"
+                    className="rounded border border-burgundy-600 bg-burgundy-950/40 px-3 py-2 text-xs text-burgundy-300"
+                  >
                     {restMutation.error?.message ?? "Failed to take rest. Please try again."}
                   </div>
                 )}
@@ -248,11 +274,13 @@ export function DowntimeModal({ characterId, open, onClose }: DowntimeModalProps
                 <button
                   onClick={handleTakeRest}
                   disabled={restMutation.isPending}
+                  aria-describedby="downtime-description"
                   className="
                     w-full rounded-lg py-2.5 font-semibold text-sm
                     bg-burgundy-700 text-parchment-100
                     hover:bg-burgundy-600 disabled:opacity-50 disabled:cursor-not-allowed
                     transition-colors shadow-glow-burgundy
+                    focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-2 focus:ring-offset-slate-900
                   "
                 >
                   {restMutation.isPending ? "Taking rest…" : `Take ${restType === "short" ? "Short" : "Long"} Rest`}
@@ -269,6 +297,7 @@ export function DowntimeModal({ characterId, open, onClose }: DowntimeModalProps
                     w-full rounded-lg py-2.5 font-semibold text-sm
                     bg-slate-700 text-parchment-200 hover:bg-slate-600
                     transition-colors
+                    focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-2 focus:ring-offset-slate-900
                   "
                 >
                   Done

@@ -389,21 +389,37 @@ function parseFoundationFeatures(sectionLines: string[]): NamedFeature[] {
  */
 function parseNamedFeature(sectionLines: string[]): NamedFeature {
   const nonEmpty = sectionLines.map((l) => l.trim()).filter((l) => l.length > 0);
-  const combined = nonEmpty.join(" ");
 
-  // Bold format: **Name**: description
-  const boldMatch = combined.match(/^\*\*([^*]+)\*\*\s*:\s*(.+)$/s);
+  // Join with a single space only for the name-extraction match; preserve
+  // newlines in the description so markdown lists remain intact.
+  const firstLine = nonEmpty[0] ?? "";
+
+  // Bold format: **Name**: description (name must be on the first line)
+  const boldMatch = firstLine.match(/^\*\*([^*]+)\*\*\s*:\s*(.*)$/s);
   if (boldMatch) {
-    return { name: boldMatch[1].trim(), description: boldMatch[2].trim() };
+    const nameStr = boldMatch[1].trim();
+    // Remainder of first line + subsequent lines, joined with newlines
+    const restOfFirstLine = boldMatch[2].trim();
+    const tail = nonEmpty.slice(1).join("\n");
+    const description = restOfFirstLine
+      ? tail ? `${restOfFirstLine}\n${tail}` : restOfFirstLine
+      : tail;
+    return { name: nameStr, description: description.trim() };
   }
 
   // Italic format: _Name_: description
-  const italicMatch = combined.match(/^_([^_]+?)_\s*:\s*(.+)$/s);
+  const italicMatch = firstLine.match(/^_([^_]+?)_\s*:\s*(.*)$/s);
   if (italicMatch) {
-    return { name: italicMatch[1].trim(), description: italicMatch[2].trim() };
+    const nameStr = italicMatch[1].trim();
+    const restOfFirstLine = italicMatch[2].trim();
+    const tail = nonEmpty.slice(1).join("\n");
+    const description = restOfFirstLine
+      ? tail ? `${restOfFirstLine}\n${tail}` : restOfFirstLine
+      : tail;
+    return { name: nameStr, description: description.trim() };
   }
 
-  return { name: nonEmpty[0] ?? "", description: nonEmpty.slice(1).join(" ") };
+  return { name: firstLine, description: nonEmpty.slice(1).join("\n") };
 }
 
 /** Extract CoreStatName from the Spellcast Trait section body. */
