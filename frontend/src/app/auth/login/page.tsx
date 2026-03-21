@@ -7,6 +7,7 @@
  */
 
 import React from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -82,9 +83,19 @@ export default function LoginPage() {
       <div className="w-full max-w-sm space-y-6">
         {/* Branding */}
         <div className="text-center">
-          <h1 className="font-serif text-3xl font-bold text-parchment-100">
-            Daggerheart
-          </h1>
+          <div className="flex justify-center mb-3">
+            <Image
+              src="/images/curses-isolated-logo.png"
+              alt="Curses! Custom Character Builder logo"
+              width={120}
+              height={120}
+              className="object-contain"
+              priority
+            />
+          </div>
+          <p className="mt-2 text-xs tracking-[0.2em] text-parchment-600 lowercase">
+            custom character builder
+          </p>
           <p className="mt-1 text-sm text-parchment-500">
             Sign in to your account
           </p>

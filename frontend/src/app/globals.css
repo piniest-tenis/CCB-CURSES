@@ -61,21 +61,11 @@
     outline-offset: 2px;
   }
 
-  /* warbler-deck small-caps — applied to every element using the serif stack */
-  .font-serif,
-  [class*="font-serif"] {
-    font-variant: small-caps;
-    font-feature-settings: "smcp";
-    font-size: calc(1em * 1.25);
-  }
+  /* warbler-deck — small-caps are now handled by the <WarblerText> React
+     component (src/components/WarblerText.tsx) which wraps every capital
+     letter in a <span style="font-size:1.2em">. No CSS font-variant needed. */
 
-  /* jetsam-collection-basilea display font — no small-caps, same size boost */
-  .font-display,
-  [class*="font-display"] {
-    font-variant: normal;
-    font-feature-settings: normal;
-    font-size: calc(1em * 1.25);
-  }
+  /* jetsam-collection-basilea display font — no size override needed here */
 
   /* Scrollbar styling */
   ::-webkit-scrollbar {
