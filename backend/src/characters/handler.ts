@@ -857,18 +857,29 @@ async function patchCharacter(
   merged.characterId = existing.characterId;
   merged.userId = existing.userId;
   merged.PK = existing.PK;
-  merged.SK = existing.SK;
-  merged.createdAt = existing.createdAt;
-  merged.updatedAt = new Date().toISOString();
+   merged.SK = existing.SK;
+   merged.createdAt = existing.createdAt;
+   merged.updatedAt = new Date().toISOString();
 
-  // Keep portraitKey and portraitUrl consistent:
-  // - If the patch explicitly sets portraitUrl to null, clear portraitKey too.
-  // - If portraitUrl is being set to a non-null string, leave portraitKey
-  //   alone — it was already written by the portraitUploadUrl handler.
-  if ("portraitUrl" in patch && patch.portraitUrl === null) {
-    merged.portraitKey = null;
-    merged.portraitUrl = null;
-  }
+   // Keep portraitKey and portraitUrl consistent:
+   // - If the patch explicitly sets portraitUrl to null, clear portraitKey too.
+   // - If portraitUrl is being set to a non-null string, extract and store the portraitKey.
+   if ("portraitUrl" in patch && patch.portraitUrl === null) {
+     merged.portraitKey = null;
+     merged.portraitUrl = null;
+   } else if ("portraitUrl" in patch && patch.portraitUrl) {
+     // Extract the s3Key from the CDN URL (everything after the domain)
+     try {
+       const url = new URL(patch.portraitUrl);
+       const pathname = url.pathname.startsWith("/") 
+         ? url.pathname.substring(1) 
+         : url.pathname;
+       merged.portraitKey = pathname;
+     } catch (_) {
+       // If URL parsing fails, just store what was provided
+       merged.portraitUrl = patch.portraitUrl;
+     }
+   }
 
   const srdErrors = validateSrdRules(merged as Partial<Character>);
   if (srdErrors.length > 0) {
