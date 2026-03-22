@@ -1408,6 +1408,11 @@ export const handler = withErrorHandling(
   ): Promise<APIGatewayProxyResultV2> => {
     const routeKey = event.routeKey;
 
+    // Handle CORS preflight requests
+    if (routeKey.startsWith("OPTIONS ")) {
+      return createSuccessResponse(null);
+    }
+
     switch (routeKey) {
       case "GET /characters":
         return listCharacters(event);
