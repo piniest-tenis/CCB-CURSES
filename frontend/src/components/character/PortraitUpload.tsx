@@ -10,26 +10,24 @@
  *   1. POST /characters/{id}/portrait-upload-url
  *        → { uploadUrl, confirmUrl, s3Key, expiresIn, maxBytes }
  *   2. PUT uploadUrl with raw image bytes (no auth header)
- *   3. PATCH /characters/{id} with { portraitUrl: confirmUrl }
- *      (the auto-save in CharacterSheet handles this once updateField is called)
- *
- * The component reads character.portraitUrl (string | null) and displays it.
+ *   3. updateField("portraitUrl", confirmUrl) triggers the auto-save in CharacterSheet
  */
 
-import React, { useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import type { Character } from "@shared/types";
 import { useCharacterStore } from "@/store/characterStore";
+import { useAuthStore } from "@/store/authStore";
 
 // ─── API helpers ──────────────────────────────────────────────────────────────
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 interface PortraitUploadUrlResponse {
-  uploadUrl:   string;
-  confirmUrl:  string;
-  s3Key:       string;
-  expiresIn:   number;
-  maxBytes:    number;
+  uploadUrl:  string;
+  confirmUrl: string;
+  s3Key:      string;
+  expiresIn:  number;
+  maxBytes:   number;
 }
 
 async function fetchPortraitUploadUrl(
@@ -42,7 +40,7 @@ async function fetchPortraitUploadUrl(
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body?.error ?? `HTTP ${res.status}`);
+    throw new Error((body as { error?: string })?.error ?? `HTTP ${res.status}`);
   }
   return res.json();
 }
@@ -54,6 +52,114 @@ async function uploadToS3(uploadUrl: string, file: File): Promise<void> {
     body:    file,
   });
   if (!res.ok) throw new Error(`S3 upload failed: HTTP ${res.status}`);
+}
+
+// ─── DragDropZone ─────────────────────────────────────────────────────────────
+
+interface DragDropZoneProps {
+  onFile: (file: File) => void;
+  preview: string | null;
+  disabled?: boolean;
+}
+
+function DragDropZone({ onFile, preview, disabled }: DragDropZoneProps) {
+  const inputRef  = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const processFile = useCallback((file: File | undefined | null) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return;
+    onFile(file);
+  }, [onFile]);
+
+  const onDragOver  = (e: React.DragEvent) => { e.preventDefault(); if (!disabled) setIsDragging(true); };
+  const onDragLeave = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); };
+  const onDrop      = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (disabled) return;
+    processFile(e.dataTransfer.files[0]);
+  };
+  const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    processFile(e.target.files?.[0]);
+    // Reset so same file can be re-selected
+    e.target.value = "";
+  };
+
+  return (
+    <div
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      aria-label="Drag and drop an image or click to browse"
+      onClick={() => !disabled && inputRef.current?.click()}
+      onKeyDown={(e) => { if (!disabled && (e.key === "Enter" || e.key === " ")) inputRef.current?.click(); }}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      className={[
+        "relative flex flex-col items-center justify-center gap-3",
+        "rounded-xl border-2 border-dashed px-4 py-8 text-center",
+        "transition-colors duration-200 cursor-pointer select-none",
+        isDragging
+          ? "border-[#577399] bg-[#577399]/12"
+          : "border-[#577399]/35 bg-[#b9baa3]/[0.04] hover:border-[#577399]/60 hover:bg-[#577399]/08",
+        disabled ? "opacity-50 pointer-events-none" : "",
+      ].join(" ")}
+    >
+      {preview ? (
+        /* Show a thumbnail when a file is selected */
+        <img
+          src={preview}
+          alt="Selected portrait preview"
+          className="h-28 w-28 rounded-full object-cover border-2 border-[#577399]/40 shadow-lg"
+        />
+      ) : (
+        /* Upload icon */
+        <svg
+          aria-hidden="true"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="h-10 w-10 text-[#577399]/50"
+        >
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+      )}
+
+      <div className="space-y-1">
+        <p className="text-sm font-semibold text-[#f7f7ff]">
+          {preview ? "Drop a different image to replace" : "Drop image here"}
+        </p>
+        <p className="text-xs text-[#b9baa3]">
+          or <span className="text-[#577399] underline underline-offset-2">click to browse</span>
+          {" "}· JPG, PNG, WebP · max 5 MB
+        </p>
+      </div>
+
+      {isDragging && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 rounded-xl bg-[#577399]/10 border-2 border-[#577399] transition-all"
+        />
+      )}
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        tabIndex={-1}
+        aria-hidden="true"
+        className="sr-only"
+        onChange={onInputChange}
+      />
+    </div>
+  );
 }
 
 // ─── PortraitUploadSidebar ────────────────────────────────────────────────────
@@ -73,15 +179,16 @@ function PortraitUploadSidebar({
   currentUrl,
   onUploaded,
 }: PortraitUploadSidebarProps) {
-  const headingId  = React.useId();
-  const panelRef   = React.useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const headingId = React.useId();
+  const panelRef  = React.useRef<HTMLDivElement>(null);
 
-  const [preview, setPreview]   = useState<string | null>(null);
-  const [file, setFile]         = useState<File | null>(null);
+  const idToken = useAuthStore((s) => s.idToken);
+
+  const [preview,   setPreview]   = useState<string | null>(null);
+  const [file,      setFile]      = useState<File | null>(null);
   const [isPending, setIsPending] = useState(false);
-  const [error, setError]       = useState<string | null>(null);
-  const [success, setSuccess]   = useState(false);
+  const [error,     setError]     = useState<string | null>(null);
+  const [success,   setSuccess]   = useState(false);
 
   // Reset when opened
   React.useEffect(() => {
@@ -92,7 +199,7 @@ function PortraitUploadSidebar({
     setSuccess(false);
     const t = setTimeout(() => {
       panelRef.current
-        ?.querySelector<HTMLElement>('button, input, [tabindex]:not([tabindex="-1"])')
+        ?.querySelector<HTMLElement>('button, [role="button"], input, [tabindex]:not([tabindex="-1"])')
         ?.focus();
     }, 50);
     return () => clearTimeout(t);
@@ -108,46 +215,40 @@ function PortraitUploadSidebar({
     return () => document.removeEventListener("keydown", handler, true);
   }, [open, onClose]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files?.[0] ?? null;
+  const handleFile = useCallback((selected: File) => {
     setFile(selected);
     setError(null);
     setSuccess(false);
-    if (selected) {
-      const reader = new FileReader();
-      reader.onload = (ev) => setPreview(ev.target?.result as string);
-      reader.readAsDataURL(selected);
-    } else {
-      setPreview(null);
-    }
-  };
+    const reader = new FileReader();
+    reader.onload = (ev) => setPreview(ev.target?.result as string);
+    reader.readAsDataURL(selected);
+  }, []);
 
   const handleUpload = async () => {
     if (!file) return;
+    if (!idToken) {
+      setError("You must be signed in to upload a portrait.");
+      return;
+    }
     setError(null);
     setIsPending(true);
     try {
-      // 1. Get auth token from session (Next.js /api/auth/token or similar)
-      //    We'll pull it from the meta cookie pattern used elsewhere in this app.
-      const tokenRes = await fetch("/api/auth/token");
-      const { token } = tokenRes.ok ? await tokenRes.json() : { token: "" };
-
-      // 2. Get presigned upload URL
+      // 1. Get presigned upload URL from our API
       const { uploadUrl, confirmUrl, maxBytes } = await fetchPortraitUploadUrl(
         characterId,
-        token
+        idToken
       );
 
-      // 3. Validate size
+      // 2. Validate size client-side
       if (file.size > maxBytes) {
         setError(`File too large. Maximum size: ${Math.round(maxBytes / 1024 / 1024)} MB.`);
         return;
       }
 
-      // 4. Upload to S3 (no auth header — presigned URL)
+      // 3. PUT directly to S3 (presigned URL — no auth header)
       await uploadToS3(uploadUrl, file);
 
-      // 5. Confirm to the app
+      // 4. Persist the public URL on the character
       onUploaded(confirmUrl);
       setSuccess(true);
     } catch (err) {
@@ -156,8 +257,6 @@ function PortraitUploadSidebar({
       setIsPending(false);
     }
   };
-
-  const displayUrl = preview ?? currentUrl;
 
   return (
     <>
@@ -202,58 +301,38 @@ function PortraitUploadSidebar({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
-          {/* Preview */}
-          <div className="flex justify-center">
-            <div
-              className="relative h-40 w-40 rounded-full overflow-hidden border-2 border-[#577399]/40 bg-slate-900"
-              aria-label="Portrait preview"
-            >
-              {displayUrl ? (
+
+          {/* Current portrait (shown when no new file selected) */}
+          {!preview && currentUrl && (
+            <div className="flex justify-center">
+              <div className="relative">
                 <img
-                  src={displayUrl}
-                  alt="Portrait preview"
-                  className="h-full w-full object-cover"
+                  src={currentUrl}
+                  alt="Current portrait"
+                  className="h-28 w-28 rounded-full object-cover border-2 border-[#577399]/40"
                 />
-              ) : (
-                <div className="h-full w-full flex items-center justify-center">
-                  <span className="text-5xl text-[#577399]/30" aria-hidden="true">?</span>
-                </div>
-              )}
+                <p className="mt-2 text-center text-xs text-[#b9baa3]">Current portrait</p>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Help text */}
-          <div className="rounded-xl border border-[#577399]/20 bg-[#b9baa3]/[0.06] px-4 py-3">
-            <p className="text-sm text-[#f7f7ff] leading-relaxed">
-              Upload a portrait image to personalize your character sheet. Square images work best. JPG or PNG, max 5 MB.
-            </p>
-          </div>
+          {/* Drag-and-drop zone */}
+          <DragDropZone
+            onFile={handleFile}
+            preview={preview}
+            disabled={isPending}
+          />
 
-          {/* File input */}
-          <div className="space-y-2">
-            <label
-              htmlFor="portrait-file-input"
-              className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b9baa3]"
+          {/* Clear selection */}
+          {file && !isPending && (
+            <button
+              type="button"
+              onClick={() => { setFile(null); setPreview(null); setError(null); setSuccess(false); }}
+              className="w-full text-xs text-[#b9baa3] hover:text-[#f7f7ff] underline underline-offset-2 transition-colors"
             >
-              Choose image
-            </label>
-            <input
-              id="portrait-file-input"
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handleFileChange}
-              className="
-                block w-full text-sm text-[#b9baa3]
-                file:mr-4 file:rounded-lg file:border file:border-[#577399]/40
-                file:bg-[#577399]/15 file:px-4 file:py-2
-                file:text-sm file:font-semibold file:text-[#f7f7ff]
-                file:cursor-pointer file:transition-colors
-                hover:file:bg-[#577399]/25
-                focus:outline-none
-              "
-            />
-          </div>
+              Clear selection
+            </button>
+          )}
 
           {/* Error */}
           {error && (
@@ -325,7 +404,7 @@ interface PortraitDisplayProps {
 
 export function PortraitDisplay({ characterId }: PortraitDisplayProps) {
   const { activeCharacter, updateField } = useCharacterStore();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen]    = useState(false);
 
   if (!activeCharacter) return null;
 
@@ -351,13 +430,12 @@ export function PortraitDisplay({ characterId }: PortraitDisplayProps) {
             focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2 focus:ring-offset-[#0a100d]
             rounded-full
           "
-          style={{ width: 180, height: 162 }}  /* proportional to SVG viewBox 596.65 × 536.72 */
+          style={{ width: 180, height: 162 }}
         >
           {/* Background portrait image — circular crop */}
           <div
             className="absolute"
             style={{
-              /* Portrait sits centered and slightly higher than frame center */
               top: "8%", left: "16%", right: "16%", bottom: "4%",
               borderRadius: "50%",
               overflow: "hidden",
