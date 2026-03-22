@@ -409,7 +409,7 @@ interface PortraitDisplayProps {
 }
 
 export function PortraitDisplay({ characterId }: PortraitDisplayProps) {
-  const { activeCharacter, updateField } = useCharacterStore();
+  const { activeCharacter, updateField, saveCharacter } = useCharacterStore();
   const [sidebarOpen, setSidebarOpen]    = useState(false);
 
   if (!activeCharacter) return null;
@@ -417,7 +417,11 @@ export function PortraitDisplay({ characterId }: PortraitDisplayProps) {
   const portraitUrl: string | null = (activeCharacter as Character).portraitUrl ?? null;
 
   const handleUploaded = (url: string) => {
+    // Update the store immediately so the UI reflects the new portrait without
+    // waiting for the debounced auto-save, then persist right away.
     updateField("portraitUrl", url);
+    // Fire the PATCH immediately — don't rely on the 1500ms debounce.
+    void saveCharacter();
     setSidebarOpen(false);
   };
 

@@ -1019,6 +1019,8 @@ export function DomainLoadout() {
             ? "Hide"
             : isFull && canSwap
             ? "Swap Card"
+            : domainLoadout.length > 0
+            ? "Change Loadout"
             : "Add Card"}
         </button>
       </div>

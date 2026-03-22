@@ -1051,11 +1051,11 @@ function HopeTrackerInner({
                   h-8 w-8 rounded-full border-2 text-xs font-bold
                   flex items-center justify-center select-none
                   transition-all duration-150
-                  ${
-                    filled
-                      ? "bg-[#577399] border-[#577399] text-[#f7f7ff] shadow-lg"
-                      : "border-[#577399]/30 bg-transparent text-[#577399]/40"
-                  }
+                   ${
+                     filled
+                       ? "bg-[#DAA520] border-[#DAA520] text-[#f7f7ff] shadow-lg"
+                       : "border-[#577399]/30 bg-transparent text-[#577399]/40"
+                   }
                 `}
               >
                 {i + 1}
@@ -1226,118 +1226,51 @@ function ExperiencesList() {
 }
 
 // ─── TraitsSection ────────────────────────────────────────────────────────────
-// Each trait is displayed as a card using the named SVG background.
-// The SVG viewBox is 521.87 × 865.9 (portrait card shape).
-// Trait name text is placed at ~97% from the top (bottom banner area).
+// Displays ancestry and community features as read-only named text.
+// Per SRD, these are not "Traits" — Traits are the six core stats.
+// Ancestry/Community confer named Features, not numerical Trait bonuses.
 
-const TRAIT_CARD_SVGS: Record<string, string> = {
-  agility:   "/images/ui-elements/agility-card.svg",
-  strength:  "/images/ui-elements/strength-card.svg",
-  knowledge: "/images/ui-elements/knowledge-card.svg",
-  finesse:   "/images/ui-elements/finesse-card.svg",
-  instinct:  "/images/ui-elements/instinct-card.svg",
-  presence:  "/images/ui-elements/presence-card.svg",
-};
-
-interface TraitCardProps {
-  traitName:   string;   // e.g. "Nightwalker", "Ironclad"
-  sourceName:  string;   // e.g. "Elf", "Orderborn"
-  sourceLabel: string;   // e.g. "Ancestry", "Community"
-  statKey:     string;   // for SVG lookup: agility | strength | …
-  bonus:       number;
-  onBonusChange: (v: number) => void;
-  ariaLabel:   string;
+interface HeritageFeatureProps {
+  featureName:  string;   // e.g. "Scales", "Thick Skin"
+  featureText:  string;   // rule text describing the feature
+  sourceName:   string;   // e.g. "Drakona", "Seaborne"
+  sourceLabel:  string;   // "Ancestry" or "Community"
 }
 
-function TraitCard({
-  traitName,
+function HeritageFeature({
+  featureName,
+  featureText,
   sourceName,
   sourceLabel,
-  statKey,
-  bonus,
-  onBonusChange,
-  ariaLabel,
-}: TraitCardProps) {
-  const svgSrc = TRAIT_CARD_SVGS[statKey.toLowerCase()] ?? "/images/ui-elements/blank-card.svg";
-
+}: HeritageFeatureProps) {
   return (
-    <div
-      className="relative flex-shrink-0 select-none"
-      style={{ width: 120, aspectRatio: "521.87 / 865.9" }}
+    <article
+      className="
+        flex-shrink-0 rounded-xl border border-[#577399]/30 bg-slate-900/80
+        p-3 space-y-1.5 shadow-card
+      "
+      style={{ width: 220 }}
     >
-      {/* Card SVG background */}
-      <img
-        src={svgSrc}
-        alt=""
-        aria-hidden="true"
-        className="absolute inset-0 w-full h-full object-cover"
-        draggable={false}
-      />
+      {/* Source pill */}
+      <p className="text-[9px] uppercase tracking-widest text-[#aa7b1b] font-semibold leading-none">
+        {sourceLabel} · {sourceName}
+      </p>
 
-      {/* Source label — top area */}
-      <div
-        className="absolute top-[7%] left-0 right-0 flex flex-col items-center px-2"
-        aria-hidden="true"
-      >
-        <span className="text-[7px] uppercase tracking-widest text-[#aa7b1b] font-semibold leading-tight text-center">
-          {sourceLabel}
-        </span>
-        <span className="text-[7px] text-[#5a3e1b] leading-tight text-center truncate max-w-[70%]">
-          {sourceName}
-        </span>
-      </div>
+      {/* Feature name */}
+      <p className="text-sm font-bold text-[#f9ecd8] leading-snug">
+        {featureName}
+      </p>
 
-      {/* Trait name — bottom banner at ~88% from top */}
-      <div
-        className="absolute left-0 right-0 flex flex-col items-center justify-center px-1"
-        style={{ top: "88%", bottom: "3%" }}
-        aria-hidden="true"
-      >
-        <span
-          className="text-[8px] font-bold text-[#f9ecd8] text-center leading-tight"
-          style={{ maxWidth: "70%", wordBreak: "break-word" }}
-        >
-          {traitName}
-        </span>
-      </div>
-
-      {/* Bonus counter overlay — center of card */}
-      <div
-        className="absolute inset-0 flex flex-col items-center justify-center"
-        style={{ paddingTop: "20%", paddingBottom: "18%" }}
-      >
-        <div className="flex flex-col items-center gap-1">
-          <button
-            type="button"
-            onClick={() => onBonusChange(bonus + 1)}
-            aria-label={`Increase ${ariaLabel}`}
-            className="h-6 w-6 rounded-full bg-[#0a100d]/60 border border-[#f9ecd8]/30 text-[#f9ecd8] text-xs hover:bg-[#0a100d]/80 transition-colors focus:outline-none focus:ring-1 focus:ring-[#f9ecd8]/60 flex items-center justify-center leading-none"
-          >
-            ▲
-          </button>
-          <output
-            aria-live="polite"
-            aria-label={`${ariaLabel}: ${bonus >= 0 ? "+" : ""}${bonus}`}
-            className="text-xl font-bold font-serif text-[#f9ecd8] tabular-nums leading-none [text-shadow:0_1px_4px_rgba(0,0,0,0.8)]"
-          >
-            {bonus >= 0 ? `+${bonus}` : `${bonus}`}
-          </output>
-          <button
-            type="button"
-            onClick={() => onBonusChange(bonus - 1)}
-            aria-label={`Decrease ${ariaLabel}`}
-            className="h-6 w-6 rounded-full bg-[#0a100d]/60 border border-[#f9ecd8]/30 text-[#f9ecd8] text-xs hover:bg-[#0a100d]/80 transition-colors focus:outline-none focus:ring-1 focus:ring-[#f9ecd8]/60 flex items-center justify-center leading-none"
-          >
-            ▼
-          </button>
-        </div>
-      </div>
-    </div>
+      {/* Feature text — the actual rule description */}
+      <p className="text-[11px] text-[#b9baa3] leading-snug">
+        {featureText}
+      </p>
+    </article>
   );
 }
 
-function TraitsSection() {
-  const { activeCharacter, updateField } = useCharacterStore();
+function HeritageSection() {
+  const { activeCharacter } = useCharacterStore();
 
   if (!activeCharacter) return null;
 
@@ -1349,81 +1282,58 @@ function TraitsSection() {
 
   if (!ancestryId && !communityId) return null;
 
-  const getTraitBonus = (key: string): number => {
-    const traitBonuses = activeCharacter.traitBonuses ?? {};
-    if (key in traitBonuses) return traitBonuses[key];
-    const featureKey = key === "ancestry" ? "trait_ancestry" : "trait_community";
-    return activeCharacter.classFeatureState?.[featureKey]?.tokens ?? 0;
-  };
-
-  const setTraitBonus = (key: string, value: number) => {
-    const traitBonuses = { ...(activeCharacter.traitBonuses ?? {}) };
-    traitBonuses[key] = value;
-    updateField("traitBonuses", traitBonuses);
-  };
-
-  // Derive which stat SVG to use from the trait name.
-  // The trait name often contains a stat keyword (e.g. "Agility" in "Swift Agility").
-  // Fall back to blank-card if no keyword matches.
-  const inferStatKey = (traitName: string): string => {
-    const lower = traitName.toLowerCase();
-    for (const stat of ["agility", "strength", "knowledge", "finesse", "instinct", "presence"]) {
-      if (lower.includes(stat)) return stat;
-    }
-    return "blank";
-  };
-
-  const cards: { key: string; traitName: string; sourceName: string; sourceLabel: string; statKey: string }[] = [];
+  const features: {
+    key:          string;
+    featureName:  string;
+    featureText:  string;
+    sourceName:   string;
+    sourceLabel:  string;
+  }[] = [];
 
   if (ancestryData) {
-    cards.push({
-      key:         "ancestry",
-      traitName:   ancestryData.traitName,
-      sourceName:  ancestryData.name,
-      sourceLabel: "Ancestry",
-      statKey:     inferStatKey(ancestryData.traitName),
+    features.push({
+      key:          "ancestry1",
+      featureName:  ancestryData.traitName,
+      featureText:  ancestryData.traitDescription,
+      sourceName:   ancestryData.name,
+      sourceLabel:  "Ancestry",
     });
     if (ancestryData.secondTraitName) {
-      cards.push({
-        key:         "ancestry2",
-        traitName:   ancestryData.secondTraitName,
-        sourceName:  ancestryData.name,
-        sourceLabel: "Ancestry",
-        statKey:     inferStatKey(ancestryData.secondTraitName),
+      features.push({
+        key:          "ancestry2",
+        featureName:  ancestryData.secondTraitName,
+        featureText:  ancestryData.secondTraitDescription ?? "",
+        sourceName:   ancestryData.name,
+        sourceLabel:  "Ancestry",
       });
     }
   }
 
   if (communityData) {
-    cards.push({
-      key:         "community",
-      traitName:   communityData.traitName,
-      sourceName:  communityData.name,
-      sourceLabel: "Community",
-      statKey:     inferStatKey(communityData.traitName),
+    features.push({
+      key:          "community",
+      featureName:  communityData.traitName,
+      featureText:  communityData.traitDescription,
+      sourceName:   communityData.name,
+      sourceLabel:  "Community",
     });
   }
 
   return (
     <div className="flex flex-col gap-3">
       <span className="text-xs font-semibold uppercase tracking-wider text-[#b9baa3]">
-        Traits
+        Heritage Features
       </span>
-      <p className="text-[11px] text-[#b9baa3]/60 italic -mt-1">
-        Ancestry and community traits — adjust bonus as you level up.
-      </p>
-      <div className="flex flex-wrap gap-4" role="group" aria-label="Character Traits">
-        {cards.map((card) => (
-          <TraitCard
-            key={card.key}
-            traitName={card.traitName}
-            sourceName={card.sourceName}
-            sourceLabel={card.sourceLabel}
-            statKey={card.statKey}
-            bonus={getTraitBonus(card.key)}
-            onBonusChange={(v) => setTraitBonus(card.key, v)}
-            ariaLabel={`${card.sourceLabel} ${card.traitName} trait`}
-          />
+      <div className="flex flex-wrap gap-3" role="list" aria-label="Ancestry and Community Features">
+        {features.map((feature) => (
+          <div key={feature.key} role="listitem">
+            <HeritageFeature
+              featureName={feature.featureName}
+              featureText={feature.featureText}
+              sourceName={feature.sourceName}
+              sourceLabel={feature.sourceLabel}
+            />
+          </div>
         ))}
       </div>
     </div>
@@ -1530,8 +1440,8 @@ export function TrackersPanel() {
         </div>
       </div>
 
-      {/* Traits (ancestry + community) */}
-      <TraitsSection />
+       {/* Heritage Features (ancestry + community) */}
+       <HeritageSection />
 
       {/* Experiences */}
       <ExperiencesList />

@@ -238,25 +238,27 @@ export function DomainCardSelectionPanel({
   const isLoading = domain1Query.isLoading || domain2Query.isLoading;
   const isError = domain1Query.isError || domain2Query.isError;
 
-  // Toggle card selection
-  function toggleCard(cardId: string) {
-    if (selectedCardIds.includes(cardId)) {
-      onSelectionChange(selectedCardIds.filter((id) => id !== cardId));
+  // Toggle card selection — stored as "domain/cardId" so LoadoutCardSlot and
+  // DowntimeProjectsPanel can resolve the card via useDomainCard(domain, id).
+  function toggleCard(card: DomainCard) {
+    const prefixedId = `${card.domain}/${card.cardId}`;
+    if (selectedCardIds.includes(prefixedId)) {
+      onSelectionChange(selectedCardIds.filter((id) => id !== prefixedId));
     } else if (selectedCardIds.length < 2) {
-      onSelectionChange([...selectedCardIds, cardId]);
+      onSelectionChange([...selectedCardIds, prefixedId]);
     }
   }
 
   // ── Detail view ──
   if (detailCard) {
-    const isSelected = selectedCardIds.includes(detailCard.cardId);
+    const isSelected = selectedCardIds.includes(`${detailCard.domain}/${detailCard.cardId}`);
     const canSelect = selectedCardIds.length < 2;
     return (
       <CardDetail
         card={detailCard}
         isSelected={isSelected}
         canSelect={canSelect}
-        onToggle={() => toggleCard(detailCard.cardId)}
+        onToggle={() => toggleCard(detailCard)}
         onBack={() => setDetailCard(null)}
       />
     );
@@ -312,14 +314,14 @@ export function DomainCardSelectionPanel({
       {/* Card list */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
         {allCards.map((card) => {
-          const isSelected = selectedCardIds.includes(card.cardId);
+          const isSelected = selectedCardIds.includes(`${card.domain}/${card.cardId}`);
           return (
             <CardRow
               key={card.cardId}
               card={card}
               isSelected={isSelected}
               canSelect={canSelectMore}
-              onToggle={() => toggleCard(card.cardId)}
+              onToggle={() => toggleCard(card)}
               onDrill={() => setDetailCard(card)}
             />
           );

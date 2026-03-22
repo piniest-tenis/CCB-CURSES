@@ -167,7 +167,7 @@ export function StatsPanel() {
       aria-label="Core Statistics"
     >
       <h2 className="mb-5 font-serif text-sm font-semibold uppercase tracking-widest text-[#577399]">
-        Core Stats
+        Traits
       </h2>
 
       {/* 6 stat inputs in a responsive grid */}
