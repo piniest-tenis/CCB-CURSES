@@ -45,6 +45,7 @@ import {
   putItem,
   deleteItem,
   queryPage,
+  scanItems,
   keys,
 } from "../common/dynamodb";
 import type {
@@ -1617,6 +1618,101 @@ async function portraitUploadUrl(
 
 // ─── Route Dispatcher ─────────────────────────────────────────────────────────
 
+// ─── Admin: requireAdminGroup ─────────────────────────────────────────────────
+// Mirrors the same check in auth/handler.ts — asserts the caller belongs to
+// the Cognito "admin" group (injected as a JWT claim by API Gateway).
+
+function requireAdminGroup(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): void {
+  const claims = event.requestContext?.authorizer?.jwt?.claims;
+  if (!claims) throw AppError.unauthorized();
+
+  const raw = claims["cognito:groups"];
+  let groups: string[] = [];
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      groups = Array.isArray(parsed) ? parsed.map(String) : raw.split(/[\s,]+/).filter(Boolean);
+    } catch {
+      groups = raw.split(/[\s,]+/).filter(Boolean);
+    }
+  }
+  if (!groups.includes("admin")) {
+    throw AppError.forbidden("Admin group membership is required");
+  }
+}
+
+// ─── Admin: listAllCharacters ─────────────────────────────────────────────────
+
+interface AdminCharacterSummary {
+  characterId: string;
+  userId: string;
+  name: string;
+  classId: string;
+  className: string;
+  ancestryId: string | null;
+  communityId: string | null;
+  level: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * GET /admin/characters
+ * Returns every character in the system (all users), sorted by createdAt desc.
+ * Requires the caller to be a member of the Cognito "admin" group.
+ */
+async function listAllCharacters(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<APIGatewayProxyResultV2> {
+  requireAdminGroup(event);
+
+  // Scan the full characters table — filter to only CHARACTER# SK items
+  const records = await scanItems<CharacterRecord>(
+    CHARACTERS_TABLE,
+    "begins_with(SK, :skPrefix)",
+    { ":skPrefix": "CHARACTER#" }
+  );
+
+  // Resolve class names in parallel
+  const classCache = new Map<string, string>();
+  const summaries: AdminCharacterSummary[] = await Promise.all(
+    records.map(async (record) => {
+      let className = classCache.get(record.classId);
+      if (!className) {
+        const classRecord = await getItem<ClassRecord>({
+          TableName: CLASSES_TABLE,
+          Key: keys.classMetadata(record.classId),
+        });
+        className = classRecord?.name ?? record.classId;
+        classCache.set(record.classId, className);
+      }
+      return {
+        characterId: record.characterId,
+        userId: record.userId,
+        name: record.name,
+        classId: record.classId,
+        className,
+        ancestryId: record.ancestryId ?? null,
+        communityId: record.communityId ?? null,
+        level: record.level,
+        createdAt: record.createdAt ?? record.updatedAt,
+        updatedAt: record.updatedAt,
+      };
+    })
+  );
+
+  // Sort newest-first by default
+  summaries.sort((a, b) =>
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  return createSuccessResponse({ characters: summaries });
+}
+
+// ─── Handler ──────────────────────────────────────────────────────────────────
+
 export const handler = withErrorHandling(
   async (
     event: APIGatewayProxyEventV2WithJWTAuthorizer
@@ -1629,6 +1725,8 @@ export const handler = withErrorHandling(
     }
 
     switch (routeKey) {
+      case "GET /admin/characters":
+        return listAllCharacters(event);
       case "GET /characters":
         return listCharacters(event);
       case "POST /characters":

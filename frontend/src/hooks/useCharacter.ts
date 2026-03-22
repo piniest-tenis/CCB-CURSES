@@ -69,7 +69,33 @@ export function useCharacters(
   });
 }
 
-// ─── useCharacter ─────────────────────────────────────────────────────────────
+// ─── useAdminAllCharacters ────────────────────────────────────────────────────
+
+export interface AdminCharacterSummary {
+  characterId: string;
+  userId: string;
+  name: string;
+  classId: string;
+  className: string;
+  ancestryId: string | null;
+  communityId: string | null;
+  level: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminCharacterListData {
+  characters: AdminCharacterSummary[];
+}
+
+export function useAdminAllCharacters(): UseQueryResult<AdminCharacterListData> {
+  return useQuery({
+    queryKey: ["admin", "characters"],
+    queryFn: () => apiClient.get<AdminCharacterListData>("/admin/characters"),
+    staleTime: 30_000,
+  });
+}
+
 
 export function useCharacter(
   characterId: string | undefined
