@@ -833,6 +833,23 @@ function advancementSlotCost(adv: AdvancementChoice): number {
 }
 
 /**
+ * Helper: get which levels belong to a given tier.
+ * Tier 1: level 1 only (no advancements)
+ * Tier 2: levels 2–4
+ * Tier 3: levels 5–7
+ * Tier 4: levels 8–10
+ */
+function levelsInTier(tier: number): number[] {
+  switch (tier) {
+    case 1: return [1];
+    case 2: return [2, 3, 4];
+    case 3: return [5, 6, 7];
+    case 4: return [8, 9, 10];
+    default: return [];
+  }
+}
+
+/**
  * Apply a level-up to a character. Pure function — no I/O.
  * Throws AppError (422) on any validation failure.
  *
@@ -887,8 +904,64 @@ export function applyLevelUp(
     );
   }
 
+  // ── Per-tier restrictions (SRD p.22) ──────────────────────────────────────
+  const targetTier = tierForLevel(targetLevel);
+  const history = character.levelUpHistory ?? {};
+  const tierLevels = levelsInTier(targetTier);
+
+  // Collect all advancements previously chosen in this tier
+  const priorTierAdvancements: AdvancementChoice[] = [];
+  for (const lv of tierLevels) {
+    if (lv < targetLevel && history[lv]) {
+      priorTierAdvancements.push(...history[lv]!);
+    }
+  }
+
+  // trait-bonus: once per tier
+  const traitBonusInTier = priorTierAdvancements.some((a) => a.type === "trait-bonus");
+  const traitBonusInChoices = advancements.filter((a) => a.type === "trait-bonus").length;
+  if (traitBonusInChoices > 1) {
+    throw new AppError("INVALID_LEVEL_UP", "trait-bonus can only be selected once per level-up", 422,
+      [{ field: "advancements", issue: "duplicate trait-bonus" }]);
+  }
+  if (traitBonusInTier && traitBonusInChoices > 0) {
+    throw new AppError("INVALID_LEVEL_UP", "trait-bonus already used this tier — can only be taken once per tier", 422,
+      [{ field: "advancements", issue: "trait-bonus once per tier" }]);
+  }
+
+  // subclass-upgrade and multiclass: mutually exclusive within a tier
+  const hasSubclassInTier = priorTierAdvancements.some((a) => a.type === "subclass-upgrade");
+  const hasMulticlassInTier = priorTierAdvancements.some((a) => a.type === "multiclass");
+  const choosingSubclass = advancements.some((a) => a.type === "subclass-upgrade");
+  const choosingMulticlass = advancements.some((a) => a.type === "multiclass");
+
+  if (choosingSubclass && (hasMulticlassInTier || choosingMulticlass)) {
+    throw new AppError("INVALID_LEVEL_UP", "subclass-upgrade and multiclass are mutually exclusive within a tier", 422,
+      [{ field: "advancements", issue: "subclass/multiclass exclusion" }]);
+  }
+  if (choosingMulticlass && (hasSubclassInTier || choosingSubclass)) {
+    throw new AppError("INVALID_LEVEL_UP", "multiclass and subclass-upgrade are mutually exclusive within a tier", 422,
+      [{ field: "advancements", issue: "multiclass/subclass exclusion" }]);
+  }
+
+  // multiclass: permanently once only (check ALL history, not just this tier)
+  if (choosingMulticlass) {
+    const allHistory = Object.values(history).flat();
+    if (allHistory.some((a) => a.type === "multiclass")) {
+      throw new AppError("INVALID_LEVEL_UP", "multiclass can only be taken once (permanently)", 422,
+        [{ field: "advancements", issue: "multiclass already taken" }]);
+    }
+  }
+
   // ── Start building updated character ─────────────────────────────────────
   let updated: Character = { ...character, level: targetLevel };
+
+  // Ensure levelUpHistory and markedTraits exist
+  updated = {
+    ...updated,
+    levelUpHistory: { ...(updated.levelUpHistory ?? {}) },
+    markedTraits: [...(updated.markedTraits ?? [])],
+  };
 
   // ── Step 1: Tier Achievement (automatic) ─────────────────────────────────
   if (isTierAchievement(targetLevel)) {
@@ -897,9 +970,10 @@ export function applyLevelUp(
       ...updated,
       proficiency: Math.min(6, (updated.proficiency ?? 1) + 1),
     };
-    // Add a new Experience at +2 (SRD p.22)
-    // The wizard provides this via an advancement of type "new-experience".
-    // Tier achievements also clear marked traits — handled below when we apply advancements.
+    // Clear marked traits at levels 5 and 8 (SRD p.22)
+    if (targetLevel === 5 || targetLevel === 8) {
+      updated = { ...updated, markedTraits: [] };
+    }
   }
 
   // ── Step 2: Damage Thresholds +1 (automatic, SRD p.22) ──────────────────
@@ -915,16 +989,33 @@ export function applyLevelUp(
   for (const adv of advancements) {
     switch (adv.type) {
       case "trait-bonus": {
-        const statName = adv.detail as CoreStatName | undefined;
-        if (!statName || !(statName in updated.stats)) {
-          throw new AppError("INVALID_LEVEL_UP", `trait-bonus requires a valid stat name in detail`, 422,
-            [{ field: "advancements.detail", issue: "invalid stat name" }]);
+        // Detail is comma-separated pair of stat names, e.g. "agility,strength"
+        const detail = adv.detail;
+        if (!detail) {
+          throw new AppError("INVALID_LEVEL_UP", "trait-bonus requires detail (two comma-separated stat names)", 422,
+            [{ field: "advancements.detail", issue: "missing stat names" }]);
         }
-        const current = updated.stats[statName];
-        updated = {
-          ...updated,
-          stats: { ...updated.stats, [statName]: current + 1 },
-        };
+        const statNames = detail.split(",").map((s) => s.trim()) as CoreStatName[];
+        if (statNames.length !== 2) {
+          throw new AppError("INVALID_LEVEL_UP", "trait-bonus detail must contain exactly two comma-separated stat names", 422,
+            [{ field: "advancements.detail", issue: "must be two stats" }]);
+        }
+        for (const statName of statNames) {
+          if (!(statName in updated.stats)) {
+            throw new AppError("INVALID_LEVEL_UP", `trait-bonus: '${statName}' is not a valid stat name`, 422,
+              [{ field: "advancements.detail", issue: `invalid stat name: ${statName}` }]);
+          }
+        }
+        // Apply +1 to both stats and mark them
+        const newStats = { ...updated.stats };
+        const newMarked = [...updated.markedTraits];
+        for (const statName of statNames) {
+          newStats[statName] = (newStats[statName] ?? 0) + 1;
+          if (!newMarked.includes(statName)) {
+            newMarked.push(statName);
+          }
+        }
+        updated = { ...updated, stats: newStats, markedTraits: newMarked };
         break;
       }
 
@@ -964,32 +1055,27 @@ export function applyLevelUp(
       }
 
       case "experience-bonus": {
-        const expName = adv.detail;
-        if (!expName) {
-          throw new AppError("INVALID_LEVEL_UP", "experience-bonus requires detail (experience name)", 422,
-            [{ field: "advancements.detail", issue: "missing experience name" }]);
+        // Detail is comma-separated pair of experience names, e.g. "Stealth,Athletics"
+        const detail = adv.detail;
+        if (!detail) {
+          throw new AppError("INVALID_LEVEL_UP", "experience-bonus requires detail (two comma-separated experience names)", 422,
+            [{ field: "advancements.detail", issue: "missing experience names" }]);
         }
-        const idx = updated.experiences.findIndex((e) => e.name === expName);
-        if (idx === -1) {
-          throw new AppError("INVALID_LEVEL_UP", `Experience '${expName}' not found on character`, 422,
-            [{ field: "advancements.detail", issue: "experience not found" }]);
+        const expNames = detail.split(",").map((s) => s.trim());
+        if (expNames.length !== 2) {
+          throw new AppError("INVALID_LEVEL_UP", "experience-bonus detail must contain exactly two comma-separated experience names", 422,
+            [{ field: "advancements.detail", issue: "must be two experiences" }]);
         }
         const newExps = [...updated.experiences];
-        newExps[idx] = { ...newExps[idx]!, bonus: newExps[idx]!.bonus + 1 };
-        updated = { ...updated, experiences: newExps };
-        break;
-      }
-
-      case "new-experience": {
-        const expName = adv.detail;
-        if (!expName) {
-          throw new AppError("INVALID_LEVEL_UP", "new-experience requires detail (experience name)", 422,
-            [{ field: "advancements.detail", issue: "missing experience name" }]);
+        for (const expName of expNames) {
+          const idx = newExps.findIndex((e) => e.name === expName);
+          if (idx === -1) {
+            throw new AppError("INVALID_LEVEL_UP", `Experience '${expName}' not found on character`, 422,
+              [{ field: "advancements.detail", issue: `experience not found: ${expName}` }]);
+          }
+          newExps[idx] = { ...newExps[idx]!, bonus: newExps[idx]!.bonus + 1 };
         }
-        updated = {
-          ...updated,
-          experiences: [...updated.experiences, { name: expName, bonus: 2 }],
-        };
+        updated = { ...updated, experiences: newExps };
         break;
       }
 
@@ -1019,7 +1105,16 @@ export function applyLevelUp(
     }
   }
 
-  // ── Step 4: New Domain Card ───────────────────────────────────────────────
+  // ── Step 4: Record level-up history ───────────────────────────────────────
+  updated = {
+    ...updated,
+    levelUpHistory: {
+      ...updated.levelUpHistory,
+      [targetLevel]: advancements,
+    },
+  };
+
+  // ── Step 5: New Domain Card ───────────────────────────────────────────────
   if (newDomainCardId) {
     if (exchangeCardId) {
       // Exchange: remove old card from vault (and loadout if present), add new one

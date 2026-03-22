@@ -190,6 +190,18 @@ export interface Character extends CharacterSummary {
   reputationBonuses: Record<string, number>;
   /** Conditions beyond SRD's Hidden / Restrained / Vulnerable. */
   customConditions: CustomCondition[];
+  /**
+   * Level-up history: records which advancements were chosen at each level.
+   * Keyed by target level (2–10). Used to enforce per-tier restrictions
+   * (e.g. trait-bonus once per tier, subclass/multiclass mutual exclusion).
+   */
+  levelUpHistory: Record<number, AdvancementChoice[]>;
+  /**
+   * Traits that are "marked" from trait-bonus advancements (SRD p.22).
+   * Marked traits are cleared at tier achievements (levels 5 and 8).
+   * Stored as stat names, e.g. ["agility", "strength"].
+   */
+  markedTraits: string[];
 }
 
 // ─── Class & Subclass ─────────────────────────────────────────────────────────
@@ -489,24 +501,22 @@ export interface ValidationResult {
  * "multiclass" costs both advancement slots (Tier 3+ only).
  */
 export type AdvancementType =
-  | "trait-bonus"          // +1 to a chosen stat (marks it; cleared at next tier achievement)
+  | "trait-bonus"          // +1 to TWO chosen stats (marks them; cleared at tier achievements lv5, lv8). Once per tier.
   | "hp-slot"              // +1 HP slot (max 12)
   | "stress-slot"          // +1 Stress slot (max 12)
-  | "experience-bonus"     // +1 to a chosen experience
-  | "new-experience"       // Add a new Experience at +2
+  | "experience-bonus"     // +1 to TWO chosen experiences
   | "evasion"              // +1 Evasion (permanent)
   | "additional-domain-card" // Take an additional domain card (level ≤ current)
-  | "subclass-upgrade"     // Upgrade subclass: Foundation → Specialization
+  | "subclass-upgrade"     // Upgrade subclass: Foundation → Specialization → Mastery. Mutually exclusive with multiclass per tier.
   | "proficiency-increase" // +1 Proficiency (costs both slots)
-  | "multiclass";          // Multiclass (costs both slots; Tier 3+ only)
+  | "multiclass";          // Multiclass (costs both slots; Tier 3+ only). Mutually exclusive with subclass-upgrade per tier.
 
 export interface AdvancementChoice {
   type: AdvancementType;
   /**
    * Depending on type:
-   * - trait-bonus: stat name (CoreStatName)
-   * - experience-bonus: experience name string
-   * - new-experience: experience name string
+   * - trait-bonus: comma-separated pair of stat names, e.g. "agility,strength"
+   * - experience-bonus: comma-separated pair of experience names, e.g. "Stealth,Athletics"
    * - additional-domain-card: cardId
    * - subclass-upgrade: "specialization" | "mastery"
    * - multiclass: classId of the new class

@@ -6,18 +6,24 @@
  * Multi-step wizard for leveling a character from level N to N+1.
  *
  * Steps:
- *   1. Overview — shows target level, tier info, automatic bonuses
- *   2. Advancements — pick 2 slots worth of advancement choices
- *   3. Domain Card — pick new domain card(s) to acquire (or skip)
+ *   1. Overview — shows target level, tier info, automatic bonuses, tier achievements
+ *   2. Advancements — pick 2 slots worth of advancement choices (SRD-compliant)
+ *   3. Domain Card — pick new domain card(s) to acquire (mandatory, not skippable)
  *   4. Confirm — review all choices and submit
  *
  * SRD rules enforced:
  *   - Exactly 2 advancement slots (proficiency-increase and multiclass cost 2)
  *   - Multiclass only available Tier 3+ (level 5+)
  *   - Tier achievements at levels 2, 5, 8: +1 proficiency (auto), +1 experience at +2
+ *   - Tier achievements at levels 5, 8: clear marked traits
  *   - Damage thresholds +1 (auto)
  *   - Domain card level filter: card.level <= targetLevel
  *   - "Extra Domain Card" advancement grants one extra pick on the Domain Card step
+ *   - "+1 to Two Traits" marks both stats; once per tier
+ *   - "+1 to Two Experiences" boosts two existing experiences
+ *   - Subclass upgrade and multiclass are mutually exclusive within a tier
+ *   - HP max 12, Stress max 12
+ *   - Domain card acquisition is mandatory (cannot skip)
  *
  * Color scheme matches the base character sheet (#577399 steel-blue).
  */
@@ -52,6 +58,17 @@ function tierForLevel(level: number): number {
   return 4;
 }
 
+/** Returns the range of levels in a given tier. */
+function levelsInTier(tier: number): number[] {
+  switch (tier) {
+    case 1: return [1];
+    case 2: return [2, 3, 4];
+    case 3: return [5, 6, 7];
+    case 4: return [8, 9, 10];
+    default: return [];
+  }
+}
+
 function isTierAchievement(toLevel: number): boolean {
   return toLevel === 2 || toLevel === 5 || toLevel === 8;
 }
@@ -74,8 +91,8 @@ interface AdvancementOption {
 const ADVANCEMENT_OPTIONS: AdvancementOption[] = [
   {
     type: "trait-bonus",
-    label: "+1 Trait Bonus",
-    description: "Increase one core stat by 1.",
+    label: "+1 to Two Traits",
+    description: "Increase two core stats by 1 each (marks them). Once per tier.",
     slotCost: 1,
     needsDetail: true,
     minLevel: 2,
@@ -98,16 +115,8 @@ const ADVANCEMENT_OPTIONS: AdvancementOption[] = [
   },
   {
     type: "experience-bonus",
-    label: "+1 Experience Bonus",
-    description: "Increase an existing experience by 1.",
-    slotCost: 1,
-    needsDetail: true,
-    minLevel: 2,
-  },
-  {
-    type: "new-experience",
-    label: "New Experience",
-    description: "Add a new experience at +2.",
+    label: "+1 to Two Experiences",
+    description: "Increase two existing experiences by 1 each.",
     slotCost: 1,
     needsDetail: true,
     minLevel: 2,
@@ -131,7 +140,7 @@ const ADVANCEMENT_OPTIONS: AdvancementOption[] = [
   {
     type: "subclass-upgrade",
     label: "Subclass Upgrade",
-    description: "Unlock next subclass tier (Foundation -> Specialization -> Mastery).",
+    description: "Unlock next subclass tier (Foundation -> Specialization -> Mastery). Mutually exclusive with Multiclass per tier.",
     slotCost: 1,
     needsDetail: false,
     minLevel: 2,
@@ -147,7 +156,7 @@ const ADVANCEMENT_OPTIONS: AdvancementOption[] = [
   {
     type: "multiclass",
     label: "Multiclass",
-    description: "Add a second class (costs both slots; Tier 3+ only).",
+    description: "Add a second class (costs both slots; Tier 3+ only). Mutually exclusive with Subclass Upgrade per tier.",
     slotCost: 2,
     needsDetail: true,
     minLevel: 5,
@@ -194,28 +203,112 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
   const slotsRemaining = 2 - slotsUsed;
 
   const [pendingType, setPendingType] = useState<AdvancementType | null>(null);
-  const [detailValue, setDetailValue] = useState("");
+  // For trait-bonus: two stat selections. For experience-bonus: two experience selections.
+  const [detailValue1, setDetailValue1] = useState("");
+  const [detailValue2, setDetailValue2] = useState("");
+
+  // ── Per-tier restriction helpers ────────────────────────────────────────
+  const targetTier = tierForLevel(targetLevel);
+  const tierLevels = levelsInTier(targetTier);
+  const history = character.levelUpHistory ?? {};
+
+  // Collect prior advancements in this tier
+  const priorTierAdvancements = useMemo(() => {
+    const result: AdvancementChoice[] = [];
+    for (const lv of tierLevels) {
+      if (lv < targetLevel && history[lv]) {
+        result.push(...history[lv]!);
+      }
+    }
+    return result;
+  }, [tierLevels, targetLevel, history]);
+
+  // Check if trait-bonus was already used this tier (in prior levels)
+  const traitBonusUsedThisTier = priorTierAdvancements.some((a) => a.type === "trait-bonus");
+  // Check if subclass-upgrade was used this tier (in prior levels)
+  const subclassUsedThisTier = priorTierAdvancements.some((a) => a.type === "subclass-upgrade");
+  // Check if multiclass was used this tier (in prior levels)
+  const multiclassUsedThisTier = priorTierAdvancements.some((a) => a.type === "multiclass");
+  // Check if multiclass was used ever (in ALL history)
+  const multiclassUsedEver = useMemo(() => {
+    return Object.values(history).flat().some((a) => a.type === "multiclass");
+  }, [history]);
+
+  // Check current selections in this level-up
+  const choosingSubclass = choices.some((a) => a.type === "subclass-upgrade");
+  const choosingMulticlass = choices.some((a) => a.type === "multiclass");
+  const choosingTraitBonus = choices.some((a) => a.type === "trait-bonus");
 
   const availableOptions = ADVANCEMENT_OPTIONS.filter((opt) => {
     if (opt.minLevel > targetLevel) return false;
     if (opt.slotCost > slotsRemaining) return false;
+
+    // ── SRD Restrictions ────────────────────────────────────────────────
+
+    // trait-bonus: once per tier (across all level-ups in this tier)
+    if (opt.type === "trait-bonus") {
+      if (traitBonusUsedThisTier || choosingTraitBonus) return false;
+    }
+
+    // HP cap: max 12
+    if (opt.type === "hp-slot" && character.trackers.hp.max >= 12) return false;
+    // Also account for HP slots already chosen in this level-up
+    if (opt.type === "hp-slot") {
+      const hpSlotsChosen = choices.filter((c) => c.type === "hp-slot").length;
+      if (character.trackers.hp.max + hpSlotsChosen >= 12) return false;
+    }
+
+    // Stress cap: max 12
+    if (opt.type === "stress-slot" && character.trackers.stress.max >= 12) return false;
+    if (opt.type === "stress-slot") {
+      const stressSlotsChosen = choices.filter((c) => c.type === "stress-slot").length;
+      if (character.trackers.stress.max + stressSlotsChosen >= 12) return false;
+    }
+
+    // Subclass/multiclass mutual exclusion within a tier
+    if (opt.type === "subclass-upgrade") {
+      if (multiclassUsedThisTier || choosingMulticlass) return false;
+      // Also only 1 subclass-upgrade per tier
+      const subclassInTierOrChoices = subclassUsedThisTier || choosingSubclass;
+      if (subclassInTierOrChoices) return false;
+    }
+    if (opt.type === "multiclass") {
+      if (subclassUsedThisTier || choosingSubclass) return false;
+      // Multiclass is permanently once only
+      if (multiclassUsedEver || choosingMulticlass) return false;
+    }
+
     return true;
   });
 
   const handleAdd = (opt: AdvancementOption) => {
     if (opt.needsDetail) {
       setPendingType(opt.type);
-      setDetailValue("");
+      setDetailValue1("");
+      setDetailValue2("");
       return;
     }
     onChange([...choices, { type: opt.type }]);
   };
 
   const handleConfirmDetail = () => {
-    if (!pendingType || !detailValue.trim()) return;
-    onChange([...choices, { type: pendingType, detail: detailValue.trim() }]);
+    if (!pendingType) return;
+
+    if (pendingType === "trait-bonus") {
+      if (!detailValue1 || !detailValue2 || detailValue1 === detailValue2) return;
+      onChange([...choices, { type: pendingType, detail: `${detailValue1},${detailValue2}` }]);
+    } else if (pendingType === "experience-bonus") {
+      if (!detailValue1 || !detailValue2) return;
+      onChange([...choices, { type: pendingType, detail: `${detailValue1},${detailValue2}` }]);
+    } else {
+      // multiclass — single text detail
+      if (!detailValue1.trim()) return;
+      onChange([...choices, { type: pendingType, detail: detailValue1.trim() }]);
+    }
+
     setPendingType(null);
-    setDetailValue("");
+    setDetailValue1("");
+    setDetailValue2("");
   };
 
   const handleRemove = (index: number) => {
@@ -224,7 +317,20 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
 
   const handleCancelDetail = () => {
     setPendingType(null);
-    setDetailValue("");
+    setDetailValue1("");
+    setDetailValue2("");
+  };
+
+  // Check if confirm button should be enabled for detail input
+  const isDetailValid = () => {
+    if (!pendingType) return false;
+    if (pendingType === "trait-bonus") {
+      return !!detailValue1 && !!detailValue2 && detailValue1 !== detailValue2;
+    }
+    if (pendingType === "experience-bonus") {
+      return !!detailValue1 && !!detailValue2;
+    }
+    return !!detailValue1.trim();
   };
 
   // Detail input rendering based on type
@@ -237,62 +343,97 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
     return (
       <div className="mt-3 rounded-lg border border-[#577399]/40 bg-slate-850 p-3 space-y-2">
         <p className="text-xs text-parchment-400">
-          {opt.label}: specify detail
+          {opt.label}: specify details
         </p>
 
         {pendingType === "trait-bonus" && (
-          <select
-            value={detailValue}
-            onChange={(e) => setDetailValue(e.target.value)}
-            aria-label="Select stat to increase"
-            className="
-              w-full rounded bg-slate-900 px-2 py-1.5 text-sm text-parchment-200
-              border border-[#577399]/40 focus:outline-none focus:ring-1 focus:ring-[#577399]
-            "
-          >
-            <option value="">Select stat...</option>
-            {CORE_STATS.map((stat) => (
-              <option key={stat} value={stat}>
-                {stat.charAt(0).toUpperCase() + stat.slice(1)} (currently {character.stats[stat]})
-              </option>
-            ))}
-          </select>
+          <>
+            <label className="block text-[10px] text-parchment-500 uppercase tracking-wider">First stat</label>
+            <select
+              value={detailValue1}
+              onChange={(e) => setDetailValue1(e.target.value)}
+              aria-label="Select first stat to increase"
+              className="
+                w-full rounded bg-slate-900 px-2 py-1.5 text-sm text-parchment-200
+                border border-[#577399]/40 focus:outline-none focus:ring-1 focus:ring-[#577399]
+              "
+            >
+              <option value="">Select stat...</option>
+              {CORE_STATS.filter((s) => s !== detailValue2).map((stat) => (
+                <option key={stat} value={stat}>
+                  {stat.charAt(0).toUpperCase() + stat.slice(1)} (currently {character.stats[stat]})
+                </option>
+              ))}
+            </select>
+            <label className="block text-[10px] text-parchment-500 uppercase tracking-wider mt-1">Second stat</label>
+            <select
+              value={detailValue2}
+              onChange={(e) => setDetailValue2(e.target.value)}
+              aria-label="Select second stat to increase"
+              className="
+                w-full rounded bg-slate-900 px-2 py-1.5 text-sm text-parchment-200
+                border border-[#577399]/40 focus:outline-none focus:ring-1 focus:ring-[#577399]
+              "
+            >
+              <option value="">Select stat...</option>
+              {CORE_STATS.filter((s) => s !== detailValue1).map((stat) => (
+                <option key={stat} value={stat}>
+                  {stat.charAt(0).toUpperCase() + stat.slice(1)} (currently {character.stats[stat]})
+                </option>
+              ))}
+            </select>
+            {detailValue1 && detailValue2 && detailValue1 === detailValue2 && (
+              <p className="text-[10px] text-[#fe5f55]">Must select two different stats</p>
+            )}
+          </>
         )}
 
         {pendingType === "experience-bonus" && (
-          <select
-            value={detailValue}
-            onChange={(e) => setDetailValue(e.target.value)}
-            aria-label="Select experience to increase"
-            className="
-              w-full rounded bg-slate-900 px-2 py-1.5 text-sm text-parchment-200
-              border border-[#577399]/40 focus:outline-none focus:ring-1 focus:ring-[#577399]
-            "
-          >
-            <option value="">Select experience...</option>
-            {character.experiences.map((exp) => (
-              <option key={exp.name} value={exp.name}>
-                {exp.name} (+{exp.bonus})
-              </option>
-            ))}
-          </select>
+          <>
+            <label className="block text-[10px] text-parchment-500 uppercase tracking-wider">First experience</label>
+            <select
+              value={detailValue1}
+              onChange={(e) => setDetailValue1(e.target.value)}
+              aria-label="Select first experience to increase"
+              className="
+                w-full rounded bg-slate-900 px-2 py-1.5 text-sm text-parchment-200
+                border border-[#577399]/40 focus:outline-none focus:ring-1 focus:ring-[#577399]
+              "
+            >
+              <option value="">Select experience...</option>
+              {character.experiences.map((exp) => (
+                <option key={exp.name} value={exp.name}>
+                  {exp.name} (+{exp.bonus})
+                </option>
+              ))}
+            </select>
+            <label className="block text-[10px] text-parchment-500 uppercase tracking-wider mt-1">Second experience</label>
+            <select
+              value={detailValue2}
+              onChange={(e) => setDetailValue2(e.target.value)}
+              aria-label="Select second experience to increase"
+              className="
+                w-full rounded bg-slate-900 px-2 py-1.5 text-sm text-parchment-200
+                border border-[#577399]/40 focus:outline-none focus:ring-1 focus:ring-[#577399]
+              "
+            >
+              <option value="">Select experience...</option>
+              {character.experiences.map((exp) => (
+                <option key={exp.name} value={exp.name}>
+                  {exp.name} (+{exp.bonus})
+                </option>
+              ))}
+            </select>
+          </>
         )}
 
-        {(pendingType === "new-experience" || pendingType === "multiclass") && (
+        {pendingType === "multiclass" && (
           <input
             type="text"
-            value={detailValue}
-            onChange={(e) => setDetailValue(e.target.value)}
-            placeholder={
-              pendingType === "new-experience"
-                ? "Experience name"
-                : "Class ID for multiclass"
-            }
-            aria-label={
-              pendingType === "new-experience"
-                ? "New experience name"
-                : "Multiclass target class"
-            }
+            value={detailValue1}
+            onChange={(e) => setDetailValue1(e.target.value)}
+            placeholder="Class ID for multiclass"
+            aria-label="Multiclass target class"
             className="
               w-full rounded bg-slate-900 px-2 py-1.5 text-sm text-parchment-200
               border border-[#577399]/40 focus:outline-none focus:ring-1 focus:ring-[#577399]
@@ -305,7 +446,7 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
           <button
             type="button"
             onClick={handleConfirmDetail}
-            disabled={!detailValue.trim()}
+            disabled={!isDetailValid()}
             className="
               rounded px-3 py-1.5 text-xs font-semibold
               bg-[#577399]/80 text-[#f7f7ff] border border-[#577399]
@@ -333,6 +474,19 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
     );
   };
 
+  /** Format the detail string for display (turn "agility,strength" into "Agility, Strength") */
+  const formatDetail = (choice: AdvancementChoice): string | null => {
+    if (!choice.detail) return null;
+    if (choice.type === "trait-bonus" || choice.type === "experience-bonus") {
+      return choice.detail
+        .split(",")
+        .map((s) => s.trim())
+        .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+        .join(", ");
+    }
+    return choice.detail;
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -349,6 +503,7 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
         <div className="space-y-1">
           {choices.map((choice, i) => {
             const opt = ADVANCEMENT_OPTIONS.find((o) => o.type === choice.type);
+            const displayDetail = formatDetail(choice);
             return (
               <div
                 key={i}
@@ -356,8 +511,8 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
               >
                 <div>
                   <span className="text-sm text-parchment-200">{opt?.label ?? choice.type}</span>
-                  {choice.detail && (
-                    <span className="ml-2 text-xs text-parchment-500">({choice.detail})</span>
+                  {displayDetail && (
+                    <span className="ml-2 text-xs text-parchment-500">({displayDetail})</span>
                   )}
                   {opt && opt.slotCost === 2 && (
                     <span className="ml-2 text-[10px] text-[#577399] font-bold">2 SLOTS</span>
@@ -491,11 +646,9 @@ function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardI
           Acquire Domain Card{maxSelections > 1 ? "s" : ""}
         </h3>
         <div className="flex items-center gap-3">
-          {maxSelections > 1 && (
-            <span className={`text-xs font-bold ${selectedCardIds.length >= maxSelections ? "text-emerald-400" : "text-[#577399]"}`}>
-              {selectedCardIds.length}/{maxSelections} selected
-            </span>
-          )}
+          <span className={`text-xs font-bold ${selectedCardIds.length >= 1 ? "text-emerald-400" : "text-[#fe5f55]"}`}>
+            {selectedCardIds.length}/{maxSelections} selected
+          </span>
           {selectedCardIds.length > 0 && (
             <button
               type="button"
@@ -512,7 +665,8 @@ function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardI
         Choose {maxSelections > 1 ? `up to ${maxSelections} cards` : "one card"} from your domains
         ({domain0 && domain1 ? `${domain0} & ${domain1}` : domain0 ?? domain1}, level {targetLevel} or below).
         {maxSelections > 1 && " You chose Extra Domain Card as an advancement, granting one extra pick."}
-        {" "}Cards you already own are excluded.{maxSelections === 1 ? " You may skip this step." : ""}
+        {" "}Cards you already own are excluded.
+        {" "}Domain card acquisition is required.
       </p>
 
       {isLoading ? (
@@ -522,7 +676,7 @@ function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardI
         </div>
       ) : availableCards.length === 0 ? (
         <p className="text-xs text-parchment-600 italic">
-          No new cards available at this level.
+          No new cards available at this level. You may proceed without selecting a card.
         </p>
       ) : (
         <ul className="space-y-1 max-h-64 overflow-y-auto pr-1" role="listbox" aria-label="Available domain cards" aria-multiselectable={maxSelections > 1}>
@@ -585,6 +739,8 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
   const currentTier = tierForLevel(character.level);
   const newTier     = tierForLevel(targetLevel);
   const hasTierAchievement = isTierAchievement(targetLevel);
+  const clearsMarkedTraits = targetLevel === 5 || targetLevel === 8;
+  const markedTraits = character.markedTraits ?? [];
 
   const [step, setStep]           = useState(0);
   const [advancements, setAdvancements] = useState<AdvancementChoice[]>([]);
@@ -601,17 +757,21 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
   const hasExtraDomainCard = advancements.some((a) => a.type === "additional-domain-card");
   const maxDomainCardSelections = hasExtraDomainCard ? 2 : 1;
 
+  // Domain card acquisition is mandatory — but if no cards are available, allow proceeding
+  const [noCardsAvailable, setNoCardsAvailable] = useState(false);
+  const domainCardSatisfied = selectedDomainCardIds.length >= 1 || noCardsAvailable;
+
   const STEPS = ["Overview", "Advancements", "Domain Card", "Confirm"];
 
   const canProceed = useCallback((): boolean => {
     switch (step) {
       case 0: return true; // overview
       case 1: return advancementsComplete;
-      case 2: return true; // domain card is optional
+      case 2: return domainCardSatisfied; // mandatory
       case 3: return true; // confirm
       default: return false;
     }
-  }, [step, advancementsComplete]);
+  }, [step, advancementsComplete, domainCardSatisfied]);
 
   const handleSubmit = () => {
     // Build advancements with extra domain card detail filled in
@@ -744,6 +904,33 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
                   )}
                 </ul>
               </div>
+
+              {/* Tier Achievement: Clear Marked Traits */}
+              {clearsMarkedTraits && (
+                <div className="rounded border border-[#577399]/50 bg-[#577399]/10 p-3 mt-2">
+                  <p className="text-xs font-semibold text-[#b9baa3] uppercase tracking-wider mb-1">
+                    Tier Achievement: Clear Marked Traits
+                  </p>
+                  {markedTraits.length > 0 ? (
+                    <p className="text-sm text-parchment-300">
+                      The following marked traits will be cleared:{" "}
+                      <span className="font-semibold text-[#f7f7ff]">
+                        {markedTraits.map((t) => t.charAt(0).toUpperCase() + t.slice(1)).join(", ")}
+                      </span>
+                      . These stats keep their bonuses but are no longer marked, allowing them to be chosen again in future tiers.
+                    </p>
+                  ) : (
+                    <p className="text-sm text-parchment-500 italic">
+                      No traits are currently marked. This tier achievement will have no effect on traits.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Domain card mandatory notice */}
+              <div className="mt-2 text-[11px] text-parchment-500 italic">
+                You will be required to select a domain card in step 3.
+              </div>
             </div>
           </div>
         )}
@@ -760,12 +947,14 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
 
         {/* Step 2: Domain Card */}
         {step === 2 && (
-          <DomainCardPicker
+          <DomainCardPickerWrapper
             character={character}
             targetLevel={targetLevel}
-            maxSelections={maxDomainCardSelections}
-            selectedCardIds={selectedDomainCardIds}
-            onSelect={setSelectedDomainCardIds}
+            maxDomainCardSelections={maxDomainCardSelections}
+            hasExtraDomainCard={hasExtraDomainCard}
+            selectedDomainCardIds={selectedDomainCardIds}
+            setSelectedDomainCardIds={setSelectedDomainCardIds}
+            onNoCardsAvailable={setNoCardsAvailable}
           />
         )}
 
@@ -789,7 +978,10 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
                   <p className="text-[10px] uppercase tracking-wider text-parchment-600 font-medium mb-1">
                     Tier Achievement
                   </p>
-                  <p className="text-sm text-[#b9baa3]">+1 Proficiency, +1 Experience at +2</p>
+                  <p className="text-sm text-[#b9baa3]">
+                    +1 Proficiency, +1 Experience at +2
+                    {clearsMarkedTraits && ", Clear Marked Traits"}
+                  </p>
                 </div>
               )}
 
@@ -810,9 +1002,17 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
                   <ul className="space-y-1">
                     {advancements.map((adv, i) => {
                       const opt = ADVANCEMENT_OPTIONS.find((o) => o.type === adv.type);
-                      const displayDetail = adv.type === "additional-domain-card" && selectedDomainCardIds.length > 1
-                        ? selectedDomainCardIds[1]
-                        : adv.detail;
+                      let displayDetail: string | null;
+                      if (adv.type === "additional-domain-card" && selectedDomainCardIds.length > 1) {
+                        displayDetail = selectedDomainCardIds[1] ?? null;
+                      } else if (adv.detail && (adv.type === "trait-bonus" || adv.type === "experience-bonus")) {
+                        displayDetail = adv.detail
+                          .split(",")
+                          .map((s) => s.trim().charAt(0).toUpperCase() + s.trim().slice(1))
+                          .join(", ");
+                      } else {
+                        displayDetail = adv.detail ?? null;
+                      }
                       return (
                         <li key={i} className="text-sm text-parchment-300">
                           {opt?.label ?? adv.type}
@@ -829,7 +1029,7 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
                   New Domain Card{selectedDomainCardIds.length > 1 ? "s" : ""}
                 </p>
                 {selectedDomainCardIds.length === 0 ? (
-                  <p className="text-sm text-parchment-500 italic">None (skipped)</p>
+                  <p className="text-sm text-parchment-500 italic">None (no cards available)</p>
                 ) : (
                   <ul className="space-y-0.5">
                     {selectedDomainCardIds.map((id, i) => (
@@ -918,5 +1118,68 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
         )}
       </div>
     </div>
+  );
+}
+
+// ─── DomainCardPickerWrapper ──────────────────────────────────────────────────
+// Thin wrapper that detects when no cards are available to signal the parent.
+
+function DomainCardPickerWrapper({
+  character,
+  targetLevel,
+  maxDomainCardSelections,
+  hasExtraDomainCard,
+  selectedDomainCardIds,
+  setSelectedDomainCardIds,
+  onNoCardsAvailable,
+}: {
+  character: Character;
+  targetLevel: number;
+  maxDomainCardSelections: number;
+  hasExtraDomainCard: boolean;
+  selectedDomainCardIds: string[];
+  setSelectedDomainCardIds: (ids: string[]) => void;
+  onNoCardsAvailable: (v: boolean) => void;
+}) {
+  const domain0 = character.domains[0];
+  const domain1 = character.domains[1];
+  const { data: d0 } = useDomain(domain0);
+  const { data: d1 } = useDomain(domain1);
+
+  // Detect no-cards scenario
+  React.useEffect(() => {
+    // No domains at all
+    if (!domain0 && !domain1) {
+      onNoCardsAvailable(true);
+      return;
+    }
+    // If data hasn't loaded yet, don't flag
+    if ((domain0 && !d0) || (domain1 && !d1)) return;
+    // Check if there are any available cards
+    const ownedSet = new Set<string>();
+    for (const id of [...character.domainVault, ...character.domainLoadout]) {
+      ownedSet.add(id);
+      const slash = id.indexOf("/");
+      if (slash !== -1) ownedSet.add(id.slice(slash + 1));
+    }
+    const allCards: DomainCard[] = [];
+    if (d0?.cards) allCards.push(...d0.cards);
+    if (d1?.cards) allCards.push(...d1.cards);
+    const available = allCards.filter((c) => {
+      if (c.level > targetLevel) return false;
+      if (ownedSet.has(`${c.domain}/${c.cardId}`) || ownedSet.has(c.cardId)) return false;
+      return true;
+    });
+    onNoCardsAvailable(available.length === 0);
+  }, [domain0, domain1, d0, d1, character.domainVault, character.domainLoadout, targetLevel, onNoCardsAvailable]);
+
+  return (
+    <DomainCardPicker
+      character={character}
+      targetLevel={targetLevel}
+      maxSelections={maxDomainCardSelections}
+      selectedCardIds={selectedDomainCardIds}
+      onSelect={setSelectedDomainCardIds}
+    />
   );
 }

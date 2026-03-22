@@ -303,6 +303,9 @@ const PutCharacterSchema = z.object({
   companionState: CompanionStateSchema.nullable().optional().default(null),
   reputationBonuses: z.record(z.string(), z.number().int()).optional().default({}),
   customConditions: z.array(CustomConditionSchema).optional().default([]),
+  // ── Level-up history ────────────────────────────────────────────────────
+  levelUpHistory: z.record(z.string(), z.array(AdvancementChoiceSchema)).optional().default({}),
+  markedTraits: z.array(z.string()).optional().default([]),
 });
 
 const PatchCharacterSchema = PutCharacterSchema.partial();
@@ -612,6 +615,8 @@ function toCharacterResponse(
     companionState: record.companionState ?? null,
     reputationBonuses: record.reputationBonuses ?? {},
     customConditions: record.customConditions ?? [],
+    levelUpHistory: record.levelUpHistory ?? {},
+    markedTraits: record.markedTraits ?? [],
   };
 }
 
@@ -803,6 +808,8 @@ async function createCharacter(
     companionState: null,
     reputationBonuses: {},
     customConditions: [],
+    levelUpHistory: {},
+    markedTraits: [],
   };
 
   // ── SRD Validation ─────────────────────────────────────────────────────────
@@ -1338,7 +1345,6 @@ const AdvancementChoiceSchema = z.object({
     "hp-slot",
     "stress-slot",
     "experience-bonus",
-    "new-experience",
     "evasion",
     "additional-domain-card",
     "subclass-upgrade",
