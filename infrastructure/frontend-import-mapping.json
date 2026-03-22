@@ -1,0 +1,8 @@
+{
+  "FrontendBucketEFE2E19C": {
+    "BucketName": "daggerheart-frontend-prod-625693792690"
+  },
+  "FrontendCdnLogBucketA6150BD3": {
+    "BucketName": "daggerheart-frontend-cdn-logs-prod-625693792690"
+  }
+}

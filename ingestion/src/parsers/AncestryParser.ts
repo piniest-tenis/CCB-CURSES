@@ -14,6 +14,7 @@ import * as fs from "fs";
 import * as path from "path";
 import type { AncestryData } from "@shared/types";
 import { toSlug } from "../transformers/SlugTransformer";
+import { extractMechanicalBonuses } from "../transformers/BonusExtractor";
 
 /**
  * Parse a single ancestry `.md` file into an `AncestryData` object.
@@ -106,6 +107,8 @@ export function parseAncestryFile(
     );
   }
 
+  const mechanicalBonuses = extractMechanicalBonuses(raw, traitDescription, secondTraitDescription);
+
   return {
     ancestryId,
     name: ancestryName,
@@ -115,6 +118,7 @@ export function parseAncestryFile(
     secondTraitName,
     secondTraitDescription,
     source: "homebrew",
+    ...(mechanicalBonuses ? { mechanicalBonuses } : {}),
   };
 }
 

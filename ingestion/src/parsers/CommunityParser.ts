@@ -18,6 +18,7 @@ import * as fs from "fs";
 import * as path from "path";
 import type { CommunityData } from "@shared/types";
 import { toSlug } from "../transformers/SlugTransformer";
+import { extractMechanicalBonuses } from "../transformers/BonusExtractor";
 
 /**
  * Parse a single community `.md` file into a `CommunityData` object.
@@ -94,6 +95,8 @@ export function parseCommunityFile(
     );
   }
 
+  const mechanicalBonuses = extractMechanicalBonuses(raw, traitDescription, "");
+
   return {
     communityId,
     name: communityName,
@@ -101,5 +104,6 @@ export function parseCommunityFile(
     traitName,
     traitDescription,
     source: "homebrew",
+    ...(mechanicalBonuses ? { mechanicalBonuses } : {}),
   };
 }

@@ -344,7 +344,7 @@ export default function ClassDetailPage() {
                     {cls.classFeature.options.map((opt, i) => (
                       <li key={i} className="flex items-start gap-2 text-base text-parchment-500">
                         <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-burgundy-600" />
-                        <MarkdownContent className="inline">{opt}</MarkdownContent>
+                        <MarkdownContent inline>{opt}</MarkdownContent>
                       </li>
                     ))}
                   </ul>
@@ -385,7 +385,7 @@ export default function ClassDetailPage() {
                       <span className="shrink-0 rounded border border-burgundy-800 bg-slate-900 w-6 h-6 flex items-center justify-center text-sm font-bold text-parchment-600">
                         {i + 1}
                       </span>
-                      <MarkdownContent className="text-base text-parchment-400">{q}</MarkdownContent>
+                      <MarkdownContent inline className="text-base text-parchment-400">{q}</MarkdownContent>
                     </li>
                   ))}
                 </ol>
@@ -401,7 +401,7 @@ export default function ClassDetailPage() {
                       <span className="shrink-0 rounded border border-burgundy-800 bg-slate-900 w-6 h-6 flex items-center justify-center text-sm font-bold text-parchment-600">
                         {i + 1}
                       </span>
-                      <MarkdownContent className="text-base text-parchment-400">{q}</MarkdownContent>
+                      <MarkdownContent inline className="text-base text-parchment-400">{q}</MarkdownContent>
                     </li>
                   ))}
                 </ol>

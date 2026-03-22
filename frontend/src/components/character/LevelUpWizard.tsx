@@ -13,15 +13,17 @@
  *
  * SRD rules enforced:
  *   - Exactly 2 advancement slots (proficiency-increase and multiclass cost 2)
- *   - Multiclass only available Tier 3+ (level 5+)
+ *   - Multiclass only available Tier 3+ (level 5+), only once ever
+ *   - Multiclass mutually exclusive with subclass-upgrade per tier
+ *   - Multiclass grants: class feature + one domain (at ≤ half-level cards) + one subclass Foundation
+ *   - When multiclassed, domain card step includes multiclass domain at half-level cap
  *   - Tier achievements at levels 2, 5, 8: +1 proficiency (auto), +1 experience at +2
  *   - Tier achievements at levels 5, 8: clear marked traits
  *   - Damage thresholds +1 (auto)
- *   - Domain card level filter: card.level <= targetLevel
+ *   - Domain card level filter: card.level <= targetLevel (primary), card.level <= ceil(targetLevel/2) (multiclass)
  *   - "Extra Domain Card" advancement grants one extra pick on the Domain Card step
  *   - "+1 to Two Traits" marks both stats; once per tier
  *   - "+1 to Two Experiences" boosts two existing experiences
- *   - Subclass upgrade and multiclass are mutually exclusive within a tier
  *   - HP max 12, Stress max 12
  *   - Domain card acquisition is mandatory (cannot skip)
  *
@@ -35,9 +37,10 @@ import type {
   CoreStatName,
   DomainCard,
   Character,
+  ClassData,
 } from "@shared/types";
 import { useCharacterLevelUp, type LevelUpInput } from "@/hooks/useCharacter";
-import { useDomain, useClass } from "@/hooks/useGameData";
+import { useDomain, useClass, useClasses } from "@/hooks/useGameData";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { ApiError } from "@/lib/api";
 
@@ -76,6 +79,11 @@ function isTierAchievement(toLevel: number): boolean {
 
 function advancementSlotCost(type: AdvancementType): number {
   return type === "proficiency-increase" || type === "multiclass" ? 2 : 1;
+}
+
+/** SRD p.43: multiclass domain cards are capped at ceil(characterLevel / 2). */
+function multiclassDomainCardCap(characterLevel: number): number {
+  return Math.ceil(characterLevel / 2);
 }
 
 // All advancement options with labels and descriptions
@@ -141,7 +149,7 @@ const ADVANCEMENT_OPTIONS: AdvancementOption[] = [
   {
     type: "subclass-upgrade",
     label: "Subclass Upgrade",
-    description: "Unlock next subclass tier (Foundation -> Specialization -> Mastery). Mutually exclusive with Multiclass per tier.",
+    description: "Unlock next subclass tier (Foundation → Specialization → Mastery). Mutually exclusive with Multiclass per tier.",
     slotCost: 1,
     needsDetail: false,
     minLevel: 2,
@@ -190,6 +198,242 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
   );
 }
 
+// ─── MulticlassPicker ─────────────────────────────────────────────────────────
+// A three-phase inline picker: Class → Domain → Subclass.
+// Uses the same card-row drill-down pattern as DomainCardPicker.
+
+interface MulticlassPickerProps {
+  currentClassId: string;
+  /** Pipe-delimited "classId|domainId|subclassId" or "" */
+  value: string;
+  onChange: (detail: string) => void;
+}
+
+function MulticlassPicker({ currentClassId, value, onChange }: MulticlassPickerProps) {
+  const { data: classListData, isLoading: classListLoading } = useClasses();
+
+  // Parse current value
+  const [selectedClassId, selectedDomainId, selectedSubclassId] = useMemo(() => {
+    if (!value) return ["", "", ""];
+    const parts = value.split("|");
+    return [parts[0] ?? "", parts[1] ?? "", parts[2] ?? ""];
+  }, [value]);
+
+  const [phase, setPhase] = useState<"class" | "domain" | "subclass">(
+    selectedSubclassId ? "subclass" : selectedDomainId ? "domain" : "class"
+  );
+
+  // Fetch data for the chosen class (for domain and subclass steps)
+  const { data: chosenClassData, isLoading: chosenClassLoading } = useClass(
+    selectedClassId || undefined
+  );
+
+  // ── Phase: Class selection ────────────────────────────────────────────────
+
+  const availableClasses = useMemo(() => {
+    if (!classListData?.classes) return [];
+    // Cannot multiclass into the same class
+    return classListData.classes.filter((c) => c.classId !== currentClassId);
+  }, [classListData, currentClassId]);
+
+  if (classListLoading) {
+    return (
+      <div className="flex items-center gap-2 py-4">
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#577399] border-t-transparent" aria-hidden="true" />
+        <span className="text-xs text-parchment-500">Loading classes...</span>
+      </div>
+    );
+  }
+
+  // ── Phase: Class ──────────────────────────────────────────────────────────
+
+  if (phase === "class") {
+    return (
+      <div className="space-y-2">
+        <p className="text-[11px] text-parchment-500">
+          Select the class you want to multiclass into. You will choose one of its domains and one of its subclass Foundation features.
+        </p>
+        <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+          {availableClasses.map((cls) => {
+            const isSelected = cls.classId === selectedClassId;
+            return (
+              <button
+                key={cls.classId}
+                type="button"
+                onClick={() => {
+                  // Reset domain/subclass when class changes
+                  onChange(`${cls.classId}||`);
+                  setPhase("domain");
+                }}
+                className={`
+                  w-full flex items-center rounded-lg border transition-all text-left px-3 py-2.5
+                  ${isSelected
+                    ? "border-[#577399] bg-[#577399]/15"
+                    : "border-slate-700/60 bg-slate-900/30 hover:border-slate-600"
+                  }
+                `}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-[#f7f7ff]">{cls.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-[#b9baa3]/50 truncate">
+                      {cls.domains.join(" & ")}
+                    </span>
+                  </div>
+                </div>
+                {isSelected && (
+                  <span className="ml-2 text-[#577399] text-lg leading-none shrink-0">✓</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Phase: Domain ─────────────────────────────────────────────────────────
+
+  if (phase === "domain") {
+    const domains = chosenClassData?.domains ?? [];
+
+    return (
+      <div className="space-y-2">
+        <button
+          type="button"
+          onClick={() => setPhase("class")}
+          className="flex items-center gap-1.5 text-xs text-[#b9baa3]/50 hover:text-[#b9baa3] transition-colors"
+        >
+          ← Change class
+        </button>
+        <p className="text-[11px] text-parchment-500">
+          Choose <span className="font-semibold text-[#f7f7ff]">one domain</span> from{" "}
+          <span className="font-semibold text-[#f7f7ff]">{chosenClassData?.name ?? selectedClassId}</span>.
+          Cards from this domain will be available at up to half your character level (rounded up).
+        </p>
+        {chosenClassLoading ? (
+          <div className="flex items-center gap-2 py-2">
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#577399] border-t-transparent" aria-hidden="true" />
+            <span className="text-xs text-parchment-500">Loading class details...</span>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {domains.map((domain) => {
+              const isSelected = domain === selectedDomainId;
+              return (
+                <button
+                  key={domain}
+                  type="button"
+                  onClick={() => {
+                    onChange(`${selectedClassId}|${domain}|`);
+                    setPhase("subclass");
+                  }}
+                  className={`
+                    w-full flex items-center rounded-lg border transition-all text-left px-3 py-2.5
+                    ${isSelected
+                      ? "border-[#577399] bg-[#577399]/15"
+                      : "border-slate-700/60 bg-slate-900/30 hover:border-slate-600"
+                    }
+                  `}
+                >
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-semibold text-[#f7f7ff]">{domain}</span>
+                    <p className="text-xs text-[#b9baa3]/50 mt-0.5">Domain</p>
+                  </div>
+                  {isSelected && (
+                    <span className="ml-2 text-[#577399] text-lg leading-none shrink-0">✓</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Phase: Subclass ────────────────────────────────────────────────────────
+
+  const subclasses = chosenClassData?.subclasses ?? [];
+
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={() => setPhase("domain")}
+        className="flex items-center gap-1.5 text-xs text-[#b9baa3]/50 hover:text-[#b9baa3] transition-colors"
+      >
+        ← Change domain
+      </button>
+      <p className="text-[11px] text-parchment-500">
+        Choose a <span className="font-semibold text-[#f7f7ff]">subclass</span> from{" "}
+        <span className="font-semibold text-[#f7f7ff]">{chosenClassData?.name ?? selectedClassId}</span>{" "}
+        to take its <span className="font-semibold text-[#f7f7ff]">Foundation</span> feature card.
+        You cannot upgrade this subclass beyond Foundation.
+      </p>
+      {chosenClassLoading ? (
+        <div className="flex items-center gap-2 py-2">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#577399] border-t-transparent" aria-hidden="true" />
+          <span className="text-xs text-parchment-500">Loading class details...</span>
+        </div>
+      ) : (
+        <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+          {subclasses.map((sc) => {
+            const isSelected = sc.subclassId === selectedSubclassId;
+            return (
+              <button
+                key={sc.subclassId}
+                type="button"
+                onClick={() => {
+                  onChange(`${selectedClassId}|${selectedDomainId}|${sc.subclassId}`);
+                  // Stay in subclass phase so user can see their final selection
+                }}
+                className={`
+                  w-full flex items-center rounded-lg border transition-all text-left px-3 py-2.5
+                  ${isSelected
+                    ? "border-[#577399] bg-[#577399]/15"
+                    : "border-slate-700/60 bg-slate-900/30 hover:border-slate-600"
+                  }
+                `}
+              >
+                {/* Selection circle */}
+                <span
+                  className={`
+                    mr-3 h-5 w-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors
+                    ${isSelected ? "border-[#577399] bg-[#577399]" : "border-slate-600"}
+                  `}
+                >
+                  {isSelected && <span className="h-2 w-2 rounded-full bg-white" />}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-semibold text-[#f7f7ff]">{sc.name}</span>
+                  {sc.description && (
+                    <p className="text-xs text-[#b9baa3]/50 mt-0.5 truncate">{sc.description}</p>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Summary when all three are chosen */}
+      {selectedClassId && selectedDomainId && selectedSubclassId && (
+        <div className="rounded border border-[#577399]/40 bg-[#577399]/10 px-3 py-2 mt-2">
+          <p className="text-[11px] text-[#b9baa3]">
+            <span className="font-semibold text-[#f7f7ff]">Multiclass Summary:</span>{" "}
+            {chosenClassData?.name ?? selectedClassId} ·{" "}
+            <span className="text-[#577399]">{selectedDomainId}</span> domain ·{" "}
+            {subclasses.find((s) => s.subclassId === selectedSubclassId)?.name ?? selectedSubclassId} Foundation
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── AdvancementPicker ────────────────────────────────────────────────────────
 
 interface AdvancementPickerProps {
@@ -207,6 +451,8 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
   // For trait-bonus: two stat selections. For experience-bonus: two experience selections.
   const [detailValue1, setDetailValue1] = useState("");
   const [detailValue2, setDetailValue2] = useState("");
+  // For multiclass: the pipe-delimited "classId|domainId|subclassId" string
+  const [multiclassDetail, setMulticlassDetail] = useState("");
 
   // ── Per-tier restriction helpers ────────────────────────────────────────
   const targetTier = tierForLevel(targetLevel);
@@ -279,6 +525,9 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
       if (multiclassUsedEver || choosingMulticlass) return false;
     }
 
+    // experience-bonus: requires at least 2 experiences to pick from
+    if (opt.type === "experience-bonus" && character.experiences.length < 2) return false;
+
     return true;
   });
 
@@ -287,6 +536,7 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
       setPendingType(opt.type);
       setDetailValue1("");
       setDetailValue2("");
+      setMulticlassDetail("");
       return;
     }
     onChange([...choices, { type: opt.type }]);
@@ -301,8 +551,12 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
     } else if (pendingType === "experience-bonus") {
       if (!detailValue1 || !detailValue2) return;
       onChange([...choices, { type: pendingType, detail: `${detailValue1},${detailValue2}` }]);
+    } else if (pendingType === "multiclass") {
+      const parts = multiclassDetail.split("|");
+      if (parts.length !== 3 || parts.some((p) => !p.trim())) return;
+      onChange([...choices, { type: pendingType, detail: multiclassDetail }]);
     } else {
-      // multiclass — single text detail
+      // Fallback (should not be reached for current option set)
       if (!detailValue1.trim()) return;
       onChange([...choices, { type: pendingType, detail: detailValue1.trim() }]);
     }
@@ -310,6 +564,7 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
     setPendingType(null);
     setDetailValue1("");
     setDetailValue2("");
+    setMulticlassDetail("");
   };
 
   const handleRemove = (index: number) => {
@@ -320,6 +575,7 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
     setPendingType(null);
     setDetailValue1("");
     setDetailValue2("");
+    setMulticlassDetail("");
   };
 
   // Check if confirm button should be enabled for detail input
@@ -330,6 +586,10 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
     }
     if (pendingType === "experience-bonus") {
       return !!detailValue1 && !!detailValue2;
+    }
+    if (pendingType === "multiclass") {
+      const parts = multiclassDetail.split("|");
+      return parts.length === 3 && parts.every((p) => p.trim().length > 0);
     }
     return !!detailValue1.trim();
   };
@@ -419,7 +679,7 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
               "
             >
               <option value="">Select experience...</option>
-              {character.experiences.map((exp) => (
+              {character.experiences.filter((exp) => exp.name !== detailValue1).map((exp) => (
                 <option key={exp.name} value={exp.name}>
                   {exp.name} (+{exp.bonus})
                 </option>
@@ -429,21 +689,14 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
         )}
 
         {pendingType === "multiclass" && (
-          <input
-            type="text"
-            value={detailValue1}
-            onChange={(e) => setDetailValue1(e.target.value)}
-            placeholder="Class ID for multiclass"
-            aria-label="Multiclass target class"
-            className="
-              w-full rounded bg-slate-900 px-2 py-1.5 text-sm text-parchment-200
-              border border-[#577399]/40 focus:outline-none focus:ring-1 focus:ring-[#577399]
-              placeholder-parchment-700
-            "
+          <MulticlassPicker
+            currentClassId={character.classId}
+            value={multiclassDetail}
+            onChange={setMulticlassDetail}
           />
         )}
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 pt-1">
           <button
             type="button"
             onClick={handleConfirmDetail}
@@ -475,7 +728,7 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
     );
   };
 
-  /** Format the detail string for display (turn "agility,strength" into "Agility, Strength") */
+  /** Format the detail string for display */
   const formatDetail = (choice: AdvancementChoice): string | null => {
     if (!choice.detail) return null;
     if (choice.type === "trait-bonus" || choice.type === "experience-bonus") {
@@ -484,6 +737,10 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
         .map((s) => s.trim())
         .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
         .join(", ");
+    }
+    if (choice.type === "multiclass") {
+      const parts = choice.detail.split("|");
+      return parts.filter(Boolean).join(" · ");
     }
     return choice.detail;
   };
@@ -533,7 +790,7 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
         </div>
       )}
 
-      {/* Available options (only when slots remain) */}
+      {/* Available options (only when slots remain and no pending detail input) */}
       {slotsRemaining > 0 && !pendingType && (
         <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
           {availableOptions.map((opt) => (
@@ -568,9 +825,8 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
 }
 
 // ─── DomainCardPicker ─────────────────────────────────────────────────────────
-// Matches the drilldown selection pattern used in DomainCardSelectionPanel
-// (character builder): list of CardRow items → CardDetail drill-down with full
-// markdown-rendered card text and a select/deselect button.
+// Matches the drilldown selection pattern used in DomainCardSelectionPanel.
+// Also includes multiclass domain (capped at half-level) when applicable.
 
 /** Truncate text to ≤50 characters for collapsed list view. */
 function truncateCardText(text: string, max = 50): string {
@@ -703,12 +959,14 @@ function LevelUpCardRow({
   card,
   isSelected,
   canSelect,
+  isMulticlassDomain,
   onToggle,
   onDrill,
 }: {
   card: DomainCard;
   isSelected: boolean;
   canSelect: boolean;
+  isMulticlassDomain?: boolean;
   onToggle: () => void;
   onDrill: () => void;
 }) {
@@ -748,6 +1006,9 @@ function LevelUpCardRow({
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-[#f7f7ff] truncate">{card.name}</span>
             <span className="text-xs text-[#b9baa3]/40 shrink-0">{card.domain}</span>
+            {isMulticlassDomain && (
+              <span className="text-[10px] text-[#577399]/70 font-bold shrink-0 border border-[#577399]/30 rounded px-1">MC</span>
+            )}
             {card.isCursed && (
               <span className="text-[10px] text-[#fe5f55] font-bold shrink-0">Cursed</span>
             )}
@@ -785,9 +1046,15 @@ interface DomainCardPickerProps {
   maxSelections: number;
   selectedCardIds: string[];
   onSelect: (cardIds: string[]) => void;
+  /**
+   * If the character is actively multiclassing THIS level-up (not yet persisted),
+   * provide the pending multiclass domain name here so the picker can include
+   * those cards at the half-level cap.
+   */
+  pendingMulticlassDomain?: string | null;
 }
 
-function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardIds, onSelect }: DomainCardPickerProps) {
+function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardIds, onSelect, pendingMulticlassDomain }: DomainCardPickerProps) {
   const [detailCard, setDetailCard] = useState<DomainCard | null>(null);
 
   // Fetch the class data to get authoritative domain names (matches DomainLoadout pattern)
@@ -799,15 +1066,32 @@ function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardI
   const { data: domainData0, isLoading: loading0 } = useDomain(domain0);
   const { data: domainData1, isLoading: loading1 } = useDomain(domain1);
 
-  const isLoading = classLoading || (!!domain0 && loading0) || (!!domain1 && loading1);
+  // Multiclass domain: either already persisted on the character, or pending from this level-up
+  const multiclassDomain = pendingMulticlassDomain ?? character.multiclassDomainId ?? null;
+  const { data: multiclassDomainData, isLoading: multiclassLoading } = useDomain(multiclassDomain || undefined);
+
+  const isLoading = classLoading
+    || (!!domain0 && loading0)
+    || (!!domain1 && loading1)
+    || (!!multiclassDomain && multiclassLoading);
+
+  // Half-level cap for multiclass domain cards (SRD p.43)
+  const mcCardCap = multiclassDomainCardCap(targetLevel);
 
   // Combine and filter cards
+  // Primary domain cards: level ≤ targetLevel
+  // Multiclass domain cards: level ≤ ceil(targetLevel/2)
   const allCards = useMemo(() => {
     const cards: DomainCard[] = [];
     if (domainData0?.cards) cards.push(...domainData0.cards);
     if (domainData1?.cards) cards.push(...domainData1.cards);
     return cards;
   }, [domainData0, domainData1]);
+
+  const multiclassCards = useMemo(() => {
+    if (!multiclassDomainData?.cards) return [];
+    return multiclassDomainData.cards;
+  }, [multiclassDomainData]);
 
   // Build owned set using the same prefixed format as the builder: "domain/cardId"
   const ownedSet = useMemo(() => {
@@ -822,15 +1106,25 @@ function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardI
   }, [character.domainVault, character.domainLoadout]);
 
   const availableCards = useMemo(() => {
-    return allCards
+    const primary = allCards
       .filter((c) => {
         if (c.level > targetLevel) return false;
-        // Check both "domain/cardId" prefixed and raw "cardId" against owned set
         if (ownedSet.has(`${c.domain}/${c.cardId}`) || ownedSet.has(c.cardId)) return false;
         return true;
       })
-      .sort((a, b) => a.level - b.level || a.domain.localeCompare(b.domain) || a.name.localeCompare(b.name));
-  }, [allCards, targetLevel, ownedSet]);
+      .map((c) => ({ card: c, isMulticlass: false }));
+
+    const mc = multiclassCards
+      .filter((c) => {
+        if (c.level > mcCardCap) return false; // SRD: half-level cap for multiclass domain
+        if (ownedSet.has(`${c.domain}/${c.cardId}`) || ownedSet.has(c.cardId)) return false;
+        return true;
+      })
+      .map((c) => ({ card: c, isMulticlass: true }));
+
+    return [...primary, ...mc]
+      .sort((a, b) => a.card.level - b.card.level || a.card.domain.localeCompare(b.card.domain) || a.card.name.localeCompare(b.card.name));
+  }, [allCards, multiclassCards, targetLevel, mcCardCap, ownedSet]);
 
   const handleToggle = (card: DomainCard) => {
     const cardId = card.cardId;
@@ -853,6 +1147,12 @@ function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardI
       </div>
     );
   }
+
+  // Describe which domains are available
+  const primaryDomainLabel = [domain0, domain1].filter(Boolean).join(" & ");
+  const domainDescription = multiclassDomain
+    ? `${primaryDomainLabel} (up to level ${targetLevel}) · ${multiclassDomain} (up to level ${mcCardCap}, multiclass)`
+    : `${primaryDomainLabel} (up to level ${targetLevel})`;
 
   // ── Detail view (drill-down) ──
   if (detailCard) {
@@ -904,11 +1204,14 @@ function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardI
 
       <p className="text-[11px] text-parchment-500">
         Choose {maxSelections > 1 ? `up to ${maxSelections} cards` : "one card"} from your domains
-        ({domain0 && domain1 ? `${domain0} & ${domain1}` : domain0 ?? domain1}, level {targetLevel} or below).
+        ({domainDescription}).
         {maxSelections > 1 && " You chose Extra Domain Card as an advancement, granting one extra pick."}
         {" "}Cards you already own are excluded.
         {" "}Domain card acquisition is required.
         {" "}Tap a card to view its full details.
+        {multiclassDomain && (
+          <span className="ml-1 text-[#577399]/70">Cards marked <span className="font-bold">MC</span> are from your multiclass domain.</span>
+        )}
       </p>
 
       {isLoading ? (
@@ -922,7 +1225,7 @@ function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardI
         </p>
       ) : (
         <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-          {availableCards.map((card) => {
+          {availableCards.map(({ card, isMulticlass }) => {
             const isSelected = selectedCardIds.includes(card.cardId);
             const atMax = selectedCardIds.length >= maxSelections && !isSelected;
             return (
@@ -931,6 +1234,7 @@ function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardI
                 card={card}
                 isSelected={isSelected}
                 canSelect={!atMax}
+                isMulticlassDomain={isMulticlass}
                 onToggle={() => handleToggle(card)}
                 onDrill={() => setDetailCard(card)}
               />
@@ -966,6 +1270,15 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
   // Check if user chose the "additional-domain-card" advancement
   const hasExtraDomainCard = advancements.some((a) => a.type === "additional-domain-card");
   const maxDomainCardSelections = hasExtraDomainCard ? 2 : 1;
+
+  // Derive the pending multiclass domain from this level-up's advancement choices
+  // (the multiclass is not yet persisted on character, but we need it for the domain card step)
+  const pendingMulticlassDetail = advancements.find((a) => a.type === "multiclass")?.detail ?? null;
+  const pendingMulticlassDomain = useMemo(() => {
+    if (!pendingMulticlassDetail) return null;
+    const parts = pendingMulticlassDetail.split("|");
+    return parts[1]?.trim() || null;
+  }, [pendingMulticlassDetail]);
 
   // Domain card acquisition is mandatory — but if no cards are available, allow proceeding
   const [noCardsAvailable, setNoCardsAvailable] = useState(false);
@@ -1083,6 +1396,11 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
                   <p className="text-sm font-semibold text-[#f7f7ff]">
                     Tier {currentTier} &rarr; Tier {newTier}
                   </p>
+                  {targetLevel === 5 && (
+                    <p className="text-xs text-parchment-400 mt-1">
+                      Multiclassing becomes available at Tier 3 (level 5+).
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -1165,105 +1483,22 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
             selectedDomainCardIds={selectedDomainCardIds}
             setSelectedDomainCardIds={setSelectedDomainCardIds}
             onNoCardsAvailable={setNoCardsAvailable}
+            pendingMulticlassDomain={pendingMulticlassDomain}
           />
         )}
 
         {/* Step 3: Confirm */}
         {step === 3 && (
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-parchment-200">
-              Confirm Level Up
-            </h3>
-
-            <div className="rounded-lg border border-[#577399]/30 bg-slate-900/80 p-4 space-y-3">
-              <div>
-                <p className="text-[10px] uppercase tracking-wider text-parchment-600 font-medium mb-1">
-                  Target Level
-                </p>
-                <p className="text-lg font-bold text-[#f7f7ff]">{targetLevel}</p>
-              </div>
-
-              {hasTierAchievement && (
-                <div>
-                  <p className="text-[10px] uppercase tracking-wider text-parchment-600 font-medium mb-1">
-                    Tier Achievement
-                  </p>
-                  <p className="text-sm text-[#b9baa3]">
-                    +1 Proficiency, +1 Experience at +2
-                    {clearsMarkedTraits && ", Clear Marked Traits"}
-                  </p>
-                </div>
-              )}
-
-              <div>
-                <p className="text-[10px] uppercase tracking-wider text-parchment-600 font-medium mb-1">
-                  Automatic
-                </p>
-                <p className="text-sm text-parchment-400">+1 Major Threshold, +1 Severe Threshold</p>
-              </div>
-
-              <div>
-                <p className="text-[10px] uppercase tracking-wider text-parchment-600 font-medium mb-1">
-                  Advancements ({slotsUsed}/2 slots)
-                </p>
-                {advancements.length === 0 ? (
-                  <p className="text-xs text-parchment-600 italic">None selected</p>
-                ) : (
-                  <ul className="space-y-1">
-                    {advancements.map((adv, i) => {
-                      const opt = ADVANCEMENT_OPTIONS.find((o) => o.type === adv.type);
-                      let displayDetail: string | null;
-                      if (adv.type === "additional-domain-card" && selectedDomainCardIds.length > 1) {
-                        displayDetail = selectedDomainCardIds[1] ?? null;
-                      } else if (adv.detail && (adv.type === "trait-bonus" || adv.type === "experience-bonus")) {
-                        displayDetail = adv.detail
-                          .split(",")
-                          .map((s) => s.trim().charAt(0).toUpperCase() + s.trim().slice(1))
-                          .join(", ");
-                      } else {
-                        displayDetail = adv.detail ?? null;
-                      }
-                      return (
-                        <li key={i} className="text-sm text-parchment-300">
-                          {opt?.label ?? adv.type}
-                          {displayDetail && <span className="text-parchment-500"> ({displayDetail})</span>}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
-
-              <div>
-                <p className="text-[10px] uppercase tracking-wider text-parchment-600 font-medium mb-1">
-                  New Domain Card{selectedDomainCardIds.length > 1 ? "s" : ""}
-                </p>
-                {selectedDomainCardIds.length === 0 ? (
-                  <p className="text-sm text-parchment-500 italic">None (no cards available)</p>
-                ) : (
-                  <ul className="space-y-0.5">
-                    {selectedDomainCardIds.map((id, i) => (
-                      <li key={id} className="text-sm text-parchment-300">
-                        {id}
-                        {i === 1 && <span className="ml-1 text-xs text-[#577399]">(extra)</span>}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-
-            {/* Error display */}
-            {levelUpMutation.isError && (
-              <div role="alert" className="rounded border border-[#fe5f55]/60 bg-[#fe5f55]/10 px-3 py-2">
-                <p className="text-xs text-[#fe5f55]">
-                  {levelUpMutation.error instanceof ApiError
-                    ? levelUpMutation.error.message
-                    : levelUpMutation.error?.message ?? "Level up failed."}
-                </p>
-              </div>
-            )}
-          </div>
+          <ConfirmStep
+            character={character}
+            targetLevel={targetLevel}
+            hasTierAchievement={hasTierAchievement}
+            clearsMarkedTraits={clearsMarkedTraits}
+            advancements={advancements}
+            slotsUsed={slotsUsed}
+            selectedDomainCardIds={selectedDomainCardIds}
+            levelUpError={levelUpMutation.isError ? levelUpMutation.error : null}
+          />
         )}
       </div>
 
@@ -1331,6 +1566,130 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
   );
 }
 
+// ─── ConfirmStep ──────────────────────────────────────────────────────────────
+
+function ConfirmStep({
+  character,
+  targetLevel,
+  hasTierAchievement,
+  clearsMarkedTraits,
+  advancements,
+  slotsUsed,
+  selectedDomainCardIds,
+  levelUpError,
+}: {
+  character: Character;
+  targetLevel: number;
+  hasTierAchievement: boolean;
+  clearsMarkedTraits: boolean;
+  advancements: AdvancementChoice[];
+  slotsUsed: number;
+  selectedDomainCardIds: string[];
+  levelUpError: unknown;
+}) {
+  const formatAdvancementDetail = (adv: AdvancementChoice): string | null => {
+    if (!adv.detail) return null;
+    if (adv.type === "trait-bonus" || adv.type === "experience-bonus") {
+      return adv.detail
+        .split(",")
+        .map((s) => s.trim().charAt(0).toUpperCase() + s.trim().slice(1))
+        .join(", ");
+    }
+    if (adv.type === "multiclass") {
+      const parts = adv.detail.split("|");
+      return parts.filter(Boolean).join(" · ");
+    }
+    return adv.detail;
+  };
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-sm font-semibold text-parchment-200">
+        Confirm Level Up
+      </h3>
+
+      <div className="rounded-lg border border-[#577399]/30 bg-slate-900/80 p-4 space-y-3">
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-parchment-600 font-medium mb-1">
+            Target Level
+          </p>
+          <p className="text-lg font-bold text-[#f7f7ff]">{targetLevel}</p>
+        </div>
+
+        {hasTierAchievement && (
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-parchment-600 font-medium mb-1">
+              Tier Achievement
+            </p>
+            <p className="text-sm text-[#b9baa3]">
+              +1 Proficiency, +1 Experience at +2
+              {clearsMarkedTraits && ", Clear Marked Traits"}
+            </p>
+          </div>
+        )}
+
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-parchment-600 font-medium mb-1">
+            Automatic
+          </p>
+          <p className="text-sm text-parchment-400">+1 Major Threshold, +1 Severe Threshold</p>
+        </div>
+
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-parchment-600 font-medium mb-1">
+            Advancements ({slotsUsed}/2 slots)
+          </p>
+          {advancements.length === 0 ? (
+            <p className="text-xs text-parchment-600 italic">None selected</p>
+          ) : (
+            <ul className="space-y-1">
+              {advancements.map((adv, i) => {
+                const opt = ADVANCEMENT_OPTIONS.find((o) => o.type === adv.type);
+                const displayDetail = formatAdvancementDetail(adv);
+                return (
+                  <li key={i} className="text-sm text-parchment-300">
+                    {opt?.label ?? adv.type}
+                    {displayDetail && <span className="text-parchment-500"> ({displayDetail})</span>}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-parchment-600 font-medium mb-1">
+            New Domain Card{selectedDomainCardIds.length > 1 ? "s" : ""}
+          </p>
+          {selectedDomainCardIds.length === 0 ? (
+            <p className="text-sm text-parchment-500 italic">None (no cards available)</p>
+          ) : (
+            <ul className="space-y-0.5">
+              {selectedDomainCardIds.map((id, i) => (
+                <li key={id} className="text-sm text-parchment-300">
+                  {id}
+                  {i === 1 && <span className="ml-1 text-xs text-[#577399]">(extra)</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      {/* Error display */}
+      {!!levelUpError && (
+        <div role="alert" className="rounded border border-[#fe5f55]/60 bg-[#fe5f55]/10 px-3 py-2">
+          <p className="text-xs text-[#fe5f55]">
+            {levelUpError instanceof ApiError
+              ? levelUpError.message
+              : (levelUpError as Error)?.message ?? "Level up failed."}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── DomainCardPickerWrapper ──────────────────────────────────────────────────
 // Thin wrapper that detects when no cards are available to signal the parent.
 
@@ -1342,6 +1701,7 @@ function DomainCardPickerWrapper({
   selectedDomainCardIds,
   setSelectedDomainCardIds,
   onNoCardsAvailable,
+  pendingMulticlassDomain,
 }: {
   character: Character;
   targetLevel: number;
@@ -1350,6 +1710,7 @@ function DomainCardPickerWrapper({
   selectedDomainCardIds: string[];
   setSelectedDomainCardIds: (ids: string[]) => void;
   onNoCardsAvailable: (v: boolean) => void;
+  pendingMulticlassDomain?: string | null;
 }) {
   // Fetch authoritative domain names from class data (matches DomainCardPicker/DomainLoadout pattern)
   const { data: classData } = useClass(character.classId || undefined);
@@ -1358,6 +1719,12 @@ function DomainCardPickerWrapper({
   const domain1 = classDomains[1];
   const { data: d0 } = useDomain(domain0);
   const { data: d1 } = useDomain(domain1);
+
+  // Multiclass domain: either pending from this level-up, or already persisted on the character
+  const multiclassDomain = pendingMulticlassDomain ?? character.multiclassDomainId ?? null;
+  const { data: dmc } = useDomain(multiclassDomain || undefined);
+
+  const mcCardCap = multiclassDomainCardCap(targetLevel);
 
   // Detect no-cards scenario
   React.useEffect(() => {
@@ -1369,6 +1736,9 @@ function DomainCardPickerWrapper({
     }
     // If data hasn't loaded yet, don't flag
     if ((domain0 && !d0) || (domain1 && !d1)) return;
+    // If multiclass domain is expected but data hasn't loaded, wait
+    if (multiclassDomain && !dmc) return;
+
     // Check if there are any available cards
     const ownedSet = new Set<string>();
     for (const id of [...character.domainVault, ...character.domainLoadout]) {
@@ -1384,8 +1754,17 @@ function DomainCardPickerWrapper({
       if (ownedSet.has(`${c.domain}/${c.cardId}`) || ownedSet.has(c.cardId)) return false;
       return true;
     });
-    onNoCardsAvailable(available.length === 0);
-  }, [classData, domain0, domain1, d0, d1, character.domainVault, character.domainLoadout, targetLevel, onNoCardsAvailable]);
+
+    // Also check multiclass domain cards (capped at half-level)
+    const mcAvailable = (dmc?.cards ?? []).filter((c) => {
+      if (c.level > mcCardCap) return false;
+      if (ownedSet.has(`${c.domain}/${c.cardId}`) || ownedSet.has(c.cardId)) return false;
+      return true;
+    });
+
+    onNoCardsAvailable(available.length === 0 && mcAvailable.length === 0);
+  }, [classData, domain0, domain1, d0, d1, dmc, multiclassDomain, mcCardCap,
+      character.domainVault, character.domainLoadout, targetLevel, onNoCardsAvailable]);
 
   return (
     <DomainCardPicker
@@ -1394,6 +1773,7 @@ function DomainCardPickerWrapper({
       maxSelections={maxDomainCardSelections}
       selectedCardIds={selectedDomainCardIds}
       onSelect={setSelectedDomainCardIds}
+      pendingMulticlassDomain={pendingMulticlassDomain}
     />
   );
 }

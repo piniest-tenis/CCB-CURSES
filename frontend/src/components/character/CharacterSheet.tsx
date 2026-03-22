@@ -317,10 +317,21 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
     (c) => c.classId === activeCharacter.classId
   )?.name ?? "Unknown";
 
+  const multiclassClassName = activeCharacter.multiclassClassId
+    ? (classesData?.classes.find(
+        (c) => c.classId === activeCharacter.multiclassClassId
+      )?.name ?? activeCharacter.multiclassClassName ?? null)
+    : null;
+
+  // Build class display: "Warrior" or "Warrior / Bard" when multiclassed
+  const classDisplay = multiclassClassName
+    ? `${className} / ${multiclassClassName}`
+    : className;
+
   const kickerParts: string[] = [];
   if (activeCharacter.communityId) kickerParts.push(communityName);
   if (activeCharacter.ancestryId)  kickerParts.push(ancestryName);
-  if (activeCharacter.classId)     kickerParts.push(className);
+  if (activeCharacter.classId)     kickerParts.push(classDisplay);
 
   // Conditions collapsed display
   const activeConditionLabels = activeConditions.map((id) => {
@@ -573,11 +584,24 @@ interface FeaturesPanelProps {
 
 function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
   const { activeCharacter } = useCharacterStore();
+
+  // Fetch multiclass class data when the character has multiclassed
+  const { data: multiclassData } = useClass(
+    activeCharacter?.multiclassClassId ?? undefined
+  );
+
   if (!activeCharacter || !classData) return null;
 
   const activeSubclass = classData.subclasses.find(
     (sc) => sc.subclassId === activeCharacter.subclassId
   );
+
+  // Resolve multiclass subclass (Foundation features only — SRD: multiclassing
+  // never grants Specialization or Mastery)
+  const mcSubclass = multiclassData?.subclasses.find(
+    (sc) => sc.subclassId === activeCharacter.multiclassSubclassId
+  ) ?? null;
+
   const level = activeCharacter.level;
   // SRD page 22: Tier 1=level 1, Tier 2=levels 2-4, Tier 3=levels 5-7, Tier 4=levels 8-10.
   const tier = level >= 8 ? 4 : level >= 5 ? 3 : level >= 2 ? 2 : 1;
@@ -638,10 +662,10 @@ function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
               {classData.classFeature.description}
             </MarkdownContent>
             {classData.classFeature.options.length > 0 && (
-              <ul className="mt-2 space-y-0.5 list-disc list-inside">
+              <ul className="mt-2 space-y-0.5 list-disc list-outside pl-4">
                 {classData.classFeature.options.map((opt) => (
                   <li key={opt} className="text-xs text-[#b9baa3]">
-                    <MarkdownContent className="inline">{opt}</MarkdownContent>
+                    <MarkdownContent inline>{opt}</MarkdownContent>
                   </li>
                 ))}
               </ul>
@@ -784,6 +808,87 @@ function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
               })()}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Multiclass features ───────────────────────────────────────────── */}
+      {multiclassData && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#577399]">
+              {multiclassData.name} — Multiclass Features
+            </h3>
+            <span className="rounded bg-[#577399]/20 px-1.5 text-[10px] font-bold text-[#f7f7ff]">
+              Multiclass
+            </span>
+          </div>
+
+          {/* Multiclass class feature */}
+          {multiclassData.classFeature && (
+            <div className="rounded-lg border border-[#577399]/20 bg-slate-850 p-4 space-y-3">
+              <div>
+                <h4 className="mb-1 font-serif text-sm font-semibold text-[#f7f7ff]">
+                  {multiclassData.classFeature.name}
+                </h4>
+                <MarkdownContent className="text-xs text-[#b9baa3] leading-relaxed">
+                  {multiclassData.classFeature.description}
+                </MarkdownContent>
+                {multiclassData.classFeature.options.length > 0 && (
+                  <ul className="mt-2 space-y-0.5 list-disc list-outside pl-4">
+                    {multiclassData.classFeature.options.map((opt) => (
+                      <li key={opt} className="text-xs text-[#b9baa3]">
+                        <MarkdownContent inline>{opt}</MarkdownContent>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              {(() => {
+                const action = classFeatureHasAction(multiclassData.classFeature.name);
+                return action ? (
+                  <FeatureActionButton
+                    characterId={characterId}
+                    label={`Use ${multiclassData.classFeature.name}`}
+                    actionId={action.actionId}
+                    params={action.params}
+                    costLabel={action.costLabel}
+                  />
+                ) : null;
+              })()}
+            </div>
+          )}
+
+          {/* Multiclass subclass Foundation features (no Specialization / Mastery) */}
+          {mcSubclass && mcSubclass.foundationFeatures.map((feat) => {
+            const action = classFeatureHasAction(feat.name);
+            return (
+              <div
+                key={feat.name}
+                className="rounded border border-[#577399]/20 bg-slate-900 p-3 space-y-2"
+              >
+                <div>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <p className="text-sm font-medium text-[#f7f7ff]">{feat.name}</p>
+                    <span className="rounded bg-[#577399]/15 px-1.5 text-[10px] font-semibold text-[#b9baa3]">
+                      Foundation
+                    </span>
+                  </div>
+                  <MarkdownContent className="text-xs text-[#b9baa3] leading-relaxed">
+                    {feat.description}
+                  </MarkdownContent>
+                </div>
+                {action && (
+                  <FeatureActionButton
+                    characterId={characterId}
+                    label={`Use ${feat.name}`}
+                    actionId={action.actionId}
+                    params={action.params}
+                    costLabel={action.costLabel}
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 

@@ -1,6 +1,6 @@
 |        Domains         | Starting Evasion | Starting Hit Points |
 | :--------------------: | :--------------: | :-----------------: |
-| [[Oddity]] & [[Study]] |        10        |          6          |
+| [[Oddity]] & [[Study]] |        9         |          7          |
 
 ### Class Items
 
@@ -94,3 +94,5 @@ _Predictive Analysis_: When you succeed on a Knowledge roll to analyze something
 ## Mechanical Notes
 
 Your class feature rewards active engagement with the Creep, Etherotaxia encounters, haunts, and other Forestdown phenomena your GM presents. The more you lean into noticing and questioning specific manifestations in the fiction, the more Demystify, Predict, and Contextualize can do. The Anomalist path turns what would terrify others directly into offense or cover; the Exception Theorist turns documentation into reliable information advantages — and Build the Model lets you convert a Filed Under Impossible success into a boosted Knowledge roll when you need it most. Both paths get stronger the deeper into Forestdown the situation goes. Lean into the corruption.
+
+%% armor rec: light %%

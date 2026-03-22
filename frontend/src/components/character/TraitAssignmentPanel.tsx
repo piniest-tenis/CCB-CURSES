@@ -156,28 +156,33 @@ export function TraitAssignmentPanel({
           const availableOptions = AVAILABLE_TRAITS.filter(
             (t) => !assignedTraits.has(t) || t === currentTrait
           );
+          const selectId = `trait-slot-${slot.key}`;
 
           return (
             <div
               key={slot.key}
-              className="flex items-center gap-3 p-3 rounded-lg border border-slate-700/60 bg-slate-850/50"
+              className="flex items-center gap-3 p-3 rounded-lg border border-slate-700/60 bg-slate-850/50 min-w-0"
             >
               {/* Bonus label */}
               <div className="w-12 shrink-0">
-                <span className="text-sm font-bold text-[#577399] bg-slate-900 px-2.5 py-1 rounded border border-slate-700">
+                <label
+                  htmlFor={selectId}
+                  className="text-sm font-bold text-[#577399] bg-slate-900 px-2.5 py-1 rounded border border-slate-700 cursor-pointer"
+                >
                   {slot.label}
-                </span>
+                </label>
               </div>
 
               {/* Dropdown */}
               <select
+                id={selectId}
                 value={currentTrait}
                 onChange={(e) =>
                   handleSlotChange(slot.key, (e.target.value as TraitName) || "")
                 }
                 className="
-                  flex-1 rounded px-3 py-2 bg-slate-900 border border-slate-700
-                  text-[#f7f7ff] text-sm font-medium
+                  flex-1 min-w-0 rounded px-3 py-2 bg-slate-900 border border-slate-700
+                  text-[#f7f7ff] text-base sm:text-sm font-medium
                   hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-[#577399]
                   transition-colors
                 "
@@ -203,7 +208,7 @@ export function TraitAssignmentPanel({
 
       {/* Real-time validation feedback */}
       {!validation.isValid && (
-        <div className="p-3 rounded-lg border border-[#fe5f55]/50 bg-[#fe5f55]/8 space-y-1">
+        <div role="alert" className="p-3 rounded-lg border border-[#fe5f55]/50 bg-[#fe5f55]/8 space-y-1">
           <div className="flex items-start gap-2">
             <span className="text-lg shrink-0 text-[#fe5f55]">⚠</span>
             <div className="flex-1 min-w-0">

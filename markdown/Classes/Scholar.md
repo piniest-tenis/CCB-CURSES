@@ -70,3 +70,5 @@ _Deep Research_: When you _Prepare_ as a downtime move, you can clear 1 Stress i
 ## Mechanical Notes
 
 Impressive Recall rewards social preparation, so use it at the start of conversations rather than mid-scene. That way, the Attitude bonus shapes the whole interaction. The Socialite path rewards consistent factional work. Mover and Shaker applies every time you meet a new group, so treat each faction as an opportunity rather than a complication. Calculated Pressure is most valuable on high-stakes influence targets. Apply the Mark before your most important roll, not on easy targets. The Bookworm path trades social momentum for defensive and informational leverage. Use Studied Threat proactively when a scene shifts from dialogue to violence, so your Evasion is already reinforced before the first attack lands.
+
+%% armor rec: light %%

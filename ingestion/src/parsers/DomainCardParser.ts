@@ -165,6 +165,43 @@ function parseGrimoireEntries(lines: string[]): GrimoireAbility[] {
   return entries;
 }
 
+// ─── Frontmatter parsing ──────────────────────────────────────────────────────
+
+interface CardFrontmatter {
+  recall_cost?: number;
+}
+
+/**
+ * If the file starts with YAML frontmatter (`---`), extract known fields.
+ * Returns the parsed frontmatter and the remaining body lines.
+ */
+function extractFrontmatter(lines: string[]): { frontmatter: CardFrontmatter; bodyLines: string[] } {
+  if (lines.length === 0 || lines[0].trim() !== "---") {
+    return { frontmatter: {}, bodyLines: lines };
+  }
+
+  const closingIdx = lines.findIndex((l, i) => i > 0 && l.trim() === "---");
+  if (closingIdx < 0) {
+    // Malformed frontmatter — treat entire content as body
+    return { frontmatter: {}, bodyLines: lines };
+  }
+
+  const fm: CardFrontmatter = {};
+  for (let i = 1; i < closingIdx; i++) {
+    const match = lines[i].match(/^\s*(\w+)\s*:\s*(.+)$/);
+    if (match) {
+      const key = match[1].trim();
+      const val = match[2].trim();
+      if (key === "recall_cost") {
+        const parsed = parseInt(val, 10);
+        if (!isNaN(parsed)) fm.recall_cost = parsed;
+      }
+    }
+  }
+
+  return { frontmatter: fm, bodyLines: lines.slice(closingIdx + 1) };
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -180,7 +217,11 @@ export function parseDomainCardFile(filePath: string, domain: string): DomainCar
   const cardId = toCardId(filename);
 
   const lines = raw.split(/\r?\n/);
-  const nonEmptyLines = lines.map((l) => l.trim()).filter((l) => l.length > 0);
+
+  // ── Extract optional YAML frontmatter ─────────────────────────────────────
+  const { frontmatter, bodyLines } = extractFrontmatter(lines);
+
+  const nonEmptyLines = bodyLines.map((l) => l.trim()).filter((l) => l.length > 0);
 
   // Empty file — return a minimal record
   if (nonEmptyLines.length === 0) {
@@ -188,6 +229,7 @@ export function parseDomainCardFile(filePath: string, domain: string): DomainCar
       cardId,
       domain,
       level,
+      recallCost: frontmatter.recall_cost ?? level,
       name,
       isCursed,
       isLinkedCurse,
@@ -205,29 +247,29 @@ export function parseDomainCardFile(filePath: string, domain: string): DomainCar
   const isGrimoire = /^\*\*Grimoire\*\*\s*$/.test(nonEmptyLines[0]);
 
   // ── Split content on the separator for cursed cards ───────────────────────
-  // Find the first horizontal-rule separator in the raw lines array
-  const separatorIdx = lines.findIndex(isSeparator);
+  // Find the first horizontal-rule separator in the body lines array
+  const separatorIdx = bodyLines.findIndex(isSeparator);
 
   let descriptionLines: string[];
   let curseLines: string[];
 
   if (isCursed && separatorIdx >= 0) {
     // Normal case: *** or --- divides description from curse block
-    descriptionLines = lines.slice(0, separatorIdx);
-    curseLines = lines.slice(separatorIdx + 1);
+    descriptionLines = bodyLines.slice(0, separatorIdx);
+    curseLines = bodyLines.slice(separatorIdx + 1);
   } else if (isCursed) {
     // Fallback: no separator — look for a **Curse**: label inline
-    const curseLabelIdx = lines.findIndex((l) => isCurseLabel(l));
+    const curseLabelIdx = bodyLines.findIndex((l) => isCurseLabel(l));
     if (curseLabelIdx >= 0) {
-      descriptionLines = lines.slice(0, curseLabelIdx);
-      curseLines = lines.slice(curseLabelIdx);
+      descriptionLines = bodyLines.slice(0, curseLabelIdx);
+      curseLines = bodyLines.slice(curseLabelIdx);
     } else {
       // Cursed card with no discernible curse block — treat all as description
-      descriptionLines = lines;
+      descriptionLines = bodyLines;
       curseLines = [];
     }
   } else {
-    descriptionLines = lines;
+    descriptionLines = bodyLines;
     curseLines = [];
   }
 
@@ -277,6 +319,7 @@ export function parseDomainCardFile(filePath: string, domain: string): DomainCar
     cardId,
     domain,
     level,
+    recallCost: frontmatter.recall_cost ?? level,
     name,
     isCursed,
     isLinkedCurse,

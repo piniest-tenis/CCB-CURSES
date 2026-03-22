@@ -39,6 +39,7 @@ import type {
   SubclassData,
   CommunityData,
   AncestryData,
+  MechanicalBonus,
   DomainCard,
   DomainSummary,
   RuleEntry,
@@ -60,6 +61,7 @@ interface ClassMetaRecord {
   backgroundQuestions: string[];
   connectionQuestions: string[];
   mechanicalNotes: string;
+  armorRec?: string[];
   source: "homebrew" | "srd";
 }
 
@@ -88,6 +90,7 @@ interface GameDataRecord {
   secondTraitDescription?: string;
   body: string;
   source: "homebrew" | "srd";
+  mechanicalBonuses?: MechanicalBonus[];
 }
 
 interface DomainCardRecord {
@@ -96,6 +99,7 @@ interface DomainCardRecord {
   cardId: string;
   domain: string;
   level: number;
+  recallCost?: number;
   name: string;
   isCursed: boolean;
   isLinkedCurse: boolean;
@@ -153,12 +157,13 @@ function toClassData(
       masteryFeature: s.masteryFeature,
     })),
     mechanicalNotes: record.mechanicalNotes ?? "",
+    armorRec: record.armorRec ?? [],
     source: record.source,
   };
 }
 
 function toCommunityData(record: GameDataRecord): CommunityData {
-  return {
+  const result: CommunityData = {
     communityId: record.id,
     name: record.name,
     flavorText: record.flavorText ?? "",
@@ -166,10 +171,14 @@ function toCommunityData(record: GameDataRecord): CommunityData {
     traitDescription: record.traitDescription ?? "",
     source: record.source,
   };
+  if (record.mechanicalBonuses && record.mechanicalBonuses.length > 0) {
+    result.mechanicalBonuses = record.mechanicalBonuses;
+  }
+  return result;
 }
 
 function toAncestryData(record: GameDataRecord): AncestryData {
-  return {
+  const result: AncestryData = {
     ancestryId: record.id,
     name: record.name,
     flavorText: record.flavorText ?? "",
@@ -179,6 +188,10 @@ function toAncestryData(record: GameDataRecord): AncestryData {
     secondTraitDescription: record.secondTraitDescription ?? "",
     source: record.source,
   };
+  if (record.mechanicalBonuses && record.mechanicalBonuses.length > 0) {
+    result.mechanicalBonuses = record.mechanicalBonuses;
+  }
+  return result;
 }
 
 function toDomainCard(record: DomainCardRecord): DomainCard {
@@ -186,6 +199,7 @@ function toDomainCard(record: DomainCardRecord): DomainCard {
     cardId: record.cardId,
     domain: record.domain,
     level: record.level,
+    recallCost: record.recallCost ?? record.level,
     name: record.name,
     isCursed: record.isCursed ?? false,
     isLinkedCurse: record.isLinkedCurse ?? false,

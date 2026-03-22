@@ -1,3 +1,4 @@
+
 |           Domains           | Starting Evasion | Starting Hit Points |
 | :-------------------------: | :--------------: | :-----------------: |
 | [[Creature]] & [[Thievery]] |        10        |          6          |
@@ -96,3 +97,5 @@ _Quick Snap_: When you take damage from an adversary, you can spend a Hope to ga
 ## Mechanical Notes
 
 Finely Tuned Senses is flexible so read the situation before you decide which option to take. Advantage is safest. Adding your Instinct is strongest when your score is high. The failure-to-success flip is most valuable to steer outcomes when you need a success. The Carrion Creature path converts every investigation into a resource. Look for scenes where you can stack Hope, Stress clears, and items from a single roll sequence. Make the Most of it turns bad group luck into a recovery moment; use it before your party fully processes a fear-failure. The Needler path is pure burst: double damage from one Instinct strike, then build the Exposed chain to maximize a single target. Both paths benefit from using your class feature every scene.
+
+%% armor rec: light | med %%

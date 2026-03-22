@@ -61,6 +61,7 @@ import type {
   DowntimeProject,
   LevelUpChoices,
   AdvancementChoice,
+  MechanicalBonus,
 } from "@shared/types";
 
 // ─── S3 Client (portrait uploads) ────────────────────────────────────────────
@@ -202,6 +203,23 @@ const CustomConditionSchema = z.object({
   name: z.string().min(1).max(60),
   description: z.string(),
   sourceCardId: z.string().nullable(),
+});
+
+// ─── Level-Up Schema (declared early — used in PutCharacterSchema) ───────────
+
+const AdvancementChoiceSchema = z.object({
+  type: z.enum([
+    "trait-bonus",
+    "hp-slot",
+    "stress-slot",
+    "experience-bonus",
+    "evasion",
+    "additional-domain-card",
+    "subclass-upgrade",
+    "proficiency-increase",
+    "multiclass",
+  ]),
+  detail: z.string().optional(),
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -403,6 +421,7 @@ interface GameDataRecord {
   id: string;
   name: string;
   type: string;
+  mechanicalBonuses?: MechanicalBonus[];
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -429,7 +448,7 @@ function buildAvatarUrl(avatarKey: string | null | undefined): string | null {
   if (!avatarKey) return null;
   const cdnBase =
     process.env["CDN_BASE_URL"] ??
-    (CDN_DOMAIN ? `https://${CDN_DOMAIN}` : "https://cdn.daggerheart.example.com");
+    (CDN_DOMAIN ? `https://${CDN_DOMAIN}` : "https://cdn.curses-ccb.example.com");
   return `${cdnBase}/${avatarKey}`;
 }
 
@@ -441,7 +460,7 @@ function buildPortraitUrl(portraitKey: string | null | undefined): string | null
   if (!portraitKey) return null;
   const cdnBase = CDN_DOMAIN
     ? `https://${CDN_DOMAIN}`
-    : "https://cdn.daggerheart.example.com";
+    : "https://cdn.curses-ccb.example.com";
   return `${cdnBase}/${portraitKey}`;
 }
 
@@ -473,6 +492,47 @@ function buildPortraitKey(
 
 // deepMerge, encodeCursor, decodeCursor, signShareToken, validateSrdRules,
 // applyRest, normalizeWeapons are imported from ./helpers above.
+
+// ─── Mechanical Bonus Application ────────────────────────────────────────────
+
+/**
+ * Apply an array of MechanicalBonus objects (from ancestry/community records)
+ * to the mutable character creation defaults.
+ *
+ * Each bonus is additive. The caller is responsible for passing safe initial
+ * values (all stats ≥ 0) and for re-deriving any downstream stats afterwards.
+ */
+function applyMechanicalBonuses(
+  bonuses: MechanicalBonus[],
+  derivedStats: DerivedStats,
+  trackers: CharacterTrackers,
+  character: { hope: number; hopeMax: number }
+): void {
+  for (const bonus of bonuses) {
+    switch (bonus.stat) {
+      case "armor":
+        derivedStats.armor += bonus.amount;
+        break;
+      case "evasion":
+        derivedStats.evasion += bonus.amount;
+        // Also bump baseEvasion so armor swaps don't accidentally wipe the bonus
+        derivedStats.baseEvasion = (derivedStats.baseEvasion ?? derivedStats.evasion - bonus.amount) + bonus.amount;
+        break;
+      case "hp":
+        trackers.hp.max += bonus.amount;
+        break;
+      case "stress":
+        trackers.stress.max += bonus.amount;
+        break;
+      case "hope":
+        character.hope += bonus.amount;
+        break;
+      case "hopeMax":
+        character.hopeMax += bonus.amount;
+        break;
+    }
+  }
+}
 
 // ─── Lookup Helpers ───────────────────────────────────────────────────────────
 
@@ -560,6 +620,7 @@ function toCharacterResponse(
     subclassName?: string | null;
     communityName?: string | null;
     ancestryName?: string | null;
+    multiclassClassName?: string | null;
   }
 ): Character & {
   className: string;
@@ -617,6 +678,11 @@ function toCharacterResponse(
     customConditions: record.customConditions ?? [],
     levelUpHistory: record.levelUpHistory ?? {},
     markedTraits: record.markedTraits ?? [],
+    // ── Multiclass fields (SRD p.43) ──────────────────────────────────────
+    multiclassClassId: record.multiclassClassId ?? null,
+    multiclassClassName: enrichment?.multiclassClassName ?? record.multiclassClassName ?? null,
+    multiclassSubclassId: record.multiclassSubclassId ?? null,
+    multiclassDomainId: record.multiclassDomainId ?? null,
   };
 }
 
@@ -629,7 +695,7 @@ async function enrichCharacter(record: CharacterRecord): Promise<
     avatarUrl: string | null;
   }
 > {
-  const [classRecord, communityRecord, ancestryRecord] = await Promise.all([
+  const [classRecord, communityRecord, ancestryRecord, multiclassRecord] = await Promise.all([
     getItem<ClassRecord>({
       TableName: CLASSES_TABLE,
       Key: keys.classMetadata(record.classId),
@@ -639,6 +705,13 @@ async function enrichCharacter(record: CharacterRecord): Promise<
       : Promise.resolve(null),
     record.ancestryId
       ? lookupGameData("ANCESTRY", record.ancestryId)
+      : Promise.resolve(null),
+    // Resolve multiclass class name if the character has multiclassed
+    record.multiclassClassId
+      ? getItem<ClassRecord>({
+          TableName: CLASSES_TABLE,
+          Key: keys.classMetadata(record.multiclassClassId),
+        })
       : Promise.resolve(null),
   ]);
 
@@ -656,6 +729,7 @@ async function enrichCharacter(record: CharacterRecord): Promise<
     subclassName,
     communityName: communityRecord?.name ?? null,
     ancestryName: ancestryRecord?.name ?? null,
+    multiclassClassName: multiclassRecord?.name ?? null,
   });
 }
 
@@ -706,6 +780,11 @@ async function listCharacters(
         avatarUrl: buildAvatarUrl(record.avatarKey),
         portraitUrl: record.portraitUrl ?? buildPortraitUrl(record.portraitKey),
         updatedAt: record.updatedAt,
+        // Multiclass summary fields
+        multiclassClassId: record.multiclassClassId ?? null,
+        multiclassClassName: record.multiclassClassName ?? null,
+        multiclassSubclassId: record.multiclassSubclassId ?? null,
+        multiclassDomainId: record.multiclassDomainId ?? null,
       };
     })
   );
@@ -726,6 +805,16 @@ async function createCharacter(
   const classRecord = input.classId
     ? await lookupClass(input.classId)
     : null;
+
+  // Look up ancestry and community in parallel (needed for mechanicalBonuses)
+  const [ancestryRecord, communityRecord] = await Promise.all([
+    input.ancestryId
+      ? lookupGameData("ANCESTRY", input.ancestryId)
+      : Promise.resolve(null),
+    input.communityId
+      ? lookupGameData("COMMUNITY", input.communityId)
+      : Promise.resolve(null),
+  ]);
 
   const now = new Date().toISOString();
   const characterId = uuidv4();
@@ -757,6 +846,29 @@ async function createCharacter(
 
   const defaultFeatureState: ClassFeatureState = {};
 
+  // ── Apply ancestry/community mechanical bonuses ─────────────────────────────
+  // Collect all flat stat bonuses from both records and apply them to the
+  // defaults built above. This is done before the character record is assembled
+  // so the stored values already reflect the ancestry/community bonuses.
+  const allBonuses: MechanicalBonus[] = [
+    ...(ancestryRecord?.mechanicalBonuses ?? []),
+    ...(communityRecord?.mechanicalBonuses ?? []),
+  ];
+
+  // We need a temporary mutable holder for hope/hopeMax since they live on the
+  // character root, not on derivedStats/trackers.
+  const hopeHolder = { hope: 2, hopeMax: 6 };
+
+  if (allBonuses.length > 0) {
+    applyMechanicalBonuses(allBonuses, derivedStats, defaultTrackers, hopeHolder);
+    // Sync armor tracker max to the (possibly bumped) armor score
+    defaultTrackers.armor.max = derivedStats.armor;
+    // Clamp baseEvasion if not already set
+    if (derivedStats.baseEvasion === undefined) {
+      derivedStats.baseEvasion = derivedStats.evasion;
+    }
+  }
+
   const character: CharacterRecord = {
     PK: `USER#${userId}`,
     SK: `CHARACTER#${characterId}`,
@@ -778,8 +890,8 @@ async function createCharacter(
     trackers: defaultTrackers,
     damageThresholds: defaultDamageThresholds,
     weapons: defaultWeapons,
-    hope: 2,
-    hopeMax: 6,
+    hope: hopeHolder.hope,
+    hopeMax: hopeHolder.hopeMax,
     proficiency: 1,
     experiences: (input.experiences ?? []).map((e) => ({
       name: e.name,
@@ -810,6 +922,11 @@ async function createCharacter(
     customConditions: [],
     levelUpHistory: {},
     markedTraits: [],
+    // ── Multiclass (none at creation) ─────────────────────────────────────
+    multiclassClassId:    null,
+    multiclassClassName:  null,
+    multiclassSubclassId: null,
+    multiclassDomainId:   null,
   };
 
   // ── SRD Validation ─────────────────────────────────────────────────────────
@@ -1099,7 +1216,7 @@ async function getShareToken(
   const shareToken = signShareToken(characterId, userId, exp);
 
   const frontendUrl =
-    process.env["FRONTEND_URL"] ?? "https://app.daggerheart.example.com";
+    process.env["FRONTEND_URL"] ?? "https://app.curses-ccb.example.com";
   const shareUrl = `${frontendUrl}/character/${characterId}/view?token=${shareToken}`;
 
   return createSuccessResponse({ shareToken, shareUrl, expiresAt });
@@ -1339,21 +1456,6 @@ async function executeAction(
 
 // ─── Level-Up Schema & Route Handler ─────────────────────────────────────────
 
-const AdvancementChoiceSchema = z.object({
-  type: z.enum([
-    "trait-bonus",
-    "hp-slot",
-    "stress-slot",
-    "experience-bonus",
-    "evasion",
-    "additional-domain-card",
-    "subclass-upgrade",
-    "proficiency-increase",
-    "multiclass",
-  ]),
-  detail: z.string().optional(),
-});
-
 const LevelUpSchema = z.object({
   targetLevel:     z.number().int().min(2).max(10),
   advancements:    z.array(AdvancementChoiceSchema).min(1).max(4),
@@ -1484,7 +1586,7 @@ async function portraitUploadUrl(
   // We derive it from the same deterministic key — no confirm step needed.
   const cdnBase    = CDN_DOMAIN
     ? `https://${CDN_DOMAIN}`
-    : "https://cdn.daggerheart.example.com";
+    : "https://cdn.curses-ccb.example.com";
   const confirmUrl = `${cdnBase}/${s3Key}`;
 
   return createSuccessResponse(

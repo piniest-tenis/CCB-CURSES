@@ -611,6 +611,37 @@ function parseMechanicalNotes(lines: string[]): string {
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
+ * Map a tier label from `%% armor rec: <label> %%` to a Tier-1 armor ID.
+ * Returns null for unrecognised labels (they are silently skipped).
+ */
+function armorTierToId(label: string): string | null {
+  switch (label.trim().toLowerCase()) {
+    case "light":       return "gambeson";
+    case "med":
+    case "medium":      return "leather";
+    case "heavy":       return "chainmail";
+    case "extra heavy":
+    case "full plate":
+    case "xheavy":      return "full-plate";
+    default:            return null;
+  }
+}
+
+/**
+ * Extract `armorRec` IDs from the raw file content.
+ * Looks for `%% armor rec: light | med %%` (pipe-separated, any whitespace).
+ * Returns an empty array when no comment is present.
+ */
+function parseArmorRec(raw: string): string[] {
+  const match = raw.match(/%{2}\s*armor rec\s*:\s*([^%]+?)\s*%{2}/i);
+  if (!match) return [];
+  return match[1]
+    .split("|")
+    .map((t) => armorTierToId(t))
+    .filter((id): id is string => id !== null);
+}
+
+/**
  * Parse a single class markdown file into a `ClassData` object (which embeds
  * `SubclassData[]` for the `subclasses` field).
  *
@@ -669,6 +700,9 @@ export function parseClassFile(filePath: string, className?: string): ClassData 
   // 9. Mechanical Notes
   const mechanicalNotes = parseMechanicalNotes(lines);
 
+  // 10. Armor recommendation
+  const armorRec = parseArmorRec(raw);
+
   return {
     classId,
     name,
@@ -682,6 +716,7 @@ export function parseClassFile(filePath: string, className?: string): ClassData 
     connectionQuestions,
     subclasses,
     mechanicalNotes,
+    armorRec,
     source: "homebrew",
   };
 }

@@ -91,3 +91,5 @@ _Power Through_: Once per scene, mark a stress to clear a condition on you. If y
 ## Mechanical Notes
 
 You have two class features. Decide during each rest whether to activate Hide Before Honor as the trade of your own roll penalty for an ally bonus is significant and shouldn't be a passive afterthought. Flashy Display costs a Stress, so use it on the most dangerous adversary in a scene to lock their targeting onto you. The Pillar Beast path plays as a mobile interceptor. Pounce is a reaction that repositions you and penalizes the attacker, so position yourself where you can reach the most likely attack targets. Diverting Blow stacks on top of normal attacks for free. The Hidewarden path rewards absorbing punishment. My Body is a Shield becomes stronger the more Hit Points you have marked, so don't treat damage as something to avoid. Last to Fall is a guaranteed once-per-session survival moment.
+
+%% armor rec: heavy | xheavy %%

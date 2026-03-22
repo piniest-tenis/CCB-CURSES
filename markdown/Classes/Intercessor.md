@@ -93,3 +93,5 @@ _Practical Blessing_: Once per rest, when you successfully consecrate a phenomen
 ## Mechanical Notes
 
 Your class feature rewards paying attention to the details your GM presents. The more you engage with specific events and phenomena in the fiction, the more clearly you can choose between the two effects. Save Hope for moments when you need both at once. The Theologian path builds information advantages that compound; the Priest path keeps your party functional under pressure. Both paths reward active curiosity and consistent engagement with the sacred and the strange.
+
+%% armor rec: med %%

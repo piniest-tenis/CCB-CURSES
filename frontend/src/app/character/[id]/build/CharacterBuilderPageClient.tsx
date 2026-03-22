@@ -21,10 +21,10 @@
  * After saving, redirects back to character sheet.
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useCharacter, useUpdateCharacter } from "@/hooks/useCharacter";
-import { useClass, useClasses, useAncestries, useCommunities } from "@/hooks/useGameData";
+import { useClass, useClasses, useAncestries, useCommunities, useDomainCard } from "@/hooks/useGameData";
 import type { Character, AncestryData, CommunityData, CoreStats } from "@shared/types";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { CollapsibleSRDDescription } from "@/components/character/CollapsibleSRDDescription";
@@ -34,6 +34,23 @@ import { ArmorSelectionPanel } from "@/components/character/ArmorSelectionPanel"
 import { StartingEquipmentPanel, type StartingEquipmentSelections } from "@/components/character/StartingEquipmentPanel";
 import { DomainCardSelectionPanel } from "@/components/character/DomainCardSelectionPanel";
 import { ALL_TIER1_WEAPONS, TIER1_ARMOR, UNIVERSAL_STARTING_ITEMS, STARTING_GOLD } from "@/lib/srdEquipment";
+import { loadBuilderDraft, useBuilderSessionStorage } from "@/hooks/useBuilderSessionStorage";
+
+// ─── DomainCardName ─────────────────────────────────────────────────────────
+// Small component that resolves a "domain/cardId" string to a human-friendly name.
+
+function DomainCardName({ cardId }: { cardId: string }) {
+  const parts = cardId.includes("/") ? cardId.split("/") : null;
+  const domain = parts?.[0];
+  const id = parts?.[1] ?? cardId;
+  const { data: card } = useDomainCard(domain, id);
+  if (card) {
+    return <>{card.name}</>;
+  }
+  // Fallback: title-case the slug while loading
+  const fallback = id.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return <span className="text-parchment-500 italic">{fallback}</span>;
+}
 
 interface CharacterBuilderPageProps {
   params: { id: string };
@@ -48,6 +65,16 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
   // Path shape: /character/{id}/build  → segments[2] is the id.
   const characterId = pathname?.split("/")[2] ?? "";
   const router = useRouter();
+
+  // ── Session-storage draft ────────────────────────────────────────────────
+  // Load any in-progress draft once (synchronously on first render) so the
+  // useState initialisers below can use it.  We intentionally capture this
+  // outside a useEffect so the values are available for the initial render.
+  const sessionDraft = useMemo(
+    () => (characterId ? loadBuilderDraft(characterId) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [] // run only on mount — characterId is stable for the lifetime of this page
+  );
   
   // Queries
   const { data: character, isLoading: charLoading } = useCharacter(characterId);
@@ -56,20 +83,37 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
   const { data: communitiesData } = useCommunities();
   
   // Builder state
+  // Priority: session draft > server character data > empty defaults.
+  // The session draft is only applied when it exists (i.e. the user was
+  // mid-wizard and refreshed).  For a fresh builder or an already-saved
+  // character the normal server-recovery path wins.
   const updateMutation = useUpdateCharacter(characterId);
-  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>(1);
-  const [classId, setClassId] = useState(character?.classId ?? "");
-  const [subclassId, setSubclassId] = useState(character?.subclassId ?? "");
-  const [ancestryId, setAncestryId] = useState(character?.ancestryId ?? "");
-  const [communityId, setCommunityId] = useState(character?.communityId ?? "");
-  const [traitBonuses, setTraitBonuses] = useState<TraitBonuses>(character?.traitBonuses ?? {});
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>(
+    () => (sessionDraft?.step as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9) ?? 1
+  );
+  const [classId, setClassId] = useState(
+    sessionDraft?.classId ?? character?.classId ?? ""
+  );
+  const [subclassId, setSubclassId] = useState(
+    sessionDraft?.subclassId ?? character?.subclassId ?? ""
+  );
+  const [ancestryId, setAncestryId] = useState(
+    sessionDraft?.ancestryId ?? character?.ancestryId ?? ""
+  );
+  const [communityId, setCommunityId] = useState(
+    sessionDraft?.communityId ?? character?.communityId ?? ""
+  );
+  const [traitBonuses, setTraitBonuses] = useState<TraitBonuses>(
+    sessionDraft?.traitBonuses ?? character?.traitBonuses ?? {}
+  );
   const [primaryWeaponId, setPrimaryWeaponId] = useState<string | null>(
-    character?.weapons?.primary?.weaponId ?? null
+    sessionDraft?.primaryWeaponId ?? character?.weapons?.primary?.weaponId ?? null
   );
   const [secondaryWeaponId, setSecondaryWeaponId] = useState<string | null>(
-    character?.weapons?.secondary?.weaponId ?? null
+    sessionDraft?.secondaryWeaponId ?? character?.weapons?.secondary?.weaponId ?? null
   );
   const [armorId, setArmorId] = useState<string | null>(() => {
+    if (sessionDraft?.armorId !== undefined) return sessionDraft.armorId;
     // Recover armor from inventory: we store the armor name there on save.
     const inv = character?.inventory ?? [];
     return TIER1_ARMOR.find((a) => inv.includes(a.name))?.id ?? null;
@@ -77,6 +121,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
 
   // Step 7: Starting Equipment
   const [equipmentSelections, setEquipmentSelections] = useState<StartingEquipmentSelections>(() => {
+    if (sessionDraft?.equipmentSelections) return sessionDraft.equipmentSelections;
     const inv = character?.inventory ?? [];
     // Recover consumable
     const consumableId = inv.includes("Minor Health Potion")
@@ -91,11 +136,37 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
 
   // Step 8: Domain Cards
   const [selectedDomainCardIds, setSelectedDomainCardIds] = useState<string[]>(
-    character?.domainLoadout ?? []
+    sessionDraft?.selectedDomainCardIds ?? character?.domainLoadout ?? []
   );
 
-  const [heritageTab, setHeritageTab] = useState<"ancestry" | "community">("ancestry");
+  const [heritageTab, setHeritageTab] = useState<"ancestry" | "community">(
+    sessionDraft?.heritageTab ?? "ancestry"
+  );
   const [error, setError] = useState<string | null>(null);
+
+  // ── Persist builder state to sessionStorage on every change ─────────────
+  const builderDraft = useMemo(
+    () => ({
+      step,
+      classId,
+      subclassId,
+      ancestryId,
+      communityId,
+      traitBonuses,
+      primaryWeaponId,
+      secondaryWeaponId,
+      armorId,
+      equipmentSelections,
+      selectedDomainCardIds,
+      heritageTab,
+    }),
+    [
+      step, classId, subclassId, ancestryId, communityId,
+      traitBonuses, primaryWeaponId, secondaryWeaponId,
+      armorId, equipmentSelections, selectedDomainCardIds, heritageTab,
+    ]
+  );
+  const { clearSession } = useBuilderSessionStorage(characterId, builderDraft);
   
   // Get full class data for currently selected class
   const { data: selectedClassData } = useClass(classId || undefined);
@@ -210,6 +281,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
       } as Partial<Character>);
       
       // Redirect back to character sheet
+      clearSession();
       router.push(`/character/${updated.characterId ?? characterId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update character");
@@ -219,7 +291,13 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
   if (charLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a100d]">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#577399] border-t-transparent" />
+        <div
+          className="h-8 w-8 animate-spin rounded-full border-2 border-[#577399] border-t-transparent"
+          role="status"
+          aria-label="Loading character"
+        >
+          <span className="sr-only">Loading character…</span>
+        </div>
       </div>
     );
   }
@@ -243,7 +321,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
   return (
     <div className="min-h-screen bg-[#0a100d]">
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-2 sm:p-4"
         role="presentation"
       >
         <div
@@ -251,11 +329,10 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
           aria-modal="true"
           aria-labelledby="builder-title"
           className="
-            w-full max-w-5xl rounded-2xl border border-slate-700/60
+            w-full max-w-5xl min-w-0 overflow-hidden rounded-2xl border border-slate-700/60
             bg-[#0a100d] shadow-2xl flex flex-col
             max-h-[92vh]
           "
-          style={{ boxShadow: "0 0 60px rgba(87,115,153,0.15), 0 24px 48px rgba(0,0,0,0.6)" }}
         >
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700/40 shrink-0">
@@ -263,7 +340,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
               <h2 id="builder-title" className="font-serif text-xl font-semibold text-[#f7f7ff]">
                 Edit Character
               </h2>
-              <p className="text-xs text-[#b9baa3]/40 mt-0.5">
+              <p className="text-xs text-[#b9baa3]/60 mt-0.5">
                 {character.name} • Step {step} of 9
               </p>
             </div>
@@ -271,29 +348,55 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
             <button
               type="button"
               onClick={() => router.push(`/character/${characterId}`)}
-              className="text-[#b9baa3]/40 hover:text-[#b9baa3] text-2xl leading-none transition-colors focus:outline-none focus:ring-2 focus:ring-[#577399] rounded"
-              aria-label="Close"
+              className="h-11 w-11 flex items-center justify-center text-[#b9baa3]/40 hover:text-[#b9baa3] text-2xl leading-none transition-colors focus:outline-none focus:ring-2 focus:ring-[#577399] rounded-lg"
+              aria-label="Close builder"
             >
               ×
             </button>
+          </div>
+
+          {/* Mobile step progress bar — hidden on md+ where the sidebar step panel is visible */}
+          <div className="md:hidden px-4 sm:px-6 pb-3 shrink-0">
+            <div
+              className="flex items-center gap-1"
+              role="progressbar"
+              aria-valuenow={step}
+              aria-valuemin={1}
+              aria-valuemax={9}
+              aria-label={`Step ${step} of 9`}
+            >
+              {Array.from({ length: 9 }, (_, i) => (
+                <div
+                  key={i}
+                  aria-hidden="true"
+                  className={`
+                    h-1 flex-1 rounded-full transition-colors
+                    ${i + 1 <= step ? "bg-[#577399]" : "bg-slate-700/60"}
+                  `}
+                />
+              ))}
+            </div>
+            <p className="text-[10px] text-[#b9baa3]/60 mt-1">
+              Step {step} of 9
+            </p>
           </div>
           
           {/* Content */}
           <div className="flex flex-1 min-h-0 overflow-hidden">
             {/* Main step content */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0">
              {/* Step 1: Choose Class */}
             {step === 1 && (
-              <div className="flex flex-1 min-h-0">
-                {/* Left: class list */}
-                <div className="w-64 sm:w-72 shrink-0 border-r border-slate-700/40 flex flex-col">
+              <div className="flex flex-col sm:flex-row sm:h-full">
+                {/* Left: class list — full width stacked on mobile, fixed sidebar on sm+ */}
+                <div className="w-full sm:w-64 lg:w-72 shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/40 flex flex-col max-h-[40vh] sm:max-h-none overflow-y-auto">
                   <div className="px-4 pt-3 pb-2 shrink-0">
                     <p className="text-xs font-medium uppercase tracking-wider text-[#b9baa3]/50">
                       Choose a Class
                     </p>
                   </div>
-                  <div className="flex-1 overflow-y-auto">
-                    {classesData?.classes.map((c) => (
+                  <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0">
+                    {[...(classesData?.classes ?? [])].sort((a, b) => a.name.localeCompare(b.name)).map((c) => (
                       <button
                         key={c.classId}
                         type="button"
@@ -321,11 +424,11 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                 </div>
                 
                 {/* Right: preview */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 min-h-[120px]">
                   {!classId ? (
                     <div className="flex h-full items-center justify-center">
                       <div className="text-center space-y-3">
-                        <div className="text-4xl opacity-20">⚔️</div>
+                        <div className="text-4xl opacity-20" aria-hidden="true">⚔️</div>
                         <p className="text-sm text-[#b9baa3]/40 italic">Select a class to see details</p>
                       </div>
                     </div>
@@ -374,7 +477,10 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                           <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3">
                             <p className="text-sm font-semibold text-[#f7f7ff] mb-1">{selectedClassData.classFeature.name}</p>
                             <MarkdownContent className="text-sm text-[#b9baa3]/70">
-                              {selectedClassData.classFeature.description}
+                              {[
+                                selectedClassData.classFeature.description,
+                                ...selectedClassData.classFeature.options.map((o) => `- ${o}`),
+                              ].filter(Boolean).join("\n\n")}
                             </MarkdownContent>
                           </div>
                         </div>
@@ -387,7 +493,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
             
             {/* Step 2: Choose Subclass */}
             {step === 2 && selectedClassData && (
-              <div className="flex-1 overflow-y-auto p-6 space-y-6 max-w-2xl mx-auto">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 max-w-2xl mx-auto w-full min-h-0">
                 <div>
                   <h3 className="font-serif text-2xl font-bold text-[#f7f7ff] mb-1">
                     Choose Your {selectedClassData.name} Subclass
@@ -469,37 +575,46 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
             
             {/* Step 3: Heritage */}
             {step === 3 && (
-              <div className="flex flex-1 min-h-0">
-                {/* Left pane: tab switcher + list */}
-                <div className="w-64 sm:w-72 shrink-0 border-r border-slate-700/40 flex flex-col">
+              <div className="flex flex-col sm:flex-row sm:h-full">
+                {/* Left pane: tab switcher + list — full width stacked on mobile, fixed sidebar on sm+ */}
+                <div className="w-full sm:w-64 lg:w-72 shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/40 flex flex-col max-h-[40vh] sm:max-h-none overflow-y-auto">
                   {/* Tab switcher */}
-                  <div className="flex shrink-0 border-b border-slate-700/30">
-                    {(["ancestry", "community"] as const).map((tab) => (
-                      <button
-                        key={tab}
-                        type="button"
-                        onClick={() => setHeritageTab(tab)}
-                        className={`
-                          flex-1 py-3 px-2 text-xs font-semibold uppercase tracking-wider transition-colors
-                          ${heritageTab === tab
-                            ? "text-[#577399] border-b-2 border-[#577399]"
-                            : "text-[#b9baa3]/40 hover:text-[#b9baa3]/70 border-b-2 border-transparent"
-                          }
-                        `}
-                      >
-                        {tab === "ancestry" ? "Ancestry" : "Community"}
-                        {tab === "ancestry" && ancestryId && (
-                          <span className="ml-1.5 text-[#577399]">✓</span>
-                        )}
-                        {tab === "community" && communityId && (
-                          <span className="ml-1.5 text-[#577399]">✓</span>
-                        )}
-                      </button>
-                    ))}
+                  <div className="flex shrink-0 border-b border-slate-700/30" role="tablist" aria-label="Heritage selection">
+                    {(["ancestry", "community"] as const).map((tab) => {
+                      const isActive = heritageTab === tab;
+                      const isComplete = tab === "ancestry" ? !!ancestryId : !!communityId;
+                      const shouldPulse = !isActive && !isComplete;
+                      return (
+                        <button
+                          key={tab}
+                          type="button"
+                          role="tab"
+                          aria-selected={heritageTab === tab}
+                          onClick={() => setHeritageTab(tab)}
+                          className={`
+                            flex-1 py-3 px-2 text-xs font-semibold uppercase tracking-wider transition-colors
+                            ${isActive
+                              ? "text-[#577399] border-b-2 border-[#577399]"
+                              : "text-[#b9baa3]/40 hover:text-[#b9baa3]/70 border-b-2 border-transparent"
+                            }
+                          `}
+                        >
+                          <span className={shouldPulse ? "animate-pulse-glow-goldenrod" : undefined}>
+                            {tab === "ancestry" ? "Ancestry" : "Community"}
+                          </span>
+                          {tab === "ancestry" && ancestryId && (
+                            <span className="ml-1.5 text-[#577399]">✓</span>
+                          )}
+                          {tab === "community" && communityId && (
+                            <span className="ml-1.5 text-[#577399]">✓</span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                   
                   {/* List */}
-                  <div className="flex-1 overflow-y-auto">
+                  <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0">
                     {heritageTab === "ancestry" && ancestriesData?.ancestries.map((a) => (
                       <button
                         key={a.ancestryId}
@@ -539,11 +654,11 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                 </div>
                 
                 {/* Right pane: detail panel */}
-                <div className="flex-1 overflow-y-auto p-6">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6 min-h-[120px]">
                   {heritageTab === "ancestry" && !ancestryId && (
                     <div className="flex h-full items-center justify-center">
                       <div className="text-center space-y-3">
-                        <div className="text-4xl opacity-20">🌿</div>
+                        <div className="text-4xl opacity-20" aria-hidden="true">🌿</div>
                         <p className="text-sm text-[#b9baa3]/40 italic">Select an ancestry to see details</p>
                       </div>
                     </div>
@@ -551,7 +666,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                   {heritageTab === "community" && !communityId && (
                     <div className="flex h-full items-center justify-center">
                       <div className="text-center space-y-3">
-                        <div className="text-4xl opacity-20">🏘️</div>
+                        <div className="text-4xl opacity-20" aria-hidden="true">🏘</div>
                         <p className="text-sm text-[#b9baa3]/40 italic">Select a community to see details</p>
                       </div>
                     </div>
@@ -613,7 +728,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
             
             {/* Step 4: Assign Traits */}
             {step === 4 && (
-              <div className="flex-1 overflow-y-auto p-6 space-y-6 max-w-2xl mx-auto">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 max-w-2xl mx-auto w-full min-h-0">
                 <div>
                   <h3 className="font-serif text-2xl font-bold text-[#f7f7ff] mb-1">
                     Assign Your Traits
@@ -641,7 +756,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
             {/* Step 5: Choose Starting Weapons */}
             {step === 5 && (
               <div className="flex flex-1 min-h-0 flex-col">
-                <div className="px-6 pt-5 pb-3 shrink-0 space-y-3">
+                <div className="px-4 sm:px-6 pt-4 sm:pt-5 pb-3 shrink-0 space-y-3">
                   <div>
                     <h3 className="font-serif text-xl font-semibold text-[#f7f7ff]">Choose Starting Weapons</h3>
                     <p className="text-sm text-[#b9baa3]/60 mt-0.5">Select a primary weapon. A secondary weapon is optional.</p>
@@ -673,7 +788,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
             {/* Step 6: Choose Starting Armor */}
             {step === 6 && selectedClassData && (
               <div className="flex flex-1 min-h-0 flex-col">
-                <div className="px-6 pt-5 pb-3 shrink-0 space-y-3">
+                <div className="px-4 sm:px-6 pt-4 sm:pt-5 pb-3 shrink-0 space-y-3">
                   <div>
                     <h3 className="font-serif text-xl font-semibold text-[#f7f7ff]">Choose Starting Armor</h3>
                     <p className="text-sm text-[#b9baa3]/60 mt-0.5">Select one armor. Thresholds shown are base values; add your level to each.</p>
@@ -689,10 +804,10 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                   />
                 </div>
                 <div className="flex-1 min-h-0 overflow-hidden border-t border-slate-700/30">
-                  <ArmorSelectionPanel
+                   <ArmorSelectionPanel
                     armorId={armorId}
                     onArmorChange={setArmorId}
-                    startingEvasion={selectedClassData.startingEvasion}
+                    armorRec={selectedClassData.armorRec ?? []}
                   />
                 </div>
               </div>
@@ -701,7 +816,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
             {/* Step 7: Starting Equipment */}
             {step === 7 && selectedClassData && (
               <div className="flex flex-1 min-h-0 flex-col">
-                <div className="px-6 pt-5 pb-3 shrink-0 space-y-3">
+                <div className="px-4 sm:px-6 pt-4 sm:pt-5 pb-3 shrink-0 space-y-3">
                   <div>
                     <h3 className="font-serif text-xl font-semibold text-[#f7f7ff]">Take Your Starting Equipment</h3>
                     <p className="text-sm text-[#b9baa3]/60 mt-0.5">
@@ -733,7 +848,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
             {/* Step 8: Domain Deck Cards */}
             {step === 8 && selectedClassData && (
               <div className="flex flex-1 min-h-0 flex-col">
-                <div className="px-6 pt-5 pb-3 shrink-0 space-y-3">
+                <div className="px-4 sm:px-6 pt-4 sm:pt-5 pb-3 shrink-0 space-y-3">
                   <div>
                     <h3 className="font-serif text-xl font-semibold text-[#f7f7ff]">Take Domain Deck Cards</h3>
                     <p className="text-sm text-[#b9baa3]/60 mt-0.5">
@@ -767,7 +882,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
 
             {/* Step 9: Review */}
             {step === 9 && (
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 min-h-0">
                 <div className="max-w-xl mx-auto space-y-6">
                   <h3 className="font-serif text-xl font-semibold text-[#f7f7ff]">
                     Confirm Your Changes
@@ -853,7 +968,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                             {primaryWeapon?.name ?? "Not selected"}
                           </span>
                           {primaryWeapon && (
-                            <span className="text-xs text-[#b9baa3]/50 ml-2">
+                            <span className="text-xs text-[#b9baa3]/50 ml-1 sm:ml-2 block sm:inline">
                               {primaryWeapon.damageDie} · {primaryWeapon.range} · {primaryWeapon.burden}
                             </span>
                           )}
@@ -864,7 +979,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                             {secondaryWeapon?.name ?? <span className="italic text-[#b9baa3]/40">None</span>}
                           </span>
                           {secondaryWeapon && (
-                            <span className="text-xs text-[#b9baa3]/50 ml-2">
+                            <span className="text-xs text-[#b9baa3]/50 ml-1 sm:ml-2 block sm:inline">
                               {secondaryWeapon.damageDie} · {secondaryWeapon.range}
                             </span>
                           )}
@@ -925,7 +1040,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                         <div className="space-y-1">
                           {selectedDomainCardIds.map((cardId) => (
                             <p key={cardId} className="text-sm font-semibold text-[#f7f7ff]">
-                              {cardId}
+                              <DomainCardName cardId={cardId} />
                             </p>
                           ))}
                         </div>
@@ -934,7 +1049,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                   </div>
                   
                   {error && (
-                    <div className="rounded-lg border border-[#fe5f55]/40 bg-[#fe5f55]/10 p-4">
+                    <div role="alert" className="rounded-lg border border-[#fe5f55]/40 bg-[#fe5f55]/10 p-4">
                       <p className="text-sm text-[#fe5f55]">{error}</p>
                     </div>
                   )}
@@ -1009,6 +1124,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                       key={s.num}
                       type="button"
                       onClick={() => setStep(s.num as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9)}
+                      aria-current={step === s.num ? "step" : undefined}
                       className={`
                         w-full text-left px-3 py-2 transition-colors rounded-none
                         ${step === s.num
@@ -1037,7 +1153,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
             })()}
           </div>{/* end flex content row */}
           
-           <div className="shrink-0 border-t border-slate-700/40 px-6 py-4 flex items-center justify-between gap-4">
+           <div className="shrink-0 border-t border-slate-700/40 px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2 sm:gap-4 flex-wrap">
              <button
                type="button"
                onClick={() => {
@@ -1048,7 +1164,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                  }
                }}
                className="
-                 rounded-lg px-4 py-2.5 text-sm font-medium
+                 rounded-lg px-4 py-3 text-sm font-medium min-h-[44px]
                  border border-slate-700/60 text-[#b9baa3]/60
                  hover:border-slate-600 hover:text-[#b9baa3]
                  transition-colors
@@ -1072,16 +1188,16 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                      (step === 7 && !canGoNext7) ||
                      (step === 8 && !canGoNext8)
                    }
-                   className="
-                     rounded-lg px-6 py-2.5 font-semibold text-sm
-                     bg-[#577399] text-[#f7f7ff]
-                     hover:bg-[#577399]/80
-                     disabled:opacity-40 disabled:cursor-not-allowed
-                     transition-colors shadow-sm
-                   "
-                 >
-                   Next →
-                 </button>
+                    className="
+                      rounded-lg px-6 py-3 font-semibold text-sm min-h-[44px]
+                      bg-[#577399] text-[#f7f7ff]
+                      hover:bg-[#577399]/80
+                      disabled:opacity-50 disabled:cursor-not-allowed
+                      transition-colors shadow-sm
+                    "
+                  >
+                    Next →
+                  </button>
                )}
                
                {step === 9 && (
@@ -1089,19 +1205,20 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                    type="button"
                    onClick={handleSave}
                    disabled={updateMutation.isPending}
-                   className="
-                     rounded-lg px-6 py-2.5 font-semibold text-sm
-                     bg-[#577399] text-[#f7f7ff]
-                     hover:bg-[#577399]/80
-                     disabled:opacity-40 disabled:cursor-not-allowed
-                     transition-colors shadow-sm
-                   "
-                 >
-                   {updateMutation.isPending ? (
-                     <span className="flex items-center gap-2">
-                       <span className="h-3.5 w-3.5 animate-spin rounded-full border border-[#f7f7ff] border-t-transparent" />
-                       Saving…
-                     </span>
+                    className="
+                      rounded-lg px-6 py-3 font-semibold text-sm min-h-[44px]
+                      bg-[#577399] text-[#f7f7ff]
+                      hover:bg-[#577399]/80
+                      disabled:opacity-50 disabled:cursor-not-allowed
+                      transition-colors shadow-sm
+                    "
+                  >
+                    {updateMutation.isPending ? (
+                      <span className="flex items-center gap-2">
+                        <span className="h-3.5 w-3.5 animate-spin rounded-full border border-[#f7f7ff] border-t-transparent" aria-hidden="true" />
+                        <span className="sr-only">Saving…</span>
+                        <span aria-hidden="true">Saving…</span>
+                      </span>
                    ) : (
                      "Save Changes ✦"
                    )}

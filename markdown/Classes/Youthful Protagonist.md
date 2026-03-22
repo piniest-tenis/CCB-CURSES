@@ -75,7 +75,7 @@ _Play Burning Conviction if you want every blow you take to be paid back tenfold
 
 ### Spellcast Trait
 
-Presence
+Strength
 
 ### Foundation Features
 
@@ -94,3 +94,5 @@ _Running on Something_: When more than half your Hit Points are marked, gain a b
 ## Mechanical Notes
 
 Not Done Yet is an active decision: you must choose to use it when damage is declared, not before or after. It rewards knowing when protecting yourself through Stress is worth it versus letting a Hit Point land. The Reluctant Chosen path rewards staying close to your allies and making your body a wall between them and harm; the Burning Conviction path rewards staying in the thick of it and converting every wound into momentum. Both paths require careful Stress management. Don't trigger Not Done Yet when you're near your Stress limit, or the thing that keeps you going will be the thing that ends you.
+
+%% armor rec: heavy | xheavy %%

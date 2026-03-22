@@ -72,3 +72,5 @@ _Dominant Energy_: Make a Spellcast Roll against a creature within Close range. 
 ## Mechanical Notes
 
 Befriending a companion is a long-term investment: complete _Lure_ during downtime between significant scenes and treat your companion as a persistent resource, not an occasional tool. The Animist path connects your social and combat work to your companion directly. Your companion's Attitude system means building relationships with it actively, not just issuing commands. Tandem Strikes is your most reliable action-economy play; use it when you need an extra action without spending Hope. The Creature Wrangler path is about opportunistic control: apply Calm or Dominant Energy on creatures that are complications rather than primary threats, and use Culling the Herd on the most dangerous target to shift burst damage dramatically.
+
+%% armor rec: heavy %%

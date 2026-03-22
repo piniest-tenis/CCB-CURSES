@@ -983,18 +983,17 @@ export const SUBCLASS_SUGGESTED_WEAPONS: Record<string, [string, string]> = {
   blademaster:  ["returning-blade", "dagger"],
 };
 
-// ─── Suggested Armor by Starting Evasion ─────────────────────────────────────
-// Per builder rules:
-//   Evasion 9–10 → Flexible (Gambeson)
-//   Evasion 8    → No feature (Leather)
-//   Evasion 7    → Heavy (Chainmail)
-//   Evasion < 7  → Very Heavy (Full Plate)
+// ─── Suggested Armor IDs ──────────────────────────────────────────────────────
+// Returns 1–2 armor IDs to highlight as "Suggested" in the builder.
+// Derived exclusively from the class's `%% armor rec: ... %%` markdown comment.
+//   light       → gambeson
+//   med/medium  → leather
+//   heavy       → chainmail
+//   extra heavy → full-plate
+// Returns an empty array when the class has no armor rec comment.
 
-export function getSuggestedArmorId(startingEvasion: number): string {
-  if (startingEvasion >= 9) return "gambeson";
-  if (startingEvasion === 8) return "leather";
-  if (startingEvasion === 7) return "chainmail";
-  return "full-plate";
+export function getSuggestedArmorIds(armorRec: string[]): string[] {
+  return armorRec;
 }
 
 // ─── Starting Consumables (SRD page 58) ──────────────────────────────────────

@@ -124,6 +124,30 @@ export interface CharacterSummary {
    */
   portraitUrl: string | null;
   updatedAt: string;
+
+  // ── Multiclass fields (SRD p.43: available Tier 3+, costs both slots) ────
+  /**
+   * The classId of the character's second class, if they have multiclassed.
+   * Null until the multiclass advancement is taken (level 5+).
+   */
+  multiclassClassId: string | null;
+  /**
+   * Display name of the multiclass class (denormalized for list views).
+   * Null until multiclassed.
+   */
+  multiclassClassName: string | null;
+  /**
+   * The subclassId chosen from the multiclass class's subclasses.
+   * Only the Foundation feature of this subclass is granted (SRD p.43).
+   * Null until multiclassed.
+   */
+  multiclassSubclassId: string | null;
+  /**
+   * The domain name chosen from the multiclass class's two domains.
+   * Cards from this domain are available at up to half character level (rounded up).
+   * Null until multiclassed.
+   */
+  multiclassDomainId: string | null;
 }
 
 export interface Character extends CharacterSummary {
@@ -251,9 +275,32 @@ export interface ClassData extends ClassSummary {
   connectionQuestions: string[];
   subclasses: SubclassData[];
   mechanicalNotes: string;
+  /** Armor IDs recommended for this class (1–2 items). Derived from the
+   *  `%% armor rec: <tier> %%` comment in the class markdown file.
+   *  Falls back to evasion-based suggestion if absent. */
+  armorRec: string[];
 }
 
 // ─── Community & Ancestry ─────────────────────────────────────────────────────
+
+/**
+ * A flat, numeric stat bonus granted at character creation by an ancestry or
+ * community trait. Only creation-time bonuses are represented here; conditional
+ * or once-per-session effects are described in traitDescription prose instead.
+ *
+ * stat:        Which character stat is modified.
+ * amount:      Additive integer delta (positive = increase).
+ * traitIndex:  0 for first/only trait, 1 for second trait (ancestries only).
+ * condition:   Optional human-readable qualifier (stored for display; does NOT
+ *              change the flat-bonus semantics — if a condition is present and
+ *              non-trivial, the bonus should NOT be in this list).
+ */
+export interface MechanicalBonus {
+  stat: "armor" | "hp" | "stress" | "evasion" | "hope" | "hopeMax";
+  amount: number;
+  traitIndex: 0 | 1;
+  condition?: string;
+}
 
 export interface CommunityData {
   communityId: string;
@@ -262,6 +309,8 @@ export interface CommunityData {
   traitName: string;
   traitDescription: string;
   source: CharacterSource;
+  /** Flat stat bonuses granted at character creation. Absent when there are none. */
+  mechanicalBonuses?: MechanicalBonus[];
 }
 
 export interface AncestryData {
@@ -273,6 +322,8 @@ export interface AncestryData {
   secondTraitName: string;
   secondTraitDescription: string;
   source: CharacterSource;
+  /** Flat stat bonuses granted at character creation. Absent when there are none. */
+  mechanicalBonuses?: MechanicalBonus[];
 }
 
 // ─── Domain Cards ─────────────────────────────────────────────────────────────
@@ -286,6 +337,7 @@ export interface DomainCard {
   cardId: string;
   domain: string;
   level: number;
+  recallCost: number;
   name: string;
   isCursed: boolean;
   isLinkedCurse: boolean;
@@ -519,7 +571,11 @@ export interface AdvancementChoice {
    * - experience-bonus: comma-separated pair of experience names, e.g. "Stealth,Athletics"
    * - additional-domain-card: cardId
    * - subclass-upgrade: "specialization" | "mastery"
-   * - multiclass: classId of the new class
+   * - multiclass: pipe-delimited string "classId|domainId|subclassId"
+   *     e.g. "bard|codex|luminary"
+   *     classId    = the chosen secondary class
+   *     domainId   = which of that class's two domains was chosen
+   *     subclassId = the subclass whose Foundation card was taken
    * All others: no detail needed.
    */
   detail?: string;

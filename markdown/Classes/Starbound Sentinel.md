@@ -94,3 +94,5 @@ _Absorbed Strangeness_: Once per rest, when you successfully protect an ally fro
 ## Mechanical Notes
 
 The Ward needs to be active before the Creep or Etherotaxia reach your allies — raise it at the first sign of supernatural involvement, not after someone has already been targeted. The Threshold Keeper path is built around holding position. Stack Fearless Stand and Warden's Challenge to concentrate all incoming threat on yourself, but be ready for the Maintenance rolls to fail under sustained pressure. Hold the Line is your emergency release valve so don't spend it too early. The Rift-Touched path rewards attentiveness. Counter-Resonance gives you advance information every turn The Ward is up, so use it to actively plan. Absorbed Strangeness fires once per rest and stacks a +2 onto your next Spellcast Roll — save that roll for Turn the Weird or a high-stakes moment. The Carried Weight is a session-defining sacrifice and should be treated as a last resort.
+
+%% armor rec: heavy | xheavy %%

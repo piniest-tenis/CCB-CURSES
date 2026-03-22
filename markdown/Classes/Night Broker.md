@@ -1,3 +1,4 @@
+
 |          Domains          | Starting Evasion | Starting Hit Points |
 | :-----------------------: | :--------------: | :-----------------: |
 | [[Oddity]] & [[Thievery]] |        10        |          6          |
@@ -90,3 +91,5 @@ _Quick Exit_: Once per rest immediately after a Thievery action, you may use Bet
 ## Mechanical Notes
 
 Between Places is a positioning tool first. Use it to set up advantages, not just as an escape hatch. The Fold-Walker path rewards long-term spatial planning and treating locations as relationships; the Acquisitor path is about decisive, irreversible action with clean recovery. In either case, use your class feature every scene; the class loses much of its power if you hold Between Places in reserve indefinitely.
+
+%% armor rec: light %%

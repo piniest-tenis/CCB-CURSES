@@ -89,3 +89,5 @@ _Cover Story_: After a Thievery action, once per scene, immediately construct a 
 ## Mechanical Notes
 
 The Setup requires active engagement with your GM at the start of every relevant scene, not retroactively. The more specific and concrete your established condition, the more powerful the bonus. Vague conditions produce vague advantages. The Long Con path rewards patience and multi-session investment; the Quick Mark path rewards clean decisive action and knowing when to stop. In either case, establish the pre-arranged condition as early as possible, as it shapes the whole scene that follows.
+
+%% armor rec: med %%

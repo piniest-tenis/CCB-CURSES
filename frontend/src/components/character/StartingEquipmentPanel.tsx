@@ -52,7 +52,7 @@ function ConsumableDetail({
       <button
         type="button"
         onClick={onBack}
-        className="flex items-center gap-1.5 px-4 py-3 text-xs text-[#b9baa3]/50 hover:text-[#b9baa3] transition-colors shrink-0"
+        className="flex items-center gap-1.5 px-4 py-3 min-h-[44px] text-xs text-[#b9baa3]/50 hover:text-[#b9baa3] transition-colors shrink-0 focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-inset rounded"
       >
         ← Back
       </button>
@@ -91,7 +91,7 @@ export function StartingEquipmentPanel({
   }
 
   return (
-    <div className="overflow-y-auto h-full px-6 py-5 space-y-8">
+    <div className="overflow-y-auto h-full px-4 sm:px-6 py-5 space-y-8">
 
       {/* ── Section 1: Automatic items ────────────────────────────────── */}
       <section>
@@ -104,7 +104,7 @@ export function StartingEquipmentPanel({
           {UNIVERSAL_STARTING_ITEMS.map((item) => (
             <li
               key={item}
-              className="flex items-center gap-3 rounded-lg border border-slate-700/40 bg-slate-900/30 px-4 py-2.5"
+              className="flex items-center gap-3 rounded-lg border border-slate-700/40 bg-slate-900/30 px-4 py-2.5 min-w-0"
             >
               <span className="text-[#577399] text-sm">✓</span>
               <span className="text-sm text-[#f7f7ff]">{item}</span>
@@ -112,7 +112,7 @@ export function StartingEquipmentPanel({
           ))}
 
           {/* Gold */}
-          <li className="flex items-center gap-3 rounded-lg border border-slate-700/40 bg-slate-900/30 px-4 py-2.5">
+          <li className="flex items-center gap-3 rounded-lg border border-slate-700/40 bg-slate-900/30 px-4 py-2.5 min-w-0">
             <span className="text-[#577399] text-sm">✓</span>
             <div className="flex flex-col">
               <span className="text-sm text-[#f7f7ff]">
@@ -140,21 +140,21 @@ export function StartingEquipmentPanel({
                 key={item.id}
                 onClick={() => setDetailItem(item)}
                 className={`
-                  flex items-center rounded-lg border transition-all cursor-pointer
+                  flex items-center rounded-lg border transition-all cursor-pointer min-w-0
                   ${isSelected
                     ? "border-[#577399] bg-[#577399]/15"
                     : "border-slate-700/60 bg-slate-900/30 hover:border-slate-600"
                   }
                 `}
               >
-                {/* Circular select button */}
+                {/* Circular select button — padded to meet 44px touch target */}
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     onChange({ ...selections, consumableId: item.id });
                   }}
-                  className="pl-4 pr-3 py-3 flex-shrink-0 flex items-center"
+                  className="pl-3 pr-2 py-3 flex-shrink-0 flex items-center min-h-[44px]"
                   aria-label={`Select ${item.name}`}
                 >
                   <span
@@ -173,9 +173,9 @@ export function StartingEquipmentPanel({
                 </button>
 
                 {/* Row content */}
-                <div className="flex-1 py-3 pr-3">
-                  <p className="text-sm font-semibold text-[#f7f7ff]">{item.name}</p>
-                  <p className="text-xs text-[#b9baa3]/50 mt-0.5">{item.shortDescription}</p>
+                <div className="flex-1 min-w-0 py-3 pr-3">
+                  <p className="text-sm font-semibold text-[#f7f7ff] truncate">{item.name}</p>
+                  <p className="text-xs text-[#b9baa3]/50 mt-0.5 truncate">{item.shortDescription}</p>
                 </div>
 
                 {/* Decorative chevron */}
@@ -205,7 +205,7 @@ export function StartingEquipmentPanel({
                   type="button"
                   onClick={() => onChange({ ...selections, classItem: item })}
                   className={`
-                    w-full flex items-center gap-3 px-4 py-3 rounded-lg border text-left transition-all
+                    w-full flex items-center gap-3 px-4 py-3 min-h-[44px] rounded-lg border text-left transition-all min-w-0
                     ${isSelected
                       ? "border-[#577399] bg-[#577399]/15"
                       : "border-slate-700/60 bg-slate-900/30 hover:border-slate-600"
@@ -225,7 +225,7 @@ export function StartingEquipmentPanel({
                       <span className="h-1.5 w-1.5 rounded-full bg-white" />
                     )}
                   </span>
-                  <p className="text-sm font-semibold text-[#f7f7ff]">{item}</p>
+                  <p className="text-sm font-semibold text-[#f7f7ff] min-w-0 truncate">{item}</p>
                 </button>
               );
             })}

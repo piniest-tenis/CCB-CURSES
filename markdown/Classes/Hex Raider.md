@@ -94,3 +94,5 @@ _Known Risk_: Once per rest, when you are about to make a Thievery roll, describ
 ## Mechanical Notes
 
 Engage with the narrative of your collection. Give individual items names and histories and describe them specifically when you invoke them. The more present they are in the fiction, the more the GM can build situations around them. The Relic-Marked path treats the collection as a growing and changing supernatural inheritance; the Midnight Acquisitor uses it as reliable professional equipment. In either case, the Hope Feature is your big-moment enabler, so save it for scenes where you genuinely need both effects.
+
+%% armor rec: light %%

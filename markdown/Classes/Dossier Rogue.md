@@ -1,6 +1,6 @@
 |         Domains          | Starting Evasion | Starting Hit Points |
 | :----------------------: | :--------------: | :-----------------: |
-| [[Study]] & [[Thievery]] |        10        |          6          |
+| [[Study]] & [[Thievery]] |        9         |          7          |
 
 ### Class Items
 
@@ -95,3 +95,5 @@ _Pre-Planned Exit_: Once per rest, before you enter a space, declare a specific 
 ## Mechanical Notes
 
 Your power scales with preparation. Use Advanced Reconnaissance consistently and early, since information gathered before you act is worth far more than information discovered after. The Profile Artist path wins through accumulated intelligence over a session; the Ghost Operative path wins through irreversible, clean execution. In either case, talk to your GM during downtime about upcoming jobs. This class is most satisfying when planning is rewarded.
+
+%% armor rec: med %%

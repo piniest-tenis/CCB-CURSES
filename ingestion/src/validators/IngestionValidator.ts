@@ -312,6 +312,15 @@ export function validateDomainCard(data: DomainCard): ValidationResult {
     );
   }
 
+  if (typeof data.recallCost !== "number" || data.recallCost < 0) {
+    addError(
+      result,
+      "recallCost",
+      "recallCost-range",
+      `recallCost must be a non-negative number (got ${data.recallCost})`
+    );
+  }
+
   if (data.isCursed && !data.curseText) {
     addWarning(
       result,

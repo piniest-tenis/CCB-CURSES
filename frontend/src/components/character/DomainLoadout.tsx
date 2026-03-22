@@ -43,13 +43,14 @@ function parseCardId(cardId: string): { domain: string | undefined; id: string }
 // SRD p. 22-23: "Acquire a new domain card at your level or lower from one of your class's domains"
 
 interface AcquireCardPickerProps {
-  classId:           string | undefined;
-  characterLevel:    number;
-  characterId:       string;
-  acquiredCardIds:   Set<string>;
-  loadoutIds:        string[];
-  onCardAcquired:    () => void;
-  onClose:           () => void;
+  classId:              string | undefined;
+  characterLevel:       number;
+  characterId:          string;
+  acquiredCardIds:      Set<string>;
+  loadoutIds:           string[];
+  multiclassDomainId:   string | null;
+  onCardAcquired:       () => void;
+  onClose:              () => void;
 }
 
 function AcquireCardPicker({
@@ -58,6 +59,7 @@ function AcquireCardPicker({
   characterId,
   acquiredCardIds,
   loadoutIds,
+  multiclassDomainId,
   onCardAcquired,
   onClose,
 }: AcquireCardPickerProps) {
@@ -74,30 +76,39 @@ function AcquireCardPicker({
     return classData.domains ?? [];
   }, [classData]);
 
-  // Fetch cards for each domain
-  const domainCardsResults = domains.map((d) =>
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useDomain(d, characterLevel)
-  );
+  // Multiclass domain level cap: cards capped at ceil(level / 2) — SRD p.43
+  const multiclassLevelCap = Math.ceil(characterLevel / 2);
+
+  // Fetch cards for each domain (always call all three hooks unconditionally to
+  // satisfy Rules of Hooks — pass undefined when the domain doesn't exist).
+  const domain0Result = useDomain(domains[0] ?? undefined, characterLevel);
+  const domain1Result = useDomain(domains[1] ?? undefined, characterLevel);
+  const domain2Result = useDomain(multiclassDomainId ?? undefined, multiclassLevelCap);
 
   // Collect all eligible, unacquired cards
   const eligibleCards = React.useMemo(() => {
     const cards: (DomainCard & { domain: string })[] = [];
-    domains.forEach((domain, idx) => {
-      const result = domainCardsResults[idx];
-      if (result.data?.cards) {
-        result.data.cards
-          .filter((card) => {
-            const cardId = `${domain}/${card.cardId}`;
-            return !acquiredCardIds.has(cardId) && card.level <= characterLevel;
-          })
-          .forEach((card) => {
-            cards.push({ ...card, domain });
-          });
+    const seen = new Set<string>();
+    // Primary class domains: level cap = character level
+    // Multiclass domain: level cap = ceil(level / 2)
+    const pairs: [string | undefined, typeof domain0Result, number][] = [
+      [domains[0], domain0Result, characterLevel],
+      [domains[1], domain1Result, characterLevel],
+      [multiclassDomainId ?? undefined, domain2Result, multiclassLevelCap],
+    ];
+    for (const [domain, result, levelCap] of pairs) {
+      if (!domain || !result.data?.cards) continue;
+      for (const card of result.data.cards) {
+        const cardId = `${domain}/${card.cardId}`;
+        if (seen.has(cardId)) continue;
+        if (!acquiredCardIds.has(cardId) && card.level <= levelCap) {
+          seen.add(cardId);
+          cards.push({ ...card, domain });
+        }
       }
-    });
+    }
     return cards.sort((a, b) => a.level - b.level || a.domain.localeCompare(b.domain) || a.name.localeCompare(b.name));
-  }, [domains, domainCardsResults, acquiredCardIds, characterLevel]);
+  }, [domains, domain0Result, domain1Result, multiclassDomainId, domain2Result, multiclassLevelCap, acquiredCardIds, characterLevel]);
 
   const handleAcquire = async () => {
     if (!selectedCard) return;
@@ -115,7 +126,7 @@ function AcquireCardPicker({
     }
   };
 
-  const isLoading = domainCardsResults.some((r) => r.isLoading);
+  const isLoading = domain0Result.isLoading || domain1Result.isLoading || domain2Result.isLoading;
 
   return (
     <div className="rounded-xl border border-burgundy-800 bg-slate-900/50 p-4 space-y-3">
@@ -134,6 +145,7 @@ function AcquireCardPicker({
       <p className="text-xs text-parchment-600">
         Level {characterLevel} or below from your domains
         {domains.length > 0 && ` (${domains.join(", ")})`}
+        {multiclassDomainId && ` + ${multiclassDomainId} (Lv ${multiclassLevelCap} cap)`}
       </p>
 
       {isLoading ? (
@@ -331,9 +343,11 @@ interface AuraToggleProps {
   cardName: string;
   characterId: string;
   isActive: boolean;
+  /** True when another aura is currently active (will be deactivated if this one is turned on). */
+  anotherAuraActive: boolean;
 }
 
-function AuraToggle({ cardId, cardName, characterId, isActive }: AuraToggleProps) {
+function AuraToggle({ cardId, cardName, characterId, isActive, anotherAuraActive }: AuraToggleProps) {
   const { fire, isPending, inlineError } = useActionButton(characterId);
   const errorId = React.useId();
 
@@ -368,6 +382,12 @@ function AuraToggle({ cardId, cardName, characterId, isActive }: AuraToggleProps
       {isActive && (
         <p className="text-[11px] text-[#6a8fb5] leading-snug" role="status">
           Aura active — when hit, make a Spellcast Roll to maintain.
+        </p>
+      )}
+
+      {!isActive && anotherAuraActive && (
+        <p className="text-[11px] text-parchment-600 leading-snug">
+          Activating will deactivate your current aura.
         </p>
       )}
 
@@ -464,7 +484,7 @@ function DomainCardDetailSidebar({ card, onClose }: DomainCardDetailSidebarProps
                 Lv {card.level}
               </span>
               <span className="rounded-full border border-slate-700 px-2 py-0.5 text-[11px] text-parchment-500 uppercase tracking-wider">
-                Recall Cost {card.level}⚡
+                Recall Cost {card.recallCost}⚡
               </span>
               {card.isGrimoire && (
                 <span className="rounded bg-gold-900/50 px-1.5 py-0.5 text-[11px] font-semibold text-gold-400">
@@ -693,6 +713,7 @@ function LoadoutCardSlot({
           cardName={card.name}
           characterId={characterId}
           isActive={isAuraActive}
+          anotherAuraActive={!isAuraActive && activeAuras.length > 0}
         />
       )}
     </div>
@@ -724,9 +745,17 @@ function VaultPicker({ vaultIds, loadoutIds, characterId, characterLevel, onClos
   const [selectedLoadoutCard, setSelectedLoadoutCard] = React.useState<string | null>(null);
   const swapAction = useActionButton(characterId);
 
+  // Fetch the selected vault card's data so we can read its recall cost
+  const selectedParsed = selectedVaultCard ? parseCardId(selectedVaultCard) : { domain: undefined, id: undefined };
+  const { data: selectedCardData } = useDomainCard(selectedParsed.domain, selectedParsed.id);
+
   const handleSwap = () => {
     if (!selectedVaultCard) return;
     if (isFull && !selectedLoadoutCard) return;
+
+    // Recall cost = card's recallCost field if available, otherwise fall back to card level.
+    // During a rest the backend ignores n, but during normal play it charges stress.
+    const recallCost = selectedCardData?.recallCost ?? selectedCardData?.level ?? 0;
 
     swapAction.fire("swap-loadout-card", {
       vaultCardId:   selectedVaultCard,
@@ -735,7 +764,8 @@ function VaultPicker({ vaultIds, loadoutIds, characterId, characterLevel, onClos
       // is passed via n so the backend knows how much stress to charge.
       // For now, we pass restType: "none" — the DowntimeModal will use "short"/"long".
       restType: "none",
-      n: 0, // Placeholder: actual recallCost would be looked up from card data
+      n: recallCost,
+      isLinkedCurse: selectedCardData?.isLinkedCurse ?? false,
     });
 
     setSelectedVaultCard(null);
@@ -953,7 +983,7 @@ export function DomainLoadout() {
 
   if (!activeCharacter) return null;
 
-  const { domainLoadout, domainVault, characterId, classId, level } = activeCharacter;
+  const { domainLoadout, domainVault, characterId, classId, level, multiclassDomainId } = activeCharacter;
 
   const handleDragStart = (index: number) => {
     dragIndex.current = index;
@@ -1140,6 +1170,7 @@ export function DomainLoadout() {
               characterId={characterId}
               acquiredCardIds={acquiredCardIds}
               loadoutIds={domainLoadout}
+              multiclassDomainId={multiclassDomainId}
               onCardAcquired={() => {
                 setShowPicker(false);
               }}

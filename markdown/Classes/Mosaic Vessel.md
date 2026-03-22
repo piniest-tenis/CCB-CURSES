@@ -90,3 +90,5 @@ _Crowd Turned_: Once per rest, when you address more than one character at once,
 ## Mechanical Notes
 
 Your manifestations are intentionally open-ended. Talk with your GM before the session about what they can and can't interact with physically. Don't try to engineer perfect mechanical outcomes; let the weirdness create openings. Save Hope for the moments when you want a manifestation to stick around or do something consequential. The Waking Dream path rewards patience; the Grand Performer path rewards working the room before anything goes wrong.
+
+%% armor rec: light %%

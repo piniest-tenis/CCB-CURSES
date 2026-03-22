@@ -45,11 +45,11 @@ export class ApiStack extends cdk.Stack {
     // CORS allowed origins — shared between API Gateway config and Lambda env
     // -----------------------------------------------------------------------
     const corsAllowOrigins = isProd
-      ? ["https://app.daggerheart.example.com"]
+      ? ["https://curses-ccb.maninjumpsuit.com"]
       : [
           "http://localhost:3000",
           "http://localhost:3001",
-          `https://${stage}.daggerheart.example.com`,
+          `https://${stage}.curses-ccb.example.com`,
           // CloudFront domain for the deployed dev frontend
           "https://dqt96kbhxdqy3.cloudfront.net",
         ];
@@ -392,7 +392,7 @@ export class ApiStack extends cdk.Stack {
 
     // Named deployment stage with access logging
     const accessLogGroup = new logs.LogGroup(this, "ApiAccessLogs", {
-      logGroupName: `/aws/apigateway/daggerheart-${stage}`,
+      logGroupName: `/aws/apigateway/curses-ccb-${stage}`,
       retention: isProd ? logs.RetentionDays.THREE_MONTHS : logs.RetentionDays.ONE_WEEK,
       removalPolicy: isProd ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
     });
@@ -545,6 +545,14 @@ export class ApiStack extends cdk.Stack {
       { method: apigwv2.HttpMethod.GET, path: "/characters/{characterId}/share" },
       // Portrait image upload — returns a presigned S3 PUT URL
       { method: apigwv2.HttpMethod.POST, path: "/characters/{characterId}/portrait-upload-url" },
+      // Level-up wizard
+      { method: apigwv2.HttpMethod.POST, path: "/characters/{characterId}/levelup" },
+      // Downtime projects
+      { method: apigwv2.HttpMethod.POST, path: "/characters/{characterId}/projects" },
+      { method: apigwv2.HttpMethod.PATCH, path: "/characters/{characterId}/projects/{projectId}" },
+      { method: apigwv2.HttpMethod.DELETE, path: "/characters/{characterId}/projects/{projectId}" },
+      // Actions (in-session)
+      { method: apigwv2.HttpMethod.POST, path: "/characters/{characterId}/actions" },
     ];
 
     for (const route of characterRoutes) {

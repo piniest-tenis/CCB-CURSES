@@ -100,3 +100,5 @@ _Charmed, I'm Sure_: You can spend a Hope to gain a temporary +1 bonus to the [[
 ## Mechanical Notes
 
 Invader of Dreams is once per session and requires prior conversation, so set it up deliberately — use downtime or early scene dialogue to qualify a target before the situation becomes urgent. The Deathwarden path builds a persistent force: raise Sleepwalkers opportunistically on downed adversaries, then use Rising Dreams when you need a concentrated push. Dream Legion pays out best when you've been banking Hope rather than spending it liberally. The Social Enchanter path is sustained condition control: build Attitude with Charmed, I'm Sure before applying Puppets on a String, and choose your condition based on what the scene needs — Enchanted for compliance, Fearful for removal, Abashed for a party-wide social advantage. Commanding Presence lets you combine the condition with repositioning, which is most valuable when you need a target away from an ally or into a specific spot.
+
+%% armor rec: light %%

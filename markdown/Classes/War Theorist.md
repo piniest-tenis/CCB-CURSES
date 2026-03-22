@@ -94,3 +94,5 @@ _Aggressive Adaptation_: Once per rest, after you take damage, your next attack 
 ## Mechanical Notes
 
 Combat Assessment works best when you use it at the very start of any fight. Get your chosen effect down before the chaos starts. Expose Weakness is strong but requires your party to press the advantage on the same target, so coordinate with your allies before spending it. The Siege Scholar path builds toward one devastating, perfectly positioned strike. The Front-Line Theorist path rewards staying in the thick of it and improving as you take hits. Both paths benefit from paying attention to adversary behavior between your turns.
+
+%% armor rec: med | heavy %%

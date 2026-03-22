@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import "source-map-support/register";
 import * as cdk from "aws-cdk-lib";
+import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import { AuthStack } from "../lib/auth-stack";
 import { DataStack } from "../lib/data-stack";
 import { StorageStack } from "../lib/storage-stack";
@@ -35,9 +36,36 @@ const apiStack = new ApiStack(app, `DaggerheartApi-${stage}`, {
   storageStack,
 });
 
+// CloudFront requires ACM certificates to be in us-east-1 regardless of the
+// stack's deployment region. We create the cert in a dedicated us-east-1 stack
+// and pass the certificate ARN string into FrontendStack to avoid cross-region
+// SSM references (which require bootstrapping in both regions).
+let frontendCertificateArn: string | undefined;
+if (stage === "prod") {
+  const certStack = new cdk.Stack(app, `DaggerheartCert-${stage}`, {
+    env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: "us-east-1" },
+    crossRegionReferences: true,
+  });
+
+  const cert = new acm.Certificate(certStack, "FrontendCertificate", {
+    domainName: "curses-ccb.maninjumpsuit.com",
+    validation: acm.CertificateValidation.fromDns(),
+  });
+  // Export the ARN as a plain string output so the FrontendStack can consume
+  // it without a cross-region reference (avoids SSM bootstrap requirement).
+  new cdk.CfnOutput(certStack, "CertificateArn", {
+    value: cert.certificateArn,
+    exportName: `DaggerheartFrontendCertArn-${stage}`,
+  });
+  frontendCertificateArn = cert.certificateArn;
+}
+
 new FrontendStack(app, `DaggerheartFrontend-${stage}`, {
   ...stackProps,
+  // crossRegionReferences lets CDK pass the cert ARN from us-east-1 via SSM
+  crossRegionReferences: true,
   apiStack,
+  frontendCertificateArn,
 });
 
 cdk.Tags.of(app).add("Project", "DaggerheartCharacterPlatform");

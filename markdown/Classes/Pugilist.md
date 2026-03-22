@@ -1,3 +1,4 @@
+
 |           Domains           | Starting Evasion | Starting Hit Points |
 | :-------------------------: | :--------------: | :-----------------: |
 | [[Artistry]] & [[Violence]] |        9         |          7          |
@@ -88,3 +89,5 @@ _Snub Nose_: When you fail a roll with Fear, you can mark 2 Stress to change the
 ## Mechanical Notes
 
 Showmanship is always available. As long as you describe your attack with flair, you're rolling with your strongest trait. The Graceful Combatant path rewards constant movement. Move Like Water generates free positioning, and Raining Blows lets you chain attacks as long as you keep hitting, so don't stand still. The Brutal Technician path rewards focus. Study one target to build your damage bonus, then spend consecutive successful rolls to chain up to Speed Bag's critical trigger. Snub Nose is an insurance policy for when the dice turn against you. Both paths work best when you commit to a primary target early and apply consistent pressure rather than spreading attacks.
+
+%% armor rec: light | med | heavy | xheavy %%

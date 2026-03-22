@@ -48,7 +48,7 @@ function CardDetail({
       <button
         type="button"
         onClick={onBack}
-        className="flex items-center gap-1.5 px-4 py-3 text-xs text-[#b9baa3]/50 hover:text-[#b9baa3] transition-colors shrink-0"
+        className="flex items-center gap-1.5 px-4 py-3 min-h-[44px] text-xs text-[#b9baa3]/50 hover:text-[#b9baa3] transition-colors shrink-0 focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-inset rounded"
       >
         ← Back to cards
       </button>
@@ -160,23 +160,30 @@ function CardRow({
         }
       `}
     >
-      {/* Circular select button */}
+      {/* Circular select button — padded to meet 44px touch target */}
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); if (canSelect || isSelected) onToggle(); }}
         disabled={!canSelect && !isSelected}
         aria-label={isSelected ? `Deselect ${card.name}` : `Select ${card.name}`}
         className={`
-          ml-3 h-5 w-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors
-          ${isSelected
-            ? "border-[#577399] bg-[#577399]"
-            : !canSelect
-              ? "border-slate-700/40 cursor-not-allowed"
-              : "border-slate-600 hover:border-[#577399]/70"
-          }
+          ml-1 p-3 flex-shrink-0 flex items-center justify-center transition-colors
+          ${!canSelect && !isSelected ? "cursor-not-allowed" : ""}
         `}
       >
-        {isSelected && <span className="h-2 w-2 rounded-full bg-white" />}
+        <span
+          className={`
+            h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors
+            ${isSelected
+              ? "border-[#577399] bg-[#577399]"
+              : !canSelect
+                ? "border-slate-700/40"
+                : "border-slate-600 hover:border-[#577399]/70"
+            }
+          `}
+        >
+          {isSelected && <span className="h-2 w-2 rounded-full bg-white" />}
+        </span>
       </button>
 
       {/* Text — fills remaining space, clicking goes to drill-down via parent */}
@@ -268,7 +275,13 @@ export function DomainCardSelectionPanel({
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#577399] border-t-transparent" />
+        <div
+          className="h-6 w-6 animate-spin rounded-full border-2 border-[#577399] border-t-transparent"
+          role="status"
+          aria-label="Loading domain cards"
+        >
+          <span className="sr-only">Loading domain cards…</span>
+        </div>
       </div>
     );
   }
@@ -292,8 +305,8 @@ export function DomainCardSelectionPanel({
   return (
     <div className="flex flex-col h-full">
       {/* Selection counter */}
-      <div className="shrink-0 px-4 py-3 border-b border-slate-700/30 flex items-center justify-between">
-        <p className="text-xs text-[#b9baa3]/50">
+      <div className="shrink-0 px-4 py-3 border-b border-slate-700/30 flex items-start gap-3">
+        <p className="text-xs text-[#b9baa3]/50 flex-1 min-w-0">
           Select exactly <strong className="text-[#f7f7ff]">2</strong> cards from your class domains
           {classDomains.length > 0 && (
             <span className="ml-1 text-[#577399]">
@@ -303,7 +316,7 @@ export function DomainCardSelectionPanel({
         </p>
         <span
           className={`
-            text-sm font-bold px-2 py-0.5 rounded
+            text-sm font-bold px-2 py-0.5 rounded shrink-0
             ${selectionCount === 2 ? "text-[#4ade80]" : "text-[#b9baa3]/50"}
           `}
         >

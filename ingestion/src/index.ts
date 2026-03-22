@@ -196,9 +196,10 @@ async function runClasses(opts: CliOptions): Promise<CategorySummary> {
     nocase: true,
   });
 
-  // Skip the index file (Classes.md)
+  // Skip any file whose stem matches the folder it lives in (e.g. Classes.md inside Classes/)
+  const folderName = path.basename(classesDir).toLowerCase();
   const classFiles = allFiles.filter(
-    (f) => path.basename(f).toLowerCase() !== "classes.md"
+    (f) => path.basename(f, ".md").toLowerCase() !== folderName
   );
 
   const metadataItems: Record<string, unknown>[] = [];
@@ -237,6 +238,7 @@ async function runClasses(opts: CliOptions): Promise<CategorySummary> {
         backgroundQuestions: data.backgroundQuestions,
         connectionQuestions: data.connectionQuestions,
         mechanicalNotes: data.mechanicalNotes,
+        armorRec: data.armorRec,
         source: data.source,
       };
       metadataItems.push(metaItem);
@@ -343,8 +345,9 @@ async function runCommunities(opts: CliOptions): Promise<CategorySummary> {
 
   const commDir = path.join(MARKDOWN_ROOT, "Communities");
   const allFiles = await glob("*.md", { cwd: commDir, absolute: true });
+  const commFolderName = path.basename(commDir).toLowerCase();
   const commFiles = allFiles.filter(
-    (f) => path.basename(f).toLowerCase() !== "communities.md"
+    (f) => path.basename(f, ".md").toLowerCase() !== commFolderName
   );
 
   const items: Record<string, unknown>[] = [];
@@ -373,6 +376,7 @@ async function runCommunities(opts: CliOptions): Promise<CategorySummary> {
         traitName: data.traitName,
         traitDescription: data.traitDescription,
         source: data.source,
+        ...(data.mechanicalBonuses ? { mechanicalBonuses: data.mechanicalBonuses } : {}),
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -413,8 +417,9 @@ async function runAncestries(opts: CliOptions): Promise<CategorySummary> {
   }
 
   const allFiles = await glob("*.md", { cwd: ancestryDir, absolute: true });
+  const ancestryFolderName = path.basename(ancestryDir).toLowerCase();
   const ancestryFiles = allFiles.filter(
-    (f) => path.basename(f).toLowerCase() !== "ancestries.md"
+    (f) => path.basename(f, ".md").toLowerCase() !== ancestryFolderName
   );
 
   if (ancestryFiles.length === 0) {
@@ -450,6 +455,7 @@ async function runAncestries(opts: CliOptions): Promise<CategorySummary> {
         secondTraitName: data.secondTraitName,
         secondTraitDescription: data.secondTraitDescription,
         source: data.source,
+        ...(data.mechanicalBonuses ? { mechanicalBonuses: data.mechanicalBonuses } : {}),
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -521,9 +527,13 @@ async function runDomains(opts: CliOptions): Promise<CategorySummary> {
       description: domainDescription,
     });
 
-    // Only process card files — filenames must start with "(Level N)"
-    const cardFiles = allFiles.filter((f) =>
-      /\(Level\s+\d+\)/i.test(path.basename(f))
+    // Only process card files — filenames must start with "(Level N)".
+    // Also skip any file whose stem matches the domain folder name (index files).
+    const domainFolderName = domain.toLowerCase();
+    const cardFiles = allFiles.filter(
+      (f) =>
+        /\(Level\s+\d+\)/i.test(path.basename(f)) &&
+        path.basename(f, ".md").toLowerCase() !== domainFolderName
     );
 
     for (const filePath of cardFiles) {
@@ -549,6 +559,7 @@ async function runDomains(opts: CliOptions): Promise<CategorySummary> {
           cardId: data.cardId,
           domain: data.domain,
           level: data.level,
+          recallCost: data.recallCost,
           name: data.name,
           isCursed: data.isCursed,
           isLinkedCurse: data.isLinkedCurse,

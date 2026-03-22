@@ -1,6 +1,6 @@
 |          Domains          | Starting Evasion | Starting Hit Points |
 | :-----------------------: | :--------------: | :-----------------: |
-| [[Creature]] & [[Oddity]] |        10        |          6          |
+| [[Creature]] & [[Oddity]] |        9         |          7          |
 
 ### Class Items
 
@@ -94,3 +94,5 @@ _Weave a Yarn_: When you spend a few moments recounting a story to a Character, 
 ## Mechanical Notes
 
 Of Two Worlds costs 2 Hope, so use it deliberately: give the Warped condition to targets you need in Melee range for specific subclass features, not as a general mobility fix. The Ethereal Stalker path rewards stacking conditions. Gnasher spreads your current conditions to targets on a hit, so enter fights with beneficial conditions already active where possible. Mind over Matter gives you control over your own condition going into an attack; choose Enraged for offense, Ethereal for escape, and Docile only when deescalation is the goal. The Curiosity path is sustained social control: apply Charmed or Needled early and let the Stress cost erode the target's ability to act freely over time. Dreadful Fascination pays out best in long social encounters where conditions have time to trigger more than once.
+
+%% armor rec: med | heavy %%

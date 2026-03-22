@@ -125,7 +125,7 @@ export function WeaponSelectionPanel({
   return (
     <div className="flex flex-col h-full">
       {/* Slot tabs */}
-      <div className="flex shrink-0 border-b border-slate-700/30">
+      <div className="flex shrink-0 border-b border-slate-700/30" role="tablist" aria-label="Weapon slot">
         {(["primary", "secondary"] as ActiveSlot[]).map((slot) => {
           const weapon = slot === "primary" ? primaryWeapon : secondaryWeapon;
           const disabled = slot === "secondary" && primaryIsTwoHanded;
@@ -133,20 +133,22 @@ export function WeaponSelectionPanel({
             <button
               key={slot}
               type="button"
+              role="tab"
+              aria-selected={activeSlot === slot}
               disabled={disabled}
               onClick={() => setActiveSlot(slot)}
               className={`
-                flex-1 py-3 px-3 text-xs font-semibold uppercase tracking-wider transition-colors
+                flex-1 min-h-[44px] py-3 px-3 text-xs font-semibold uppercase tracking-wider transition-colors
                 ${activeSlot === slot
                   ? "text-[#577399] border-b-2 border-[#577399]"
                   : "text-[#b9baa3]/40 hover:text-[#b9baa3]/70 border-b-2 border-transparent"
                 }
-                ${disabled ? "opacity-40 cursor-not-allowed" : ""}
+                ${disabled ? "opacity-50 cursor-not-allowed" : ""}
               `}
             >
               {slot === "primary" ? "Primary" : "Secondary"}
               {weapon && <span className="ml-1.5 text-[#577399]">✓</span>}
-              {disabled && <span className="ml-1.5 text-[#b9baa3]/30 text-[10px] normal-case font-normal">(Two-Handed equipped)</span>}
+              {disabled && <span className="ml-1 text-[#b9baa3]/30 text-[10px] normal-case font-normal hidden sm:inline" aria-hidden="true">(2H)</span>}
             </button>
           );
         })}
@@ -154,19 +156,23 @@ export function WeaponSelectionPanel({
 
       {/* Filter bar */}
       <div className="shrink-0 px-4 py-3 border-b border-slate-700/30">
+        <label htmlFor="weapon-filter" className="sr-only">
+          Filter {categoryForSlot.toLowerCase()} weapons
+        </label>
         <input
+          id="weapon-filter"
           type="text"
           value={filterText}
           onChange={(e) => setFilterText(e.target.value)}
           placeholder={`Filter ${categoryForSlot.toLowerCase()} weapons…`}
           className="
             w-full rounded px-3 py-2 bg-slate-900 border border-slate-700
-            text-sm text-[#f7f7ff] placeholder-[#b9baa3]/30
+            text-base sm:text-sm text-[#f7f7ff] placeholder-[#b9baa3]/30
             focus:outline-none focus:ring-2 focus:ring-[#577399] focus:border-transparent
             transition-colors
           "
         />
-        <p className="text-[10px] text-[#b9baa3]/30 mt-1.5">
+        <p className="text-[10px] text-[#b9baa3]/30 mt-1.5" aria-hidden="true">
           Filter by name, trait, burden, range, damage type, or feature
         </p>
       </div>
@@ -193,20 +199,26 @@ export function WeaponSelectionPanel({
                   }
                 `}
               >
-                {/* Circular select button */}
+                {/* Circular select button — visual dot is 20px; padded to meet 44px touch target */}
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); handleSelect(weapon); }}
                   aria-label={`Select ${weapon.name}`}
                   className={`
-                    mt-0.5 h-5 w-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors
-                    ${isSelected
-                      ? "border-[#577399] bg-[#577399]"
-                      : "border-slate-600 hover:border-[#577399]/70"
-                    }
+                    -m-2 p-2 flex-shrink-0 flex items-center justify-center transition-colors
                   `}
                 >
-                  {isSelected && <span className="h-2 w-2 rounded-full bg-white" />}
+                  <span
+                    className={`
+                      h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors
+                      ${isSelected
+                        ? "border-[#577399] bg-[#577399]"
+                        : "border-slate-600 hover:border-[#577399]/70"
+                      }
+                    `}
+                  >
+                    {isSelected && <span className="h-2 w-2 rounded-full bg-white" />}
+                  </span>
                 </button>
 
                 {/* Content */}
@@ -250,17 +262,17 @@ export function WeaponSelectionPanel({
       {(primaryWeapon || secondaryWeapon) && (
         <div className="shrink-0 border-t border-slate-700/30 px-4 py-3 space-y-1">
           {primaryWeapon && (
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-[#b9baa3]/50 w-16 shrink-0">Primary:</span>
-              <span className="text-[#f7f7ff] font-medium">{primaryWeapon.name}</span>
-              <span className="text-[#b9baa3]/40">{primaryWeapon.damageDie} · {primaryWeapon.range}</span>
+            <div className="flex items-center gap-2 text-xs min-w-0">
+              <span className="text-[#b9baa3]/50 w-14 shrink-0">Primary:</span>
+              <span className="text-[#f7f7ff] font-medium truncate">{primaryWeapon.name}</span>
+              <span className="text-[#b9baa3]/40 shrink-0 whitespace-nowrap ml-auto">{primaryWeapon.damageDie} · {primaryWeapon.range}</span>
             </div>
           )}
           {secondaryWeapon && (
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-[#b9baa3]/50 w-16 shrink-0">Secondary:</span>
-              <span className="text-[#f7f7ff] font-medium">{secondaryWeapon.name}</span>
-              <span className="text-[#b9baa3]/40">{secondaryWeapon.damageDie} · {secondaryWeapon.range}</span>
+            <div className="flex items-center gap-2 text-xs min-w-0">
+              <span className="text-[#b9baa3]/50 w-14 shrink-0">Secondary:</span>
+              <span className="text-[#f7f7ff] font-medium truncate">{secondaryWeapon.name}</span>
+              <span className="text-[#b9baa3]/40 shrink-0 whitespace-nowrap ml-auto">{secondaryWeapon.damageDie} · {secondaryWeapon.range}</span>
             </div>
           )}
         </div>
@@ -285,7 +297,7 @@ function WeaponDrillDown({ weapon, isSuggested, onBack }: WeaponDrillDownProps) 
         <button
           type="button"
           onClick={onBack}
-          className="text-xs text-[#577399] hover:text-[#7a9fc2] transition-colors flex items-center gap-1"
+          className="flex items-center gap-1.5 px-4 py-3 -mx-4 text-xs text-[#577399] hover:text-[#7a9fc2] transition-colors min-h-[44px]"
         >
           ← Back to list
         </button>

@@ -7,11 +7,12 @@
  *
  * Features:
  * - Filterable list (by name, tier, feature type, armor score, thresholds)
- * - "Suggested" badge on armor derived from class's Starting Evasion:
- *     Evasion 9–10 → Flexible (Gambeson)
- *     Evasion 8    → No feature (Leather)
- *     Evasion 7    → Heavy (Chainmail)
- *     Evasion < 7  → Very Heavy (Full Plate)
+ * - "Suggested" badge on armor derived from class armorRec (`%% armor rec: ... %%`):
+ *     light       → Gambeson (Flexible)
+ *     med/medium  → Leather  (No feature)
+ *     heavy       → Chainmail
+ *     extra heavy → Full Plate
+ * - Up to 2 items can be suggested (pipe-separated in markdown)
  * - Suggested armor sorts to the top by default
  * - Drill-down detail view with full SRD stats + page reference
  * - Shows all tiers (for reference), but Tier 1 items are highlighted as
@@ -21,26 +22,26 @@
 import React, { useState, useMemo } from "react";
 import {
   TIER1_ARMOR,
-  getSuggestedArmorId,
+  getSuggestedArmorIds,
   type SRDArmor,
 } from "@/lib/srdEquipment";
 
 interface ArmorSelectionPanelProps {
   armorId: string | null;
   onArmorChange: (id: string | null) => void;
-  /** Class's starting evasion value — determines suggested armor */
-  startingEvasion: number;
+  /** Explicit armor recommendations from class markdown (may be empty) */
+  armorRec: string[];
 }
 
 export function ArmorSelectionPanel({
   armorId,
   onArmorChange,
-  startingEvasion,
+  armorRec,
 }: ArmorSelectionPanelProps) {
   const [filterText, setFilterText] = useState("");
   const [drillArmor, setDrillArmor] = useState<SRDArmor | null>(null);
 
-  const suggestedId = getSuggestedArmorId(startingEvasion);
+  const suggestedIds = getSuggestedArmorIds(armorRec);
 
   // Apply text filter
   const filtered = useMemo(() => {
@@ -58,15 +59,17 @@ export function ArmorSelectionPanel({
     );
   }, [filterText]);
 
-  // Sort: suggested first, then by armor score descending
+  // Sort: suggested first (preserving their relative order), then alphabetical
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
-      const aSug = a.id === suggestedId ? 0 : 1;
-      const bSug = b.id === suggestedId ? 0 : 1;
-      if (aSug !== bSug) return aSug - bSug;
+      const aIdx = suggestedIds.indexOf(a.id);
+      const bIdx = suggestedIds.indexOf(b.id);
+      const aRank = aIdx === -1 ? suggestedIds.length : aIdx;
+      const bRank = bIdx === -1 ? suggestedIds.length : bIdx;
+      if (aRank !== bRank) return aRank - bRank;
       return a.name.localeCompare(b.name);
     });
-  }, [filtered, suggestedId]);
+  }, [filtered, suggestedIds]);
 
   const selectedArmor = TIER1_ARMOR.find((a) => a.id === armorId) ?? null;
 
@@ -74,11 +77,17 @@ export function ArmorSelectionPanel({
     return (
       <ArmorDrillDown
         armor={drillArmor}
-        isSuggested={drillArmor.id === suggestedId}
+        isSuggested={suggestedIds.includes(drillArmor.id)}
         onBack={() => setDrillArmor(null)}
       />
     );
   }
+
+  // Build the banner label
+  const suggestedNames = suggestedIds
+    .map((id) => TIER1_ARMOR.find((a) => a.id === id)?.name)
+    .filter(Boolean)
+    .join(" or ");
 
   return (
     <div className="flex flex-col h-full">
@@ -86,28 +95,30 @@ export function ArmorSelectionPanel({
       <div className="shrink-0 px-4 py-2.5 border-b border-slate-700/30 bg-[#577399]/5">
         <p className="text-xs text-[#b9baa3]/60">
           <span className="text-[#577399] font-medium">Suggested for your class</span>
-          {" "}(Starting Evasion {startingEvasion}):
-          {" "}<span className="text-[#f7f7ff] font-medium">
-            {TIER1_ARMOR.find((a) => a.id === suggestedId)?.name ?? "—"}
-          </span>
+          {suggestedNames
+            ? <>{": "}<span className="text-[#f7f7ff] font-medium">{suggestedNames}</span></>
+            : <span className="text-[#b9baa3]/40"> — no recommendation defined</span>
+          }
         </p>
       </div>
 
       {/* Filter bar */}
       <div className="shrink-0 px-4 py-3 border-b border-slate-700/30">
+        <label htmlFor="armor-filter" className="sr-only">Filter armor</label>
         <input
+          id="armor-filter"
           type="text"
           value={filterText}
           onChange={(e) => setFilterText(e.target.value)}
           placeholder="Filter armor…"
           className="
             w-full rounded px-3 py-2 bg-slate-900 border border-slate-700
-            text-sm text-[#f7f7ff] placeholder-[#b9baa3]/30
+            text-base sm:text-sm text-[#f7f7ff] placeholder-[#b9baa3]/30
             focus:outline-none focus:ring-2 focus:ring-[#577399] focus:border-transparent
             transition-colors
           "
         />
-        <p className="text-[10px] text-[#b9baa3]/30 mt-1.5">
+        <p className="text-[10px] text-[#b9baa3]/30 mt-1.5" aria-hidden="true">
           Filter by name, feature, or armor score
         </p>
       </div>
@@ -121,7 +132,7 @@ export function ArmorSelectionPanel({
         ) : (
           sorted.map((armor) => {
             const isSelected = armor.id === armorId;
-            const isSuggested = armor.id === suggestedId;
+            const isSuggested = suggestedIds.includes(armor.id);
             return (
               <div
                 key={armor.id}
@@ -134,20 +145,24 @@ export function ArmorSelectionPanel({
                   }
                 `}
               >
-                {/* Circular select button */}
+                {/* Circular select button — visual dot is 20px; padded to meet 44px touch target */}
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onArmorChange(armor.id); }}
                   aria-label={`Select ${armor.name}`}
-                  className={`
-                    mt-0.5 h-5 w-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors
-                    ${isSelected
-                      ? "border-[#577399] bg-[#577399]"
-                      : "border-slate-600 hover:border-[#577399]/70"
-                    }
-                  `}
+                  className="-m-2 p-2 flex-shrink-0 flex items-center justify-center transition-colors"
                 >
-                  {isSelected && <span className="h-2 w-2 rounded-full bg-white" />}
+                  <span
+                    className={`
+                      h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors
+                      ${isSelected
+                        ? "border-[#577399] bg-[#577399]"
+                        : "border-slate-600 hover:border-[#577399]/70"
+                      }
+                    `}
+                  >
+                    {isSelected && <span className="h-2 w-2 rounded-full bg-white" />}
+                  </span>
                 </button>
 
                 {/* Content */}
@@ -185,13 +200,10 @@ export function ArmorSelectionPanel({
       {/* Selected summary */}
       {selectedArmor && (
         <div className="shrink-0 border-t border-slate-700/30 px-4 py-3">
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex items-center gap-2 text-xs min-w-0">
             <span className="text-[#b9baa3]/50 w-14 shrink-0">Armor:</span>
-            <span className="text-[#f7f7ff] font-medium">{selectedArmor.name}</span>
-            <span className="text-[#b9baa3]/40">Score {selectedArmor.baseArmorScore}</span>
-            {selectedArmor.feature && (
-              <span className="text-[#b9baa3]/40 truncate">· {selectedArmor.featureType}</span>
-            )}
+            <span className="text-[#f7f7ff] font-medium truncate">{selectedArmor.name}</span>
+            <span className="text-[#b9baa3]/40 shrink-0 whitespace-nowrap ml-auto">Score {selectedArmor.baseArmorScore}</span>
           </div>
         </div>
       )}
@@ -215,7 +227,7 @@ function ArmorDrillDown({ armor, isSuggested, onBack }: ArmorDrillDownProps) {
         <button
           type="button"
           onClick={onBack}
-          className="text-xs text-[#577399] hover:text-[#7a9fc2] transition-colors flex items-center gap-1"
+          className="flex items-center gap-1.5 px-4 py-3 -mx-4 text-xs text-[#577399] hover:text-[#7a9fc2] transition-colors min-h-[44px]"
         >
           ← Back to list
         </button>
@@ -238,7 +250,7 @@ function ArmorDrillDown({ armor, isSuggested, onBack }: ArmorDrillDownProps) {
         </div>
 
         {/* Stats grid */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <StatBlock label="Armor Score" value={String(armor.baseArmorScore)} />
           <StatBlock label="Major Threshold" value={`${armor.baseMajorThreshold}+`} />
           <StatBlock label="Severe Threshold" value={`${armor.baseSevereThreshold}+`} />

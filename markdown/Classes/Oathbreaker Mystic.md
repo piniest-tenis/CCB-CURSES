@@ -94,3 +94,5 @@ _Sacred Scar_: Once per rest, when you take damage, mark a Stress instead of a H
 ## Mechanical Notes
 
 Your class feature is tied directly to your backstory. Work with your GM to establish a list of the specific vows you broke and keep it accessible during play. The more precise the vow you invoke, the more resonant the fiction. The Apostate path plays aggressively with supernatural effects and builds toward a growing arsenal of alien power; the Penitent path builds resilience through sacrifice and draws mechanical strength from the ongoing relationship with a power that still has claim on you.
+
+%% armor rec: light %%

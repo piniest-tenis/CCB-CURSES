@@ -91,3 +91,5 @@ _Bad Omen_: Once per scene, when you succeed with Fear on a roll, choose a [[Cha
 ## Mechanical Notes
 
 Your two class features work together: use Veilstep to reposition before key actions, then apply your subclass features from the resulting position. Both are Hope-free or Hope-light, so conserve Hope for subclass abilities. The Grovetender path centers on your Ghostly Companion's placement. Silent Procession lets you reposition it without telegraphing; use it before combat reaches your allies rather than reactively. Sovereign of Echoes is most valuable when your companion has been under sustained pressure. Let it work hard, then bring it back if it falls. The Mire Whisperer path rewards patience: apply Bad Omen first, then stack Hex of Unrest, and let Name in the Dark pay out when targets fail. Don't spend the condition early before it has a chance to trigger.
+
+%% armor rec: light | med %%

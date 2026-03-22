@@ -1,5 +1,5 @@
-|                        Domains                        | Starting Evasion | Starting Hit Points |
-| :---------------------------------------------------: | :--------------: | :-----------------: |
+|          Domains          | Starting Evasion | Starting Hit Points |
+| :-----------------------: | :--------------: | :-----------------: |
 | [[Oddity]] & [[Trickery]] |        10        |          6          |
 ### Class Items
 _A prop that is different every time you look at it_ or _a record of lies you've told that have later become true_
@@ -71,3 +71,5 @@ _Unraveling_: Whenever you use Narrative Collapse, characters who actively disbe
 ## Mechanical Notes
 
 Commit fully to whatever you've said; half-hearted deceptions don't generate Narrative Collapse. Establish lies boldly and early, then pay attention to what happens when they start holding. The Architect path rewards long-term planning and complex social environments; the Living Contradiction path thrives in chaotic scenes where the impossible is expected. Engage your GM before sessions about the scope of your reality manipulation so you both know where the edges are.
+
+%% armor rec: light | med %%

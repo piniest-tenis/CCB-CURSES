@@ -93,3 +93,5 @@ _Wink and a Smile_: When you attempt to deceive a character, you can spend a Hop
 ## Mechanical Notes
 
 Criminal Connections is once per session, so don't save it for a perfect moment that never arrives. Use it at the first significant obstacle where it would meaningfully change the situation. The Enforcer path builds slowly: collect trophies through play, then deploy your intimidation bonus when you need to flip an adversary's behavior quickly. Crusher costs Hope but shuts down mobility; use it on high-priority targets you want to hold in place. The Pretty Face path converts social momentum directly into attacks: use Wink and Smile to set up advantage, then follow with Deadly Charm when a Presence success opens the window. Sharp Comeback turns a social failure into an offensive opportunity, so lean into it rather than treating failures as dead turns.
+
+%% armor rec: med | heavy %%

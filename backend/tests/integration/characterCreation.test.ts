@@ -348,15 +348,18 @@ describe("Character creation happy path", () => {
     expect(asResult(res).statusCode).toBe(404);
   });
 
-  // ── 8. POST /characters → 400 missing classId ────────────────────────────────
+  // ── 8. POST /characters → 201 when classId is omitted (classId is optional) ──
 
-  it("POST /characters → 400 when classId is missing", async () => {
+  it("POST /characters → 201 when classId is omitted (classless character)", async () => {
     const res = await handler(
       makeJwtEvent("POST /characters", {
-        body: { name: "Aeris" }, // no classId
+        body: { name: "Aeris" }, // no classId — valid per CreateCharacterSchema
       })
     );
-    expect(asResult(res).statusCode).toBe(400);
+    // classId is optional; a classless character shell is allowed at creation
+    expect(asResult(res).statusCode).toBe(201);
+    const body = parseBody(res);
+    expect(body.data.classId).toBe("");
   });
 
   // ── 9. POST /characters → 400 when class not found in DB ─────────────────────
@@ -384,5 +387,230 @@ describe("Character creation happy path", () => {
     } as unknown as Parameters<typeof handler>[0]);
 
     expect(asResult(res).statusCode).toBe(401);
+  });
+});
+
+// ─── Mechanical bonus application tests ──────────────────────────────────────
+
+describe("Character creation — mechanicalBonuses applied", () => {
+  beforeEach(() => {
+    characterStore = null;
+
+    mockPutItem.mockImplementation(async (params: { Item: Record<string, unknown> }) => {
+      characterStore = params.Item;
+      return {};
+    });
+
+    mockDeleteItem.mockImplementation(async () => {
+      characterStore = null;
+      return {};
+    });
+  });
+
+  it("applies ancestry armor bonus (+2) at creation (Allonaut-style)", async () => {
+    const ANCESTRY_WITH_ARMOR = {
+      PK: "ANCESTRY#allonaut",
+      SK: "allonaut",
+      id: "allonaut",
+      type: "ancestry",
+      name: "Allonaut",
+      mechanicalBonuses: [{ stat: "armor", amount: 2, traitIndex: 0 }],
+    };
+
+    mockGetItem.mockImplementation(
+      async (params: { TableName: string; Key: Record<string, unknown> }) => {
+        if (params.TableName === dynamodb.CLASSES_TABLE) {
+          if (params.Key["SK"] === "METADATA") return FAKE_CLASS;
+          return null;
+        }
+        if (params.TableName === dynamodb.GAME_DATA_TABLE) {
+          if (String(params.Key["PK"] ?? "").includes("ANCESTRY")) return ANCESTRY_WITH_ARMOR;
+          return null;
+        }
+        return characterStore;
+      }
+    );
+
+    const res = await handler(
+      makeJwtEvent("POST /characters", {
+        body: { name: "Carapace", classId: "warrior", ancestryId: "allonaut" },
+      })
+    );
+
+    expect(asResult(res).statusCode).toBe(201);
+    const body = parseBody(res);
+    // Armor score should be 0 (base) + 2 (ancestry bonus) = 2
+    expect(body.data.derivedStats.armor).toBe(2);
+    // Armor tracker max should also be synced to 2
+    expect(body.data.trackers.armor.max).toBe(2);
+    // Other stats should be unaffected
+    expect(body.data.trackers.hp.max).toBe(7); // from class
+    expect(body.data.trackers.stress.max).toBe(6);
+  });
+
+  it("applies ancestry hp + armor bonus at creation (Goran-style)", async () => {
+    const ANCESTRY_WITH_HP_AND_ARMOR = {
+      PK: "ANCESTRY#goran",
+      SK: "goran",
+      id: "goran",
+      type: "ancestry",
+      name: "Goran",
+      mechanicalBonuses: [
+        { stat: "armor", amount: 1, traitIndex: 0 },
+        { stat: "hp", amount: 1, traitIndex: 0 },
+      ],
+    };
+
+    mockGetItem.mockImplementation(
+      async (params: { TableName: string; Key: Record<string, unknown> }) => {
+        if (params.TableName === dynamodb.CLASSES_TABLE) {
+          if (params.Key["SK"] === "METADATA") return FAKE_CLASS;
+          return null;
+        }
+        if (params.TableName === dynamodb.GAME_DATA_TABLE) {
+          if (String(params.Key["PK"] ?? "").includes("ANCESTRY")) return ANCESTRY_WITH_HP_AND_ARMOR;
+          return null;
+        }
+        return characterStore;
+      }
+    );
+
+    const res = await handler(
+      makeJwtEvent("POST /characters", {
+        body: { name: "Hardrock", classId: "warrior", ancestryId: "goran" },
+      })
+    );
+
+    expect(asResult(res).statusCode).toBe(201);
+    const body = parseBody(res);
+    // HP: 7 (class base) + 1 (ancestry) = 8
+    expect(body.data.trackers.hp.max).toBe(8);
+    // Armor: 0 + 1 = 1
+    expect(body.data.derivedStats.armor).toBe(1);
+    expect(body.data.trackers.armor.max).toBe(1);
+  });
+
+  it("applies ancestry stress bonus (+1) at creation (Human-style)", async () => {
+    const ANCESTRY_WITH_STRESS = {
+      PK: "ANCESTRY#human",
+      SK: "human",
+      id: "human",
+      type: "ancestry",
+      name: "Human",
+      mechanicalBonuses: [{ stat: "stress", amount: 1, traitIndex: 0 }],
+    };
+
+    mockGetItem.mockImplementation(
+      async (params: { TableName: string; Key: Record<string, unknown> }) => {
+        if (params.TableName === dynamodb.CLASSES_TABLE) {
+          if (params.Key["SK"] === "METADATA") return FAKE_CLASS;
+          return null;
+        }
+        if (params.TableName === dynamodb.GAME_DATA_TABLE) {
+          if (String(params.Key["PK"] ?? "").includes("ANCESTRY")) return ANCESTRY_WITH_STRESS;
+          return null;
+        }
+        return characterStore;
+      }
+    );
+
+    const res = await handler(
+      makeJwtEvent("POST /characters", {
+        body: { name: "Adaptable", classId: "warrior", ancestryId: "human" },
+      })
+    );
+
+    expect(asResult(res).statusCode).toBe(201);
+    const body = parseBody(res);
+    // Stress: 6 (base) + 1 (ancestry) = 7
+    expect(body.data.trackers.stress.max).toBe(7);
+    expect(body.data.trackers.hp.max).toBe(7); // unaffected
+  });
+
+  it("stacks ancestry + community bonuses when both are provided", async () => {
+    const ANCESTRY_BONUS = {
+      PK: "ANCESTRY#test",
+      SK: "test",
+      id: "test",
+      type: "ancestry",
+      name: "Test Ancestry",
+      mechanicalBonuses: [{ stat: "hp", amount: 1, traitIndex: 0 }],
+    };
+    const COMMUNITY_BONUS = {
+      PK: "COMMUNITY#test",
+      SK: "test",
+      id: "test",
+      type: "community",
+      name: "Test Community",
+      mechanicalBonuses: [{ stat: "stress", amount: 1, traitIndex: 0 }],
+    };
+
+    mockGetItem.mockImplementation(
+      async (params: { TableName: string; Key: Record<string, unknown> }) => {
+        if (params.TableName === dynamodb.CLASSES_TABLE) {
+          if (params.Key["SK"] === "METADATA") return FAKE_CLASS;
+          return null;
+        }
+        if (params.TableName === dynamodb.GAME_DATA_TABLE) {
+          if (String(params.Key["PK"] ?? "").includes("ANCESTRY")) return ANCESTRY_BONUS;
+          if (String(params.Key["PK"] ?? "").includes("COMMUNITY")) return COMMUNITY_BONUS;
+          return null;
+        }
+        return characterStore;
+      }
+    );
+
+    const res = await handler(
+      makeJwtEvent("POST /characters", {
+        body: {
+          name: "Stacktest",
+          classId: "warrior",
+          ancestryId: "test",
+          communityId: "test",
+        },
+      })
+    );
+
+    expect(asResult(res).statusCode).toBe(201);
+    const body = parseBody(res);
+    expect(body.data.trackers.hp.max).toBe(8);     // 7 + 1 from ancestry
+    expect(body.data.trackers.stress.max).toBe(7); // 6 + 1 from community
+  });
+
+  it("applies no bonus when ancestry has no mechanicalBonuses", async () => {
+    const ANCESTRY_NO_BONUS = {
+      PK: "ANCESTRY#plain",
+      SK: "plain",
+      id: "plain",
+      type: "ancestry",
+      name: "Plain Ancestry",
+      // no mechanicalBonuses
+    };
+
+    mockGetItem.mockImplementation(
+      async (params: { TableName: string; Key: Record<string, unknown> }) => {
+        if (params.TableName === dynamodb.CLASSES_TABLE) {
+          if (params.Key["SK"] === "METADATA") return FAKE_CLASS;
+          return null;
+        }
+        if (params.TableName === dynamodb.GAME_DATA_TABLE) {
+          if (String(params.Key["PK"] ?? "").includes("ANCESTRY")) return ANCESTRY_NO_BONUS;
+          return null;
+        }
+        return characterStore;
+      }
+    );
+
+    const res = await handler(
+      makeJwtEvent("POST /characters", {
+        body: { name: "Baseline", classId: "warrior", ancestryId: "plain" },
+      })
+    );
+
+    expect(asResult(res).statusCode).toBe(201);
+    const body = parseBody(res);
+    expect(body.data.trackers.hp.max).toBe(7);
+    expect(body.data.trackers.stress.max).toBe(6);
+    expect(body.data.derivedStats.armor).toBe(0);
   });
 });

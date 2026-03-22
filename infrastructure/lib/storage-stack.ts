@@ -52,7 +52,7 @@ export class StorageStack extends cdk.Stack {
           ],
           // Tightened per environment: restrict to known domain in prod
           allowedOrigins: isProd
-            ? ["https://app.daggerheart.example.com"]
+            ? ["https://curses-ccb.maninjumpsuit.com"]
             : ["*"],
           allowedHeaders: ["*"],
           exposedHeaders: ["ETag"],
@@ -151,6 +151,9 @@ export class StorageStack extends cdk.Stack {
             blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
             encryption: s3.BucketEncryption.S3_MANAGED,
             enforceSSL: true,
+            // CloudFront access logging requires ACLs — BucketOwnerPreferred
+            // is the minimum ownership setting that allows ACL grants.
+            objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_PREFERRED,
             lifecycleRules: [
               {
                 id: "ExpireLogs",

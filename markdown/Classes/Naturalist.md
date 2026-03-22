@@ -1,3 +1,4 @@
+
 |           Domains           | Starting Evasion | Starting Hit Points |
 | :-------------------------: | :--------------: | :-----------------: |
 | [[Artistry]] & [[Creature]] |        9         |          7          |
@@ -92,3 +93,5 @@ _Jumpy_: Unless a creature with the _Hidden_ condition attacks you or your party
 ## Mechanical Notes
 
 Keen Senses rewards curiosity: spend Hope on Instinct investigation rolls to gain tactical details, species information, or a social edge simultaneously. The Feral Wonder path is strongest in natural environments where unarmed attacks and _Survivalist_ dice can swing fights; distribute your stored dice to allies at critical moments rather than holding them until they expire. The Practiced Observer path builds directly on your class feature: use _Sniff it Out_ to refresh Keen Senses for free, keeping your investigative momentum running through multi-scene situations. Both paths benefit from treating Instinct investigations as a core part of your action economy, not as side activities.
+
+%% armor rec: med | heavy %%

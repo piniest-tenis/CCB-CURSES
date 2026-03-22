@@ -90,3 +90,5 @@ _Slipped Away_: Once per rest, after using your class feature against a target, 
 ## Mechanical Notes
 
 The distraction always comes before the action. Your class feature depends on the social moment landing first. Work to set it up in every scene with a social element before the situation turns. Your Thievery actions become considerably more reliable when attached to this feature, so think beyond objects in pockets: information, planted items, and quiet access all count. The Dazzler path rewards patience and planning; the Quiet Hand path rewards opportunism and clean exits.
+
+%% armor rec: light | med %%

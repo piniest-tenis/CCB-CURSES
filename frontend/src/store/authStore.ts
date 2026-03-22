@@ -11,6 +11,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { UserProfile } from "@shared/types";
 import * as cognitoAuth from "@/lib/auth";
+import type { AuthTokens } from "@/lib/auth";
 import { registerTokenHandlers, apiClient } from "@/lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -29,6 +30,8 @@ interface AuthActions {
   initialize: () => Promise<void>;
   /** Sign in with email + password, fetch profile, update store. */
   signIn: (email: string, password: string) => Promise<void>;
+  /** Complete a Google SSO sign-in with tokens from the callback. */
+  signInWithGoogle: (tokens: AuthTokens) => Promise<void>;
   /** Sign out of Cognito and clear all state. */
   signOut: () => Promise<void>;
   /** Forcibly refresh Cognito tokens and update the stored idToken. */
@@ -66,13 +69,42 @@ export const useAuthStore = create<AuthStore>()(
         initialize: async () => {
           set({ isLoading: true });
           try {
-            // Attempt to retrieve a valid id token from the current Cognito session.
+            // 1. Check for a federated (Google SSO) session first.
+            const federatedToken = cognitoAuth.getFederatedIdToken();
+            if (federatedToken) {
+              set({ idToken: federatedToken, isAuthenticated: true });
+              try {
+                const user = await apiClient.get<UserProfile>("/users/me");
+                set({ user });
+              } catch {
+                // non-fatal
+              }
+              return;
+            }
+
+            // 2. Try federated refresh if a refresh token exists but id token expired.
+            if (cognitoAuth.isFederatedSession()) {
+              const refreshed = await cognitoAuth.refreshFederatedTokens();
+              if (refreshed) {
+                set({ idToken: refreshed.idToken, isAuthenticated: true });
+                try {
+                  const user = await apiClient.get<UserProfile>("/users/me");
+                  set({ user });
+                } catch {
+                  // non-fatal
+                }
+                return;
+              }
+              // Federated refresh failed — clear stale federated state
+              await cognitoAuth.signOutFederated();
+              set({ user: null, idToken: null, isAuthenticated: false });
+              return;
+            }
+
+            // 3. Attempt to retrieve a valid id token from the current SRP session.
             const idToken = await cognitoAuth.getIdToken();
             if (idToken) {
               set({ idToken, isAuthenticated: true });
-
-              // Fetch the full profile from the API (token is now set so
-              // apiClient will attach the Authorization header).
               try {
                 const user = await apiClient.get<UserProfile>("/users/me");
                 set({ user });
@@ -121,9 +153,27 @@ export const useAuthStore = create<AuthStore>()(
           }
         },
 
+        // ── signInWithGoogle ──────────────────────────────────────────────
+        signInWithGoogle: async (tokens: AuthTokens) => {
+          set({ isLoading: true });
+          try {
+            set({ idToken: tokens.idToken, isAuthenticated: true });
+
+            try {
+              const user = await apiClient.get<UserProfile>("/users/me");
+              set({ user });
+            } catch {
+              // Non-fatal — sign-in succeeded even if profile fetch fails.
+            }
+          } finally {
+            set({ isLoading: false });
+          }
+        },
+
         // ── signOut ───────────────────────────────────────────────────────
         signOut: async () => {
-          await cognitoAuth.signOut();
+          // Clear federated tokens if any, then SRP session.
+          await cognitoAuth.signOutFederated();
           set({
             user:            null,
             idToken:         null,
@@ -134,6 +184,20 @@ export const useAuthStore = create<AuthStore>()(
 
         // ── refreshTokens ─────────────────────────────────────────────────
         refreshTokens: async (): Promise<string | null> => {
+          // Try federated refresh first if in a Google SSO session.
+          if (cognitoAuth.isFederatedSession()) {
+            const fedTokens = await cognitoAuth.refreshFederatedTokens();
+            if (fedTokens) {
+              set({ idToken: fedTokens.idToken, isAuthenticated: true });
+              return fedTokens.idToken;
+            }
+            // Federated refresh failed — force sign-out
+            await cognitoAuth.signOutFederated();
+            set({ user: null, idToken: null, isAuthenticated: false });
+            return null;
+          }
+
+          // SRP-based session refresh.
           const tokens = await cognitoAuth.refreshTokens();
           if (tokens) {
             set({ idToken: tokens.idToken, isAuthenticated: true });

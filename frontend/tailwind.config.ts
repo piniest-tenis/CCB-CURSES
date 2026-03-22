@@ -140,10 +140,15 @@ const config: Config = {
           "0%":   { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
         },
+        "pulse-glow-goldenrod": {
+          "0%, 100%": { color: "rgba(218,165,32,0.45)", textShadow: "0 0 0px rgba(218,165,32,0)" },
+          "50%":      { color: "rgba(218,165,32,0.9)",  textShadow: "0 0 8px rgba(218,165,32,0.6), 0 0 2px rgba(218,165,32,0.4)" },
+        },
       },
       animation: {
-        "fade-in": "fade-in 0.2s ease-out",
-        shimmer:   "shimmer 1.5s infinite",
+        "fade-in":              "fade-in 0.2s ease-out",
+        shimmer:                "shimmer 1.5s infinite",
+        "pulse-glow-goldenrod": "pulse-glow-goldenrod 2.4s ease-in-out infinite",
       },
     },
   },

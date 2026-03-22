@@ -1,6 +1,6 @@
 |        Domains        | Starting Evasion | Starting Hit Points |
 | :-------------------: | :--------------: | :-----------------: |
-| [[Study]] & [[Weird]] |        10        |          6          |
+| [[Study]] & [[Weird]] |        9         |          7          |
 ### Class Items
 _An arcane device of your own construction_ or _a set of annotated technical schematics_
 ### Hope Feature
@@ -74,3 +74,5 @@ _Supernatural Feedback_: When supernatural or magical phenomena are nearby, the 
 ## Mechanical Notes
 
 Define your Apparatus settings clearly and specifically in your session zero. Each setting should do one thing well, not everything passably. The class is built around the interaction between two focused, distinct powers; vague settings produce vague play. The Mechanist path rewards planning and using the device as reliable infrastructure; the Channeler path rewards aggression and willingness to pay costs for outsized effects. The Hope Feature is your designated big moment, so plan for it and save Hope accordingly.
+
+%% armor rec: med %%

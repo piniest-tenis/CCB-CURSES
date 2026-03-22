@@ -168,6 +168,22 @@ describe("GET /communities/{communityId}", () => {
     const res = await handler(makeEvent("GET /communities/{communityId}", { communityId: "nope" }));
     expect(asResult(res).statusCode).toBe(404);
   });
+
+  it("passes mechanicalBonuses through when present on the DynamoDB record", async () => {
+    const bonuses = [{ stat: "stress", amount: 1, traitIndex: 0 }];
+    mockGetItem.mockResolvedValue({ ...COMMUNITY_RECORD, mechanicalBonuses: bonuses });
+    const res = await handler(makeEvent("GET /communities/{communityId}", { communityId: "badlander" }));
+    expect(asResult(res).statusCode).toBe(200);
+    const body = parseBody(res);
+    expect(body.data.mechanicalBonuses).toEqual(bonuses);
+  });
+
+  it("omits mechanicalBonuses when the DynamoDB record has none", async () => {
+    mockGetItem.mockResolvedValue(COMMUNITY_RECORD);
+    const res = await handler(makeEvent("GET /communities/{communityId}", { communityId: "badlander" }));
+    const body = parseBody(res);
+    expect(body.data.mechanicalBonuses).toBeUndefined();
+  });
 });
 
 // ─── Ancestry serialization ───────────────────────────────────────────────────
@@ -204,6 +220,22 @@ describe("GET /ancestries/{ancestryId}", () => {
     mockGetItem.mockResolvedValue(null);
     const res = await handler(makeEvent("GET /ancestries/{ancestryId}", { ancestryId: "nope" }));
     expect(asResult(res).statusCode).toBe(404);
+  });
+
+  it("passes mechanicalBonuses through when present on the DynamoDB record", async () => {
+    const bonuses = [{ stat: "armor", amount: 2, traitIndex: 0 }];
+    mockGetItem.mockResolvedValue({ ...ANCESTRY_RECORD, mechanicalBonuses: bonuses });
+    const res = await handler(makeEvent("GET /ancestries/{ancestryId}", { ancestryId: "elf" }));
+    expect(asResult(res).statusCode).toBe(200);
+    const body = parseBody(res);
+    expect(body.data.mechanicalBonuses).toEqual(bonuses);
+  });
+
+  it("omits mechanicalBonuses when the DynamoDB record has none", async () => {
+    mockGetItem.mockResolvedValue(ANCESTRY_RECORD); // no mechanicalBonuses field
+    const res = await handler(makeEvent("GET /ancestries/{ancestryId}", { ancestryId: "elf" }));
+    const body = parseBody(res);
+    expect(body.data.mechanicalBonuses).toBeUndefined();
   });
 });
 

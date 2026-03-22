@@ -90,3 +90,5 @@ _Savage Rush_: Once per rest, move to Melee range as part of your attack action 
 ## Mechanical Notes
 
 You need a Prey designated to be at your best. Make it a priority at the top of every combat encounter. This class rewards aggressive forward movement; standing back or acting defensively works against your strengths. The Houndtooth path is for players who want fights to end through positioning and relentlessness; the Berserker path is for players who want to absorb damage and come out ahead every time. Switching Prey mid-fight is always an option, but losing momentum on a kill costs you the bonus damage buildup.
+
+%% armor rec: med | heavy | xheavy %%

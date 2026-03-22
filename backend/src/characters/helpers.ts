@@ -243,8 +243,14 @@ export function validateSrdRules(character: Partial<Character>): SrdError[] {
     }
   }
 
-  // activeAuras: every entry must be present in domainLoadout.
+  // activeAuras: at most one aura may be active at a time, and it must be in domainLoadout.
   if (character.activeAuras && character.domainLoadout) {
+    if (character.activeAuras.length > 1) {
+      errors.push({
+        field: "activeAuras",
+        issue: `Only one aura may be active at a time (found ${character.activeAuras.length})`,
+      });
+    }
     const loadoutSet = new Set(character.domainLoadout);
     for (const auraId of character.activeAuras) {
       if (!loadoutSet.has(auraId)) {
@@ -439,6 +445,8 @@ export function applyAction(
     }
 
     // ── Aura: toggle ────────────────────────────────────────────────────────
+    // Only one aura may be active at a time (SRD / campaign rule).
+    // Toggling an aura ON deactivates all other active auras.
     case "toggle-aura": {
       const cardId = params.cardId;
       if (!cardId) invalidAction("cardId is required for toggle-aura", "cardId");
@@ -451,9 +459,9 @@ export function applyAction(
       const isActive = character.activeAuras.includes(cardId);
       return {
         ...character,
-        activeAuras: isActive
-          ? character.activeAuras.filter((id) => id !== cardId)
-          : [...character.activeAuras, cardId],
+        // Turning off: just remove this one.
+        // Turning on: replace entire array with only this card.
+        activeAuras: isActive ? character.activeAuras.filter((id) => id !== cardId) : [cardId],
       };
     }
 
@@ -1099,7 +1107,30 @@ export function applyLevelUp(
       }
 
       case "multiclass": {
-        // Similar: the frontend selects the classId; this records the slot used.
+        // Detail format: "classId|domainId|subclassId" (SRD p.43)
+        // Persist the three chosen identifiers on the character.
+        // className and subclassName are resolved by the handler after looking
+        // up the class record; here we store only the IDs.
+        const detail = adv.detail;
+        if (!detail) {
+          throw new AppError("INVALID_LEVEL_UP",
+            "multiclass requires detail in the format 'classId|domainId|subclassId'", 422,
+            [{ field: "advancements.detail", issue: "missing multiclass detail" }]);
+        }
+        const parts = detail.split("|");
+        if (parts.length !== 3 || parts.some((p) => !p.trim())) {
+          throw new AppError("INVALID_LEVEL_UP",
+            "multiclass detail must be 'classId|domainId|subclassId'", 422,
+            [{ field: "advancements.detail", issue: "invalid multiclass detail format" }]);
+        }
+        const [mcClassId, mcDomainId, mcSubclassId] = parts as [string, string, string];
+        updated = {
+          ...updated,
+          multiclassClassId:   mcClassId.trim(),
+          multiclassClassName: null, // resolved by handler after class lookup
+          multiclassSubclassId: mcSubclassId.trim(),
+          multiclassDomainId:  mcDomainId.trim(),
+        };
         break;
       }
     }

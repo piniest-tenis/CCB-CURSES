@@ -68,7 +68,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 function buildAvatarUrl(avatarKey: string | null | undefined): string | null {
   if (!avatarKey) return null;
   const cdnBase =
-    process.env["CDN_BASE_URL"] ?? "https://cdn.daggerheart.example.com";
+    process.env["CDN_BASE_URL"] ?? "https://cdn.curses-ccb.example.com";
   return `${cdnBase}/${avatarKey}`;
 }
 

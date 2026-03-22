@@ -93,3 +93,5 @@ _Soft Landing_: Once per rest, when you make a Thievery roll with Fear, spend 1 
 ## Mechanical Notes
 
 Peaceknife rewards knowing in advance whether you'll need to talk or run. Read the situation before you commit to either. Use backgrounds and Connections to establish your character as someone who plans every conversation like a job. The Diplomat path plays the long social game and builds relationships that pay out later; the Moonlit Agent path prefers decisive action with clean recovery. In either case, your class feature is strongest when you use it early, before consequences have a chance to compound.
+
+%% armor rec: light %%

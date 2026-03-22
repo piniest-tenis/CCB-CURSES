@@ -92,3 +92,5 @@ _Righteous Indignation_: When you make a roll to influence a target within Far w
 ## Mechanical Notes
 
 Inspiration is flexible support: choose the benefit before the roll lands. The bonus to result is reliable; the Stress-clear option works best when allies are already under pressure; the Hit Point option is worth saving for moments where critical success is genuinely likely. The Impactful Artist path scales with Hope investment. Build your Hope pool intentionally and spend it on the influence rolls that matter most. The True Believer path is strongest when you have multiple adversaries or difficult attitude targets to work against; Blistering Sermon and Righteous Indignation both reward acting before the party's key social rolls rather than reacting to outcomes. Both paths are strongest when you're in reach of your allies and acting first.
+
+%% armor rec: med %%

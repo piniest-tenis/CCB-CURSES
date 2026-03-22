@@ -43,7 +43,7 @@ const s3Client = new S3Client({
 
 const MEDIA_BUCKET = process.env["S3_MEDIA_BUCKET"] ?? "daggerheart-media";
 const CDN_BASE_URL =
-  process.env["CDN_BASE_URL"] ?? "https://cdn.daggerheart.example.com";
+  process.env["CDN_BASE_URL"] ?? "https://cdn.curses-ccb.example.com";
 // Pre-signed URL validity window (5 minutes)
 const PRESIGN_EXPIRY_SECONDS = 300;
 // Maximum allowed file size: 5 MB

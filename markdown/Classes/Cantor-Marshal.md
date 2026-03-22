@@ -94,3 +94,5 @@ _Marked Flock_: Once per rest, when you use Sacred Address, choose up to two all
 ## Mechanical Notes
 
 You are strongest in crowd scenes and multi-character social encounters. Position yourself centrally and speak first. Sacred Address before a social roll sets up your whole group for success. You have real power in combat too, but look for moments where the social and tactical overlap (demoralizing an adversary while rallying allies). The Marshal path builds influence that compounds over a session; the Preacher path focuses on keeping your party in fighting shape moment to moment.
+
+%% armor rec: light %%

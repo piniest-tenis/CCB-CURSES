@@ -28,7 +28,7 @@ export class AuthStack extends cdk.Stack {
     // Cognito User Pool
     // -----------------------------------------------------------------------
     this.userPool = new cognito.UserPool(this, "UserPool", {
-      userPoolName: `daggerheart-users-${stage}`,
+      userPoolName: `curses-ccb-users-${stage}`,
 
       // Self-service registration
       selfSignUpEnabled: true,
@@ -132,6 +132,12 @@ export class AuthStack extends cdk.Stack {
       // Prevent enumeration attacks
       preventUserExistenceErrors: true,
 
+      // Identity providers allowed for this client
+      supportedIdentityProviders: [
+        cognito.UserPoolClientIdentityProvider.COGNITO,
+        cognito.UserPoolClientIdentityProvider.GOOGLE,
+      ],
+
       // OAuth 2.0 / OIDC (configure callback URLs per environment)
       oAuth: {
         flows: {
@@ -144,16 +150,16 @@ export class AuthStack extends cdk.Stack {
           cognito.OAuthScope.PROFILE,
         ],
         callbackUrls: isProd
-          ? ["https://app.daggerheart.example.com/auth/callback"]
+          ? ["https://curses-ccb.maninjumpsuit.com/auth/callback"]
           : [
               "http://localhost:3000/auth/callback",
-              `https://${stage}.daggerheart.example.com/auth/callback`,
+              "https://dqt96kbhxdqy3.cloudfront.net/auth/callback",
             ],
         logoutUrls: isProd
-          ? ["https://app.daggerheart.example.com/auth/logout"]
+          ? ["https://curses-ccb.maninjumpsuit.com/auth/logout"]
           : [
               "http://localhost:3000/auth/logout",
-              `https://${stage}.daggerheart.example.com/auth/logout`,
+              "https://dqt96kbhxdqy3.cloudfront.net/auth/logout",
             ],
       },
 
@@ -173,12 +179,20 @@ export class AuthStack extends cdk.Stack {
     // -----------------------------------------------------------------------
     // Google Identity Provider
     // -----------------------------------------------------------------------
+    // Google OAuth credentials are loaded from environment variables at synth time.
+    // Set GOOGLE_CLIENT_ID_PROD, GOOGLE_CLIENT_ID_DEV, GOOGLE_CLIENT_SECRET_PROD,
+    // and GOOGLE_CLIENT_SECRET_DEV in your shell or CI secrets before running cdk synth/deploy.
+    const googleClientId = isProd
+      ? (process.env.GOOGLE_CLIENT_ID_PROD ?? "REDACTED_GOOGLE_CLIENT_ID_PROD")
+      : (process.env.GOOGLE_CLIENT_ID_DEV  ?? "REDACTED_GOOGLE_CLIENT_ID_DEV");
+    const googleClientSecret = isProd
+      ? (process.env.GOOGLE_CLIENT_SECRET_PROD ?? "REDACTED_GOOGLE_CLIENT_SECRET_PROD")
+      : (process.env.GOOGLE_CLIENT_SECRET_DEV  ?? "REDACTED_GOOGLE_CLIENT_SECRET_DEV");
+
     const googleIdp = new cognito.UserPoolIdentityProviderGoogle(this, "GoogleIdp", {
       userPool: this.userPool,
-      clientId: "REDACTED_GOOGLE_CLIENT_ID",
-      clientSecretValue: cdk.SecretValue.unsafePlainText(
-        "REDACTED_GOOGLE_CLIENT_SECRET"
-      ),
+      clientId: googleClientId,
+      clientSecretValue: cdk.SecretValue.unsafePlainText(googleClientSecret),
       scopes: ["email", "profile", "openid"],
       attributeMapping: {
         email: cognito.ProviderAttribute.GOOGLE_EMAIL,
@@ -186,13 +200,18 @@ export class AuthStack extends cdk.Stack {
       },
     });
 
+    // Both clients reference Google as a supported provider — ensure the IdP
+    // is fully created before either client is updated.
+    this.userPoolClient.node.addDependency(googleIdp);
+    // cmsUserPoolClient dependency is added after that client is defined below.
+
     // -----------------------------------------------------------------------
     // Cognito Hosted UI Domain
     // -----------------------------------------------------------------------
     const hostedDomain = new cognito.UserPoolDomain(this, "HostedDomain", {
       userPool: this.userPool,
       cognitoDomain: {
-        domainPrefix: `daggerheart-${stage}`,
+        domainPrefix: `curses-ccb-${stage}`,
       },
     });
 
@@ -221,18 +240,19 @@ export class AuthStack extends cdk.Stack {
           cognito.OAuthScope.PROFILE,
         ],
         callbackUrls: isProd
-          ? ["https://cms.daggerheart.example.com/auth/callback"]
+          ? ["https://cms.curses-ccb.example.com/auth/callback"]
           : [
               "http://localhost:3001/auth/callback",
             ],
         logoutUrls: isProd
-          ? ["https://cms.daggerheart.example.com/auth/logout"]
+          ? ["https://cms.curses-ccb.example.com/auth/logout"]
           : [
               "http://localhost:3001/",
             ],
       },
     });
-    // Ensure the IdP is created before the client that references it
+
+    // Ensure the Google IdP is created before the CMS client that references it.
     this.cmsUserPoolClient.node.addDependency(googleIdp);
 
     this.cmsUserPoolClientId = this.cmsUserPoolClient.userPoolClientId;
@@ -272,7 +292,7 @@ export class AuthStack extends cdk.Stack {
 
     new cdk.CfnOutput(this, "CognitoHostedDomain", {
       exportName: `DaggerheartCognitoHostedDomain-${stage}`,
-      value: `daggerheart-${stage}.auth.${this.region}.amazoncognito.com`,
+      value: `curses-ccb-${stage}.auth.${this.region}.amazoncognito.com`,
       description: "Cognito Hosted UI domain for OAuth redirects",
     });
   }

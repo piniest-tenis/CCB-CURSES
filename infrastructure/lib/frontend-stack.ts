@@ -5,12 +5,15 @@ import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as logs from "aws-cdk-lib/aws-logs";
+import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import { Construct } from "constructs";
 import { ApiStack } from "./api-stack";
 
 export interface FrontendStackProps extends cdk.StackProps {
   stage: string;
   apiStack: ApiStack;
+  /** ARN of an ACM certificate in us-east-1 (required for prod CloudFront). */
+  frontendCertificateArn?: string;
 }
 
 /**
@@ -44,7 +47,7 @@ export class FrontendStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: FrontendStackProps) {
     super(scope, id, props);
 
-    const { stage, apiStack } = props;
+    const { stage, apiStack, frontendCertificateArn } = props;
     const isProd = stage === "prod";
 
     // -----------------------------------------------------------------------
@@ -165,6 +168,21 @@ function handler(event) {
     );
 
     // -----------------------------------------------------------------------
+    // ACM Certificate (prod only) — must live in us-east-1 for CloudFront.
+    // The cert is created in a dedicated DaggerheartCert-prod stack (us-east-1)
+    // in app.ts and its ARN is passed in via frontendCertificateArn.
+    // -----------------------------------------------------------------------
+    const prodDomain = "curses-ccb.maninjumpsuit.com";
+    const certificate =
+      isProd && frontendCertificateArn
+        ? acm.Certificate.fromCertificateArn(
+            this,
+            "FrontendCertificate",
+            frontendCertificateArn
+          )
+        : undefined;
+
+    // -----------------------------------------------------------------------
     // CloudFront Distribution
     // -----------------------------------------------------------------------
     this.distribution = new cloudfront.Distribution(
@@ -172,6 +190,12 @@ function handler(event) {
       "FrontendDistribution",
       {
         comment: `Daggerheart frontend — ${stage}`,
+
+        // Custom domain + ACM certificate in prod
+        ...(isProd && certificate && {
+          domainNames: [prodDomain],
+          certificate,
+        }),
 
         defaultBehavior: {
           origin: origins.S3BucketOrigin.withOriginAccessControl(
@@ -254,6 +278,9 @@ function handler(event) {
             blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
             encryption: s3.BucketEncryption.S3_MANAGED,
             enforceSSL: true,
+            // CloudFront access logging requires ACLs — BucketOwnerPreferred
+            // is the minimum ownership setting that allows ACL grants.
+            objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_PREFERRED,
             lifecycleRules: [
               {
                 id: "ExpireLogs",
@@ -320,9 +347,15 @@ function handler(event) {
 
     new cdk.CfnOutput(this, "FrontendDomainName", {
       exportName: `DaggerheartFrontendDomain-${stage}`,
-      value: this.distribution.distributionDomainName,
+      value: isProd ? prodDomain : this.distribution.distributionDomainName,
       description:
-        "CloudFront domain for the frontend (add CNAME from your custom domain)",
+        "Frontend domain — custom domain in prod, CloudFront domain in dev",
+    });
+
+    new cdk.CfnOutput(this, "FrontendDistributionDomain", {
+      exportName: `DaggerheartFrontendCloudfrontDomain-${stage}`,
+      value: this.distribution.distributionDomainName,
+      description: "Raw CloudFront domain — use as CNAME target in Namecheap",
     });
 
     new cdk.CfnOutput(this, "ApiUrlForFrontend", {

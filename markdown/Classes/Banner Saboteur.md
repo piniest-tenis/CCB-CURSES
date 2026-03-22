@@ -1,6 +1,6 @@
 |           Domains           | Starting Evasion | Starting Hit Points |
 | :-------------------------: | :--------------: | :-----------------: |
-| [[Trickery]] & [[Valiance]] |        10        |          6          |
+| [[Trickery]] & [[Valiance]] |        9         |          7          |
 
 ### Class Items
 
@@ -75,7 +75,7 @@ _Play the Vanguard Deceiver if you want your courage to be the truth and your de
 
 ### Spellcast Trait
 
-Presence
+Strength
 
 ### Foundation Features
 
@@ -94,3 +94,5 @@ _Righteous Misdirection_: Once per rest, when an adversary targets an ally inste
 ## Mechanical Notes
 
 Cover and Cause requires you to name your cause at the scene level. Don't assume it carries over automatically. The clearer you are about what you're serving in this moment, the more easily the GM can confirm when an action qualifies for the benefit. The Shadow Patriot path is for players who want to win through accumulated social manipulation and information control; the Vanguard Deceiver path is for players who want to protect allies through misdirection and tactical self-sacrifice. Both paths benefit from knowing which faction or cause you're advancing before the scene begins.
+
+%% armor rec: light | med %%
