@@ -429,16 +429,23 @@ export function PortraitDisplay({ characterId }: PortraitDisplayProps) {
     <>
       {/* Portrait area */}
       <div className="flex justify-center">
-        <button
-          type="button"
+        <div
+          role="button"
+          tabIndex={0}
           onClick={() => setSidebarOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setSidebarOpen(true);
+            }
+          }}
           aria-label={portraitUrl ? "Change character portrait" : "Upload character portrait"}
           aria-haspopup="dialog"
           aria-expanded={sidebarOpen}
           className="
             relative group
             focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2 focus:ring-offset-[#0a100d]
-            rounded-full
+            rounded-full cursor-pointer transition-opacity duration-200 hover:opacity-90
           "
           style={{ width: 180, height: 162 }}
         >
@@ -451,17 +458,17 @@ export function PortraitDisplay({ characterId }: PortraitDisplayProps) {
               overflow: "hidden",
               background: "#0a100d",
             }}
+            aria-hidden="true"
           >
             {portraitUrl ? (
               <img
                 src={portraitUrl}
-                alt=""
-                aria-hidden="true"
+                alt={`${activeCharacter.name}'s portrait`}
                 className="w-full h-full object-cover"
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-[#577399]/10">
-                <span className="text-3xl text-[#577399]/30" aria-hidden="true">
+                <span className="text-3xl text-[#577399]/30">
                   ⬡
                 </span>
               </div>
@@ -490,7 +497,7 @@ export function PortraitDisplay({ characterId }: PortraitDisplayProps) {
               {portraitUrl ? "Change" : "Upload"}
             </span>
           </div>
-        </button>
+        </div>
       </div>
 
       <PortraitUploadSidebar
