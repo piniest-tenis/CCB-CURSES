@@ -32,6 +32,8 @@ interface WeaponSelectionPanelProps {
   subclassId: string;
   /** Whether the subclass grants a Spellcast trait (gates magic weapons) */
   hasSpellcastTrait: boolean;
+  /** Character trait bonuses — used to sort weapons by the character's best traits */
+  traitBonuses?: Record<string, number>;
 }
 
 type ActiveSlot = "primary" | "secondary";
@@ -43,6 +45,7 @@ export function WeaponSelectionPanel({
   onSecondaryChange,
   subclassId,
   hasSpellcastTrait,
+  traitBonuses = {},
 }: WeaponSelectionPanelProps) {
   const [activeSlot, setActiveSlot] = useState<ActiveSlot>("primary");
   const [filterText, setFilterText] = useState("");
@@ -83,15 +86,23 @@ export function WeaponSelectionPanel({
     );
   }, [eligible, filterText]);
 
-  // Sort: suggested first, then alphabetical
+  // Sort: suggested first → then by character's trait bonus (highest first) → then alphabetical
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
+      // 1. Suggested weapons float to the top
       const aSug = suggestedIds.has(a.id) ? 0 : 1;
       const bSug = suggestedIds.has(b.id) ? 0 : 1;
       if (aSug !== bSug) return aSug - bSug;
+
+      // 2. Sort by the character's bonus for the weapon's trait (higher = better)
+      const aBonus = traitBonuses[a.trait.toLowerCase()] ?? 0;
+      const bBonus = traitBonuses[b.trait.toLowerCase()] ?? 0;
+      if (bBonus !== aBonus) return bBonus - aBonus;
+
+      // 3. Alphabetical tiebreak
       return a.name.localeCompare(b.name);
     });
-  }, [filtered, suggestedIds]);
+  }, [filtered, suggestedIds, traitBonuses]);
 
   const selectedId = activeSlot === "primary" ? primaryWeaponId : secondaryWeaponId;
   const primaryWeapon = ALL_TIER1_WEAPONS.find((w) => w.id === primaryWeaponId) ?? null;

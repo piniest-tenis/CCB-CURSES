@@ -105,8 +105,8 @@ const config: Config = {
       fontFamily: {
         // warbler-deck — small-caps header font (Adobe Typekit)
         serif:   ['"warbler-deck"', "Georgia", "Cambria", "serif"],
-        // sofia-pro-narrow — default body/UI font (Adobe Typekit)
-        sans:    ['"sofia-pro-narrow"', "Inter", "system-ui", "sans-serif"],
+        // ibarra-real-nova — default body/UI font (Adobe Typekit)
+        sans:    ['"ibarra-real-nova"', "Inter", "system-ui", "sans-serif"],
         // jetsam-collection-basilea — attention-getting display font (Adobe Typekit)
         display: ['"jetsam-collection-basilea"', '"warbler-deck"', "Georgia", "serif"],
         mono:    ['"JetBrains Mono"', '"Fira Code"', "monospace"],

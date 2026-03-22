@@ -316,6 +316,34 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
   const canGoNext7 = Boolean(equipmentSelections.consumableId && equipmentSelections.classItem);
   const canGoNext8 = selectedDomainCardIds.length === 2;
 
+  // ── Steps 5 (weapons) and 6 (armor): skip when already saved ────────────
+  // Once weapons/armor have been selected and persisted via a previous builder run,
+  // they are managed from the equipment page on the character sheet.
+  // Detect from the server character data (not local draft state).
+  const hasExistingWeapons = Boolean(character?.weapons?.primary?.weaponId);
+  const hasExistingArmor = Boolean(
+    character?.inventory && TIER1_ARMOR.some((a) => character.inventory!.includes(a.name))
+  );
+
+  // Build the ordered list of active steps (skipping locked equipment steps).
+  const activeSteps = useMemo<Array<1|2|3|4|5|6|7|8|9>>(() => {
+    const all: Array<1|2|3|4|5|6|7|8|9> = [1,2,3,4,5,6,7,8,9];
+    return all.filter((s) => {
+      if (s === 5 && hasExistingWeapons) return false;
+      if (s === 6 && hasExistingArmor) return false;
+      return true;
+    });
+  }, [hasExistingWeapons, hasExistingArmor]);
+
+  function nextActiveStep(current: number): number {
+    const idx = activeSteps.indexOf(current as 1|2|3|4|5|6|7|8|9);
+    return idx !== -1 && idx < activeSteps.length - 1 ? activeSteps[idx + 1] : current;
+  }
+  function prevActiveStep(current: number): number {
+    const idx = activeSteps.indexOf(current as 1|2|3|4|5|6|7|8|9);
+    return idx > 0 ? activeSteps[idx - 1] : current;
+  }
+
   // Helper: find selected weapon/armor data for save
   const primaryWeapon = ALL_TIER1_WEAPONS.find((w) => w.id === primaryWeaponId) ?? null;
   const secondaryWeapon = ALL_TIER1_WEAPONS.find((w) => w.id === secondaryWeaponId) ?? null;
@@ -892,13 +920,14 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                   />
                 </div>
                 <div className="flex-1 min-h-0 overflow-hidden border-t border-slate-700/30">
-                  <WeaponSelectionPanel
+                   <WeaponSelectionPanel
                     primaryWeaponId={primaryWeaponId}
                     secondaryWeaponId={secondaryWeaponId}
                     onPrimaryChange={setPrimaryWeaponId}
                     onSecondaryChange={setSecondaryWeaponId}
                     subclassId={subclassId}
                     hasSpellcastTrait={Boolean(selectedSubclass?.spellcastTrait)}
+                    traitBonuses={traitBonuses}
                   />
                 </div>
               </div>
@@ -1178,56 +1207,58 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
             {/* Right: Step Summary Panel */}
             {(() => {
               const selectedArmorData = TIER1_ARMOR.find((a) => a.id === armorId);
-              const steps: { num: number; name: string; done: boolean; summary: string | null }[] = [
+              const steps: { num: number; name: string; done: boolean; locked: boolean; summary: string | null }[] = [
                 {
                   num: 1, name: "Class",
-                  done: Boolean(classId),
+                  done: Boolean(classId), locked: false,
                   summary: selectedClassData?.name ?? null,
                 },
                 {
                   num: 2, name: "Subclass",
-                  done: Boolean(subclassId),
+                  done: Boolean(subclassId), locked: false,
                   summary: selectedSubclass?.name ?? null,
                 },
                 {
                   num: 3, name: "Heritage",
-                  done: Boolean(ancestryId && communityId),
+                  done: Boolean(ancestryId && communityId), locked: false,
                   summary: (selectedAncestry && selectedCommunity)
                     ? `${selectedAncestry.name} · ${selectedCommunity.name}`
                     : selectedAncestry?.name ?? selectedCommunity?.name ?? null,
                 },
                 {
                   num: 4, name: "Traits",
-                  done: Object.keys(traitBonuses).length === 4,
+                  done: Object.keys(traitBonuses).length === 4, locked: false,
                   summary: Object.keys(traitBonuses).length === 4 ? "Assigned" : null,
                 },
                 {
                   num: 5, name: "Weapons",
                   done: Boolean(primaryWeaponId),
-                  summary: primaryWeapon?.name ?? null,
+                  locked: hasExistingWeapons,
+                  summary: hasExistingWeapons ? "Via equipment page" : (primaryWeapon?.name ?? null),
                 },
                 {
                   num: 6, name: "Armor",
                   done: Boolean(armorId),
-                  summary: selectedArmorData?.name.replace(" Armor", "") ?? null,
+                  locked: hasExistingArmor,
+                  summary: hasExistingArmor ? "Via equipment page" : (selectedArmorData?.name.replace(" Armor", "") ?? null),
                 },
                 {
                   num: 7, name: "Equipment",
-                  done: Boolean(equipmentSelections.consumableId && equipmentSelections.classItem),
+                  done: Boolean(equipmentSelections.consumableId && equipmentSelections.classItem), locked: false,
                   summary: equipmentSelections.consumableId
                     ? (equipmentSelections.consumableId === "minor-health-potion" ? "Health Potion" : "Stamina Potion")
                     : null,
                 },
                 {
                   num: 8, name: "Domain Cards",
-                  done: selectedDomainCardIds.length === 2,
+                  done: selectedDomainCardIds.length === 2, locked: false,
                   summary: selectedDomainCardIds.length > 0
                     ? `${selectedDomainCardIds.length}/2 selected`
                     : null,
                 },
                 {
                   num: 9, name: "Review & Save",
-                  done: false,
+                  done: false, locked: false,
                   summary: null,
                 },
               ];
@@ -1240,19 +1271,22 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                     <button
                       key={s.num}
                       type="button"
-                      onClick={() => setStep(s.num as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9)}
+                      disabled={s.locked}
+                      onClick={() => !s.locked && setStep(s.num as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9)}
                       aria-current={step === s.num ? "step" : undefined}
                       className={`
                         w-full text-left px-3 py-2 transition-colors rounded-none
-                        ${step === s.num
-                          ? "bg-[#577399]/15 border-r-2 border-[#577399]"
-                          : "hover:bg-slate-800/40 border-r-2 border-transparent"
+                        ${s.locked
+                          ? "opacity-40 cursor-not-allowed border-r-2 border-transparent"
+                          : step === s.num
+                            ? "bg-[#577399]/15 border-r-2 border-[#577399]"
+                            : "hover:bg-slate-800/40 border-r-2 border-transparent"
                         }
                       `}
                     >
                       <div className="flex items-center gap-1.5">
-                        <span className={`text-xs shrink-0 ${s.done ? "text-[#577399]" : "text-[#b9baa3]/25"}`}>
-                          {s.done ? "✓" : `${s.num}.`}
+                        <span className={`text-xs shrink-0 ${s.done || s.locked ? "text-[#577399]" : "text-[#b9baa3]/25"}`}>
+                          {s.done || s.locked ? "✓" : `${s.num}.`}
                         </span>
                         <span className={`text-xs font-medium truncate ${step === s.num ? "text-[#f7f7ff]" : "text-[#b9baa3]/60"}`}>
                           {s.name}
@@ -1274,10 +1308,10 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
              <button
                type="button"
                onClick={() => {
-                 if (step === 1) {
+                 if (step === activeSteps[0]) {
                    router.push(`/character/${characterId}`);
                  } else {
-                   setStep((s) => (s - 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9);
+                   setStep(prevActiveStep(step) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9);
                  }
                }}
                className="
@@ -1287,14 +1321,14 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                  transition-colors
                "
              >
-               {step === 1 ? "Cancel" : "← Back"}
+               {step === activeSteps[0] ? "Cancel" : "← Back"}
              </button>
              
              <div className="flex gap-3">
-               {step < 9 && (
+               {step !== activeSteps[activeSteps.length - 1] && (
                  <button
                    type="button"
-                   onClick={() => setStep((s) => (s + 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9)}
+                   onClick={() => setStep(nextActiveStep(step) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9)}
                    disabled={
                      (step === 1 && !canGoNext1) ||
                      (step === 2 && !canGoNext2) ||
@@ -1317,7 +1351,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                   </button>
                )}
                
-               {step === 9 && (
+               {step === activeSteps[activeSteps.length - 1] && (
                  <button
                    type="button"
                    onClick={handleSave}
