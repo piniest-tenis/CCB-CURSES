@@ -151,37 +151,36 @@ function CardRow({
 }) {
   return (
     <div
+      onClick={onDrill}
       className={`
-        flex items-center rounded-lg border transition-all
+        flex items-center rounded-lg border transition-all cursor-pointer
         ${isSelected
           ? "border-[#577399] bg-[#577399]/15"
           : "border-slate-700/60 bg-slate-900/30 hover:border-slate-600"
         }
       `}
     >
-      {/* Select area */}
+      {/* Circular select button */}
       <button
         type="button"
-        onClick={onToggle}
+        onClick={(e) => { e.stopPropagation(); if (canSelect || isSelected) onToggle(); }}
         disabled={!canSelect && !isSelected}
-        className="flex-1 flex items-center gap-3 px-4 py-3 text-left min-w-0"
+        aria-label={isSelected ? `Deselect ${card.name}` : `Select ${card.name}`}
+        className={`
+          ml-3 h-5 w-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors
+          ${isSelected
+            ? "border-[#577399] bg-[#577399]"
+            : !canSelect
+              ? "border-slate-700/40 cursor-not-allowed"
+              : "border-slate-600 hover:border-[#577399]/70"
+          }
+        `}
       >
-        {/* Checkbox */}
-        <span
-          className={`
-            h-4 w-4 rounded border-2 flex-shrink-0 flex items-center justify-center transition-colors
-            ${isSelected
-              ? "border-[#577399] bg-[#577399]"
-              : !canSelect
-                ? "border-slate-700/40"
-                : "border-slate-600"
-            }
-          `}
-        >
-          {isSelected && <span className="text-white text-[10px] leading-none">✓</span>}
-        </span>
+        {isSelected && <span className="h-2 w-2 rounded-full bg-white" />}
+      </button>
 
-        {/* Text */}
+      {/* Text — fills remaining space, clicking goes to drill-down via parent */}
+      <div className="flex-1 flex items-center gap-3 px-3 py-3 min-w-0">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-[#f7f7ff] truncate">{card.name}</span>
@@ -197,17 +196,10 @@ function CardRow({
             </span>
           </div>
         </div>
-      </button>
+      </div>
 
-      {/* Drill-down arrow */}
-      <button
-        type="button"
-        onClick={onDrill}
-        className="px-3 py-3 text-[#b9baa3]/30 hover:text-[#b9baa3] transition-colors text-lg shrink-0"
-        aria-label={`View details for ${card.name}`}
-      >
-        ›
-      </button>
+      {/* Drill-down chevron (visual hint only, row itself is clickable) */}
+      <span className="pr-3 text-[#b9baa3]/30 text-lg leading-none shrink-0">›</span>
     </div>
   );
 }

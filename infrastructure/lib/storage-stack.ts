@@ -38,7 +38,11 @@ export class StorageStack extends cdk.Stack {
       // Versioning — enabled in prod for accidental-delete recovery
       versioned: isProd,
 
-      // CORS — allow pre-signed URL PUT/GET from frontend origins
+      // CORS — allow pre-signed URL PUT/GET from frontend origins.
+      // Covers all object prefixes in the bucket, including:
+      //   media/     — generic user media (user avatars, CMS images)
+      //   portraits/ — character portrait images (direct browser PUT via presigned URL)
+      //   cms/       — CMS asset uploads
       cors: [
         {
           allowedMethods: [
@@ -75,6 +79,15 @@ export class StorageStack extends cdk.Stack {
             },
           ],
           noncurrentVersionExpiration: cdk.Duration.days(90),
+        },
+        {
+          // Expire superseded portrait images after 180 days so storage
+          // doesn't accumulate when users replace their portrait.
+          // Only active in prod where versioning is enabled.
+          id: "ExpireOldPortraitVersions",
+          enabled: isProd,
+          prefix: "portraits/",
+          noncurrentVersionExpiration: cdk.Duration.days(180),
         },
       ],
 

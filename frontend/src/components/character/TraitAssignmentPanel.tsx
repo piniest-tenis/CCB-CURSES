@@ -210,9 +210,9 @@ export function TraitAssignmentPanel({
               <p className="text-sm font-semibold text-[#fe5f55]">
                 {validation.message}
               </p>
-              {validation.sum !== 2 && (
+              {validation.sum !== 3 && (
                 <p className="text-xs text-[#b9baa3] mt-1 opacity-75">
-                  💡 Adjust bonuses so they sum to exactly +2
+                  💡 Adjust bonuses so they sum to exactly +3
                 </p>
               )}
               {validation.assigned < 4 && (

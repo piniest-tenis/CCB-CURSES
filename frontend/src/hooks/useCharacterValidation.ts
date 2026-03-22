@@ -6,7 +6,7 @@
  * Returns a list of violations with fix suggestions and severity levels.
  *
  * Validates:
- * - Trait modifiers sum to +2
+ * - Trait modifiers sum to +3
  * - Domain loadout max 5 cards
  * - Armor score cap (≤12)
  * - Advancement gating (level requirements)
@@ -16,7 +16,7 @@
  */
 
 import { useMemo } from "react";
-import type { Character, ClassData, DomainCard } from "@shared/types";
+import type { Character, ClassData, CoreStats, DomainCard } from "@shared/types";
 
 export interface ValidationViolation {
   id: string;
@@ -37,7 +37,7 @@ export interface CharacterValidationResult {
 
 /**
  * Validates trait modifier assignment.
- * SRD page 3: trait bonuses must sum to +2 (+2, +1, +1, +0, +0, -1).
+ * SRD page 3: trait bonuses must sum to +3 (+2, +1, +1, +0, +0, -1).
  */
 function validateTraitModifiers(
   traitBonuses: Record<string, number> | undefined
@@ -49,14 +49,14 @@ function validateTraitModifiers(
   const sum = bonusValues.reduce((acc, val) => acc + val, 0);
   const uniqueTraits = Object.keys(traitBonuses).length;
 
-  // Check sum equals +2
-  if (sum !== 2) {
+  // Check sum equals +3
+  if (sum !== 3) {
     violations.push({
       id: "trait-sum-invalid",
       field: "traitBonuses",
       severity: "error",
-      message: `Trait modifiers sum to ${sum}; must equal +2 (e.g., +2, +1, +1, +0, +0, −1)`,
-      suggestion: `Adjust traits so bonuses sum to exactly +2. Current sum: ${sum}`,
+      message: `Trait modifiers sum to ${sum}; must equal +3 (e.g., +2, +1, +1, +0, +0, −1)`,
+      suggestion: `Adjust traits so bonuses sum to exactly +3. Current sum: ${sum}`,
       srdPage: 3,
     });
   }
@@ -172,7 +172,7 @@ function validateArmorScore(
  * Validates core stats.
  * SRD page 3: stats range from -5 to +8; no hard caps but extremes are suspicious.
  */
-function validateCoreStats(stats: Record<string, number> | undefined): ValidationViolation[] {
+function validateCoreStats(stats: CoreStats | undefined): ValidationViolation[] {
   if (!stats) return [];
 
   const violations: ValidationViolation[] = [];
@@ -352,7 +352,7 @@ function validateAdvancement(
  *
  * Usage:
  *   const validation = useCharacterValidation(character, classData);
- *   if (!validation.isValid) { /* show errors */ }
+ *   if (!validation.isValid) { // show errors }
  */
 export function useCharacterValidation(
   character: Character | undefined,
@@ -409,13 +409,13 @@ export function validateTraitsForAssignment(
   const assigned = Object.keys(traits).length;
 
   return {
-    isValid: sum === 2 && assigned === 4,
+    isValid: sum === 3 && assigned === 4,
     message:
       assigned < 4
         ? `${4 - assigned} trait${assigned < 3 ? "s" : ""} to assign`
-        : sum === 2
+        : sum === 3
           ? "Traits assigned ✓"
-          : `Sum is ${sum}; must be +2`,
+          : `Sum is ${sum}; must be +3`,
     sum,
     assigned,
   };

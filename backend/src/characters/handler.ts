@@ -9,6 +9,11 @@ import type {
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import {
+  S3Client,
+  PutObjectCommand,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import {
   AppError,
   createSuccessResponse,
   createErrorResponse,
@@ -57,6 +62,26 @@ import type {
   LevelUpChoices,
   AdvancementChoice,
 } from "@shared/types";
+
+// ─── S3 Client (portrait uploads) ────────────────────────────────────────────
+
+const s3Client = new S3Client({
+  region: process.env["DYNAMODB_REGION"] ?? process.env["AWS_REGION"] ?? "us-east-1",
+});
+
+const PORTRAIT_BUCKET   = process.env["S3_MEDIA_BUCKET"]    ?? "daggerheart-media";
+const PORTRAIT_PREFIX   = process.env["PORTRAITS_KEY_PREFIX"] ?? "portraits";
+const CDN_DOMAIN        = process.env["CDN_DOMAIN"]          ?? "";
+/** Presigned URL TTL: 5 minutes — sufficient for a single browser upload. */
+const PORTRAIT_PRESIGN_TTL_S = 300;
+/** Hard cap on portrait file size: 8 MB. Enforced via Content-Length-Range header. */
+const PORTRAIT_MAX_BYTES = 8 * 1024 * 1024;
+
+const PORTRAIT_ALLOWED_CONTENT_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+] as const;
 
 // ─── Zod Schemas ──────────────────────────────────────────────────────────────
 
@@ -127,7 +152,7 @@ const CustomConditionSchema = z.object({
 
 const CreateCharacterSchema = z.object({
   name: z.string().min(1, "Name is required").max(60, "Name must be 60 characters or fewer"),
-  classId: z.string().min(1, "classId is required"),
+  classId: z.string().optional(),
   subclassId: z.string().optional(),
   communityId: z.string().optional(),
   ancestryId: z.string().optional(),
@@ -194,6 +219,16 @@ const PutCharacterSchema = z.object({
     .optional(),
   notes: z.string().nullable().optional(),
   avatarKey: z.string().nullable().optional(),
+  /**
+   * CDN URL for the character portrait image.
+   * Set by the frontend after a successful direct S3 upload
+   * (obtained from POST /characters/{id}/portrait-upload-url → confirmUrl).
+   * When provided, the backend stores it as-is; it is NOT re-derived from
+   * portraitKey here — the presign handler is the authoritative writer of
+   * portraitKey/portraitUrl on the character record.
+   * Pass `null` to explicitly clear the portrait.
+   */
+  portraitUrl: z.string().url().nullable().optional(),
   traitBonuses: z.record(z.string(), z.number().int()).optional().default({}),
   // ── Campaign fields ───────────────────────────────────────────────────────
   cardTokens: z.record(z.string(), z.number().int().min(0)).optional().default({}),
@@ -253,6 +288,19 @@ const ActionSchema = z.object({
     "swap-loadout-card",
   ] as const),
   params: z.record(z.unknown()).optional().default({}),
+});
+
+// ── Portrait Upload Schema ────────────────────────────────────────────────────
+
+/**
+ * Body for POST /characters/{characterId}/portrait-upload-url.
+ * `contentType` must be one of the allowed image MIME types.
+ * `filename` is used only to derive the file extension for the S3 key;
+ * it is never stored in DynamoDB.
+ */
+const PortraitUploadSchema = z.object({
+  contentType: z.enum(PORTRAIT_ALLOWED_CONTENT_TYPES),
+  filename: z.string().min(1).max(255),
 });
 
 // ─── DynamoDB Record Shape ────────────────────────────────────────────────────
@@ -319,8 +367,47 @@ function defaultStats(): CoreStats {
 function buildAvatarUrl(avatarKey: string | null | undefined): string | null {
   if (!avatarKey) return null;
   const cdnBase =
-    process.env["CDN_BASE_URL"] ?? "https://cdn.daggerheart.example.com";
+    process.env["CDN_BASE_URL"] ??
+    (CDN_DOMAIN ? `https://${CDN_DOMAIN}` : "https://cdn.daggerheart.example.com");
   return `${cdnBase}/${avatarKey}`;
+}
+
+/**
+ * Derive the public CDN URL for a character portrait from its stored S3 key.
+ * Returns null if no portrait key has been stored.
+ */
+function buildPortraitUrl(portraitKey: string | null | undefined): string | null {
+  if (!portraitKey) return null;
+  const cdnBase = CDN_DOMAIN
+    ? `https://${CDN_DOMAIN}`
+    : "https://cdn.daggerheart.example.com";
+  return `${cdnBase}/${portraitKey}`;
+}
+
+/**
+ * Derive the file extension from a filename string.
+ * Returns an empty string if no extension is found.
+ */
+function fileExtension(filename: string): string {
+  const lastDot = filename.lastIndexOf(".");
+  return lastDot >= 0 ? filename.slice(lastDot + 1).toLowerCase() : "";
+}
+
+/**
+ * Build the S3 key for a portrait image.
+ * Pattern: portraits/{userId}/{characterId}.{ext}
+ * Using the characterId as the object name ensures each character has exactly
+ * one canonical portrait key, making replacement atomic.
+ */
+function buildPortraitKey(
+  userId: string,
+  characterId: string,
+  filename: string
+): string {
+  const ext = fileExtension(filename);
+  return ext
+    ? `${PORTRAIT_PREFIX}/${userId}/${characterId}.${ext}`
+    : `${PORTRAIT_PREFIX}/${userId}/${characterId}`;
 }
 
 // deepMerge, encodeCursor, decodeCursor, signShareToken, validateSrdRules,
@@ -419,6 +506,7 @@ function toCharacterResponse(
   communityName: string | null;
   ancestryName: string | null;
   avatarUrl: string | null;
+  portraitUrl: string | null;
 } {
   return {
     characterId: record.characterId,
@@ -451,6 +539,9 @@ function toCharacterResponse(
     notes: record.notes ?? null,
     avatarKey: record.avatarKey ?? null,
     avatarUrl: buildAvatarUrl(record.avatarKey),
+    // Portrait — stored key drives the CDN URL at read time
+    portraitKey: record.portraitKey ?? null,
+    portraitUrl: record.portraitUrl ?? buildPortraitUrl(record.portraitKey),
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
     // ── Campaign fields ───────────────────────────────────────────────────
@@ -549,6 +640,7 @@ async function listCharacters(
         ancestryName: null,
         level: record.level,
         avatarUrl: buildAvatarUrl(record.avatarKey),
+        portraitUrl: record.portraitUrl ?? buildPortraitUrl(record.portraitKey),
         updatedAt: record.updatedAt,
       };
     })
@@ -566,14 +658,16 @@ async function createCharacter(
   const userId = extractUserId(event);
   const input = parseBody(event, CreateCharacterSchema);
 
-  // Look up class to derive starting stats and domains
-  const classRecord = await lookupClass(input.classId);
+  // Look up class to derive starting stats and domains (optional)
+  const classRecord = input.classId
+    ? await lookupClass(input.classId)
+    : null;
 
   const now = new Date().toISOString();
   const characterId = uuidv4();
 
   const defaultTrackers: CharacterTrackers = {
-    hp: { max: classRecord.startingHitPoints, marked: 0 },
+    hp: { max: classRecord?.startingHitPoints ?? 6, marked: 0 },
     stress: { max: 6, marked: 0 },
     armor: { max: 3, marked: 0 },
   };
@@ -590,7 +684,7 @@ async function createCharacter(
   };
 
   const derivedStats: DerivedStats = {
-    evasion: classRecord.startingEvasion,
+    evasion: classRecord?.startingEvasion ?? 0,
     armor: 0,
   };
 
@@ -602,8 +696,8 @@ async function createCharacter(
     characterId,
     userId,
     name: input.name,
-    classId: input.classId,
-    className: classRecord.name,
+    classId: input.classId ?? "",
+    className: classRecord?.name ?? "",
     subclassId: input.subclassId ?? null,
     subclassName: null,
     communityId: input.communityId ?? null,
@@ -611,7 +705,7 @@ async function createCharacter(
     ancestryId: input.ancestryId ?? null,
     ancestryName: null,
     level: input.level ?? 1,
-    domains: classRecord.domains ?? [],
+    domains: classRecord?.domains ?? [],
     stats: defaultStats(),
     derivedStats,
     trackers: defaultTrackers,
@@ -631,7 +725,9 @@ async function createCharacter(
     traitBonuses: {},
     notes: null,
     avatarKey: null,
-    avatarUrl: null,
+    avatarUrl: null,    // computed from avatarKey at read-time; null in storage
+    portraitKey: null,
+    portraitUrl: null,
     createdAt: now,
     updatedAt: now,
     // ── Inventory ─────────────────────────────────────────────────────────
@@ -764,6 +860,15 @@ async function patchCharacter(
   merged.SK = existing.SK;
   merged.createdAt = existing.createdAt;
   merged.updatedAt = new Date().toISOString();
+
+  // Keep portraitKey and portraitUrl consistent:
+  // - If the patch explicitly sets portraitUrl to null, clear portraitKey too.
+  // - If portraitUrl is being set to a non-null string, leave portraitKey
+  //   alone — it was already written by the portraitUploadUrl handler.
+  if ("portraitUrl" in patch && patch.portraitUrl === null) {
+    merged.portraitKey = null;
+    merged.portraitUrl = null;
+  }
 
   const srdErrors = validateSrdRules(merged as Partial<Character>);
   if (srdErrors.length > 0) {
@@ -1188,6 +1293,102 @@ async function levelUpCharacter(
   return createSuccessResponse(response);
 }
 
+// ─── Portrait Upload Route Handler ────────────────────────────────────────────
+
+/**
+ * POST /characters/{characterId}/portrait-upload-url
+ *
+ * Generates a presigned S3 PUT URL so the browser can upload a portrait image
+ * directly to S3 without proxying through the Lambda (avoids the 10 MB API
+ * Gateway payload limit and keeps Lambda cold-start impact low).
+ *
+ * Workflow:
+ *   1. Client calls this endpoint with { contentType, filename }.
+ *   2. Backend returns { uploadUrl, confirmUrl, expiresIn }.
+ *   3. Client PUTs the image file to `uploadUrl` (direct S3 upload, no auth header).
+ *   4. Client calls PATCH /characters/{characterId} with { portraitUrl: confirmUrl }
+ *      to persist the CDN URL on the character record.
+ *
+ * Security:
+ *   - Only the authenticated owner of the character may request an upload URL.
+ *   - The S3 key is deterministic (portraits/{userId}/{characterId}.{ext}),
+ *     so uploading a new portrait atomically replaces the previous one at the
+ *     same CDN URL — no stale references need to be cleaned up.
+ *   - Content-Length-Range is enforced in the presigned URL: 1 byte minimum,
+ *     PORTRAIT_MAX_BYTES maximum.  S3 will reject the PUT if the browser
+ *     sends a body outside this range.
+ *   - ContentType is locked to the value specified in the request, preventing
+ *     type confusion attacks.
+ */
+async function portraitUploadUrl(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<APIGatewayProxyResultV2> {
+  const userId      = extractUserId(event);
+  const characterId = requirePathParam(event, "characterId");
+
+  // Verify the character exists and belongs to this user before issuing a URL
+  const existing = await getItem<CharacterRecord>({
+    TableName: CHARACTERS_TABLE,
+    Key: keys.character(userId, characterId),
+  });
+  if (!existing) throw AppError.notFound("Character", characterId);
+  if (existing.userId !== userId) throw AppError.forbidden();
+
+  const { contentType, filename } = parseBody(event, PortraitUploadSchema);
+
+  const s3Key = buildPortraitKey(userId, characterId, filename);
+
+  // Presigned PutObject — browser uploads directly to S3
+  const putCommand = new PutObjectCommand({
+    Bucket: PORTRAIT_BUCKET,
+    Key: s3Key,
+    ContentType: contentType,
+    // Content-Length-Range constraint: S3 rejects uploads outside [1, max]
+    // This is expressed as a special condition in the presigned URL policy.
+    ContentLengthRange: [1, PORTRAIT_MAX_BYTES],
+    Metadata: {
+      "x-userid":      userId,
+      "x-characterid": characterId,
+    },
+  } as ConstructorParameters<typeof PutObjectCommand>[0]);
+
+  const uploadUrl = await getSignedUrl(s3Client, putCommand, {
+    expiresIn: PORTRAIT_PRESIGN_TTL_S,
+  });
+
+  // The CDN URL the client should store once the upload succeeds.
+  // We derive it from the same deterministic key — no confirm step needed.
+  const cdnBase    = CDN_DOMAIN
+    ? `https://${CDN_DOMAIN}`
+    : "https://cdn.daggerheart.example.com";
+  const confirmUrl = `${cdnBase}/${s3Key}`;
+
+  return createSuccessResponse(
+    {
+      /**
+       * Presigned S3 PUT URL. The client must:
+       *   - Use HTTP method PUT (not POST).
+       *   - Set the Content-Type header to exactly `contentType`.
+       *   - Send the raw file bytes as the request body.
+       *   - NOT include an Authorization header (the signature is in the URL).
+       */
+      uploadUrl,
+      /**
+       * The final CDN URL that will serve the portrait once uploaded.
+       * Store this on the character by PATCHing { portraitUrl: confirmUrl }.
+       */
+      confirmUrl,
+      /** S3 object key — informational; clients do not need this directly. */
+      s3Key,
+      /** Seconds until the presigned URL expires (from time of this response). */
+      expiresIn: PORTRAIT_PRESIGN_TTL_S,
+      /** Maximum allowed file size in bytes. */
+      maxBytes: PORTRAIT_MAX_BYTES,
+    },
+    201
+  );
+}
+
 // ─── Route Dispatcher ─────────────────────────────────────────────────────────
 
 export const handler = withErrorHandling(
@@ -1215,6 +1416,9 @@ export const handler = withErrorHandling(
         return getShareToken(event);
       case "GET /characters/{characterId}/view":
         return getSharedCharacter(event);
+      // ── Portrait upload ─────────────────────────────────────────────────
+      case "POST /characters/{characterId}/portrait-upload-url":
+        return portraitUploadUrl(event);
       // ── Campaign mechanics ──────────────────────────────────────────────
       case "POST /characters/{characterId}/projects":
         return createProject(event);

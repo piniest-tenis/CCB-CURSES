@@ -125,54 +125,57 @@ export function ArmorSelectionPanel({
             return (
               <div
                 key={armor.id}
+                onClick={() => setDrillArmor(armor)}
                 className={`
-                  border-l-2 transition-colors cursor-pointer
+                  flex items-start gap-2 px-4 py-3 border-l-2 transition-colors cursor-pointer
                   ${isSelected
                     ? "bg-[#577399]/20 border-[#577399]"
                     : "border-transparent hover:bg-slate-800/60 hover:border-slate-600"
                   }
                 `}
               >
-                <div className="flex items-start gap-2 px-4 py-3">
-                  {/* Main content — click to select */}
-                  <button
-                    type="button"
-                    className="flex-1 text-left min-w-0"
-                    onClick={() => onArmorChange(armor.id)}
-                  >
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-semibold text-[#f7f7ff]">{armor.name}</span>
-                      {isSuggested && (
-                        <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#577399]/30 text-[#577399] border border-[#577399]/40 whitespace-nowrap">
-                          Suggested Armor
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      <span className="text-xs text-[#b9baa3]/60">Armor Score {armor.baseArmorScore}</span>
-                      <span className="text-xs text-[#b9baa3]/40">·</span>
-                      <span className="text-xs text-[#b9baa3]/60">Major {armor.baseMajorThreshold}</span>
-                      <span className="text-xs text-[#b9baa3]/40">·</span>
-                      <span className="text-xs text-[#b9baa3]/60">Severe {armor.baseSevereThreshold}</span>
-                    </div>
-                    {armor.feature ? (
-                      <p className="text-xs text-[#b9baa3]/50 mt-1 italic truncate">{armor.feature}</p>
-                    ) : (
-                      <p className="text-xs text-[#b9baa3]/30 mt-1 italic">No feature</p>
-                    )}
-                  </button>
+                {/* Circular select button */}
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onArmorChange(armor.id); }}
+                  aria-label={`Select ${armor.name}`}
+                  className={`
+                    mt-0.5 h-5 w-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors
+                    ${isSelected
+                      ? "border-[#577399] bg-[#577399]"
+                      : "border-slate-600 hover:border-[#577399]/70"
+                    }
+                  `}
+                >
+                  {isSelected && <span className="h-2 w-2 rounded-full bg-white" />}
+                </button>
 
-                  {/* Drill-down button */}
-                  <button
-                    type="button"
-                    onClick={() => setDrillArmor(armor)}
-                    className="shrink-0 text-[#b9baa3]/30 hover:text-[#b9baa3]/70 text-lg leading-none transition-colors p-1"
-                    aria-label={`View details for ${armor.name}`}
-                    title="View full details"
-                  >
-                    ›
-                  </button>
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-semibold text-[#f7f7ff]">{armor.name}</span>
+                    {isSuggested && (
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#577399]/30 text-[#577399] border border-[#577399]/40 whitespace-nowrap">
+                        Suggested Armor
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    <span className="text-xs text-[#b9baa3]/60">Armor Score {armor.baseArmorScore}</span>
+                    <span className="text-xs text-[#b9baa3]/40">·</span>
+                    <span className="text-xs text-[#b9baa3]/60">Major {armor.baseMajorThreshold}</span>
+                    <span className="text-xs text-[#b9baa3]/40">·</span>
+                    <span className="text-xs text-[#b9baa3]/60">Severe {armor.baseSevereThreshold}</span>
+                  </div>
+                  {armor.feature ? (
+                    <p className="text-xs text-[#b9baa3]/50 mt-1 italic truncate">{armor.feature}</p>
+                  ) : (
+                    <p className="text-xs text-[#b9baa3]/30 mt-1 italic">No feature</p>
+                  )}
                 </div>
+
+                {/* Drill-down chevron (visual hint only, row itself is clickable) */}
+                <span className="shrink-0 text-[#b9baa3]/30 text-lg leading-none self-center">›</span>
               </div>
             );
           })

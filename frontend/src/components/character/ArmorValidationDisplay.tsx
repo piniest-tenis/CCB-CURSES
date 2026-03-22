@@ -134,7 +134,7 @@ export function ArmorSelectionConstraint({
     <div className="flex items-center gap-1.5 text-xs">
       <span className="text-[#fe5f55]">✕</span>
       <span className="text-[#fe5f55] opacity-75">
-        Would exceed cap ({validation.score} > {validation.max})
+        Would exceed cap ({validation.score} &gt; {validation.max})
       </span>
     </div>
   );

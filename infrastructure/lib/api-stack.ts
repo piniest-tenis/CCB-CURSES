@@ -55,6 +55,9 @@ export class ApiStack extends cdk.Stack {
         COGNITO_USER_POOL_ID: authStack.userPool.userPoolId,
         S3_MEDIA_BUCKET: storageStack.mediaBucket.bucketName,
         CDN_DOMAIN: storageStack.cdnDistribution.distributionDomainName,
+        // Key prefix used by the characters handler for portrait images.
+        // Stored as an env var so it can be overridden without code changes.
+        PORTRAITS_KEY_PREFIX: "portraits",
         CHARACTERS_TABLE: dataStack.charactersTable.tableName,
         CLASSES_TABLE: dataStack.classesTable.tableName,
         GAMEDATA_TABLE: dataStack.gameDataTable.tableName,
@@ -89,6 +92,18 @@ export class ApiStack extends cdk.Stack {
     dataStack.classesTable.grantReadData(charactersHandler);
     dataStack.gameDataTable.grantReadData(charactersHandler);
     dataStack.domainCardsTable.grantReadData(charactersHandler);
+
+    // Allow the characters handler to generate presigned PUT URLs for portrait
+    // images and (on confirmation) to read/delete them.
+    // Portraits are stored under portraits/ in the shared media bucket.
+    charactersHandler.addToRolePolicy(
+      new iam.PolicyStatement({
+        sid: "CharactersHandlerPortraitAccess",
+        effect: iam.Effect.ALLOW,
+        actions: ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
+        resources: [storageStack.mediaBucket.arnForObjects("portraits/*")],
+      })
+    );
 
     // -----------------------------------------------------------------------
     // 2. Game Data Lambda
@@ -521,6 +536,8 @@ export class ApiStack extends cdk.Stack {
       { method: apigwv2.HttpMethod.DELETE, path: "/characters/{characterId}" },
       { method: apigwv2.HttpMethod.POST, path: "/characters/{characterId}/rest" },
       { method: apigwv2.HttpMethod.GET, path: "/characters/{characterId}/share" },
+      // Portrait image upload — returns a presigned S3 PUT URL
+      { method: apigwv2.HttpMethod.POST, path: "/characters/{characterId}/portrait-upload-url" },
     ];
 
     for (const route of characterRoutes) {

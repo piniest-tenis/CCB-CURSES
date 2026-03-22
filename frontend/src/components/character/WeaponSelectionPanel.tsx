@@ -184,59 +184,62 @@ export function WeaponSelectionPanel({
             return (
               <div
                 key={weapon.id}
+                onClick={() => setDrillWeapon(weapon)}
                 className={`
-                  border-l-2 transition-colors cursor-pointer
+                  flex items-start gap-2 px-4 py-3 border-l-2 transition-colors cursor-pointer
                   ${isSelected
                     ? "bg-[#577399]/20 border-[#577399]"
                     : "border-transparent hover:bg-slate-800/60 hover:border-slate-600"
                   }
                 `}
               >
-                <div className="flex items-start gap-2 px-4 py-3">
-                  {/* Main content — click to select */}
-                  <button
-                    type="button"
-                    className="flex-1 text-left min-w-0"
-                    onClick={() => handleSelect(weapon)}
-                  >
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-semibold text-[#f7f7ff]">{weapon.name}</span>
-                      {isSuggested && (
-                        <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#577399]/30 text-[#577399] border border-[#577399]/40 whitespace-nowrap">
-                          Suggested Weapon
-                        </span>
-                      )}
-                      {weapon.damageType === "Magic" && (
-                        <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-purple-900/30 text-purple-400 border border-purple-700/40">
-                          Magic
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      <span className="text-xs text-[#b9baa3]/60">{weapon.trait}</span>
-                      <span className="text-xs text-[#b9baa3]/40">·</span>
-                      <span className="text-xs text-[#b9baa3]/60">{weapon.burden}</span>
-                      <span className="text-xs text-[#b9baa3]/40">·</span>
-                      <span className="text-xs text-[#b9baa3]/60">{weapon.range}</span>
-                      <span className="text-xs text-[#b9baa3]/40">·</span>
-                      <span className="text-xs font-mono text-[#b9baa3]/80">{weapon.damageDie}</span>
-                    </div>
-                    {weapon.feature && (
-                      <p className="text-xs text-[#b9baa3]/50 mt-1 italic truncate">{weapon.feature}</p>
-                    )}
-                  </button>
+                {/* Circular select button */}
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); handleSelect(weapon); }}
+                  aria-label={`Select ${weapon.name}`}
+                  className={`
+                    mt-0.5 h-5 w-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors
+                    ${isSelected
+                      ? "border-[#577399] bg-[#577399]"
+                      : "border-slate-600 hover:border-[#577399]/70"
+                    }
+                  `}
+                >
+                  {isSelected && <span className="h-2 w-2 rounded-full bg-white" />}
+                </button>
 
-                  {/* Drill-down button */}
-                  <button
-                    type="button"
-                    onClick={() => setDrillWeapon(weapon)}
-                    className="shrink-0 text-[#b9baa3]/30 hover:text-[#b9baa3]/70 text-lg leading-none transition-colors p-1"
-                    aria-label={`View details for ${weapon.name}`}
-                    title="View full details"
-                  >
-                    ›
-                  </button>
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-semibold text-[#f7f7ff]">{weapon.name}</span>
+                    {isSuggested && (
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#577399]/30 text-[#577399] border border-[#577399]/40 whitespace-nowrap">
+                        Suggested Weapon
+                      </span>
+                    )}
+                    {weapon.damageType === "Magic" && (
+                      <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-purple-900/30 text-purple-400 border border-purple-700/40">
+                        Magic
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    <span className="text-xs text-[#b9baa3]/60">{weapon.trait}</span>
+                    <span className="text-xs text-[#b9baa3]/40">·</span>
+                    <span className="text-xs text-[#b9baa3]/60">{weapon.burden}</span>
+                    <span className="text-xs text-[#b9baa3]/40">·</span>
+                    <span className="text-xs text-[#b9baa3]/60">{weapon.range}</span>
+                    <span className="text-xs text-[#b9baa3]/40">·</span>
+                    <span className="text-xs font-mono text-[#b9baa3]/80">{weapon.damageDie}</span>
+                  </div>
+                  {weapon.feature && (
+                    <p className="text-xs text-[#b9baa3]/50 mt-1 italic truncate">{weapon.feature}</p>
+                  )}
                 </div>
+
+                {/* Drill-down chevron (visual hint only, row itself is clickable) */}
+                <span className="shrink-0 text-[#b9baa3]/30 text-lg leading-none self-center">›</span>
               </div>
             );
           })

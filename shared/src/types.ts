@@ -115,6 +115,13 @@ export interface CharacterSummary {
   ancestryName: string | null;
   level: number;
   avatarUrl: string | null;
+  /**
+   * CDN URL for the character portrait image, or null if no portrait has been
+   * uploaded yet. Set by the backend after a successful portrait upload
+   * confirmation (POST /characters/{id}/portrait-upload-url → PUT to S3 →
+   * PATCH /characters/{id} with { portraitUrl }).
+   */
+  portraitUrl: string | null;
   updatedAt: string;
 }
 
@@ -138,6 +145,14 @@ export interface Character extends CharacterSummary {
   traitBonuses: Record<string, number>;
   notes: string | null;
   avatarKey: string | null;
+  /**
+   * S3 object key for the character portrait image (e.g.
+   * `portraits/{userId}/{characterId}.webp`). The CDN URL is derived from
+   * this key at read-time and surfaced as `portraitUrl` (inherited from
+   * CharacterSummary). Stored separately from `avatarKey` so portrait and
+   * user-avatar uploads remain independently managed.
+   */
+  portraitKey: string | null;
   createdAt: string;
 
   // ── Starting inventory ────────────────────────────────────────────────────

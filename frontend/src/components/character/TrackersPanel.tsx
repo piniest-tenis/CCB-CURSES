@@ -65,7 +65,7 @@ function ActionableSlotTracker({
   clearActionId,
   characterId,
   onMaxChange,
-  colorFilled = "bg-burgundy-600",
+  colorFilled = "bg-[#577399]",
   hardMax,
 }: ActionableSlotTrackerProps) {
   const { fire, isPending, inlineError } = useActionButton(characterId);
@@ -91,7 +91,7 @@ function ActionableSlotTracker({
           <span
             aria-live="polite"
             aria-label={`${label}: ${marked} of ${max}`}
-            className="font-semibold text-parchment-300 tabular-nums"
+            className="font-semibold text-[#f7f7ff] tabular-nums"
           >
             {marked}
           </span>
@@ -107,8 +107,8 @@ function ActionableSlotTracker({
             }}
             aria-label={`${label} max slots`}
             className="
-              w-7 bg-transparent text-center text-parchment-400
-              border-b border-burgundy-800 focus:outline-none focus:ring-1 focus:ring-gold-500 focus:border-gold-500
+              w-7 bg-transparent text-center text-[#b9baa3]
+              border-b border-[#577399]/40 focus:outline-none focus:ring-1 focus:ring-[#577399] focus:border-[#577399]
               [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none
               transition-colors
             "
@@ -139,11 +139,11 @@ function ActionableSlotTracker({
               className={[
                 // 24px visible, but min-h/min-w ensures 32px touch target
                 "h-6 w-6 min-h-[32px] min-w-[32px] rounded-full border-2 transition-all duration-150",
-                "focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-1 focus:ring-offset-slate-900",
+                "focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-1 focus:ring-offset-slate-900",
                 "disabled:opacity-60 disabled:cursor-wait",
                 filled
                   ? `${colorFilled} border-transparent shadow-sm`
-                  : "border-burgundy-700 bg-transparent hover:border-gold-500",
+                  : "border-[#577399]/30 bg-transparent hover:border-[#577399]",
               ].join(" ")}
             />
           );
@@ -192,10 +192,10 @@ const TIER_LABEL: Record<DamageTier, string> = {
 };
 
 const TIER_COLOR: Record<DamageTier, string> = {
-  none:   "text-parchment-600",
-  minor:  "text-parchment-300",
+  none:   "text-[#b9baa3]",
+  minor:  "text-[#f7f7ff]",
   major:  "text-[#b9cfe8]",
-  severe: "text-burgundy-300",
+  severe: "text-[#fe5f55]",
 };
 
 interface DamageCalculatorSidebarProps {
@@ -360,7 +360,7 @@ function DamageCalculatorSidebar({
               <span className="font-bold text-[#b9cfe8] tabular-nums">{major}</span>
               <span className="text-parchment-500">Major</span>
               <span className="sidebar-text-secondary">·</span>
-              <span className="font-bold text-burgundy-300 tabular-nums">{severe}</span>
+              <span className="font-bold text-[#f7f7ff] tabular-nums">{severe}</span>
               <span className="text-parchment-500">Severe</span>
             </div>
             <p className="text-[11px] sidebar-text-secondary italic">
@@ -452,9 +452,9 @@ function DamageCalculatorSidebar({
             <div className={[
               "rounded-xl border px-4 py-4 space-y-1 text-center",
               finalTier === "none"   ? "border-[#577399]/20 bg-[#577399]/5"      : "",
-              finalTier === "minor"  ? "border-parchment-700/40 bg-parchment-900/10" : "",
+              finalTier === "minor"  ? "border-[#577399]/30 bg-[#577399]/8"      : "",
               finalTier === "major"  ? "border-[#577399]/40 bg-[#577399]/10"     : "",
-              finalTier === "severe" ? "border-burgundy-700/60 bg-burgundy-900/20" : "",
+              finalTier === "severe" ? "border-[#fe5f55]/40 bg-[#fe5f55]/10"     : "",
             ].join(" ")}>
               {useArmor && baseTier !== finalTier && (
                 <p className="text-[11px] sidebar-text-secondary line-through">
@@ -500,11 +500,11 @@ function DamageCalculatorSidebar({
             disabled={hpToMark === null || isPending}
             aria-busy={isPending}
             className="
-              flex-1 rounded-xl border border-burgundy-600/60 bg-burgundy-800/40 px-4 py-3
-              text-sm font-semibold text-parchment-100
-              hover:bg-burgundy-700/60 hover:border-burgundy-500
+              flex-1 rounded-xl border border-[#577399]/40 bg-[#577399]/15 px-4 py-3
+              text-sm font-semibold text-[#f7f7ff]
+              hover:bg-[#577399]/25 hover:border-[#577399]
               disabled:opacity-40 disabled:cursor-not-allowed
-              focus:outline-none focus:ring-2 focus:ring-burgundy-500
+              focus:outline-none focus:ring-2 focus:ring-[#577399]
               transition-colors
             "
           >
@@ -555,7 +555,7 @@ function DamageThresholdBar({ major, severe, armorMarked, armorMax, characterId 
             </dt>
           </div>
 
-          <span aria-hidden="true" className="mx-2 text-burgundy-700 select-none font-light">|</span>
+          <span aria-hidden="true" className="mx-2 text-[#577399]/40 select-none font-light">|</span>
 
           {/* Major threshold value */}
           <div className="flex items-center gap-1.5">
@@ -570,11 +570,11 @@ function DamageThresholdBar({ major, severe, armorMarked, armorMax, characterId 
             </dt>
           </div>
 
-          <span aria-hidden="true" className="mx-2 text-burgundy-700 select-none font-light">|</span>
+          <span aria-hidden="true" className="mx-2 text-[#577399]/40 select-none font-light">|</span>
 
           {/* Severe threshold value */}
           <div className="flex items-center gap-1.5">
-            <dd className="rounded bg-burgundy-900/40 border border-burgundy-700/60 px-2 py-0.5 text-base font-bold text-burgundy-300 tabular-nums leading-none">
+            <dd className="rounded bg-[#577399]/15 border border-[#577399]/50 px-2 py-0.5 text-base font-bold text-[#f7f7ff] tabular-nums leading-none">
               {severe}
             </dd>
             <dt className="text-xs text-parchment-500 whitespace-nowrap">
@@ -593,10 +593,10 @@ function DamageThresholdBar({ major, severe, armorMarked, armorMax, characterId 
           aria-label="Open damage calculator"
           aria-haspopup="dialog"
           className="
-            flex items-center gap-1.5 rounded-lg border border-burgundy-800/70 bg-slate-900
-            px-2.5 py-1.5 text-[11px] font-semibold text-parchment-400
-            hover:border-burgundy-600 hover:text-parchment-200 hover:bg-slate-800
-            focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-1 focus:ring-offset-slate-900
+            flex items-center gap-1.5 rounded-lg border border-[#577399]/30 bg-slate-900
+            px-2.5 py-1.5 text-[11px] font-semibold text-[#b9baa3]
+            hover:border-[#577399] hover:text-[#f7f7ff] hover:bg-slate-800
+            focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-1 focus:ring-offset-slate-900
             transition-colors flex-shrink-0
           "
         >
@@ -917,10 +917,10 @@ function WeaponCard({ slot }: WeaponCardProps) {
 
   return (
     <>
-      <div className="rounded-lg border border-burgundy-800 bg-slate-850 shadow-card overflow-hidden">
+        <div className="rounded-lg border border-[#577399]/20 bg-slate-850 shadow-card overflow-hidden">
         {/* Slot label */}
-        <div className="px-3 pt-2 pb-1 border-b border-burgundy-900/50">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-gold-600">
+          <div className="px-3 pt-2 pb-1 border-b border-[#577399]/20">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-[#577399]">
             {slot === "primary" ? "Primary Weapon" : "Secondary Weapon"}
           </span>
         </div>
@@ -1022,11 +1022,11 @@ function HopeTrackerInner({
           disabled={isPending}
           aria-label="Spend 1 Hope"
           className="
-            h-9 w-9 rounded border border-burgundy-800 bg-slate-900
-            text-sm text-parchment-500 hover:bg-burgundy-900/30 hover:text-parchment-200
+            h-9 w-9 rounded border border-[#577399]/30 bg-slate-900
+            text-sm text-[#b9baa3] hover:bg-[#577399]/15 hover:text-[#f7f7ff]
             disabled:opacity-50 disabled:cursor-wait
             transition-colors flex items-center justify-center
-            focus:outline-none focus:ring-2 focus:ring-gold-500
+            focus:outline-none focus:ring-2 focus:ring-[#577399]
           "
         >
           −
@@ -1053,8 +1053,8 @@ function HopeTrackerInner({
                   transition-all duration-150
                   ${
                     filled
-                      ? "bg-gold-500 border-gold-400 text-slate-900 shadow-glow-gold"
-                      : "border-gold-800 bg-transparent text-gold-700"
+                      ? "bg-[#577399] border-[#577399] text-[#f7f7ff] shadow-lg"
+                      : "border-[#577399]/30 bg-transparent text-[#577399]/40"
                   }
                 `}
               >
@@ -1070,11 +1070,11 @@ function HopeTrackerInner({
           disabled={isPending}
           aria-label="Gain 1 Hope"
           className="
-            h-9 w-9 rounded border border-gold-800 bg-slate-900
-            text-sm text-gold-600 hover:bg-gold-900/20 hover:text-gold-300
+            h-9 w-9 rounded border border-[#577399]/40 bg-slate-900
+            text-sm text-[#577399] hover:bg-[#577399]/20 hover:text-[#f7f7ff]
             disabled:opacity-50 disabled:cursor-wait
             transition-colors flex items-center justify-center
-            focus:outline-none focus:ring-2 focus:ring-gold-500
+            focus:outline-none focus:ring-2 focus:ring-[#577399]
           "
         >
           +
@@ -1121,17 +1121,17 @@ function IncrementControls({ value, onChange, min, max, ariaLabel }: IncrementCo
   const canInc = max === undefined || value < max;
   return (
     <div className="flex items-center gap-1">
-      <button
+        <button
         type="button"
         onClick={() => onChange(value - 1)}
         disabled={!canDec}
         aria-label={ariaLabel ? `Decrease ${ariaLabel}` : "Decrease"}
         className="
-          h-9 w-9 rounded border border-burgundy-800 bg-slate-900
-          text-xs text-parchment-500 hover:bg-burgundy-900/30 hover:text-parchment-200
+          h-9 w-9 rounded border border-[#577399]/30 bg-slate-900
+          text-xs text-[#b9baa3] hover:bg-[#577399]/15 hover:text-[#f7f7ff]
           disabled:opacity-25 disabled:cursor-not-allowed
           transition-colors flex items-center justify-center leading-none select-none
-          focus:outline-none focus:ring-2 focus:ring-gold-500
+          focus:outline-none focus:ring-2 focus:ring-[#577399]
         "
       >
         −
@@ -1143,11 +1143,11 @@ function IncrementControls({ value, onChange, min, max, ariaLabel }: IncrementCo
         disabled={!canInc}
         aria-label={ariaLabel ? `Increase ${ariaLabel}` : "Increase"}
         className="
-          h-9 w-9 rounded border border-burgundy-800 bg-slate-900
-          text-xs text-parchment-500 hover:bg-gold-900/20 hover:text-gold-300
+          h-9 w-9 rounded border border-[#577399]/40 bg-slate-900
+          text-xs text-[#577399] hover:bg-[#577399]/20 hover:text-[#f7f7ff]
           disabled:opacity-25 disabled:cursor-not-allowed
           transition-colors flex items-center justify-center leading-none select-none
-          focus:outline-none focus:ring-2 focus:ring-gold-500
+          focus:outline-none focus:ring-2 focus:ring-[#577399]
         "
       >
         +
@@ -1160,22 +1160,10 @@ function IncrementControls({ value, onChange, min, max, ariaLabel }: IncrementCo
 
 function ExperiencesList() {
   const { activeCharacter, updateField } = useCharacterStore();
-  const [newName,  setNewName]  = useState("");
-  const [newBonus, setNewBonus] = useState(2);
 
   if (!activeCharacter) return null;
 
   const { experiences } = activeCharacter;
-
-  const addExperience = () => {
-    if (!newName.trim()) return;
-    updateField("experiences", [
-      ...experiences,
-      { name: newName.trim(), bonus: newBonus },
-    ]);
-    setNewName("");
-    setNewBonus(2);
-  };
 
   const removeExperience = (index: number) => {
     updateField(
@@ -1204,7 +1192,7 @@ function ExperiencesList() {
       {experiences.map((exp, i) => (
         <div
           key={i}
-          className="flex items-center gap-2 rounded-lg border border-burgundy-900/40 bg-slate-900/50 px-3 py-2"
+          className="flex items-center gap-2 rounded-lg border border-[#577399]/20 bg-slate-900/50 px-3 py-2"
         >
           {/* Experience name — opens sidebar for editing */}
           <EditableField
@@ -1227,79 +1215,126 @@ function ExperiencesList() {
             type="button"
             onClick={() => removeExperience(i)}
             aria-label={`Remove experience: ${exp.name || `#${i + 1}`}`}
-            className="ml-1 h-9 w-9 flex items-center justify-center rounded text-burgundy-500 hover:text-burgundy-300 hover:bg-burgundy-900/30 transition-colors text-xs leading-none focus:outline-none focus:ring-2 focus:ring-burgundy-500"
+            className="ml-1 h-9 w-9 flex items-center justify-center rounded text-[#577399]/60 hover:text-[#fe5f55] hover:bg-[#fe5f55]/10 transition-colors text-xs leading-none focus:outline-none focus:ring-2 focus:ring-[#577399]"
           >
             ✕
           </button>
         </div>
       ))}
-
-      {/* Add new experience row */}
-      <div className="mt-1 flex items-center gap-2">
-        <input
-          type="text"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && addExperience()}
-          placeholder="New experience…"
-          aria-label="New experience name"
-          className="
-            flex-1 rounded bg-slate-900 px-2 py-1.5 text-sm text-parchment-300
-            border border-dashed border-burgundy-800 focus:outline-none
-            focus:ring-2 focus:ring-gold-500 focus:border-gold-600 placeholder-parchment-700 transition-colors
-          "
-        />
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setNewBonus((b) => Math.max(2, b - 1))}
-            disabled={newBonus <= 2}
-            aria-label="Decrease new experience starting bonus"
-            className="
-              h-9 w-9 rounded border border-burgundy-800 bg-slate-900
-              text-xs text-parchment-500 hover:bg-burgundy-900/30
-              disabled:opacity-25 disabled:cursor-not-allowed
-              transition-colors flex items-center justify-center leading-none
-              focus:outline-none focus:ring-2 focus:ring-gold-500
-            "
-          >
-            −
-          </button>
-          <BonusDisplay bonus={newBonus} />
-          <button
-            type="button"
-            onClick={() => setNewBonus((b) => b + 1)}
-            aria-label="Increase new experience starting bonus"
-            className="
-              h-9 w-9 rounded border border-burgundy-800 bg-slate-900
-              text-xs text-parchment-500 hover:bg-gold-900/20
-              transition-colors flex items-center justify-center leading-none
-              focus:outline-none focus:ring-2 focus:ring-gold-500
-            "
-          >
-            +
-          </button>
-        </div>
-        <button
-          type="button"
-          onClick={addExperience}
-          disabled={!newName.trim()}
-          aria-label="Add experience"
-          className="
-            rounded px-2.5 py-2 text-xs font-semibold
-            bg-burgundy-800 text-parchment-200 hover:bg-burgundy-700
-            disabled:opacity-40 disabled:cursor-not-allowed
-            transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500
-          "
-        >
-          Add
-        </button>
-      </div>
     </div>
   );
 }
 
 // ─── TraitsSection ────────────────────────────────────────────────────────────
+// Each trait is displayed as a card using the named SVG background.
+// The SVG viewBox is 521.87 × 865.9 (portrait card shape).
+// Trait name text is placed at ~97% from the top (bottom banner area).
+
+const TRAIT_CARD_SVGS: Record<string, string> = {
+  agility:   "/images/ui-elements/agility-card.svg",
+  strength:  "/images/ui-elements/strength-card.svg",
+  knowledge: "/images/ui-elements/knowledge-card.svg",
+  finesse:   "/images/ui-elements/finesse-card.svg",
+  instinct:  "/images/ui-elements/instinct-card.svg",
+  presence:  "/images/ui-elements/presence-card.svg",
+};
+
+interface TraitCardProps {
+  traitName:   string;   // e.g. "Nightwalker", "Ironclad"
+  sourceName:  string;   // e.g. "Elf", "Orderborn"
+  sourceLabel: string;   // e.g. "Ancestry", "Community"
+  statKey:     string;   // for SVG lookup: agility | strength | …
+  bonus:       number;
+  onBonusChange: (v: number) => void;
+  ariaLabel:   string;
+}
+
+function TraitCard({
+  traitName,
+  sourceName,
+  sourceLabel,
+  statKey,
+  bonus,
+  onBonusChange,
+  ariaLabel,
+}: TraitCardProps) {
+  const svgSrc = TRAIT_CARD_SVGS[statKey.toLowerCase()] ?? "/images/ui-elements/blank-card.svg";
+
+  return (
+    <div
+      className="relative flex-shrink-0 select-none"
+      style={{ width: 120, aspectRatio: "521.87 / 865.9" }}
+    >
+      {/* Card SVG background */}
+      <img
+        src={svgSrc}
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 w-full h-full object-cover"
+        draggable={false}
+      />
+
+      {/* Source label — top area */}
+      <div
+        className="absolute top-[7%] left-0 right-0 flex flex-col items-center px-2"
+        aria-hidden="true"
+      >
+        <span className="text-[7px] uppercase tracking-widest text-[#aa7b1b] font-semibold leading-tight text-center">
+          {sourceLabel}
+        </span>
+        <span className="text-[7px] text-[#5a3e1b] leading-tight text-center truncate max-w-[70%]">
+          {sourceName}
+        </span>
+      </div>
+
+      {/* Trait name — bottom banner at ~88% from top */}
+      <div
+        className="absolute left-0 right-0 flex flex-col items-center justify-center px-1"
+        style={{ top: "88%", bottom: "3%" }}
+        aria-hidden="true"
+      >
+        <span
+          className="text-[8px] font-bold text-[#f9ecd8] text-center leading-tight"
+          style={{ maxWidth: "70%", wordBreak: "break-word" }}
+        >
+          {traitName}
+        </span>
+      </div>
+
+      {/* Bonus counter overlay — center of card */}
+      <div
+        className="absolute inset-0 flex flex-col items-center justify-center"
+        style={{ paddingTop: "20%", paddingBottom: "18%" }}
+      >
+        <div className="flex flex-col items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onBonusChange(bonus + 1)}
+            aria-label={`Increase ${ariaLabel}`}
+            className="h-6 w-6 rounded-full bg-[#0a100d]/60 border border-[#f9ecd8]/30 text-[#f9ecd8] text-xs hover:bg-[#0a100d]/80 transition-colors focus:outline-none focus:ring-1 focus:ring-[#f9ecd8]/60 flex items-center justify-center leading-none"
+          >
+            ▲
+          </button>
+          <output
+            aria-live="polite"
+            aria-label={`${ariaLabel}: ${bonus >= 0 ? "+" : ""}${bonus}`}
+            className="text-xl font-bold font-serif text-[#f9ecd8] tabular-nums leading-none [text-shadow:0_1px_4px_rgba(0,0,0,0.8)]"
+          >
+            {bonus >= 0 ? `+${bonus}` : `${bonus}`}
+          </output>
+          <button
+            type="button"
+            onClick={() => onBonusChange(bonus - 1)}
+            aria-label={`Decrease ${ariaLabel}`}
+            className="h-6 w-6 rounded-full bg-[#0a100d]/60 border border-[#f9ecd8]/30 text-[#f9ecd8] text-xs hover:bg-[#0a100d]/80 transition-colors focus:outline-none focus:ring-1 focus:ring-[#f9ecd8]/60 flex items-center justify-center leading-none"
+          >
+            ▼
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function TraitsSection() {
   const { activeCharacter, updateField } = useCharacterStore();
@@ -1327,68 +1362,70 @@ function TraitsSection() {
     updateField("traitBonuses", traitBonuses);
   };
 
+  // Derive which stat SVG to use from the trait name.
+  // The trait name often contains a stat keyword (e.g. "Agility" in "Swift Agility").
+  // Fall back to blank-card if no keyword matches.
+  const inferStatKey = (traitName: string): string => {
+    const lower = traitName.toLowerCase();
+    for (const stat of ["agility", "strength", "knowledge", "finesse", "instinct", "presence"]) {
+      if (lower.includes(stat)) return stat;
+    }
+    return "blank";
+  };
+
+  const cards: { key: string; traitName: string; sourceName: string; sourceLabel: string; statKey: string }[] = [];
+
+  if (ancestryData) {
+    cards.push({
+      key:         "ancestry",
+      traitName:   ancestryData.traitName,
+      sourceName:  ancestryData.name,
+      sourceLabel: "Ancestry",
+      statKey:     inferStatKey(ancestryData.traitName),
+    });
+    if (ancestryData.secondTraitName) {
+      cards.push({
+        key:         "ancestry2",
+        traitName:   ancestryData.secondTraitName,
+        sourceName:  ancestryData.name,
+        sourceLabel: "Ancestry",
+        statKey:     inferStatKey(ancestryData.secondTraitName),
+      });
+    }
+  }
+
+  if (communityData) {
+    cards.push({
+      key:         "community",
+      traitName:   communityData.traitName,
+      sourceName:  communityData.name,
+      sourceLabel: "Community",
+      statKey:     inferStatKey(communityData.traitName),
+    });
+  }
+
   return (
-    <div className="flex flex-col gap-2">
-      <span className="text-xs font-semibold uppercase tracking-wider text-parchment-400">
+    <div className="flex flex-col gap-3">
+      <span className="text-xs font-semibold uppercase tracking-wider text-[#b9baa3]">
         Traits
       </span>
-      <p className="text-[11px] text-parchment-500 italic -mt-1">
-        Ancestry and community traits — increment as you level up.
+      <p className="text-[11px] text-[#b9baa3]/60 italic -mt-1">
+        Ancestry and community traits — adjust bonus as you level up.
       </p>
-
-      {ancestryData && (
-        <div className="flex items-center gap-2 rounded-lg border border-burgundy-900/40 bg-slate-900/50 px-3 py-2">
-          <div className="flex-1 min-w-0">
-            <span className="text-[10px] uppercase tracking-wider text-parchment-500 block">
-              Ancestry — {ancestryData.name}
-            </span>
-            <span className="text-sm font-semibold text-parchment-200">
-              {ancestryData.traitName}
-            </span>
-          </div>
-          <IncrementControls
-            value={getTraitBonus("ancestry")}
-            onChange={(v) => setTraitBonus("ancestry", v)}
-            ariaLabel="ancestry trait bonus"
+      <div className="flex flex-wrap gap-4" role="group" aria-label="Character Traits">
+        {cards.map((card) => (
+          <TraitCard
+            key={card.key}
+            traitName={card.traitName}
+            sourceName={card.sourceName}
+            sourceLabel={card.sourceLabel}
+            statKey={card.statKey}
+            bonus={getTraitBonus(card.key)}
+            onBonusChange={(v) => setTraitBonus(card.key, v)}
+            ariaLabel={`${card.sourceLabel} ${card.traitName} trait`}
           />
-        </div>
-      )}
-
-      {ancestryData?.secondTraitName && (
-        <div className="flex items-center gap-2 rounded-lg border border-burgundy-900/40 bg-slate-900/50 px-3 py-2">
-          <div className="flex-1 min-w-0">
-            <span className="text-[10px] uppercase tracking-wider text-parchment-500 block">
-              Ancestry (2nd) — {ancestryData.name}
-            </span>
-            <span className="text-sm font-semibold text-parchment-200">
-              {ancestryData.secondTraitName}
-            </span>
-          </div>
-          <IncrementControls
-            value={getTraitBonus("ancestry2")}
-            onChange={(v) => setTraitBonus("ancestry2", v)}
-            ariaLabel="second ancestry trait bonus"
-          />
-        </div>
-      )}
-
-      {communityData && (
-        <div className="flex items-center gap-2 rounded-lg border border-burgundy-900/40 bg-slate-900/50 px-3 py-2">
-          <div className="flex-1 min-w-0">
-            <span className="text-[10px] uppercase tracking-wider text-parchment-500 block">
-              Community — {communityData.name}
-            </span>
-            <span className="text-sm font-semibold text-parchment-200">
-              {communityData.traitName}
-            </span>
-          </div>
-          <IncrementControls
-            value={getTraitBonus("community")}
-            onChange={(v) => setTraitBonus("community", v)}
-            ariaLabel="community trait bonus"
-          />
-        </div>
-      )}
+        ))}
+      </div>
     </div>
   );
 }
@@ -1405,10 +1442,10 @@ export function TrackersPanel() {
 
   return (
     <section
-      className="rounded-xl border border-burgundy-900 bg-slate-900/80 p-5 shadow-card space-y-6"
+      className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-5 shadow-card space-y-6"
       aria-label="Character Trackers"
     >
-      <h2 className="font-serif text-sm font-semibold uppercase tracking-widest text-gold-600">
+      <h2 className="font-serif text-sm font-semibold uppercase tracking-widest text-[#577399]">
         Trackers
       </h2>
 
@@ -1441,7 +1478,7 @@ export function TrackersPanel() {
             clearActionId="clear-hp"
             characterId={characterId}
             onMaxChange={(v) => updateTracker("hp", "max", v)}
-            colorFilled="bg-burgundy-600"
+            colorFilled="bg-[#fe5f55]"
             hardMax={12}
           />
           <ActionableSlotTracker
@@ -1452,7 +1489,7 @@ export function TrackersPanel() {
             clearActionId="clear-stress"
             characterId={characterId}
             onMaxChange={(v) => updateTracker("stress", "max", v)}
-            colorFilled="bg-gold-600"
+            colorFilled="bg-[#577399]"
             hardMax={12}
           />
           <ActionableSlotTracker
@@ -1463,7 +1500,7 @@ export function TrackersPanel() {
             clearActionId="clear-armor"
             characterId={characterId}
             onMaxChange={(v) => updateTracker("armor", "max", v)}
-            colorFilled="bg-parchment-500"
+            colorFilled="bg-[#b9baa3]"
           />
 
           {/* Hope — server-authoritative +/- */}
@@ -1472,10 +1509,10 @@ export function TrackersPanel() {
           {/* Proficiency — read-only */}
           <div className="flex items-center gap-3">
             <div
-              className="h-10 w-10 rounded-lg border border-gold-800 bg-slate-900 flex items-center justify-center shadow-inner"
+              className="h-10 w-10 rounded-lg border border-[#577399]/40 bg-slate-900 flex items-center justify-center shadow-inner"
               aria-label={`Proficiency: ${activeCharacter.proficiency ?? 1}`}
             >
-              <span className="text-xl font-bold text-gold-400 tabular-nums">
+              <span className="text-xl font-bold text-[#577399] tabular-nums">
                 {activeCharacter.proficiency ?? 1}
               </span>
             </div>

@@ -17,7 +17,6 @@ import React, { useState } from "react";
 import {
   UNIVERSAL_STARTING_ITEMS,
   STARTING_CONSUMABLES,
-  CLASS_STARTING_ITEMS,
   STARTING_GOLD,
   type SRDConsumable,
 } from "@/lib/srdEquipment";
@@ -33,8 +32,8 @@ export interface StartingEquipmentSelections {
 }
 
 interface Props {
-  classId: string;
   className: string;
+  classItems: string[] | null;
   selections: StartingEquipmentSelections;
   onChange: (next: StartingEquipmentSelections) => void;
 }
@@ -77,14 +76,12 @@ function ConsumableDetail({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function StartingEquipmentPanel({
-  classId,
   className,
+  classItems,
   selections,
   onChange,
 }: Props) {
   const [detailItem, setDetailItem] = useState<SRDConsumable | null>(null);
-
-  const classItems = CLASS_STARTING_ITEMS[classId.toLowerCase()] ?? null;
 
   // ── Detail drill-down ──
   if (detailItem) {
@@ -141,29 +138,31 @@ export function StartingEquipmentPanel({
             return (
               <div
                 key={item.id}
+                onClick={() => setDetailItem(item)}
                 className={`
-                  flex items-center rounded-lg border transition-all
+                  flex items-center rounded-lg border transition-all cursor-pointer
                   ${isSelected
                     ? "border-[#577399] bg-[#577399]/15"
                     : "border-slate-700/60 bg-slate-900/30 hover:border-slate-600"
                   }
                 `}
               >
-                {/* Select area */}
+                {/* Circular select button */}
                 <button
                   type="button"
-                  onClick={() =>
-                    onChange({ ...selections, consumableId: item.id })
-                  }
-                  className="flex-1 flex items-center gap-3 px-4 py-3 text-left"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onChange({ ...selections, consumableId: item.id });
+                  }}
+                  className="pl-4 pr-3 py-3 flex-shrink-0 flex items-center"
+                  aria-label={`Select ${item.name}`}
                 >
-                  {/* Radio indicator */}
                   <span
                     className={`
-                      h-4 w-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center
+                      h-4 w-4 rounded-full border-2 flex items-center justify-center
                       ${isSelected
                         ? "border-[#577399] bg-[#577399]"
-                        : "border-slate-600"
+                        : "border-slate-600 hover:border-[#577399]/70"
                       }
                     `}
                   >
@@ -171,21 +170,16 @@ export function StartingEquipmentPanel({
                       <span className="h-1.5 w-1.5 rounded-full bg-white" />
                     )}
                   </span>
-                  <div>
-                    <p className="text-sm font-semibold text-[#f7f7ff]">{item.name}</p>
-                    <p className="text-xs text-[#b9baa3]/50 mt-0.5">{item.shortDescription}</p>
-                  </div>
                 </button>
 
-                {/* Drill-down arrow */}
-                <button
-                  type="button"
-                  onClick={() => setDetailItem(item)}
-                  className="px-3 py-3 text-[#b9baa3]/30 hover:text-[#b9baa3] transition-colors text-lg"
-                  aria-label={`View details for ${item.name}`}
-                >
-                  ›
-                </button>
+                {/* Row content */}
+                <div className="flex-1 py-3 pr-3">
+                  <p className="text-sm font-semibold text-[#f7f7ff]">{item.name}</p>
+                  <p className="text-xs text-[#b9baa3]/50 mt-0.5">{item.shortDescription}</p>
+                </div>
+
+                {/* Decorative chevron */}
+                <span className="px-3 text-[#b9baa3]/30 text-lg">›</span>
               </div>
             );
           })}
@@ -239,7 +233,7 @@ export function StartingEquipmentPanel({
         ) : (
           <div className="rounded-lg border border-slate-700/40 bg-slate-900/30 px-4 py-3">
             <p className="text-sm text-[#b9baa3]/40 italic">
-              No class items found for "{className}". Select a class first.
+              No class items found for this class.
             </p>
           </div>
         )}

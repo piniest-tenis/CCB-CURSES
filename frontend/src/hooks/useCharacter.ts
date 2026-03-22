@@ -41,7 +41,7 @@ export interface CharacterListData {
 
 export interface CreateCharacterInput {
   name:         string;
-  classId:      string;
+  classId?:     string;
   subclassId?:  string;
   communityId?: string;
   ancestryId?:  string;

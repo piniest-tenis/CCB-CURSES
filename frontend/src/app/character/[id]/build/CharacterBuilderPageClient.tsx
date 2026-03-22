@@ -21,7 +21,7 @@
  * After saving, redirects back to character sheet.
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useCharacter, useUpdateCharacter } from "@/hooks/useCharacter";
 import { useClass, useClasses, useAncestries, useCommunities } from "@/hooks/useGameData";
@@ -73,12 +73,24 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
       ? ALL_TIER1_WEAPONS.find((w) => w.name === character.weapons.secondary.name)?.id ?? null
       : null
   );
-  const [armorId, setArmorId] = useState<string | null>(null);
+  const [armorId, setArmorId] = useState<string | null>(() => {
+    // Recover armor from inventory: we store the armor name there on save.
+    const inv = character?.inventory ?? [];
+    return TIER1_ARMOR.find((a) => inv.includes(a.name))?.id ?? null;
+  });
 
   // Step 7: Starting Equipment
-  const [equipmentSelections, setEquipmentSelections] = useState<StartingEquipmentSelections>({
-    consumableId: null,
-    classItem: null,
+  const [equipmentSelections, setEquipmentSelections] = useState<StartingEquipmentSelections>(() => {
+    const inv = character?.inventory ?? [];
+    // Recover consumable
+    const consumableId = inv.includes("Minor Health Potion")
+      ? "minor-health-potion"
+      : inv.includes("Minor Stamina Potion")
+        ? "minor-stamina-potion"
+        : null;
+    // Recover class item: done via useEffect once selectedClassData loads.
+    const classItem = null;
+    return { consumableId, classItem };
   });
 
   // Step 8: Domain Cards
@@ -91,6 +103,16 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
   
   // Get full class data for currently selected class
   const { data: selectedClassData } = useClass(classId || undefined);
+
+  // Recover saved class item from inventory once class data loads
+  useEffect(() => {
+    if (!selectedClassData || !character) return;
+    const inv = character.inventory ?? [];
+    const recovered = selectedClassData.classItems.find((ci) => inv.includes(ci)) ?? null;
+    if (recovered) {
+      setEquipmentSelections((prev) => prev.classItem ? prev : { ...prev, classItem: recovered });
+    }
+  }, [selectedClassData, character]);
   
   // Get selected subclass data
   const selectedSubclass = selectedClassData?.subclasses.find((s) => s.subclassId === subclassId);
@@ -119,8 +141,10 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
     setError(null);
     try {
       // Build inventory array from selections
+      const selectedArmor = TIER1_ARMOR.find((a) => a.id === armorId) ?? null;
       const inventory: string[] = [
         ...UNIVERSAL_STARTING_ITEMS,
+        ...(selectedArmor ? [selectedArmor.name] : []),
         ...(equipmentSelections.consumableId === "minor-health-potion"
           ? ["Minor Health Potion"]
           : equipmentSelections.consumableId === "minor-stamina-potion"
@@ -209,7 +233,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
           aria-modal="true"
           aria-labelledby="builder-title"
           className="
-            w-full max-w-4xl rounded-2xl border border-slate-700/60
+            w-full max-w-5xl rounded-2xl border border-slate-700/60
             bg-[#0a100d] shadow-2xl flex flex-col
             max-h-[92vh]
           "
@@ -237,7 +261,9 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
           </div>
           
           {/* Content */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex flex-1 min-h-0 overflow-hidden">
+            {/* Main step content */}
+            <div className="flex-1 overflow-y-auto">
              {/* Step 1: Choose Class */}
             {step === 1 && (
               <div className="flex flex-1 min-h-0">
@@ -470,6 +496,9 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                         `}
                       >
                         <p className="text-sm font-semibold text-[#f7f7ff]">{a.name}</p>
+                        <p className="text-xs text-[#b9baa3]/50 truncate">
+                          {a.traitName}{a.secondTraitName ? ` · ${a.secondTraitName}` : ""}
+                        </p>
                       </button>
                     ))}
                     {heritageTab === "community" && communitiesData?.communities.map((c) => (
@@ -521,12 +550,23 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                         )}
                       </div>
                       <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3 space-y-2">
-                        <p className="text-xs font-semibold uppercase text-[#577399]">Trait</p>
+                        <p className="text-xs font-semibold uppercase text-[#577399]">Primary Trait</p>
                         <p className="text-sm font-semibold text-[#f7f7ff]">{selectedAncestry.traitName}</p>
                         <MarkdownContent className="text-sm text-[#b9baa3]/70">
                           {selectedAncestry.traitDescription}
                         </MarkdownContent>
                       </div>
+                      {selectedAncestry.secondTraitName && (
+                        <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3 space-y-2">
+                          <p className="text-xs font-semibold uppercase text-[#577399]">Secondary Trait</p>
+                          <p className="text-sm font-semibold text-[#f7f7ff]">{selectedAncestry.secondTraitName}</p>
+                          {selectedAncestry.secondTraitDescription && (
+                            <MarkdownContent className="text-sm text-[#b9baa3]/70">
+                              {selectedAncestry.secondTraitDescription}
+                            </MarkdownContent>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                   
@@ -663,8 +703,8 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                 </div>
                 <div className="flex-1 min-h-0 overflow-hidden border-t border-slate-700/30">
                   <StartingEquipmentPanel
-                    classId={classId}
                     className={selectedClassData.name}
+                    classItems={selectedClassData.classItems.length > 0 ? selectedClassData.classItems : null}
                     selections={equipmentSelections}
                     onChange={setEquipmentSelections}
                   />
@@ -883,7 +923,101 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                 </div>
               </div>
             )}
-          </div>
+            </div>{/* end main step content */}
+
+            {/* Right: Step Summary Panel */}
+            {(() => {
+              const selectedArmorData = TIER1_ARMOR.find((a) => a.id === armorId);
+              const steps: { num: number; name: string; done: boolean; summary: string | null }[] = [
+                {
+                  num: 1, name: "Class",
+                  done: Boolean(classId),
+                  summary: selectedClassData?.name ?? null,
+                },
+                {
+                  num: 2, name: "Subclass",
+                  done: Boolean(subclassId),
+                  summary: selectedSubclass?.name ?? null,
+                },
+                {
+                  num: 3, name: "Heritage",
+                  done: Boolean(ancestryId && communityId),
+                  summary: (selectedAncestry && selectedCommunity)
+                    ? `${selectedAncestry.name} · ${selectedCommunity.name}`
+                    : selectedAncestry?.name ?? selectedCommunity?.name ?? null,
+                },
+                {
+                  num: 4, name: "Traits",
+                  done: Object.keys(traitBonuses).length === 4,
+                  summary: Object.keys(traitBonuses).length === 4 ? "Assigned" : null,
+                },
+                {
+                  num: 5, name: "Weapons",
+                  done: Boolean(primaryWeaponId),
+                  summary: primaryWeapon?.name ?? null,
+                },
+                {
+                  num: 6, name: "Armor",
+                  done: Boolean(armorId),
+                  summary: selectedArmorData?.name.replace(" Armor", "") ?? null,
+                },
+                {
+                  num: 7, name: "Equipment",
+                  done: Boolean(equipmentSelections.consumableId && equipmentSelections.classItem),
+                  summary: equipmentSelections.consumableId
+                    ? (equipmentSelections.consumableId === "minor-health-potion" ? "Health Potion" : "Stamina Potion")
+                    : null,
+                },
+                {
+                  num: 8, name: "Domain Cards",
+                  done: selectedDomainCardIds.length === 2,
+                  summary: selectedDomainCardIds.length > 0
+                    ? `${selectedDomainCardIds.length}/2 selected`
+                    : null,
+                },
+                {
+                  num: 9, name: "Review & Save",
+                  done: false,
+                  summary: null,
+                },
+              ];
+              return (
+                <div className="hidden md:flex flex-col w-44 shrink-0 border-l border-slate-700/40 overflow-y-auto py-3">
+                  <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-wider text-[#b9baa3]/30">
+                    Steps
+                  </p>
+                  {steps.map((s) => (
+                    <button
+                      key={s.num}
+                      type="button"
+                      onClick={() => setStep(s.num as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9)}
+                      className={`
+                        w-full text-left px-3 py-2 transition-colors rounded-none
+                        ${step === s.num
+                          ? "bg-[#577399]/15 border-r-2 border-[#577399]"
+                          : "hover:bg-slate-800/40 border-r-2 border-transparent"
+                        }
+                      `}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-xs shrink-0 ${s.done ? "text-[#577399]" : "text-[#b9baa3]/25"}`}>
+                          {s.done ? "✓" : `${s.num}.`}
+                        </span>
+                        <span className={`text-xs font-medium truncate ${step === s.num ? "text-[#f7f7ff]" : "text-[#b9baa3]/60"}`}>
+                          {s.name}
+                        </span>
+                      </div>
+                      {s.summary && (
+                        <p className="text-[10px] text-[#b9baa3]/35 truncate pl-4 mt-0.5 leading-tight">
+                          {s.summary}
+                        </p>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>{/* end flex content row */}
           
            <div className="shrink-0 border-t border-slate-700/40 px-6 py-4 flex items-center justify-between gap-4">
              <button

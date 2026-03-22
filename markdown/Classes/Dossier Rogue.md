@@ -70,7 +70,7 @@ _Pattern Recognition_: When you succeed on a roll using information gained from 
 
 **The Complete Picture**: Once per session, use a short rest downtime move called _Documentation_ to ask the GM three true/false questions about any target, faction, or location you've visited this session. The GM must answer all three truthfully.
 
-## **The Ghost Operative**
+## **Ghost Operative**
 
 _Play the Ghost Operative if you want reconnaissance to mean the job is already done before you walk in._
 

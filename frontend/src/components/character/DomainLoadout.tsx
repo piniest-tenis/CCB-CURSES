@@ -23,6 +23,7 @@ import type { DomainCard } from "@shared/types";
 import { useCharacterStore } from "@/store/characterStore";
 import { useDomainCard, useClass, useDomain } from "@/hooks/useGameData";
 import { useActionButton, InlineActionError } from "./ActionButton";
+import { MarkdownContent } from "@/components/MarkdownContent";
 
 // ─── Helper: parseCardId ──────────────────────────────────────────────────────
 
@@ -374,6 +375,149 @@ function AuraToggle({ cardId, cardName, characterId, isActive }: AuraToggleProps
   );
 }
 
+// ─── DomainCardDetailSidebar ──────────────────────────────────────────────────
+
+interface DomainCardDetailSidebarProps {
+  card: DomainCard | null;
+  onClose: () => void;
+}
+
+function DomainCardDetailSidebar({ card, onClose }: DomainCardDetailSidebarProps) {
+  const open = card !== null;
+  const panelRef = React.useRef<HTMLDivElement>(null);
+  const headingId = React.useId();
+
+  // Focus first focusable element when opened
+  React.useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => {
+      const first = panelRef.current?.querySelector<HTMLElement>(
+        'button, [tabindex]:not([tabindex="-1"])'
+      );
+      first?.focus();
+    }, 50);
+    return () => clearTimeout(t);
+  }, [open]);
+
+  // Escape to close
+  React.useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { e.stopPropagation(); onClose(); }
+    };
+    document.addEventListener("keydown", handler, true);
+    return () => document.removeEventListener("keydown", handler, true);
+  }, [open, onClose]);
+
+  return (
+    <>
+      {open && (
+        <div
+          aria-hidden="true"
+          onClick={onClose}
+          className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm lg:hidden"
+        />
+      )}
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={headingId}
+        aria-hidden={!open}
+        inert={!open ? ("" as unknown as boolean) : undefined}
+        className={[
+          "fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-[28rem] flex-col",
+          "border-l border-[#577399]/35 bg-[#0f1713] shadow-2xl",
+          "transition-transform duration-300 ease-in-out",
+          open ? "translate-x-0" : "translate-x-full",
+        ].join(" ")}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[#577399]/25 px-5 py-4 shrink-0">
+          <div>
+            {card && (
+              <p className="text-[11px] uppercase tracking-[0.24em] text-parchment-500">
+                {card.domain} · Level {card.level}
+              </p>
+            )}
+            <h2 id={headingId} className="font-serif text-lg font-semibold text-[#f7f7ff]">
+              {card?.name ?? "Domain Card"}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close card detail panel"
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#577399]/30 text-[#b9baa3] hover:bg-[#577399]/12 hover:text-[#f7f7ff] focus:outline-none focus:ring-2 focus:ring-[#577399]"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Body */}
+        {card && (
+          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+            {/* Badges */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-gold-800 px-2 py-0.5 text-[11px] font-bold text-gold-500">
+                Lv {card.level}
+              </span>
+              <span className="rounded-full border border-slate-700 px-2 py-0.5 text-[11px] text-parchment-500 uppercase tracking-wider">
+                Recall Cost {card.level}⚡
+              </span>
+              {card.isGrimoire && (
+                <span className="rounded bg-gold-900/50 px-1.5 py-0.5 text-[11px] font-semibold text-gold-400">
+                  Grimoire
+                </span>
+              )}
+              {card.isCursed && (
+                <span className="rounded bg-burgundy-900/50 px-1.5 py-0.5 text-[11px] font-semibold text-burgundy-400">
+                  ★ Cursed
+                </span>
+              )}
+              {card.isLinkedCurse && (
+                <span className="rounded bg-burgundy-900/50 px-1.5 py-0.5 text-[11px] font-semibold text-burgundy-400">
+                  ↔ Linked Curse
+                </span>
+              )}
+            </div>
+
+            {/* Card text */}
+            <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 px-4 py-3">
+              {card.isGrimoire && card.grimoire.length > 0 ? (
+                <div className="space-y-3">
+                  {card.grimoire.map((ability, i) => (
+                    <div key={i}>
+                      <p className="text-sm font-semibold text-[#f7f7ff] mb-1">{ability.name}</p>
+                      <MarkdownContent className="text-sm text-[#b9baa3]/75">
+                        {ability.description}
+                      </MarkdownContent>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <MarkdownContent className="text-sm text-[#b9baa3]/75">
+                  {card.description}
+                </MarkdownContent>
+              )}
+            </div>
+
+            {/* Curse text */}
+            {card.isCursed && card.curseText && (
+              <div className="rounded-lg border border-[#fe5f55]/30 bg-[#fe5f55]/5 px-4 py-3">
+                <p className="text-xs uppercase tracking-wider text-[#fe5f55]/60 mb-1">Curse</p>
+                <MarkdownContent className="text-sm text-[#b9baa3]/70">
+                  {card.curseText}
+                </MarkdownContent>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
 // ─── LoadoutCardSlot ──────────────────────────────────────────────────────────
 
 interface LoadoutCardSlotProps {
@@ -384,6 +528,7 @@ interface LoadoutCardSlotProps {
   onRemove:    () => void;
   onMoveUp:    () => void;
   onMoveDown:  () => void;
+  onDrill:     (card: DomainCard) => void;
   isDragging:  boolean;
   onDragStart: () => void;
   onDragEnter: () => void;
@@ -398,6 +543,7 @@ function LoadoutCardSlot({
   onRemove,
   onMoveUp,
   onMoveDown,
+  onDrill,
   isDragging,
   onDragStart,
   onDragEnter,
@@ -444,12 +590,17 @@ function LoadoutCardSlot({
           <span className="block w-4 border-t border-current" />
         </div>
 
-        {/* Card info */}
+        {/* Card info — click to open detail sidebar */}
         <div className="flex-1 min-w-0">
           {card ? (
-            <>
+            <button
+              type="button"
+              onClick={() => onDrill(card)}
+              className="w-full text-left group"
+              aria-label={`View details for ${card.name}`}
+            >
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-parchment-200 truncate">
+                <span className="text-sm font-semibold text-parchment-200 truncate group-hover:text-parchment-100 transition-colors">
                   {card.name}
                 </span>
                 {card.isCursed && (
@@ -467,6 +618,7 @@ function LoadoutCardSlot({
                     Grimoire
                   </span>
                 )}
+                <span className="ml-auto text-parchment-600 text-xs opacity-0 group-hover:opacity-100 transition-opacity">›</span>
               </div>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-[10px] text-parchment-500 uppercase tracking-wider">
@@ -476,9 +628,9 @@ function LoadoutCardSlot({
                   Lv {card.level}
                 </span>
               </div>
-            </>
+            </button>
           ) : (
-            <span className="text-sm text-parchment-600 italic">{cardId}</span>
+            <span className="text-sm text-parchment-600 italic">Loading…</span>
           )}
         </div>
 
@@ -792,6 +944,7 @@ export function DomainLoadout() {
     useCharacterStore();
   const [showPicker, setShowPicker] = useState(false);
   const [pickerMode, setPickerMode] = useState<"swap" | "acquire">("swap");
+  const [drillCard, setDrillCard] = useState<DomainCard | null>(null);
 
   // Drag state
   const dragIndex = useRef<number | null>(null);
@@ -842,6 +995,8 @@ export function DomainLoadout() {
   const acquiredCardIds = new Set(domainLoadout.concat(domainVault));
 
   return (
+    <>
+    <DomainCardDetailSidebar card={drillCard} onClose={() => setDrillCard(null)} />
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-parchment-400">
@@ -888,6 +1043,7 @@ export function DomainLoadout() {
                 index < domainLoadout.length - 1 &&
                 reorderLoadout(index, index + 1)
               }
+              onDrill={setDrillCard}
               isDragging={draggingIndex === index}
               onDragStart={() => handleDragStart(index)}
               onDragEnter={() => handleDragEnter(index)}
@@ -980,5 +1136,6 @@ export function DomainLoadout() {
         </div>
       )}
     </div>
+    </>
   );
 }

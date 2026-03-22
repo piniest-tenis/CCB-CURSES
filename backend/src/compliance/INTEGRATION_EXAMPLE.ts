@@ -179,6 +179,8 @@ export async function handlePostCharacter(
       level: 1,
       avatarUrl: null,
       avatarKey: null,
+      portraitKey: null,
+      portraitUrl: null,
       updatedAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       domains: classData.domains,

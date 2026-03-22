@@ -40,7 +40,9 @@ import { MarkdownContent }          from "@/components/MarkdownContent";
 import { useActionButton, InlineActionError } from "./ActionButton";
 import { EditSidebarProvider, EditableField } from "./EditSidebar";
 import { CHARACTER_NAME_FIELD, CHARACTER_NOTES_FIELD } from "./editSidebarConfig";
-import type { Character, ClassData, CustomCondition } from "@shared/types";
+import { EquipmentPanel }           from "./EquipmentPanel";
+import { PortraitDisplay }          from "./PortraitUpload";
+import type { Character, ClassData, CoreStatName, CustomCondition } from "@shared/types";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -165,8 +167,8 @@ function ConditionsSidebar({
                         "flex items-center gap-3 rounded-lg px-3 py-3 cursor-pointer",
                         "border transition-colors",
                         checked
-                          ? "border-burgundy-500 bg-burgundy-700/30 text-parchment-100"
-                          : "border-transparent hover:border-burgundy-800 hover:bg-slate-800/50 text-parchment-400",
+                          ? "border-[#577399] bg-[#577399]/20 text-[#f7f7ff]"
+                          : "border-transparent hover:border-[#577399]/40 hover:bg-slate-800/50 text-[#b9baa3]",
                       ].join(" ")}
                     >
                       <input
@@ -174,7 +176,7 @@ function ConditionsSidebar({
                         type="checkbox"
                         checked={checked}
                         onChange={() => onToggle(cond)}
-                        className="h-4 w-4 rounded border-burgundy-600 bg-slate-900 accent-burgundy-500 focus:ring-2 focus:ring-gold-500"
+                        className="h-4 w-4 rounded border-[#577399]/60 bg-slate-900 accent-[#577399] focus:ring-2 focus:ring-[#577399]"
                       />
                       <span className="text-sm font-medium">{cond}</span>
                     </label>
@@ -246,6 +248,41 @@ function ConditionsSidebar({
   );
 }
 
+// ─── SheetDivider ─────────────────────────────────────────────────────────────
+// Renders the correct SVG divider based on subclass spellcast trait.
+// Mapping (SRD-confirmed):
+//   presence | agility → divider-presence-agility.svg  (Bard, Ranger)
+//   strength | finesse → divider-strength-finesse.svg  (Seraph, Rogue)
+//   knowledge| instinct→ divider-knowledge-instinct.svg (Wizard, Druid, Sorcerer)
+//   null / undefined   → plain hr (Guardian, Warrior)
+
+const DIVIDER_MAP: Partial<Record<CoreStatName, string>> = {
+  presence:  "/images/ui-elements/divider-presence-agility.svg",
+  agility:   "/images/ui-elements/divider-presence-agility.svg",
+  strength:  "/images/ui-elements/divider-strength-finesse.svg",
+  finesse:   "/images/ui-elements/divider-strength-finesse.svg",
+  knowledge: "/images/ui-elements/divider-knowledge-instinct.svg",
+  instinct:  "/images/ui-elements/divider-knowledge-instinct.svg",
+};
+
+function SheetDivider({ spellcastTrait }: { spellcastTrait?: CoreStatName | null }) {
+  const src = spellcastTrait ? DIVIDER_MAP[spellcastTrait] : null;
+  if (!src) {
+    return <div className="my-1 border-t border-[#577399]/15" aria-hidden="true" />;
+  }
+  return (
+    <div className="my-1 w-full overflow-hidden" aria-hidden="true">
+      <img
+        src={src}
+        alt=""
+        className="w-full object-contain opacity-70"
+        draggable={false}
+        style={{ maxHeight: 48 }}
+      />
+    </div>
+  );
+}
+
 // ─── SheetHeader ─────────────────────────────────────────────────────────────
 
 interface SheetHeaderProps {
@@ -296,21 +333,24 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
 
   return (
     <div className="space-y-4">
+      {/* Portrait */}
+      <PortraitDisplay characterId={characterId} />
+
       {/* ── Name row + Conditions + Level inline ───────────────────── */}
       <div className="flex items-start gap-3">
         {/* Name (flex-1 so it takes remaining space) */}
         <div className="flex-1 min-w-0 flex flex-col gap-1">
           <EditableField
             field={CHARACTER_NAME_FIELD}
-            activeClassName="ring-2 ring-gold-500/60 rounded-lg"
+            activeClassName="ring-2 ring-[#577399]/60 rounded-lg"
           >
-            <h1 className="text-4xl font-bold font-serif text-parchment-100 leading-tight truncate">
+            <h1 className="text-4xl font-bold font-serif text-[#f7f7ff] leading-tight truncate">
               {activeCharacter.name || "Unnamed Character"}
             </h1>
           </EditableField>
 
           {kickerParts.length > 0 && (
-            <p className="text-sm text-parchment-500 font-serif">
+            <p className="text-sm text-[#b9baa3] font-serif">
               {kickerParts.join(" · ")}
             </p>
           )}
@@ -319,10 +359,10 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
             onClick={() => router.push(`/character/${characterId}/build`)}
             className="
               mt-2 rounded-lg px-3 py-1.5 text-xs font-semibold
-              bg-gold-900/40 text-gold-300 border border-gold-800/60
-              hover:bg-gold-900/60 hover:border-gold-700
+              bg-[#577399]/20 text-[#f7f7ff] border border-[#577399]/50
+              hover:bg-[#577399]/30 hover:border-[#577399]
               transition-colors
-              focus:outline-none focus:ring-2 focus:ring-gold-500
+              focus:outline-none focus:ring-2 focus:ring-[#577399]
             "
             aria-label="Edit character class, ancestry, and community"
           >
@@ -346,27 +386,27 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
             aria-haspopup="dialog"
             aria-expanded={conditionsOpen}
             className="
-              w-12 min-h-[2.75rem] rounded-lg border border-burgundy-700 bg-slate-850 px-1 py-1.5
+              w-12 min-h-[2.75rem] rounded-lg border border-[#577399]/40 bg-slate-850 px-1 py-1.5
               flex flex-col items-center justify-center gap-0.5
-              hover:border-burgundy-500 hover:bg-slate-800
-              focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-1 focus:ring-offset-slate-900
+              hover:border-[#577399] hover:bg-slate-800
+              focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-1 focus:ring-offset-slate-900
               transition-colors cursor-pointer
             "
           >
             {activeConditions.length === 0 ? (
-              <span className="text-xl font-bold text-parchment-600 font-serif leading-none">—</span>
+              <span className="text-xl font-bold text-[#b9baa3] font-serif leading-none">—</span>
             ) : (
               <>
                 {visibleChips.map((label) => (
                   <span
                     key={label}
-                    className="w-full text-center truncate rounded border border-burgundy-700/60 bg-burgundy-900/40 px-1 py-px text-[10px] font-semibold text-burgundy-300 leading-tight"
+                    className="w-full text-center truncate rounded border border-[#577399]/60 bg-[#577399]/20 px-1 py-px text-[10px] font-semibold text-[#f7f7ff] leading-tight"
                   >
                     {label}
                   </span>
                 ))}
                 {overflowCount > 0 && (
-                  <span className="text-[10px] text-parchment-500 leading-tight">+{overflowCount}</span>
+                <span className="text-[10px] text-[#b9baa3] leading-tight">+{overflowCount}</span>
                 )}
               </>
             )}
@@ -381,7 +421,7 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
           <output
             aria-live="polite"
             aria-label={`Level ${activeCharacter.level}`}
-            className="w-12 rounded-lg border border-burgundy-700 bg-slate-850 py-1.5 text-center text-2xl font-bold text-gold-400 font-serif leading-none"
+            className="w-12 rounded-lg border border-[#577399]/40 bg-slate-850 py-1.5 text-center text-2xl font-bold text-[#f7f7ff] font-serif leading-none"
           >
             {activeCharacter.level}
           </output>
@@ -391,11 +431,11 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
               onClick={onLevelUp}
               aria-label="Level up character"
               className="
-                min-h-[36px] rounded border border-gold-800/60 bg-gold-950/20 px-2 py-1
-                text-[10px] font-semibold text-gold-300 whitespace-nowrap
-                hover:bg-gold-900/30 hover:border-gold-700
+                min-h-[36px] rounded border border-[#577399]/40 bg-[#577399]/10 px-2 py-1
+                text-[10px] font-semibold text-[#f7f7ff] whitespace-nowrap
+                hover:bg-[#577399]/20 hover:border-[#577399]
                 transition-all duration-150
-                focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-1 focus:ring-offset-slate-900
+                focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-1 focus:ring-offset-slate-900
               "
             >
               Level Up
@@ -406,9 +446,9 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
 
       {/* ── Subclass ─────────────────────────────────────────────── */}
       {!!classData?.subclasses.length && activeCharacter.subclassId && (
-        <div className="pt-2 border-t border-burgundy-900/40">
-          <p className="text-[10px] uppercase tracking-widest text-parchment-500 font-medium">Subclass</p>
-          <p className="mt-0.5 text-sm font-medium text-parchment-200">
+        <div className="pt-2 border-t border-[#577399]/20">
+          <p className="text-[10px] uppercase tracking-widest text-[#b9baa3] font-medium">Subclass</p>
+          <p className="mt-0.5 text-sm font-medium text-[#f7f7ff]">
             {classData.subclasses.find((sc) => sc.subclassId === activeCharacter.subclassId)?.name ?? "Unknown"}
           </p>
         </div>
@@ -459,12 +499,12 @@ function FeatureActionButton({
           aria-describedby={inlineError ? errorId : undefined}
           aria-busy={isPending}
           className="
-            rounded-lg border border-gold-800/60 bg-gold-950/20 px-3 py-1.5
-            text-xs font-semibold text-gold-300
-            hover:bg-gold-900/30 hover:border-gold-700
+            rounded-lg border border-[#577399]/40 bg-[#577399]/15 px-3 py-1.5
+            text-xs font-semibold text-[#f7f7ff]
+            hover:bg-[#577399]/25 hover:border-[#577399]
             disabled:opacity-50 disabled:cursor-wait
             transition-all duration-150
-            focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-1 focus:ring-offset-slate-900
+            focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-1 focus:ring-offset-slate-900
           "
         >
           {isPending ? (
@@ -477,7 +517,7 @@ function FeatureActionButton({
           )}
         </button>
         {costLabel && (
-          <span className="text-[10px] text-gold-600 font-medium">{costLabel}</span>
+          <span className="text-[10px] text-[#b9baa3] font-medium">{costLabel}</span>
         )}
       </div>
       <InlineActionError message={inlineError} id={errorId} />
@@ -541,27 +581,27 @@ function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
 
   return (
     <section
-      className="rounded-xl border border-burgundy-900 bg-slate-900/80 p-5 shadow-card space-y-4"
+      className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-5 shadow-card space-y-4"
       aria-label="Features"
     >
-      <h2 className="font-serif text-sm font-semibold uppercase tracking-widest text-gold-600">
+      <h2 className="font-serif text-sm font-semibold uppercase tracking-widest text-[#577399]">
         Features
       </h2>
 
       {/* Class Feature */}
       {classData.classFeature && (
-        <div className="rounded-lg border border-burgundy-800 bg-slate-850 p-4 space-y-3">
+        <div className="rounded-lg border border-[#577399]/20 bg-slate-850 p-4 space-y-3">
           <div>
-            <h3 className="mb-1 font-serif text-sm font-semibold text-parchment-200">
+            <h3 className="mb-1 font-serif text-sm font-semibold text-[#f7f7ff]">
               {classData.classFeature.name}
             </h3>
-            <MarkdownContent className="text-xs text-parchment-400 leading-relaxed">
+            <MarkdownContent className="text-xs text-[#b9baa3] leading-relaxed">
               {classData.classFeature.description}
             </MarkdownContent>
             {classData.classFeature.options.length > 0 && (
               <ul className="mt-2 space-y-0.5 list-disc list-inside">
                 {classData.classFeature.options.map((opt) => (
-                  <li key={opt} className="text-xs text-parchment-500">
+                  <li key={opt} className="text-xs text-[#b9baa3]">
                     <MarkdownContent className="inline">{opt}</MarkdownContent>
                   </li>
                 ))}
@@ -587,17 +627,17 @@ function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
 
       {/* Hope Feature — always has a hopeCost; always gets an action button */}
       {classData.hopeFeature && (
-        <div className="rounded-lg border border-gold-900 bg-gold-950/20 p-4 space-y-3">
+        <div className="rounded-lg border border-[#577399]/30 bg-[#577399]/8 p-4 space-y-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-serif text-sm font-semibold text-gold-300">
+              <h3 className="font-serif text-sm font-semibold text-[#f7f7ff]">
                 {classData.hopeFeature.name}
               </h3>
-              <span className="rounded bg-gold-900/50 px-1.5 text-[10px] font-bold text-gold-500">
+              <span className="rounded bg-[#577399]/30 px-1.5 text-[10px] font-bold text-[#f7f7ff]">
                 {classData.hopeFeature.hopeCost} Hope
               </span>
             </div>
-            <MarkdownContent className="text-xs text-parchment-400 leading-relaxed">
+            <MarkdownContent className="text-xs text-[#b9baa3] leading-relaxed">
               {classData.hopeFeature.description}
             </MarkdownContent>
           </div>
@@ -616,7 +656,7 @@ function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
       {/* Subclass features */}
       {activeSubclass && (
         <div className="space-y-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-gold-600">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-[#577399]">
             {activeSubclass.name} — Subclass Features
           </h3>
 
@@ -625,11 +665,11 @@ function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
             return (
               <div
                 key={feat.name}
-                className="rounded border border-burgundy-900 bg-slate-900 p-3 space-y-2"
+                className="rounded border border-[#577399]/20 bg-slate-900 p-3 space-y-2"
               >
                 <div>
-                  <p className="text-sm font-medium text-parchment-200">{feat.name}</p>
-                  <MarkdownContent className="mt-0.5 text-xs text-parchment-500 leading-relaxed">
+                  <p className="text-sm font-medium text-[#f7f7ff]">{feat.name}</p>
+                  <MarkdownContent className="mt-0.5 text-xs text-[#b9baa3] leading-relaxed">
                     {feat.description}
                   </MarkdownContent>
                 </div>
@@ -647,17 +687,17 @@ function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
           })}
 
           {tier >= 2 && (
-            <div className="rounded border border-gold-900 bg-slate-900 p-3 space-y-2">
+            <div className="rounded border border-[#577399]/30 bg-slate-900 p-3 space-y-2">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <p className="text-sm font-medium text-parchment-200">
+                  <p className="text-sm font-medium text-[#f7f7ff]">
                     {activeSubclass.specializationFeature.name}
                   </p>
-                  <span className="rounded bg-gold-900/50 px-1.5 text-[10px] font-bold text-gold-400">
+                  <span className="rounded bg-[#577399]/25 px-1.5 text-[10px] font-bold text-[#f7f7ff]">
                     Specialization
                   </span>
                 </div>
-                <MarkdownContent className="text-xs text-parchment-500 leading-relaxed">
+                <MarkdownContent className="text-xs text-[#b9baa3] leading-relaxed">
                   {activeSubclass.specializationFeature.description}
                 </MarkdownContent>
               </div>
@@ -677,17 +717,17 @@ function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
           )}
 
           {tier >= 3 && (
-            <div className="rounded border border-burgundy-600 bg-slate-900 p-3 space-y-2">
+            <div className="rounded border border-[#577399]/40 bg-slate-900 p-3 space-y-2">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <p className="text-sm font-medium text-parchment-200">
+                  <p className="text-sm font-medium text-[#f7f7ff]">
                     {activeSubclass.masteryFeature.name}
                   </p>
-                  <span className="rounded bg-burgundy-900/50 px-1.5 text-[10px] font-bold text-burgundy-400">
+                  <span className="rounded bg-[#577399]/35 px-1.5 text-[10px] font-bold text-[#f7f7ff]">
                     Mastery
                   </span>
                 </div>
-                <MarkdownContent className="text-xs text-parchment-500 leading-relaxed">
+                <MarkdownContent className="text-xs text-[#b9baa3] leading-relaxed">
                   {activeSubclass.masteryFeature.description}
                 </MarkdownContent>
               </div>
@@ -742,13 +782,13 @@ function SaveStatus({ isDirty, isSaving }: SaveStatusProps) {
   }
   if (isDirty) {
     return (
-      <span role="status" aria-live="polite" className="text-xs text-gold-600">
+      <span role="status" aria-live="polite" className="text-xs text-[#577399]">
         Unsaved changes
       </span>
     );
   }
   return (
-    <span role="status" aria-live="polite" className="text-xs text-parchment-500">
+    <span role="status" aria-live="polite" className="text-xs text-[#b9baa3]">
       All changes saved
     </span>
   );
@@ -816,9 +856,9 @@ export function CharacterSheet({ characterId }: CharacterSheetProps) {
       >
         <div className="space-y-3 text-center">
           <div
-            aria-hidden="true"
-            className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-burgundy-500 border-t-transparent"
-          />
+        aria-hidden="true"
+        className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[#577399] border-t-transparent"
+      />
           <p className="text-sm text-parchment-500">Loading character…</p>
         </div>
       </div>
@@ -830,12 +870,12 @@ export function CharacterSheet({ characterId }: CharacterSheetProps) {
     return (
       <div
         role="alert"
-        className="rounded-xl border border-burgundy-700 bg-slate-900 p-8 text-center"
+        className="rounded-xl border border-[#577399]/40 bg-slate-900 p-8 text-center"
       >
-        <p className="font-serif text-lg text-burgundy-300">
+        <p className="font-serif text-lg text-[#f7f7ff]">
           Failed to load character
         </p>
-        <p className="mt-1 text-sm text-parchment-500">
+        <p className="mt-1 text-sm text-[#b9baa3]">
           {(error as Error)?.message ?? "An unexpected error occurred."}
         </p>
       </div>
@@ -887,6 +927,11 @@ function CharacterSheetContent({
 
   if (!activeCharacter) return null;
 
+  // Determine spellcast trait for dividers
+  const spellcastTrait = classData?.subclasses.find(
+    (sc) => sc.subclassId === activeCharacter.subclassId
+  )?.spellcastTrait ?? null;
+
   return (
     <div className="mx-auto max-w-4xl space-y-4 pb-20">
       {/* Toolbar */}
@@ -897,10 +942,10 @@ function CharacterSheetContent({
           onClick={() => setDowntimeOpen(true)}
           aria-haspopup="dialog"
           className="
-            rounded-lg border border-burgundy-700 bg-burgundy-800/40 px-4 py-1.5
-            text-sm font-semibold text-parchment-200
-            hover:bg-burgundy-700 transition-colors shadow-card
-            focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-2 focus:ring-offset-slate-950
+            rounded-lg border border-[#577399]/40 bg-[#577399]/15 px-4 py-1.5
+            text-sm font-semibold text-[#f7f7ff]
+            hover:bg-[#577399]/25 hover:border-[#577399] transition-colors shadow-card
+            focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2 focus:ring-offset-slate-950
           "
         >
           Downtime / Rest
@@ -908,7 +953,7 @@ function CharacterSheetContent({
       </div>
 
       {/* Header card */}
-      <section className="rounded-xl border border-burgundy-900 bg-slate-900/80 p-5 shadow-card">
+      <section className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-5 shadow-card">
         <SheetHeader characterId={characterId} classData={classData} onLevelUp={() => setLevelUpOpen(true)} />
       </section>
 
@@ -927,11 +972,22 @@ function CharacterSheetContent({
       {/* Core stats */}
       <StatsPanel />
 
+      <SheetDivider spellcastTrait={spellcastTrait} />
+
       {/* Trackers, weapons, hope, experiences */}
       <TrackersPanel />
 
+      <SheetDivider spellcastTrait={spellcastTrait} />
+
       {/* Features, loadout */}
       <FeaturesPanel classData={classData} characterId={characterId} />
+
+      <SheetDivider spellcastTrait={spellcastTrait} />
+
+      {/* Equipment and gold */}
+      <EquipmentPanel />
+
+      <SheetDivider spellcastTrait={spellcastTrait} />
 
       {/* Companion (shown only if companionState is not null) */}
       <CompanionPanel />
@@ -941,26 +997,26 @@ function CharacterSheetContent({
 
       {/* Notes */}
       <section
-        className="rounded-xl border border-burgundy-900 bg-slate-900/80 p-5 shadow-card"
+        className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-5 shadow-card"
         aria-label="Notes"
       >
-        <h2 className="mb-3 font-serif text-sm font-semibold uppercase tracking-widest text-gold-600">
+        <h2 className="mb-3 font-serif text-sm font-semibold uppercase tracking-widest text-[#577399]">
           Notes
         </h2>
         <EditableField
           field={CHARACTER_NOTES_FIELD}
           className="block w-full text-left"
-          activeClassName="ring-2 ring-gold-500/60 rounded-lg"
+          activeClassName="ring-2 ring-[#577399]/60 rounded-lg"
         >
           <div
             className="
-              w-full rounded border border-burgundy-800 bg-slate-950
-              px-3 py-2 text-sm text-parchment-300 
+              w-full rounded border border-[#577399]/20 bg-slate-950
+              px-3 py-2 text-sm text-[#b9baa3] 
               min-h-[8rem] whitespace-pre-wrap break-words
             "
           >
             {activeCharacter.notes ?? (
-              <span className="text-parchment-500">
+              <span className="text-[#b9baa3]/50">
                 Free-form notes, backstory, session reminders…
               </span>
             )}

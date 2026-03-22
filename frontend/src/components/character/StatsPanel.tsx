@@ -43,9 +43,9 @@ function StatInput({ label, value, onChange }: StatInputProps) {
         <div
           className="
             relative flex flex-col items-center w-full
-            rounded-t-xl border border-b-0 border-burgundy-700 bg-slate-850
+            rounded-t-xl border border-b-0 border-[#577399]/40 bg-slate-850
             shadow-card
-            group-hover:border-gold-500 group-hover:shadow-glow-gold
+            group-hover:border-[#577399] group-hover:shadow-glow-gold
             transition-all duration-200 overflow-hidden
           "
         >
@@ -56,11 +56,11 @@ function StatInput({ label, value, onChange }: StatInputProps) {
             disabled={value >= 8}
             aria-label={`Increase ${label}`}
             className="
-              w-full py-1 text-center text-xs text-parchment-600
-              hover:bg-gold-900/20 hover:text-gold-400
+              w-full py-1 text-center text-xs text-[#b9baa3]
+              hover:bg-[#577399]/20 hover:text-[#f7f7ff]
               disabled:opacity-20 disabled:cursor-not-allowed
               transition-colors leading-none select-none
-              focus:outline-none focus:ring-2 focus:ring-inset focus:ring-gold-500
+              focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#577399]
             "
           >
             ▲
@@ -86,11 +86,11 @@ function StatInput({ label, value, onChange }: StatInputProps) {
             disabled={value <= -5}
             aria-label={`Decrease ${label}`}
             className="
-              w-full py-1 text-center text-xs text-parchment-600
-              hover:bg-burgundy-900/30 hover:text-burgundy-300
+              w-full py-1 text-center text-xs text-[#b9baa3]
+              hover:bg-[#577399]/20 hover:text-[#f7f7ff]
               disabled:opacity-20 disabled:cursor-not-allowed
               transition-colors leading-none select-none
-              focus:outline-none focus:ring-2 focus:ring-inset focus:ring-gold-500
+              focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#577399]
             "
           >
             ▼
@@ -100,9 +100,9 @@ function StatInput({ label, value, onChange }: StatInputProps) {
         {/* Label tab — visually attached to bottom of dial */}
         <div
           className="
-            w-full rounded-b-xl border border-t-0 border-burgundy-700
+            w-full rounded-b-xl border border-t-0 border-[#577399]/40
             bg-[#f7f7ff] px-1 py-1
-            group-hover:border-gold-500
+            group-hover:border-[#577399]
             transition-all duration-200
           "
           aria-hidden="true"
@@ -137,15 +137,15 @@ function DerivedStatDisplay({ label, value, tooltip }: DerivedStatDisplayProps) 
       <div
         className="
           h-16 w-16 rounded-lg
-          border border-gold-800 bg-slate-900
+          border border-[#577399]/40 bg-slate-900
           flex items-center justify-center
           shadow-inner
         "
         aria-hidden="true"
       >
-        <span className="text-2xl font-bold text-gold-400">{value}</span>
+        <span className="text-2xl font-bold text-[#577399]">{value}</span>
       </div>
-      <span className="text-xs font-medium text-parchment-400 uppercase tracking-wide" aria-hidden="true">
+      <span className="text-xs font-medium text-[#b9baa3] uppercase tracking-wide" aria-hidden="true">
         {label}
       </span>
     </div>
@@ -163,10 +163,10 @@ export function StatsPanel() {
 
   return (
     <section
-      className="rounded-xl border border-burgundy-900 bg-slate-900/80 p-5 shadow-card"
+      className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-5 shadow-card"
       aria-label="Core Statistics"
     >
-      <h2 className="mb-5 font-serif text-sm font-semibold uppercase tracking-widest text-gold-600">
+      <h2 className="mb-5 font-serif text-sm font-semibold uppercase tracking-widest text-[#577399]">
         Core Stats
       </h2>
 
@@ -183,11 +183,11 @@ export function StatsPanel() {
       </div>
 
       {/* Divider */}
-      <div className="my-5 border-t border-burgundy-900/60" />
+      <div className="my-5 border-t border-[#577399]/20" />
 
       {/* Derived stats */}
       <div>
-        <h3 className="mb-3 font-serif text-sm font-semibold uppercase tracking-widest text-gold-600">
+        <h3 className="mb-3 font-serif text-sm font-semibold uppercase tracking-widest text-[#577399]">
           Derived
         </h3>
         <div className="flex gap-6">
@@ -202,7 +202,7 @@ export function StatsPanel() {
             tooltip="Armor Score: calculated from class and equipped items"
           />
         </div>
-        <p className="mt-3 text-[11px] text-parchment-500 italic">
+        <p className="mt-3 text-[11px] text-[#b9baa3] italic">
           Derived stats are calculated by the server based on class, level, and modifiers.
         </p>
       </div>
