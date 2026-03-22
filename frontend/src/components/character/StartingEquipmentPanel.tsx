@@ -52,7 +52,7 @@ function ConsumableDetail({
       <button
         type="button"
         onClick={onBack}
-        className="flex items-center gap-1.5 px-4 py-3 min-h-[44px] text-xs text-[#b9baa3]/50 hover:text-[#b9baa3] transition-colors shrink-0 focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-inset rounded"
+        className="flex items-center gap-1.5 px-4 py-3 min-h-[44px] text-xs text-[#daa520] hover:text-[#e8b830] transition-colors shrink-0 focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-inset rounded"
       >
         ← Back
       </button>

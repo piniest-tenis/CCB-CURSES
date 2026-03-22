@@ -15,7 +15,7 @@
  * - Enforces SRD rule: Two-Handed primary disables secondary selection
  */
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
   ALL_TIER1_WEAPONS,
   SUBCLASS_SUGGESTED_WEAPONS,
@@ -96,6 +96,16 @@ export function WeaponSelectionPanel({
   const selectedId = activeSlot === "primary" ? primaryWeaponId : secondaryWeaponId;
   const primaryWeapon = ALL_TIER1_WEAPONS.find((w) => w.id === primaryWeaponId) ?? null;
   const secondaryWeapon = ALL_TIER1_WEAPONS.find((w) => w.id === secondaryWeaponId) ?? null;
+
+  // Scroll selected item into view when the list first renders with a pre-selection.
+  const listRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!selectedId || !listRef.current) return;
+    const el = listRef.current.querySelector<HTMLElement>("[data-selected='true']");
+    if (el) el.scrollIntoView({ block: "nearest", behavior: "instant" });
+    // Only run on initial mount or when slot changes (activeSlot dependency keeps it in sync).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSlot]);
 
   // SRD rule: Two-Handed primary disables secondary slot
   const primaryIsTwoHanded = primaryWeapon?.burden === "Two-Handed";
@@ -178,7 +188,7 @@ export function WeaponSelectionPanel({
       </div>
 
       {/* Weapon list */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" ref={listRef}>
         {sorted.length === 0 ? (
           <div className="flex items-center justify-center h-32">
             <p className="text-sm text-[#b9baa3]/40 italic">No weapons match your filter</p>
@@ -190,7 +200,8 @@ export function WeaponSelectionPanel({
             return (
               <div
                 key={weapon.id}
-                onClick={() => setDrillWeapon(weapon)}
+                data-selected={isSelected ? "true" : undefined}
+                onClick={() => handleSelect(weapon)}
                 className={`
                   flex items-start gap-2 px-4 py-3 border-l-2 transition-colors cursor-pointer
                   ${isSelected
@@ -199,27 +210,19 @@ export function WeaponSelectionPanel({
                   }
                 `}
               >
-                {/* Circular select button — visual dot is 20px; padded to meet 44px touch target */}
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); handleSelect(weapon); }}
-                  aria-label={`Select ${weapon.name}`}
+                {/* Circular radio indicator (visual only, tile click selects) */}
+                <span
                   className={`
-                    -m-2 p-2 flex-shrink-0 flex items-center justify-center transition-colors
+                    mt-0.5 flex-shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors
+                    ${isSelected
+                      ? "border-[#577399] bg-[#577399]"
+                      : "border-slate-600"
+                    }
                   `}
+                  aria-hidden="true"
                 >
-                  <span
-                    className={`
-                      h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors
-                      ${isSelected
-                        ? "border-[#577399] bg-[#577399]"
-                        : "border-slate-600 hover:border-[#577399]/70"
-                      }
-                    `}
-                  >
-                    {isSelected && <span className="h-2 w-2 rounded-full bg-white" />}
-                  </span>
-                </button>
+                  {isSelected && <span className="h-2 w-2 rounded-full bg-white" />}
+                </span>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
@@ -250,8 +253,20 @@ export function WeaponSelectionPanel({
                   )}
                 </div>
 
-                {/* Drill-down chevron (visual hint only, row itself is clickable) */}
-                <span className="shrink-0 text-[#b9baa3]/30 text-lg leading-none self-center">›</span>
+                {/* Drill-down strip — clicking this area opens detail; delineated from select area */}
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setDrillWeapon(weapon); }}
+                  aria-label={`View details for ${weapon.name}`}
+                  className="
+                    self-stretch shrink-0 flex items-center justify-center
+                    pl-3 pr-1 -mr-4 border-l border-slate-700/40
+                    text-[#b9baa3]/30 hover:text-[#b9baa3]/70
+                    transition-colors min-w-[44px]
+                  "
+                >
+                  <span className="text-lg leading-none">›</span>
+                </button>
               </div>
             );
           })
@@ -297,7 +312,7 @@ function WeaponDrillDown({ weapon, isSuggested, onBack }: WeaponDrillDownProps) 
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-1.5 px-4 py-3 -mx-4 text-xs text-[#577399] hover:text-[#7a9fc2] transition-colors min-h-[44px]"
+          className="flex items-center gap-1.5 px-4 py-3 -mx-4 text-xs text-[#daa520] hover:text-[#e8b830] transition-colors min-h-[44px]"
         >
           ← Back to list
         </button>

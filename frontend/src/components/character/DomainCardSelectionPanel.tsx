@@ -14,7 +14,7 @@
  * SRD reference: page 4 (Domain Cards), page 5 (Domain Card Anatomy, Recall Cost).
  */
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useDomain, type DomainCardsData } from "@/hooks/useGameData";
 import type { DomainCard } from "@shared/types";
 import { MarkdownContent } from "@/components/MarkdownContent";
@@ -48,7 +48,7 @@ function CardDetail({
       <button
         type="button"
         onClick={onBack}
-        className="flex items-center gap-1.5 px-4 py-3 min-h-[44px] text-xs text-[#b9baa3]/50 hover:text-[#b9baa3] transition-colors shrink-0 focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-inset rounded"
+        className="flex items-center gap-1.5 px-4 py-3 min-h-[44px] text-xs text-[#daa520] hover:text-[#e8b830] transition-colors shrink-0 focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-inset rounded"
       >
         ← Back to cards
       </button>
@@ -151,42 +151,35 @@ function CardRow({
 }) {
   return (
     <div
-      onClick={onDrill}
+      data-selected={isSelected ? "true" : undefined}
+      onClick={() => { if (canSelect || isSelected) onToggle(); }}
       className={`
         flex items-center rounded-lg border transition-all cursor-pointer
         ${isSelected
           ? "border-[#577399] bg-[#577399]/15"
-          : "border-slate-700/60 bg-slate-900/30 hover:border-slate-600"
+          : canSelect
+            ? "border-slate-700/60 bg-slate-900/30 hover:border-slate-600"
+            : "border-slate-700/40 bg-slate-900/20 opacity-60 cursor-not-allowed"
         }
       `}
     >
-      {/* Circular select button — padded to meet 44px touch target */}
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); if (canSelect || isSelected) onToggle(); }}
-        disabled={!canSelect && !isSelected}
-        aria-label={isSelected ? `Deselect ${card.name}` : `Select ${card.name}`}
+      {/* Circular radio indicator (visual only, tile click selects) */}
+      <span
         className={`
-          ml-1 p-3 flex-shrink-0 flex items-center justify-center transition-colors
-          ${!canSelect && !isSelected ? "cursor-not-allowed" : ""}
+          ml-3 flex-shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors
+          ${isSelected
+            ? "border-[#577399] bg-[#577399]"
+            : !canSelect
+              ? "border-slate-700/40"
+              : "border-slate-600"
+          }
         `}
+        aria-hidden="true"
       >
-        <span
-          className={`
-            h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors
-            ${isSelected
-              ? "border-[#577399] bg-[#577399]"
-              : !canSelect
-                ? "border-slate-700/40"
-                : "border-slate-600 hover:border-[#577399]/70"
-            }
-          `}
-        >
-          {isSelected && <span className="h-2 w-2 rounded-full bg-white" />}
-        </span>
-      </button>
+        {isSelected && <span className="h-2 w-2 rounded-full bg-white" />}
+      </span>
 
-      {/* Text — fills remaining space, clicking goes to drill-down via parent */}
+      {/* Text — fills remaining space */}
       <div className="flex-1 flex items-center gap-3 px-3 py-3 min-w-0">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -205,8 +198,20 @@ function CardRow({
         </div>
       </div>
 
-      {/* Drill-down chevron (visual hint only, row itself is clickable) */}
-      <span className="pr-3 text-[#b9baa3]/30 text-lg leading-none shrink-0">›</span>
+      {/* Drill-down strip — clicking this area opens detail; delineated from select area */}
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onDrill(); }}
+        aria-label={`View details for ${card.name}`}
+        className="
+          self-stretch shrink-0 flex items-center justify-center
+          pl-3 pr-2 border-l border-slate-700/40 rounded-r-lg
+          text-[#b9baa3]/30 hover:text-[#b9baa3]/70
+          transition-colors min-w-[44px]
+        "
+      >
+        <span className="text-lg leading-none">›</span>
+      </button>
     </div>
   );
 }
@@ -230,6 +235,15 @@ export function DomainCardSelectionPanel({
   characterLevel = 1,
 }: Props) {
   const [detailCard, setDetailCard] = useState<DomainCard | null>(null);
+
+  // Scroll first selected card into view when the list renders with pre-selections.
+  const listRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!selectedCardIds.length || !listRef.current) return;
+    const el = listRef.current.querySelector<HTMLElement>("[data-selected='true']");
+    if (el) el.scrollIntoView({ block: "nearest", behavior: "instant" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Fetch both domains in parallel
   const domain1Query = useDomain(classDomains[0]);
@@ -325,7 +339,7 @@ export function DomainCardSelectionPanel({
       </div>
 
       {/* Card list */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2" ref={listRef}>
         {allCards.map((card) => {
           const isSelected = selectedCardIds.includes(`${card.domain}/${card.cardId}`);
           return (

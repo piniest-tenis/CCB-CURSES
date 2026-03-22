@@ -21,7 +21,7 @@
  * After saving, redirects back to character sheet.
  */
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useCharacter, useUpdateCharacter } from "@/hooks/useCharacter";
 import { useClass, useClasses, useAncestries, useCommunities, useDomainCard } from "@/hooks/useGameData";
@@ -50,6 +50,60 @@ function DomainCardName({ cardId }: { cardId: string }) {
   // Fallback: title-case the slug while loading
   const fallback = id.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   return <span className="text-parchment-500 italic">{fallback}</span>;
+}
+
+// ─── DomainCardSummary ────────────────────────────────────────────────────────
+// Renders the full card with name, domain, recall cost, and description
+// for use in the Step 9 review panel.
+
+function DomainCardSummary({ cardId }: { cardId: string }) {
+  const parts = cardId.includes("/") ? cardId.split("/") : null;
+  const domain = parts?.[0];
+  const id = parts?.[1] ?? cardId;
+  const { data: card } = useDomainCard(domain, id);
+
+  if (!card) {
+    // Loading skeleton
+    const fallback = id.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    return (
+      <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-3">
+        <p className="text-sm font-semibold text-[#b9baa3]/60 italic">{fallback}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-3 space-y-2">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-sm font-semibold text-[#f7f7ff]">{card.name}</span>
+        <span className="text-xs text-[#b9baa3]/40">{card.domain}</span>
+        {card.isGrimoire && (
+          <span className="text-xs text-[#daa520]/70 uppercase tracking-wider">Grimoire</span>
+        )}
+        <span className="ml-auto text-xs text-[#b9baa3]/40 shrink-0">
+          Recall {card.level}⚡
+        </span>
+      </div>
+      <div className="text-xs text-[#b9baa3]/60 leading-relaxed">
+        {card.isGrimoire && card.grimoire.length > 0 ? (
+          <div className="space-y-2">
+            {card.grimoire.map((ability, i) => (
+              <div key={i}>
+                <span className="font-semibold text-[#b9baa3]/80">{ability.name}: </span>
+                <MarkdownContent className="inline text-xs text-[#b9baa3]/60">
+                  {ability.description}
+                </MarkdownContent>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <MarkdownContent className="text-xs text-[#b9baa3]/60">
+            {card.description}
+          </MarkdownContent>
+        )}
+      </div>
+    </div>
+  );
 }
 
 interface CharacterBuilderPageProps {
@@ -171,6 +225,48 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
   // Get full class data for currently selected class
   const { data: selectedClassData } = useClass(classId || undefined);
 
+  // ── Backfill state from server character data once it loads ─────────────
+  // The useState initialisers above run synchronously before `character` arrives
+  // from the server, so they fall through to empty defaults.  This effect watches
+  // for character to arrive and fills in any fields that are still at their
+  // empty default — without clobbering values the user has already changed.
+  useEffect(() => {
+    if (!character) return;
+    if (!classId   && character.classId)    setClassId(character.classId);
+    if (!subclassId && character.subclassId) setSubclassId(character.subclassId);
+    if (!ancestryId && character.ancestryId) setAncestryId(character.ancestryId);
+    if (!communityId && character.communityId) setCommunityId(character.communityId);
+    if (!primaryWeaponId && character.weapons?.primary?.weaponId)
+      setPrimaryWeaponId(character.weapons.primary.weaponId);
+    if (!secondaryWeaponId && character.weapons?.secondary?.weaponId)
+      setSecondaryWeaponId(character.weapons.secondary.weaponId);
+    if (!armorId) {
+      const inv = character.inventory ?? [];
+      const recovered = TIER1_ARMOR.find((a) => inv.includes(a.name))?.id ?? null;
+      if (recovered) setArmorId(recovered);
+    }
+    if (!selectedDomainCardIds.length && character.domainLoadout?.length) {
+      setSelectedDomainCardIds(character.domainLoadout);
+    }
+    // Consumable recovery from inventory
+    setEquipmentSelections((prev) => {
+      if (prev.consumableId) return prev;
+      const inv = character.inventory ?? [];
+      const consumableId = inv.includes("Minor Health Potion")
+        ? "minor-health-potion"
+        : inv.includes("Minor Stamina Potion")
+          ? "minor-stamina-potion"
+          : null;
+      if (!consumableId) return prev;
+      return { ...prev, consumableId };
+    });
+    // Trait bonuses backfill
+    if (!Object.keys(traitBonuses).length && character.traitBonuses && Object.keys(character.traitBonuses).length) {
+      setTraitBonuses(character.traitBonuses);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [character]);
+
   // Recover saved class item from inventory once class data loads
   useEffect(() => {
     if (!selectedClassData || !character) return;
@@ -189,6 +285,26 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
     ancestriesData?.ancestries.find((a) => a.ancestryId === ancestryId);
   const selectedCommunity: CommunityData | undefined =
     communitiesData?.communities.find((c) => c.communityId === communityId);
+
+  // ── Scroll-into-view refs for Step 1 (class list) and Step 3 (heritage lists) ──
+  const classListRef = useRef<HTMLDivElement>(null);
+  const heritageListRef = useRef<HTMLDivElement>(null);
+
+  // When entering Step 1 with a pre-selected class, scroll it into view.
+  useEffect(() => {
+    if (step !== 1 || !classId || !classListRef.current) return;
+    const el = classListRef.current.querySelector<HTMLElement>("[data-selected='true']");
+    if (el) el.scrollIntoView({ block: "nearest", behavior: "instant" });
+  }, [step, classId]);
+
+  // When entering Step 3 (or switching tabs) with a pre-selected heritage, scroll it into view.
+  useEffect(() => {
+    if (step !== 3 || !heritageListRef.current) return;
+    const selectedId = heritageTab === "ancestry" ? ancestryId : communityId;
+    if (!selectedId) return;
+    const el = heritageListRef.current.querySelector<HTMLElement>("[data-selected='true']");
+    if (el) el.scrollIntoView({ block: "nearest", behavior: "instant" });
+  }, [step, heritageTab, ancestryId, communityId]);
   
   // Validators
   const canGoNext1 = Boolean(classId);
@@ -395,12 +511,13 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                       Choose a Class
                     </p>
                   </div>
-                  <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0">
+                 <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0" ref={classListRef}>
                     {[...(classesData?.classes ?? [])].sort((a, b) => a.name.localeCompare(b.name)).map((c) => (
-                      <button
-                        key={c.classId}
-                        type="button"
-                        onClick={() => {
+                       <button
+                         key={c.classId}
+                         type="button"
+                         data-selected={classId === c.classId ? "true" : undefined}
+                         onClick={() => {
                           setClassId(c.classId);
                           setSubclassId(""); // Reset subclass when changing class
                         }}
@@ -614,12 +731,13 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                   </div>
                   
                   {/* List */}
-                  <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0">
+                  <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0" ref={heritageListRef}>
                     {heritageTab === "ancestry" && ancestriesData?.ancestries.map((a) => (
-                      <button
-                        key={a.ancestryId}
-                        type="button"
-                        onClick={() => setAncestryId(a.ancestryId)}
+                       <button
+                         key={a.ancestryId}
+                         type="button"
+                         data-selected={ancestryId === a.ancestryId ? "true" : undefined}
+                         onClick={() => setAncestryId(a.ancestryId)}
                         className={`
                           w-full text-left px-4 py-3 transition-colors
                           ${ancestryId === a.ancestryId
@@ -635,10 +753,11 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                       </button>
                     ))}
                     {heritageTab === "community" && communitiesData?.communities.map((c) => (
-                      <button
-                        key={c.communityId}
-                        type="button"
-                        onClick={() => setCommunityId(c.communityId)}
+                       <button
+                         key={c.communityId}
+                         type="button"
+                         data-selected={communityId === c.communityId ? "true" : undefined}
+                         onClick={() => setCommunityId(c.communityId)}
                         className={`
                           w-full text-left px-4 py-3 transition-colors
                           ${communityId === c.communityId
@@ -1034,14 +1153,12 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                     {/* Domain Cards */}
                     {selectedDomainCardIds.length > 0 && (
                       <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
-                        <p className="text-xs uppercase tracking-wider text-[#b9baa3]/50 font-medium mb-2">
+                        <p className="text-xs uppercase tracking-wider text-[#b9baa3]/50 font-medium mb-3">
                           Domain Cards ({selectedDomainCardIds.length}/2)
                         </p>
-                        <div className="space-y-1">
+                        <div className="space-y-2">
                           {selectedDomainCardIds.map((cardId) => (
-                            <p key={cardId} className="text-sm font-semibold text-[#f7f7ff]">
-                              <DomainCardName cardId={cardId} />
-                            </p>
+                            <DomainCardSummary key={cardId} cardId={cardId} />
                           ))}
                         </div>
                       </div>

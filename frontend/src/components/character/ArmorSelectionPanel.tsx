@@ -19,7 +19,7 @@
  *   the only equippable options at character creation
  */
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
   TIER1_ARMOR,
   getSuggestedArmorIds,
@@ -73,6 +73,15 @@ export function ArmorSelectionPanel({
 
   const selectedArmor = TIER1_ARMOR.find((a) => a.id === armorId) ?? null;
 
+  // Scroll selected item into view when the list first renders with a pre-selection.
+  const listRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!armorId || !listRef.current) return;
+    const el = listRef.current.querySelector<HTMLElement>("[data-selected='true']");
+    if (el) el.scrollIntoView({ block: "nearest", behavior: "instant" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (drillArmor) {
     return (
       <ArmorDrillDown
@@ -124,7 +133,7 @@ export function ArmorSelectionPanel({
       </div>
 
       {/* Armor list */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" ref={listRef}>
         {sorted.length === 0 ? (
           <div className="flex items-center justify-center h-32">
             <p className="text-sm text-[#b9baa3]/40 italic">No armor matches your filter</p>
@@ -136,7 +145,8 @@ export function ArmorSelectionPanel({
             return (
               <div
                 key={armor.id}
-                onClick={() => setDrillArmor(armor)}
+                data-selected={isSelected ? "true" : undefined}
+                onClick={() => onArmorChange(armor.id)}
                 className={`
                   flex items-start gap-2 px-4 py-3 border-l-2 transition-colors cursor-pointer
                   ${isSelected
@@ -145,25 +155,19 @@ export function ArmorSelectionPanel({
                   }
                 `}
               >
-                {/* Circular select button — visual dot is 20px; padded to meet 44px touch target */}
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); onArmorChange(armor.id); }}
-                  aria-label={`Select ${armor.name}`}
-                  className="-m-2 p-2 flex-shrink-0 flex items-center justify-center transition-colors"
+                {/* Circular radio indicator (visual only, tile click selects) */}
+                <span
+                  className={`
+                    mt-0.5 flex-shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors
+                    ${isSelected
+                      ? "border-[#577399] bg-[#577399]"
+                      : "border-slate-600"
+                    }
+                  `}
+                  aria-hidden="true"
                 >
-                  <span
-                    className={`
-                      h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors
-                      ${isSelected
-                        ? "border-[#577399] bg-[#577399]"
-                        : "border-slate-600 hover:border-[#577399]/70"
-                      }
-                    `}
-                  >
-                    {isSelected && <span className="h-2 w-2 rounded-full bg-white" />}
-                  </span>
-                </button>
+                  {isSelected && <span className="h-2 w-2 rounded-full bg-white" />}
+                </span>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
@@ -189,8 +193,20 @@ export function ArmorSelectionPanel({
                   )}
                 </div>
 
-                {/* Drill-down chevron (visual hint only, row itself is clickable) */}
-                <span className="shrink-0 text-[#b9baa3]/30 text-lg leading-none self-center">›</span>
+                {/* Drill-down strip — clicking this area opens detail; delineated from select area */}
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setDrillArmor(armor); }}
+                  aria-label={`View details for ${armor.name}`}
+                  className="
+                    self-stretch shrink-0 flex items-center justify-center
+                    pl-3 pr-1 -mr-4 border-l border-slate-700/40
+                    text-[#b9baa3]/30 hover:text-[#b9baa3]/70
+                    transition-colors min-w-[44px]
+                  "
+                >
+                  <span className="text-lg leading-none">›</span>
+                </button>
               </div>
             );
           })
@@ -227,7 +243,7 @@ function ArmorDrillDown({ armor, isSuggested, onBack }: ArmorDrillDownProps) {
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-1.5 px-4 py-3 -mx-4 text-xs text-[#577399] hover:text-[#7a9fc2] transition-colors min-h-[44px]"
+          className="flex items-center gap-1.5 px-4 py-3 -mx-4 text-xs text-[#daa520] hover:text-[#e8b830] transition-colors min-h-[44px]"
         >
           ← Back to list
         </button>
