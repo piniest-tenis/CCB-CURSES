@@ -107,6 +107,7 @@ export function useUpdateCharacter(
   characterId: string
 ): UseMutationResult<Character, Error, Partial<Character>> {
   const queryClient = useQueryClient();
+  const { setCharacter } = useCharacterStore();
 
   return useMutation({
     mutationFn: (patch: Partial<Character>) =>
@@ -114,6 +115,12 @@ export function useUpdateCharacter(
     onSuccess: (updated) => {
       // Update the detail cache directly (no refetch needed)
       queryClient.setQueryData(characterKeys.detail(characterId), updated);
+      // Sync Zustand store with authoritative server state so the active
+      // character sheet reflects the saved version and isDirty is cleared.
+      // Without this, the useEffect([character, setCharacter]) in
+      // CharacterSheet.tsx could overwrite concurrent changes (e.g. portrait
+      // upload) when the stale TanStack cache propagates back to the store.
+      setCharacter(updated);
       // Invalidate the list so the updatedAt timestamp refreshes
       queryClient.invalidateQueries({ queryKey: characterKeys.lists() });
     },

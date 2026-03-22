@@ -24,6 +24,7 @@ import { useCharacterStore } from "@/store/characterStore";
 import { useDomainCard, useClass, useDomain } from "@/hooks/useGameData";
 import { useActionButton, InlineActionError } from "./ActionButton";
 import { MarkdownContent } from "@/components/MarkdownContent";
+import { CollapsibleSRDDescription } from "@/components/character/CollapsibleSRDDescription";
 
 // ─── Helper: parseCardId ──────────────────────────────────────────────────────
 
@@ -1070,6 +1071,16 @@ export function DomainLoadout() {
       {/* Card picker — toggles between Swap and Acquire modes */}
       {showPicker && (
         <div id="domain-card-picker">
+          {/* SRD explanation */}
+          <CollapsibleSRDDescription
+            title="Vault & Loadout"
+            content={
+              "Your **Vault** holds every domain card you have unlocked. Your **Loadout** is the subset of up to 5 cards you can use during play. " +
+              "During a **rest**, you may freely swap cards between your vault and loadout at no cost. " +
+              "Outside of a rest, swapping a card from your vault into your loadout costs **Stress** equal to the card's Recall Cost (the lightning bolt number)."
+            }
+          />
+
           {/* Mode toggle buttons */}
           <div className="flex gap-2 mb-3">
             {canSwap && (

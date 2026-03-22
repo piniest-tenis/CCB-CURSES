@@ -1246,10 +1246,9 @@ function HeritageFeature({
   return (
     <article
       className="
-        flex-shrink-0 rounded-xl border border-[#577399]/30 bg-slate-900/80
+        h-full rounded-xl border border-[#577399]/30 bg-slate-900/80
         p-3 space-y-1.5 shadow-card
       "
-      style={{ width: 220 }}
     >
       {/* Source pill */}
       <p className="text-[9px] uppercase tracking-widest text-[#aa7b1b] font-semibold leading-none">
@@ -1324,9 +1323,13 @@ function HeritageSection() {
       <span className="text-xs font-semibold uppercase tracking-wider text-[#b9baa3]">
         Heritage Features
       </span>
-      <div className="flex flex-wrap gap-3" role="list" aria-label="Ancestry and Community Features">
+      <div
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
+        role="list"
+        aria-label="Ancestry and Community Features"
+      >
         {features.map((feature) => (
-          <div key={feature.key} role="listitem">
+          <div key={feature.key} role="listitem" className="h-full">
             <HeritageFeature
               featureName={feature.featureName}
               featureText={feature.featureText}

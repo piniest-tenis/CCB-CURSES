@@ -42,6 +42,19 @@ export class ApiStack extends cdk.Stack {
       });
 
     // -----------------------------------------------------------------------
+    // CORS allowed origins — shared between API Gateway config and Lambda env
+    // -----------------------------------------------------------------------
+    const corsAllowOrigins = isProd
+      ? ["https://app.daggerheart.example.com"]
+      : [
+          "http://localhost:3000",
+          "http://localhost:3001",
+          `https://${stage}.daggerheart.example.com`,
+          // CloudFront domain for the deployed dev frontend
+          "https://dqt96kbhxdqy3.cloudfront.net",
+        ];
+
+    // -----------------------------------------------------------------------
     // Shared Lambda configuration
     // -----------------------------------------------------------------------
     const commonLambdaProps: Partial<lambda.FunctionProps> = {
@@ -65,6 +78,9 @@ export class ApiStack extends cdk.Stack {
         MEDIA_TABLE: dataStack.mediaTable.tableName,
         USERS_TABLE: dataStack.usersTable.tableName,
         CMS_TABLE: dataStack.cmsTable.tableName,
+        // CORS: Lambda responses must echo back the request Origin against this
+        // allowlist to stay consistent with API Gateway's corsPreflight config.
+        CORS_ALLOWED_ORIGINS: corsAllowOrigins.join(","),
       },
     };
 
@@ -346,15 +362,6 @@ export class ApiStack extends cdk.Stack {
     // -----------------------------------------------------------------------
     // HTTP API Gateway v2
     // -----------------------------------------------------------------------
-    const corsAllowOrigins = isProd
-      ? ["https://app.daggerheart.example.com"]
-      : [
-          "http://localhost:3000",
-          "http://localhost:3001",
-          `https://${stage}.daggerheart.example.com`,
-          // CloudFront domain for the deployed dev frontend
-          "https://dqt96kbhxdqy3.cloudfront.net",
-        ];
 
     this.httpApi = new apigwv2.HttpApi(this, "HttpApi", {
       apiName: `daggerheart-api-${stage}`,

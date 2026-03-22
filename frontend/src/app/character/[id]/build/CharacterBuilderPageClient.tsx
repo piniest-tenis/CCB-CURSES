@@ -25,7 +25,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useCharacter, useUpdateCharacter } from "@/hooks/useCharacter";
 import { useClass, useClasses, useAncestries, useCommunities } from "@/hooks/useGameData";
-import type { Character, AncestryData, CommunityData } from "@shared/types";
+import type { Character, AncestryData, CommunityData, CoreStats } from "@shared/types";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { CollapsibleSRDDescription } from "@/components/character/CollapsibleSRDDescription";
 import { TraitAssignmentPanel, type TraitBonuses } from "@/components/character/TraitAssignmentPanel";
@@ -153,12 +153,50 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
         ...(equipmentSelections.classItem ? [equipmentSelections.classItem] : []),
       ];
 
+      // ── Compute stats from traitBonuses ──────────────────────────
+      // traitBonuses only has the 4 assigned traits ({+2, +1, +1, −1}).
+      // Unassigned traits default to 0.
+      const stats: CoreStats = {
+        agility:   traitBonuses.agility   ?? 0,
+        strength:  traitBonuses.strength  ?? 0,
+        finesse:   traitBonuses.finesse   ?? 0,
+        instinct:  traitBonuses.instinct  ?? 0,
+        presence:  traitBonuses.presence  ?? 0,
+        knowledge: traitBonuses.knowledge ?? 0,
+      };
+
+      // ── Compute derivedStats (Evasion + Armor Score) ─────────────
+      // SRD: Evasion = class startingEvasion + armor evasion modifier
+      // SRD: Armor Score = armor.baseArmorScore
+      const evasionMod =
+        selectedArmor?.featureType === "Flexible"    ?  1 :
+        selectedArmor?.featureType === "Heavy"        ? -1 :
+        selectedArmor?.featureType === "Very Heavy"   ? -2 :
+        0;
+      const baseEvasion = selectedClassData?.startingEvasion ?? 0;
+      const derivedStats = {
+        evasion: baseEvasion + evasionMod,
+        armor: selectedArmor?.baseArmorScore ?? 0,
+      };
+
+      // ── Compute damageThresholds ─────────────────────────────────
+      // SRD: major = armor.baseMajorThreshold + level
+      // SRD: severe = armor.baseSevereThreshold + level
+      const charLevel = character?.level ?? 1;
+      const damageThresholds = {
+        major:  (selectedArmor?.baseMajorThreshold  ?? 0) + charLevel,
+        severe: (selectedArmor?.baseSevereThreshold ?? 0) + charLevel,
+      };
+
       const updated = await updateMutation.mutateAsync({
         classId,
         subclassId: subclassId || undefined,
         ancestryId: ancestryId || undefined,
         communityId: communityId || undefined,
         traitBonuses,
+        stats,
+        derivedStats,
+        damageThresholds,
         weapons: {
           primary: primaryWeapon
             ? {

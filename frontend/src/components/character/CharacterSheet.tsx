@@ -340,34 +340,73 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
       <div className="flex items-start gap-3">
         {/* Name (flex-1 so it takes remaining space) */}
         <div className="flex-1 min-w-0 flex flex-col gap-1">
-          <EditableField
-            field={CHARACTER_NAME_FIELD}
-            activeClassName="ring-2 ring-[#577399]/60 rounded-lg"
-          >
-            <h1 className="text-4xl font-bold font-serif text-[#f7f7ff] leading-tight truncate">
-              {activeCharacter.name || "Unnamed Character"}
-            </h1>
-          </EditableField>
+          <div className="flex items-center gap-2">
+            <EditableField
+              field={CHARACTER_NAME_FIELD}
+              activeClassName="ring-2 ring-[#577399]/60 rounded-lg"
+            >
+              <h1 className="text-4xl font-bold font-serif text-[#f7f7ff] leading-normal">
+                {activeCharacter.name || "Unnamed Character"}
+              </h1>
+            </EditableField>
+
+            {/* Pencil icon → builder */}
+            <button
+              type="button"
+              onClick={() => router.push(`/character/${characterId}/build`)}
+              className="
+                group relative shrink-0 p-1.5 rounded-md
+                text-[#b9baa3]/40 hover:text-[#577399] hover:bg-[#577399]/10
+                transition-colors
+                focus:outline-none focus:ring-2 focus:ring-[#577399]
+              "
+              aria-label="Open Character Builder"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                <path d="M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z" />
+              </svg>
+              <span className="
+                pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2
+                whitespace-nowrap rounded bg-slate-800 px-2 py-1 text-[10px] text-[#f7f7ff]
+                opacity-0 group-hover:opacity-100 transition-opacity
+                border border-slate-700
+              ">
+                Character Builder
+              </span>
+            </button>
+          </div>
 
           {kickerParts.length > 0 && (
             <p className="text-sm text-[#b9baa3] font-serif">
               {kickerParts.join(" · ")}
             </p>
           )}
-          <button
-            type="button"
-            onClick={() => router.push(`/character/${characterId}/build`)}
-            className="
-              mt-2 rounded-lg px-3 py-1.5 text-xs font-semibold
-              bg-[#577399]/20 text-[#f7f7ff] border border-[#577399]/50
-              hover:bg-[#577399]/30 hover:border-[#577399]
-              transition-colors
-              focus:outline-none focus:ring-2 focus:ring-[#577399]
-            "
-            aria-label="Edit character class, ancestry, and community"
-          >
-            Edit Character
-          </button>
+        </div>
+
+        {/* Evasion + Armor Score — derived stats in the header */}
+        <div className="flex-shrink-0 flex gap-2">
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-[10px] uppercase tracking-widest text-parchment-500 font-medium hidden sm:block">
+              Evasion
+            </span>
+            <output
+              aria-label={`Evasion ${activeCharacter.derivedStats.evasion}`}
+              className="w-12 rounded-lg border border-[#577399]/40 bg-slate-850 py-1.5 text-center text-2xl font-bold text-[#f7f7ff] font-serif leading-none"
+            >
+              {activeCharacter.derivedStats.evasion}
+            </output>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-[10px] uppercase tracking-widest text-parchment-500 font-medium hidden sm:block">
+              Armor
+            </span>
+            <output
+              aria-label={`Armor Score ${activeCharacter.derivedStats.armor}`}
+              className="w-12 rounded-lg border border-[#577399]/40 bg-slate-850 py-1.5 text-center text-2xl font-bold text-[#f7f7ff] font-serif leading-none"
+            >
+              {activeCharacter.derivedStats.armor}
+            </output>
+          </div>
         </div>
 
         {/* Conditions — compact column, same width as Level */}

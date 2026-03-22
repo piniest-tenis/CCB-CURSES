@@ -9,15 +9,64 @@ import type {
   APIGatewayProxyResultV2,
 } from "aws-lambda";
 
+// ─── CORS Configuration ───────────────────────────────────────────────────────
+//
+// API Gateway v2 (HTTP API) adds its own CORS headers to responses based on the
+// `corsPreflight` configuration in the CDK stack (api-stack.ts).  When that
+// config sets `allowCredentials: true`, the spec requires the origin header to
+// be an explicit value — a wildcard "*" is rejected by browsers.
+//
+// To keep Lambda responses consistent with API Gateway's preflight responses we:
+//   1. Validate the incoming `Origin` header against an allowlist.
+//   2. Echo the matched origin back in `Access-Control-Allow-Origin`.
+//   3. Include `Access-Control-Allow-Credentials: true`.
+//
+// If the origin is not in the allowlist (or missing), we omit the CORS origin
+// header entirely — the browser will block the response as expected.
+
+const CORS_ALLOWED_ORIGINS: readonly string[] = (
+  process.env["CORS_ALLOWED_ORIGINS"] ??
+  "http://localhost:3000,http://localhost:3001"
+)
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+function resolveOrigin(requestOrigin: string | undefined): string | null {
+  if (!requestOrigin) return null;
+  return CORS_ALLOWED_ORIGINS.includes(requestOrigin) ? requestOrigin : null;
+}
+
 // ─── Shared Response Headers ──────────────────────────────────────────────────
 
-const RESPONSE_HEADERS = {
+const BASE_RESPONSE_HEADERS: Record<string, string> = {
   "Content-Type": "application/json",
-  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token",
   "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-} as const;
+};
+
+/**
+ * Build response headers with a validated CORS origin.
+ * Called by every response factory so all responses carry the correct headers.
+ */
+function corsHeaders(requestOrigin?: string): Record<string, string> {
+  const origin = resolveOrigin(requestOrigin);
+  if (!origin) return { ...BASE_RESPONSE_HEADERS };
+  return {
+    ...BASE_RESPONSE_HEADERS,
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Credentials": "true",
+    "Vary": "Origin",
+  };
+}
+
+/**
+ * Thread-local (per-invocation) storage for the request origin so response
+ * factories that don't receive the event directly can still emit the correct
+ * CORS origin header.
+ */
+let _currentRequestOrigin: string | undefined;
 
 // ─── API Envelope Types ────────────────────────────────────────────────────────
 
@@ -121,7 +170,7 @@ export function createSuccessResponse<T>(
   };
   return {
     statusCode,
-    headers: { ...RESPONSE_HEADERS },
+    headers: corsHeaders(_currentRequestOrigin),
     body: JSON.stringify(body),
   };
 }
@@ -145,7 +194,7 @@ export function createErrorResponse(
   };
   return {
     statusCode,
-    headers: { ...RESPONSE_HEADERS },
+    headers: corsHeaders(_currentRequestOrigin),
     body: JSON.stringify(body),
   };
 }
@@ -156,11 +205,18 @@ export function createErrorResponse(
  * Higher-order function that wraps a Lambda handler in try/catch.
  * Catches AppError and maps to HTTP status; catches unknown errors and returns 500.
  * Accepts any Lambda event type so it can wrap both JWT-authorised and public handlers.
+ *
+ * Also captures the request `Origin` header so response factories can emit the
+ * correct CORS origin header without needing the event passed through.
  */
 export function withErrorHandling<TEvent>(
   handler: (event: TEvent) => Promise<APIGatewayProxyResultV2>
 ): (event: TEvent) => Promise<APIGatewayProxyResultV2> {
   return async (event: TEvent): Promise<APIGatewayProxyResultV2> => {
+    // Capture origin for CORS headers — works for API Gateway v2 events
+    const headers = (event as { headers?: Record<string, string> }).headers;
+    _currentRequestOrigin = headers?.["origin"] ?? headers?.["Origin"] ?? undefined;
+
     try {
       return await handler(event);
     } catch (err: unknown) {

@@ -208,6 +208,14 @@ const PutCharacterSchema = z.object({
   conditions: z.array(z.string()).optional(),
   domainLoadout: z.array(z.string()).max(5).optional(),
   domainVault: z.array(z.string()).optional(),
+  inventory: z.array(z.string()).optional().default([]),
+  gold: z
+    .object({
+      handfuls: z.number().int().min(0).max(9),
+      bags: z.number().int().min(0).max(9),
+      chests: z.number().int().min(0).max(1),
+    })
+    .optional(),
   classFeatureState: z
     .record(
       z.object({
@@ -286,6 +294,7 @@ const ActionSchema = z.object({
     "mark-armor",
     "clear-armor",
     "swap-loadout-card",
+    "acquire-domain-card",
   ] as const),
   params: z.record(z.unknown()).optional().default({}),
 });
@@ -815,6 +824,8 @@ async function updateCharacter(
     conditions: input.conditions ?? existing.conditions,
     domainLoadout: input.domainLoadout ?? existing.domainLoadout,
     domainVault: input.domainVault ?? existing.domainVault,
+    inventory: input.inventory ?? existing.inventory ?? [],
+    gold: input.gold ?? existing.gold,
     classFeatureState: input.classFeatureState ?? existing.classFeatureState,
     weapons: input.weapons
       ? normalizeWeapons(input.weapons)

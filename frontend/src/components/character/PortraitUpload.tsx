@@ -23,38 +23,44 @@ import { useAuthStore } from "@/store/authStore";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 interface PortraitUploadUrlResponse {
-  uploadUrl:  string;
+  uploadUrl: string;
   confirmUrl: string;
-  s3Key:      string;
-  expiresIn:  number;
-  maxBytes:   number;
+  s3Key: string;
+  expiresIn: number;
+  maxBytes: number;
 }
 
 async function fetchPortraitUploadUrl(
   characterId: string,
-  authToken:   string,
-  file:        File
+  authToken: string,
+  file: File,
 ): Promise<PortraitUploadUrlResponse> {
-  const res = await fetch(`${API_BASE}/characters/${characterId}/portrait-upload-url`, {
-    method:  "POST",
-    headers: {
-      Authorization:  `Bearer ${authToken}`,
-      "Content-Type": "application/json",
+  const res = await fetch(
+    `${API_BASE}/characters/${characterId}/portrait-upload-url`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ contentType: file.type, filename: file.name }),
     },
-    body: JSON.stringify({ contentType: file.type, filename: file.name }),
-  });
+  );
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error((body as { error?: string })?.error ?? `HTTP ${res.status}`);
+    throw new Error(
+      (body as { error?: string })?.error ?? `HTTP ${res.status}`,
+    );
   }
-  return res.json();
+  const json = await res.json();
+  return json.data;
 }
 
 async function uploadToS3(uploadUrl: string, file: File): Promise<void> {
   const res = await fetch(uploadUrl, {
-    method:  "PUT",
+    method: "PUT",
     headers: { "Content-Type": file.type },
-    body:    file,
+    body: file,
   });
   if (!res.ok) throw new Error(`S3 upload failed: HTTP ${res.status}`);
 }
@@ -68,18 +74,27 @@ interface DragDropZoneProps {
 }
 
 function DragDropZone({ onFile, preview, disabled }: DragDropZoneProps) {
-  const inputRef  = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  const processFile = useCallback((file: File | undefined | null) => {
-    if (!file) return;
-    if (!file.type.startsWith("image/")) return;
-    onFile(file);
-  }, [onFile]);
+  const processFile = useCallback(
+    (file: File | undefined | null) => {
+      if (!file) return;
+      if (!file.type.startsWith("image/")) return;
+      onFile(file);
+    },
+    [onFile],
+  );
 
-  const onDragOver  = (e: React.DragEvent) => { e.preventDefault(); if (!disabled) setIsDragging(true); };
-  const onDragLeave = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); };
-  const onDrop      = (e: React.DragEvent) => {
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!disabled) setIsDragging(true);
+  };
+  const onDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+  const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     if (disabled) return;
@@ -97,7 +112,10 @@ function DragDropZone({ onFile, preview, disabled }: DragDropZoneProps) {
       tabIndex={disabled ? -1 : 0}
       aria-label="Drag and drop an image or click to browse"
       onClick={() => !disabled && inputRef.current?.click()}
-      onKeyDown={(e) => { if (!disabled && (e.key === "Enter" || e.key === " ")) inputRef.current?.click(); }}
+      onKeyDown={(e) => {
+        if (!disabled && (e.key === "Enter" || e.key === " "))
+          inputRef.current?.click();
+      }}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
@@ -142,8 +160,11 @@ function DragDropZone({ onFile, preview, disabled }: DragDropZoneProps) {
           {preview ? "Drop a different image to replace" : "Drop image here"}
         </p>
         <p className="text-xs text-[#b9baa3]">
-          or <span className="text-[#577399] underline underline-offset-2">click to browse</span>
-          {" "}· JPG, PNG, WebP · max 5 MB
+          or{" "}
+          <span className="text-[#577399] underline underline-offset-2">
+            click to browse
+          </span>{" "}
+          · JPG, PNG, WebP · max 5 MB
         </p>
       </div>
 
@@ -170,11 +191,11 @@ function DragDropZone({ onFile, preview, disabled }: DragDropZoneProps) {
 // ─── PortraitUploadSidebar ────────────────────────────────────────────────────
 
 interface PortraitUploadSidebarProps {
-  open:        boolean;
-  onClose:     () => void;
+  open: boolean;
+  onClose: () => void;
   characterId: string;
-  currentUrl:  string | null;
-  onUploaded:  (url: string) => void;
+  currentUrl: string | null;
+  onUploaded: (url: string) => void;
 }
 
 function PortraitUploadSidebar({
@@ -185,15 +206,15 @@ function PortraitUploadSidebar({
   onUploaded,
 }: PortraitUploadSidebarProps) {
   const headingId = React.useId();
-  const panelRef  = React.useRef<HTMLDivElement>(null);
+  const panelRef = React.useRef<HTMLDivElement>(null);
 
   const idToken = useAuthStore((s) => s.idToken);
 
-  const [preview,   setPreview]   = useState<string | null>(null);
-  const [file,      setFile]      = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [isPending, setIsPending] = useState(false);
-  const [error,     setError]     = useState<string | null>(null);
-  const [success,   setSuccess]   = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   // Reset when opened
   React.useEffect(() => {
@@ -204,7 +225,9 @@ function PortraitUploadSidebar({
     setSuccess(false);
     const t = setTimeout(() => {
       panelRef.current
-        ?.querySelector<HTMLElement>('button, [role="button"], input, [tabindex]:not([tabindex="-1"])')
+        ?.querySelector<HTMLElement>(
+          'button, [role="button"], input, [tabindex]:not([tabindex="-1"])',
+        )
         ?.focus();
     }, 50);
     return () => clearTimeout(t);
@@ -214,7 +237,10 @@ function PortraitUploadSidebar({
   React.useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { e.stopPropagation(); onClose(); }
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
+      }
     };
     document.addEventListener("keydown", handler, true);
     return () => document.removeEventListener("keydown", handler, true);
@@ -242,12 +268,14 @@ function PortraitUploadSidebar({
       const { uploadUrl, confirmUrl, maxBytes } = await fetchPortraitUploadUrl(
         characterId,
         idToken,
-        file
+        file,
       );
 
       // 2. Validate size client-side
       if (file.size > maxBytes) {
-        setError(`File too large. Maximum size: ${Math.round(maxBytes / 1024 / 1024)} MB.`);
+        setError(
+          `File too large. Maximum size: ${Math.round(maxBytes / 1024 / 1024)} MB.`,
+        );
         return;
       }
 
@@ -258,7 +286,9 @@ function PortraitUploadSidebar({
       onUploaded(confirmUrl);
       setSuccess(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed. Please try again.");
+      setError(
+        err instanceof Error ? err.message : "Upload failed. Please try again.",
+      );
     } finally {
       setIsPending(false);
     }
@@ -290,8 +320,13 @@ function PortraitUploadSidebar({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[#577399]/25 px-5 py-4">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.24em] text-[#b9baa3]">Character</p>
-            <h2 id={headingId} className="font-serif text-lg font-semibold text-[#f7f7ff]">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-[#b9baa3]">
+              Character
+            </p>
+            <h2
+              id={headingId}
+              className="font-serif text-lg font-semibold text-[#f7f7ff]"
+            >
               Portrait
             </h2>
           </div>
@@ -307,7 +342,6 @@ function PortraitUploadSidebar({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
-
           {/* Current portrait (shown when no new file selected) */}
           {!preview && currentUrl && (
             <div className="flex justify-center">
@@ -317,7 +351,9 @@ function PortraitUploadSidebar({
                   alt="Current portrait"
                   className="h-28 w-28 rounded-full object-cover border-2 border-[#577399]/40"
                 />
-                <p className="mt-2 text-center text-xs text-[#b9baa3]">Current portrait</p>
+                <p className="mt-2 text-center text-xs text-[#b9baa3]">
+                  Current portrait
+                </p>
               </div>
             </div>
           )}
@@ -333,7 +369,12 @@ function PortraitUploadSidebar({
           {file && !isPending && (
             <button
               type="button"
-              onClick={() => { setFile(null); setPreview(null); setError(null); setSuccess(false); }}
+              onClick={() => {
+                setFile(null);
+                setPreview(null);
+                setError(null);
+                setSuccess(false);
+              }}
               className="w-full text-xs text-[#b9baa3] hover:text-[#f7f7ff] underline underline-offset-2 transition-colors"
             >
               Clear selection
@@ -410,11 +451,12 @@ interface PortraitDisplayProps {
 
 export function PortraitDisplay({ characterId }: PortraitDisplayProps) {
   const { activeCharacter, updateField, saveCharacter } = useCharacterStore();
-  const [sidebarOpen, setSidebarOpen]    = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (!activeCharacter) return null;
 
-  const portraitUrl: string | null = (activeCharacter as Character).portraitUrl ?? null;
+  const portraitUrl: string | null =
+    (activeCharacter as Character).portraitUrl ?? null;
 
   const handleUploaded = (url: string) => {
     // Update the store immediately so the UI reflects the new portrait without
@@ -439,7 +481,11 @@ export function PortraitDisplay({ characterId }: PortraitDisplayProps) {
               setSidebarOpen(true);
             }
           }}
-          aria-label={portraitUrl ? "Change character portrait" : "Upload character portrait"}
+          aria-label={
+            portraitUrl
+              ? "Change character portrait"
+              : "Upload character portrait"
+          }
           aria-haspopup="dialog"
           aria-expanded={sidebarOpen}
           className="
@@ -447,13 +493,14 @@ export function PortraitDisplay({ characterId }: PortraitDisplayProps) {
             focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2 focus:ring-offset-[#0a100d]
             rounded-full cursor-pointer transition-opacity duration-200 hover:opacity-90
           "
-          style={{ width: 180, height: 162 }}
+          style={{ width: 180, height: 180 }}
         >
           {/* Portrait image — circular crop */}
           {portraitUrl ? (
             <img
               src={portraitUrl}
               alt={`${activeCharacter.name}'s portrait`}
+              style={{ padding: "20px" }} // Matches outer transparency on the SVG frame.
               className="
                 absolute inset-0 w-full h-full
                 rounded-full object-cover
@@ -466,9 +513,7 @@ export function PortraitDisplay({ characterId }: PortraitDisplayProps) {
                 rounded-full flex items-center justify-center bg-[#577399]/10
               "
             >
-              <span className="text-3xl text-[#577399]/30">
-                ⬡
-              </span>
+              <span className="text-3xl text-[#577399]/30">⬡</span>
             </div>
           )}
 

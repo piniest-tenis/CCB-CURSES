@@ -350,7 +350,8 @@ export type ActionId =
   | "companion-mark-stress"
   | "mark-armor"
   | "clear-armor"
-  | "swap-loadout-card";
+  | "swap-loadout-card"
+  | "acquire-domain-card";
 
 export interface ActionParams {
   /** cardId for token / aura actions */
@@ -785,6 +786,22 @@ export function applyAction(
           stress: { max: newStressMax, marked: actualStressMarked },
           hp:     { max: character.trackers.hp.max, marked: newHpMarked },
         },
+      };
+    }
+
+    // ── Acquire domain card (add to vault) ────────────────────────────────
+    case "acquire-domain-card": {
+      const cardId = params.cardId;
+      if (!cardId) {
+        invalidAction("cardId is required for acquire-domain-card", "cardId");
+      }
+      // No-op if already in vault
+      if (character.domainVault.includes(cardId)) {
+        return character;
+      }
+      return {
+        ...character,
+        domainVault: [...character.domainVault, cardId],
       };
     }
 
