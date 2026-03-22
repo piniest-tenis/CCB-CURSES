@@ -37,7 +37,7 @@ import type {
   Character,
 } from "@shared/types";
 import { useCharacterLevelUp, type LevelUpInput } from "@/hooks/useCharacter";
-import { useDomain } from "@/hooks/useGameData";
+import { useDomain, useClass } from "@/hooks/useGameData";
 import { ApiError } from "@/lib/api";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -578,14 +578,16 @@ interface DomainCardPickerProps {
 }
 
 function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardIds, onSelect }: DomainCardPickerProps) {
-  // Fetch cards for each domain the character has
-  const domain0 = character.domains[0];
-  const domain1 = character.domains[1];
+  // Fetch the class data to get authoritative domain names (matches DomainLoadout pattern)
+  const { data: classData, isLoading: classLoading } = useClass(character.classId || undefined);
+  const classDomains = classData?.domains ?? [];
+  const domain0 = classDomains[0];
+  const domain1 = classDomains[1];
 
   const { data: domainData0, isLoading: loading0 } = useDomain(domain0);
   const { data: domainData1, isLoading: loading1 } = useDomain(domain1);
 
-  const isLoading = (!!domain0 && loading0) || (!!domain1 && loading1);
+  const isLoading = classLoading || (!!domain0 && loading0) || (!!domain1 && loading1);
 
   // Combine and filter cards
   const allCards = useMemo(() => {
@@ -1141,16 +1143,20 @@ function DomainCardPickerWrapper({
   setSelectedDomainCardIds: (ids: string[]) => void;
   onNoCardsAvailable: (v: boolean) => void;
 }) {
-  const domain0 = character.domains[0];
-  const domain1 = character.domains[1];
+  // Fetch authoritative domain names from class data (matches DomainCardPicker/DomainLoadout pattern)
+  const { data: classData } = useClass(character.classId || undefined);
+  const classDomains = classData?.domains ?? [];
+  const domain0 = classDomains[0];
+  const domain1 = classDomains[1];
   const { data: d0 } = useDomain(domain0);
   const { data: d1 } = useDomain(domain1);
 
   // Detect no-cards scenario
   React.useEffect(() => {
-    // No domains at all
+    // No domains at all (or class data not loaded yet)
     if (!domain0 && !domain1) {
-      onNoCardsAvailable(true);
+      // Only flag no-cards if class data has loaded (classDomains is populated)
+      if (classData) onNoCardsAvailable(true);
       return;
     }
     // If data hasn't loaded yet, don't flag
@@ -1171,7 +1177,7 @@ function DomainCardPickerWrapper({
       return true;
     });
     onNoCardsAvailable(available.length === 0);
-  }, [domain0, domain1, d0, d1, character.domainVault, character.domainLoadout, targetLevel, onNoCardsAvailable]);
+  }, [classData, domain0, domain1, d0, d1, character.domainVault, character.domainLoadout, targetLevel, onNoCardsAvailable]);
 
   return (
     <DomainCardPicker
