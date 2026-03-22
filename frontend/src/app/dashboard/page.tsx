@@ -354,7 +354,7 @@ function CreateCharacterModal({ onClose }: CreateModalProps) {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading: authLoading, isReady, user } = useAuthStore();
+  const { isAuthenticated, isLoading: authLoading, isReady, user, signOut } = useAuthStore();
   const { data, isLoading, isError } = useCharacters();
   const deleteMutation = useDeleteCharacter();
   const [showCreate, setShowCreate] = useState(false);
@@ -392,9 +392,23 @@ export default function DashboardPage() {
             priority
           />
           {user && (
-            <span className="text-sm text-[#b9baa3]/50">
-              {user.displayName || user.email}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-[#b9baa3]/50">
+                {user.displayName || user.email}
+              </span>
+              <button
+                type="button"
+                onClick={() => signOut().then(() => router.replace("/auth/login"))}
+                className="
+                  rounded px-2.5 py-1 text-xs font-medium
+                  text-[#b9baa3]/50 border border-slate-700/60
+                  hover:text-[#f7f7ff] hover:border-slate-600
+                  transition-colors
+                "
+              >
+                Sign out
+              </button>
+            </div>
           )}
         </div>
       </header>

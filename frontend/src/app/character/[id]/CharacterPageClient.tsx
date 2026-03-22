@@ -22,7 +22,7 @@ export default function CharacterPage() {
   // reflects the actual browser URL path.
   const characterId = pathname?.split("/")[2] ?? "";
   const router = useRouter();
-  const { isAuthenticated, isLoading, isReady } = useAuthStore();
+  const { isAuthenticated, isLoading, isReady, signOut } = useAuthStore();
 
   // Gate the redirect on isReady: isAuthenticated is false on initial hydration
   // (it isn't persisted) so we must wait for initialize() to complete first.
@@ -87,6 +87,18 @@ export default function CharacterPage() {
           <span className="font-serif text-sm text-parchment-400">
             Character Sheet
           </span>
+          <button
+            type="button"
+            onClick={() => signOut().then(() => router.replace("/auth/login"))}
+            className="
+              ml-auto rounded px-2.5 py-1 text-xs font-medium
+              text-parchment-600 border border-burgundy-900/60
+              hover:text-parchment-300 hover:border-burgundy-700
+              transition-colors
+            "
+          >
+            Sign out
+          </button>
         </div>
       </header>
 
