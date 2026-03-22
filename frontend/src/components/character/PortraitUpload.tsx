@@ -32,11 +32,16 @@ interface PortraitUploadUrlResponse {
 
 async function fetchPortraitUploadUrl(
   characterId: string,
-  authToken:   string
+  authToken:   string,
+  file:        File
 ): Promise<PortraitUploadUrlResponse> {
   const res = await fetch(`${API_BASE}/characters/${characterId}/portrait-upload-url`, {
     method:  "POST",
-    headers: { Authorization: `Bearer ${authToken}` },
+    headers: {
+      Authorization:  `Bearer ${authToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ contentType: file.type, filename: file.name }),
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -236,7 +241,8 @@ function PortraitUploadSidebar({
       // 1. Get presigned upload URL from our API
       const { uploadUrl, confirmUrl, maxBytes } = await fetchPortraitUploadUrl(
         characterId,
-        idToken
+        idToken,
+        file
       );
 
       // 2. Validate size client-side
