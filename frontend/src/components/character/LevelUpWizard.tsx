@@ -38,6 +38,7 @@ import type {
 } from "@shared/types";
 import { useCharacterLevelUp, type LevelUpInput } from "@/hooks/useCharacter";
 import { useDomain, useClass } from "@/hooks/useGameData";
+import { MarkdownContent } from "@/components/MarkdownContent";
 import { ApiError } from "@/lib/api";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -567,6 +568,215 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
 }
 
 // ─── DomainCardPicker ─────────────────────────────────────────────────────────
+// Matches the drilldown selection pattern used in DomainCardSelectionPanel
+// (character builder): list of CardRow items → CardDetail drill-down with full
+// markdown-rendered card text and a select/deselect button.
+
+/** Truncate text to ≤50 characters for collapsed list view. */
+function truncateCardText(text: string, max = 50): string {
+  if (!text) return "";
+  const cleaned = text.replace(/\*\*/g, "").replace(/\n/g, " ").trim();
+  return cleaned.length <= max ? cleaned : cleaned.slice(0, max - 1) + "…";
+}
+
+// ── Card Detail (drill-down view) ─────────────────────────────────────────────
+
+function LevelUpCardDetail({
+  card,
+  isSelected,
+  canSelect,
+  onToggle,
+  onBack,
+}: {
+  card: DomainCard;
+  isSelected: boolean;
+  canSelect: boolean;
+  onToggle: () => void;
+  onBack: () => void;
+}) {
+  return (
+    <div className="flex flex-col">
+      <button
+        type="button"
+        onClick={onBack}
+        className="flex items-center gap-1.5 px-4 py-3 text-xs text-[#b9baa3]/50 hover:text-[#b9baa3] transition-colors shrink-0"
+      >
+        ← Back to cards
+      </button>
+      <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4">
+        {/* Header */}
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs uppercase tracking-wider text-[#b9baa3]/40">
+              {card.domain}
+            </span>
+            <span className="text-[#b9baa3]/20">·</span>
+            <span className="text-xs uppercase tracking-wider text-[#b9baa3]/40">
+              Level {card.level}
+            </span>
+            {card.isGrimoire && (
+              <>
+                <span className="text-[#b9baa3]/20">·</span>
+                <span className="text-xs uppercase tracking-wider text-[#daa520]/60">Grimoire</span>
+              </>
+            )}
+            {card.isCursed && (
+              <>
+                <span className="text-[#b9baa3]/20">·</span>
+                <span className="text-xs uppercase tracking-wider text-[#fe5f55]/60">Cursed</span>
+              </>
+            )}
+            {card.isLinkedCurse && (
+              <>
+                <span className="text-[#b9baa3]/20">·</span>
+                <span className="text-xs uppercase tracking-wider text-[#fe5f55]/60">Linked Curse</span>
+              </>
+            )}
+          </div>
+          <h4 className="font-serif text-xl font-bold text-[#f7f7ff]">{card.name}</h4>
+        </div>
+
+        {/* Recall cost */}
+        <div className="flex gap-4 text-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-xs uppercase tracking-wider text-[#b9baa3]/40">Recall Cost</span>
+            <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 font-bold text-[#f7f7ff]">
+              {typeof card.level === "number" ? card.level : "—"}
+            </span>
+          </div>
+        </div>
+
+        {/* Full card text — markdown rendered */}
+        <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 px-4 py-3">
+          {card.isGrimoire && card.grimoire.length > 0 ? (
+            <div className="space-y-3">
+              {card.grimoire.map((ability, i) => (
+                <div key={i}>
+                  <p className="text-sm font-semibold text-[#f7f7ff] mb-1">{ability.name}</p>
+                  <MarkdownContent className="text-sm text-[#b9baa3]/75">
+                    {ability.description}
+                  </MarkdownContent>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <MarkdownContent className="text-sm text-[#b9baa3]/75">
+              {card.description}
+            </MarkdownContent>
+          )}
+        </div>
+
+        {card.isCursed && card.curseText && (
+          <div className="rounded-lg border border-[#fe5f55]/30 bg-[#fe5f55]/5 px-4 py-3">
+            <p className="text-xs uppercase tracking-wider text-[#fe5f55]/60 mb-1">Curse</p>
+            <MarkdownContent className="text-sm text-[#b9baa3]/70">
+              {card.curseText}
+            </MarkdownContent>
+          </div>
+        )}
+
+        {/* Select / deselect */}
+        <button
+          type="button"
+          onClick={onToggle}
+          disabled={!canSelect && !isSelected}
+          className={`
+            w-full rounded-lg px-4 py-3 font-semibold text-sm transition-colors
+            ${isSelected
+              ? "bg-[#577399]/20 border-2 border-[#577399] text-[#577399] hover:bg-[#577399]/30"
+              : canSelect
+                ? "bg-[#577399] text-white hover:bg-[#577399]/80"
+                : "bg-slate-800/50 border border-slate-700/40 text-[#b9baa3]/30 cursor-not-allowed"
+            }
+          `}
+        >
+          {isSelected ? "Selected — click to deselect" : canSelect ? "Select this card" : "Maximum cards already selected"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Card Row (list item) ──────────────────────────────────────────────────────
+
+function LevelUpCardRow({
+  card,
+  isSelected,
+  canSelect,
+  onToggle,
+  onDrill,
+}: {
+  card: DomainCard;
+  isSelected: boolean;
+  canSelect: boolean;
+  onToggle: () => void;
+  onDrill: () => void;
+}) {
+  return (
+    <div
+      onClick={onDrill}
+      className={`
+        flex items-center rounded-lg border transition-all cursor-pointer
+        ${isSelected
+          ? "border-[#577399] bg-[#577399]/15"
+          : "border-slate-700/60 bg-slate-900/30 hover:border-slate-600"
+        }
+      `}
+    >
+      {/* Circular select button */}
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); if (canSelect || isSelected) onToggle(); }}
+        disabled={!canSelect && !isSelected}
+        aria-label={isSelected ? `Deselect ${card.name}` : `Select ${card.name}`}
+        className={`
+          ml-3 h-5 w-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors
+          ${isSelected
+            ? "border-[#577399] bg-[#577399]"
+            : !canSelect
+              ? "border-slate-700/40 cursor-not-allowed"
+              : "border-slate-600 hover:border-[#577399]/70"
+          }
+        `}
+      >
+        {isSelected && <span className="h-2 w-2 rounded-full bg-white" />}
+      </button>
+
+      {/* Text — fills remaining space, clicking goes to drill-down via parent */}
+      <div className="flex-1 flex items-center gap-3 px-3 py-3 min-w-0">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-semibold text-[#f7f7ff] truncate">{card.name}</span>
+            <span className="text-xs text-[#b9baa3]/40 shrink-0">{card.domain}</span>
+            {card.isCursed && (
+              <span className="text-[10px] text-[#fe5f55] font-bold shrink-0">Cursed</span>
+            )}
+            {card.isLinkedCurse && (
+              <span className="text-[10px] text-[#fe5f55] font-bold shrink-0">Linked</span>
+            )}
+            {card.isGrimoire && (
+              <span className="text-[10px] text-[#daa520]/60 font-bold shrink-0">Grimoire</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-xs text-[#b9baa3]/40">Lvl {card.level}</span>
+            <span className="text-[#b9baa3]/20 text-xs">·</span>
+            <span className="text-xs text-[#b9baa3]/50 truncate">
+              {truncateCardText(card.isGrimoire
+                ? (card.grimoire[0]?.description ?? card.description)
+                : card.description)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Drill-down chevron */}
+      <span className="pr-3 text-[#b9baa3]/30 text-lg leading-none shrink-0">›</span>
+    </div>
+  );
+}
+
+// ── Main DomainCardPicker ─────────────────────────────────────────────────────
 
 interface DomainCardPickerProps {
   character: Character;
@@ -578,6 +788,8 @@ interface DomainCardPickerProps {
 }
 
 function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardIds, onSelect }: DomainCardPickerProps) {
+  const [detailCard, setDetailCard] = useState<DomainCard | null>(null);
+
   // Fetch the class data to get authoritative domain names (matches DomainLoadout pattern)
   const { data: classData, isLoading: classLoading } = useClass(character.classId || undefined);
   const classDomains = classData?.domains ?? [];
@@ -620,7 +832,8 @@ function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardI
       .sort((a, b) => a.level - b.level || a.domain.localeCompare(b.domain) || a.name.localeCompare(b.name));
   }, [allCards, targetLevel, ownedSet]);
 
-  const handleToggle = (cardId: string) => {
+  const handleToggle = (card: DomainCard) => {
+    const cardId = card.cardId;
     if (selectedCardIds.includes(cardId)) {
       onSelect(selectedCardIds.filter((id) => id !== cardId));
     } else if (selectedCardIds.length < maxSelections) {
@@ -641,6 +854,32 @@ function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardI
     );
   }
 
+  // ── Detail view (drill-down) ──
+  if (detailCard) {
+    const isSelected = selectedCardIds.includes(detailCard.cardId);
+    const canSelect = selectedCardIds.length < maxSelections;
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-parchment-200">
+            Acquire Domain Card{maxSelections > 1 ? "s" : ""}
+          </h3>
+          <span className={`text-xs font-bold ${selectedCardIds.length >= 1 ? "text-emerald-400" : "text-[#fe5f55]"}`}>
+            {selectedCardIds.length}/{maxSelections} selected
+          </span>
+        </div>
+        <LevelUpCardDetail
+          card={detailCard}
+          isSelected={isSelected}
+          canSelect={canSelect}
+          onToggle={() => handleToggle(detailCard)}
+          onBack={() => setDetailCard(null)}
+        />
+      </div>
+    );
+  }
+
+  // ── List view ──
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -669,6 +908,7 @@ function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardI
         {maxSelections > 1 && " You chose Extra Domain Card as an advancement, granting one extra pick."}
         {" "}Cards you already own are excluded.
         {" "}Domain card acquisition is required.
+        {" "}Tap a card to view its full details.
       </p>
 
       {isLoading ? (
@@ -681,54 +921,22 @@ function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardI
           No new cards available at this level. You may proceed without selecting a card.
         </p>
       ) : (
-        <ul className="space-y-1 max-h-64 overflow-y-auto pr-1" role="listbox" aria-label="Available domain cards" aria-multiselectable={maxSelections > 1}>
+        <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
           {availableCards.map((card) => {
             const isSelected = selectedCardIds.includes(card.cardId);
             const atMax = selectedCardIds.length >= maxSelections && !isSelected;
             return (
-              <li key={card.cardId}>
-                <button
-                  type="button"
-                  onClick={() => handleToggle(card.cardId)}
-                  disabled={atMax}
-                  role="option"
-                  aria-selected={isSelected}
-                  className={`
-                    w-full flex items-center gap-2 rounded px-3 py-2
-                    text-left transition-colors
-                    focus:outline-none focus:ring-1 focus:ring-[#577399]
-                    disabled:opacity-40 disabled:cursor-not-allowed
-                    ${isSelected
-                      ? "bg-[#577399]/20 border border-[#577399]"
-                      : "border border-transparent hover:bg-[#577399]/10 hover:border-[#577399]/30"
-                    }
-                  `}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-parchment-200 truncate">
-                        {card.name}
-                      </span>
-                      {card.isCursed && (
-                        <span title="Cursed" className="text-xs text-[#fe5f55] font-bold">Cursed</span>
-                      )}
-                      {card.isLinkedCurse && (
-                        <span title="Linked Curse" className="text-xs text-[#fe5f55] font-bold">Linked</span>
-                      )}
-                    </div>
-                    <span className="text-[10px] text-parchment-500 line-clamp-1">
-                      {card.description}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-parchment-600 uppercase shrink-0">{card.domain}</span>
-                  <span className="rounded-full border border-[#577399]/60 px-1.5 text-[10px] font-bold text-[#577399] shrink-0">
-                    Lv{card.level}
-                  </span>
-                </button>
-              </li>
+              <LevelUpCardRow
+                key={card.cardId}
+                card={card}
+                isSelected={isSelected}
+                canSelect={!atMax}
+                onToggle={() => handleToggle(card)}
+                onDrill={() => setDetailCard(card)}
+              />
             );
           })}
-        </ul>
+        </div>
       )}
     </div>
   );
