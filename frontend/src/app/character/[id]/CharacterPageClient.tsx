@@ -51,11 +51,31 @@ export default function CharacterPage() {
 
   return (
     <div className="min-h-screen bg-slate-950">
+      {/* ── Fixed full-viewport background ───────────────────────────── */}
+      {/* The image covers the viewport and stays put during scroll.     */}
+      {/* The overlay uses the same style as the interstitial card scrim */}
+      {/* so art reads through while the UI stays legible.               */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/images/JeffBrown_ARCEMSPLASH.webp"
+        alt=""
+        aria-hidden="true"
+        className="fixed inset-0 h-full w-full object-cover pointer-events-none select-none z-0"
+      />
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 pointer-events-none z-0"
+        style={{
+          background:
+            "linear-gradient(160deg, #0d1a24cc 0%, #0a100d99 50%, #111a10cc 100%)",
+        }}
+      />
+
       {/* Lore interstitial while the character sheet data loads */}
       <LoadingInterstitial isVisible={charLoading} />
 
       {/* Nav bar */}
-      <header className="border-b border-burgundy-900/50 bg-slate-900/80 backdrop-blur-sm sticky top-0 z-10">
+      <header className="relative z-10 border-b border-burgundy-900/50 bg-slate-900/80 backdrop-blur-sm sticky top-0">
         <div className="mx-auto flex max-w-4xl items-center gap-4 px-4 py-3">
           <Link
             href="/dashboard"
@@ -70,7 +90,7 @@ export default function CharacterPage() {
         </div>
       </header>
 
-      <main className="px-4 py-6">
+      <main className="relative z-10 px-4 py-6">
         <CharacterSheet characterId={characterId} />
       </main>
     </div>

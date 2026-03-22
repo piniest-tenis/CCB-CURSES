@@ -79,8 +79,27 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
-      <div className="w-full max-w-sm space-y-6">
+    <div className="relative flex min-h-screen items-center justify-center bg-slate-950 px-4 overflow-hidden">
+      {/* Background video */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        aria-hidden="true"
+        className="absolute inset-0 h-full w-full object-cover pointer-events-none select-none"
+        src="/videos/curses-logo-walk_60fps.webm"
+      />
+      {/* Linear gradient overlay: 40% bg at top → 65% bg at bottom */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: "linear-gradient(to bottom, rgba(10,16,13,0.40) 0%, rgba(10,16,13,0.65) 100%)",
+        }}
+      />
+      {/* Content — sits above video + overlay */}
+      <div className="relative z-10 w-full max-w-sm space-y-6">
         {/* Branding */}
         <div className="text-center">
           <div className="flex justify-center mb-3">
