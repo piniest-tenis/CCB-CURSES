@@ -449,38 +449,35 @@ export function PortraitDisplay({ characterId }: PortraitDisplayProps) {
           "
           style={{ width: 180, height: 162 }}
         >
-          {/* Background portrait image — circular crop */}
-          <div
-            className="absolute"
-            style={{
-              top: "8%", left: "16%", right: "16%", bottom: "4%",
-              borderRadius: "50%",
-              overflow: "hidden",
-              background: "#0a100d",
-            }}
-            aria-hidden="true"
-          >
-            {portraitUrl ? (
-              <img
-                src={portraitUrl}
-                alt={`${activeCharacter.name}'s portrait`}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-[#577399]/10">
-                <span className="text-3xl text-[#577399]/30">
-                  ⬡
-                </span>
-              </div>
-            )}
-          </div>
+          {/* Portrait image — circular crop */}
+          {portraitUrl ? (
+            <img
+              src={portraitUrl}
+              alt={`${activeCharacter.name}'s portrait`}
+              className="
+                absolute inset-0 w-full h-full
+                rounded-full object-cover
+              "
+            />
+          ) : (
+            <div
+              className="
+                absolute inset-0 w-full h-full
+                rounded-full flex items-center justify-center bg-[#577399]/10
+              "
+            >
+              <span className="text-3xl text-[#577399]/30">
+                ⬡
+              </span>
+            </div>
+          )}
 
           {/* SVG frame overlay */}
           <img
             src="/images/ui-elements/round-portrait-frame.svg"
             alt=""
             aria-hidden="true"
-            className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+            className="absolute inset-0 w-full h-full rounded-full object-contain pointer-events-none"
             draggable={false}
           />
 
