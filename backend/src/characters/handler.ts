@@ -148,17 +148,10 @@ function srdArmorEvasionMod(featureType: string | null): number {
 
 // ─── Zod Schemas ──────────────────────────────────────────────────────────────
 
+// A weapon slot now only stores the SRD weapon id. All display stats are
+// derived at read-time from the SRD record on the frontend.
 const WeaponSchema = z.object({
-  name: z.string().nullable().default(null),
-  trait: z.string().nullable().default(null),
-  damage: z.string().nullable().default(null),
-  range: z.string().nullable().default(null),
-  type: z.enum(["physical", "magic"]).nullable().default(null),
-  burden: z.enum(["one-handed", "two-handed"]).nullable().default(null),
-  // SRD page 23: weapons have a tier; characters cannot equip weapons above their tier.
-  tier: z.number().int().min(1).max(4).nullable().default(null),
-  // SRD page 23: optional weapon feature text.
-  feature: z.string().nullable().default(null),
+  weaponId: z.string().nullable().default(null),
 });
 
 // SRD page 3: starting trait range is -1 to +2; allow -5 for penalty modifiers, up to +8 via advancement.
@@ -412,16 +405,7 @@ interface GameDataRecord {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function emptyWeapon(): Weapons["primary"] {
-  return {
-    name: null,
-    trait: null,
-    damage: null,
-    range: null,
-    type: null,
-    burden: null,
-    tier: null,
-    feature: null,
-  };
+  return { weaponId: null };
 }
 
 /** Normalize a Zod-parsed weapon (which may have undefined fields) to the canonical Weapons type.

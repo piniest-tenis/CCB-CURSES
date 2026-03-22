@@ -315,14 +315,7 @@ export function normalizeWeapons(raw: {
   const normalizeSlot = (
     slot?: Partial<Weapons["primary"]>
   ): Weapons["primary"] => ({
-    name: slot?.name ?? null,
-    trait: slot?.trait ?? null,
-    damage: slot?.damage ?? null,
-    range: slot?.range ?? null,
-    type: slot?.type ?? null,
-    burden: slot?.burden ?? null,
-    tier: slot?.tier ?? null,
-    feature: slot?.feature ?? null,
+    weaponId: slot?.weaponId ?? null,
   });
 
   return {

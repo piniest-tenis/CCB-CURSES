@@ -53,20 +53,14 @@ export interface DamageThresholds {
   severe: number;
 }
 
-export type WeaponDamageType = "physical" | "magic";
-export type WeaponBurden = "one-handed" | "two-handed";
-
+/**
+ * A weapon slot on the character. References an SRD weapon by its id string
+ * (from srdEquipment.ts ALL_TIER1_WEAPONS). All display stats are derived at
+ * read-time from the SRD record — nothing is duplicated on the character.
+ * weaponId is null when the slot is empty.
+ */
 export interface Weapon {
-  name: string | null;
-  trait: string | null;
-  damage: string | null;
-  range: string | null;
-  type: WeaponDamageType | null;
-  burden: WeaponBurden | null;
-  /** SRD page 23: weapons have a tier; characters cannot equip weapons above their tier. */
-  tier: number | null;
-  /** SRD page 23: optional weapon feature (e.g. "Reliable", "Massive"). */
-  feature: string | null;
+  weaponId: string | null;
 }
 
 export interface Weapons {

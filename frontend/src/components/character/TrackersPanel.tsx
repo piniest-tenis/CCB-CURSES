@@ -24,7 +24,6 @@
  */
 
 import React, { useState } from "react";
-import type { WeaponBurden, WeaponDamageType } from "@shared/types";
 import { useCharacterStore } from "@/store/characterStore";
 import { useAncestry, useCommunity } from "@/hooks/useGameData";
 import { useActionButton, InlineActionError } from "./ActionButton";
@@ -631,17 +630,14 @@ function DamageThresholdBar({ major, severe, armorMarked, armorMax, characterId 
 }
 
 // ─── WeaponSidebar ────────────────────────────────────────────────────────────
-// A self-contained slide-in panel for editing all weapon properties at once,
-// modelled after ConditionsSidebar. Uses debounced updateField calls.
+// Inventory-only weapon selector. Derives all stats from the SRD record.
+// Custom/homebrew weapon creation is a future CMS feature (TODO).
 
 interface WeaponSidebarProps {
   open:     boolean;
   onClose:  () => void;
   slot:     "primary" | "secondary";
 }
-
-const DAMAGE_TYPES: WeaponDamageType[] = ["physical", "magic"];
-const BURDENS: WeaponBurden[]          = ["one-handed", "two-handed"];
 
 function WeaponSidebar({ open, onClose, slot }: WeaponSidebarProps) {
   const { activeCharacter, updateField } = useCharacterStore();
@@ -653,7 +649,7 @@ function WeaponSidebar({ open, onClose, slot }: WeaponSidebarProps) {
     if (!open) return;
     const t = setTimeout(() => {
       const first = panelRef.current?.querySelector<HTMLElement>(
-        'button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        'button, input, [tabindex]:not([tabindex="-1"])'
       );
       first?.focus();
     }, 50);
@@ -674,7 +670,7 @@ function WeaponSidebar({ open, onClose, slot }: WeaponSidebarProps) {
   React.useEffect(() => {
     if (!open || !panelRef.current) return;
     const panel = panelRef.current;
-    const selector = 'button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    const selector = 'button, input, [tabindex]:not([tabindex="-1"])';
     const handleTab = (e: KeyboardEvent) => {
       if (e.key !== "Tab") return;
       const focusable = Array.from(panel.querySelectorAll<HTMLElement>(selector)).filter(
@@ -695,48 +691,26 @@ function WeaponSidebar({ open, onClose, slot }: WeaponSidebarProps) {
 
   if (!activeCharacter) return null;
 
-  const weapon = activeCharacter.weapons[slot];
-  const base   = `weapons.${slot}`;
-  const title  = slot === "primary" ? "Primary Weapon" : "Secondary Weapon";
-  const otherSlot = slot === "primary" ? "secondary" : "primary";
-  const otherWeapon = activeCharacter.weapons[otherSlot];
+  const title      = slot === "primary" ? "Primary Weapon" : "Secondary Weapon";
+  const otherSlot  = slot === "primary" ? "secondary" : "primary";
+  const otherWeaponId = activeCharacter.weapons[otherSlot].weaponId;
+  const currentWeaponId = activeCharacter.weapons[slot].weaponId;
 
-  // Inventory-based weapon picker: find SRD weapons whose names appear in inventory
+  // Build inventory weapon list: SRD weapons whose names match something in inventory
   const inventory = activeCharacter.inventory ?? [];
   const inventoryWeaponOptions: SRDWeapon[] = ALL_TIER1_WEAPONS.filter((w) =>
     inventory.some((item) => item.toLowerCase() === w.name.toLowerCase())
   );
-  // The other slot's weapon name (to prevent double-selection)
-  const otherWeaponName = otherWeapon.name?.toLowerCase() ?? null;
 
-  const handleInventorySelect = (w: SRDWeapon) => {
-    updateField(`${base}.name`,    w.name);
-    updateField(`${base}.trait`,   w.trait.toLowerCase());
-    updateField(`${base}.damage`,  w.damageDie);
-    updateField(`${base}.range`,   w.range);
-    updateField(`${base}.type`,    w.damageType.toLowerCase() as "physical" | "magic");
-    updateField(`${base}.burden`,  w.burden === "Two-Handed" ? "two-handed" : "one-handed");
-    updateField(`${base}.tier`,    w.tier);
-    updateField(`${base}.feature`, w.feature ?? null);
+  const handleSelect = (w: SRDWeapon) => {
+    updateField(`weapons.${slot}.weaponId`, w.id);
+    onClose();
   };
 
-  // Debounced text field — updates store immediately, then persists
-  const debounceRefs = React.useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-  const handleText = (subField: string, value: string) => {
-    updateField(`${base}.${subField}`, value === "" ? null : value);
+  const handleClear = () => {
+    updateField(`weapons.${slot}.weaponId`, null);
+    onClose();
   };
-
-  const inputClass = `
-    w-full rounded-lg border border-[#577399]/35 bg-[#f7f7ff]
-    px-4 py-2.5 text-sm text-[#0a100d] placeholder:text-slate-400
-    focus:outline-none focus:ring-2 focus:ring-[#577399]
-  `;
-  const selectClass = `
-    w-full rounded-lg border border-[#577399]/35 bg-[#f7f7ff]
-    px-4 py-2.5 text-sm text-[#0a100d]
-    focus:outline-none focus:ring-2 focus:ring-[#577399]
-  `;
-  const labelClass = "text-[11px] font-semibold uppercase tracking-[0.18em] sidebar-text";
 
   return (
     <>
@@ -778,193 +752,82 @@ function WeaponSidebar({ open, onClose, slot }: WeaponSidebarProps) {
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
-          {/* SRD help */}
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+          {/* SRD guidance */}
           <div className="rounded-xl border border-[#577399]/20 bg-[#b9baa3]/[0.06] px-4 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] sidebar-text mb-1">SRD guidance</p>
             <p className="text-sm leading-relaxed text-[#f7f7ff]">
-              Weapons are defined by their trait, damage dice, range, burden, tier, and any special feature. Add your proficiency to damage if the weapon is in your proficiency tier. (SRD p. 23)
+              Select a weapon from your inventory. Add weapons via the Equipment panel to make them available here. (SRD p. 23)
             </p>
           </div>
 
-          {/* Inventory weapon picker */}
-          <div className="space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] sidebar-text">
-              Select from inventory
+          {inventoryWeaponOptions.length === 0 ? (
+            <p className="text-sm text-[#b9baa3]/60 italic text-center pt-4">
+              No weapons found in inventory. Add weapons via the Equipment panel first.
             </p>
-            {inventoryWeaponOptions.length === 0 ? (
-              <p className="text-sm text-[#b9baa3]/60 italic text-center py-2">
-                No weapons found in inventory. Add weapons via the Equipment panel first.
-              </p>
-            ) : (
-              <ul className="space-y-1.5" role="listbox" aria-label="Inventory weapon options">
-                {inventoryWeaponOptions.map((w) => {
-                  const isSelected = w.name === weapon.name;
-                  const isUsedByOther = w.name.toLowerCase() === otherWeaponName;
-                  return (
-                    <li key={w.name}>
-                      <button
-                        type="button"
-                        role="option"
-                        aria-selected={isSelected}
-                        disabled={isUsedByOther}
-                        onClick={() => { handleInventorySelect(w); onClose(); }}
-                        title={isUsedByOther ? `Already equipped as ${otherSlot} weapon` : undefined}
-                        className={[
-                          "w-full text-left rounded-xl border px-4 py-2.5 transition-all",
-                          "focus:outline-none focus:ring-2 focus:ring-[#577399]",
-                          "disabled:opacity-40 disabled:cursor-not-allowed",
-                          isSelected
-                            ? "border-[#577399] bg-[#577399]/20 shadow-md"
-                            : "border-[#577399]/25 bg-slate-900/60 hover:border-[#577399]/60 hover:bg-[#577399]/10",
-                        ].join(" ")}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-[#f7f7ff]">{w.name}</p>
-                            <p className="text-[11px] text-[#b9baa3] mt-0.5">
-                              {w.damageDie} · {w.range} · {w.trait} · {w.burden === "Two-Handed" ? "Two-handed" : "One-handed"}
+          ) : (
+            <ul className="space-y-2" role="listbox" aria-label="Inventory weapon options">
+              {inventoryWeaponOptions.map((w) => {
+                const isSelected  = w.id === currentWeaponId;
+                const isOtherSlot = w.id === otherWeaponId;
+                return (
+                  <li key={w.id}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      disabled={isOtherSlot}
+                      onClick={() => handleSelect(w)}
+                      title={isOtherSlot ? `Already equipped as ${otherSlot} weapon` : undefined}
+                      className={[
+                        "w-full text-left rounded-xl border px-4 py-3 transition-all",
+                        "focus:outline-none focus:ring-2 focus:ring-[#577399]",
+                        "disabled:opacity-40 disabled:cursor-not-allowed",
+                        isSelected
+                          ? "border-[#577399] bg-[#577399]/20 shadow-md"
+                          : "border-[#577399]/25 bg-slate-900/60 hover:border-[#577399]/60 hover:bg-[#577399]/10",
+                      ].join(" ")}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-[#f7f7ff]">{w.name}</p>
+                          <p className="text-[11px] text-[#b9baa3] mt-0.5">
+                            {w.damageDie} · {w.range} · {w.trait} · {w.burden === "Two-Handed" ? "Two-handed" : "One-handed"}
+                          </p>
+                          {w.feature && (
+                            <p className="text-[11px] text-gold-500 mt-0.5">
+                              <span className="mr-1" aria-hidden="true">✦</span>
+                              {w.feature}
                             </p>
-                            {w.feature && (
-                              <p className="text-[11px] text-gold-500 mt-0.5">
-                                <span className="mr-1" aria-hidden="true">✦</span>
-                                {w.feature}
-                              </p>
-                            )}
-                          </div>
-                          {isSelected && !isUsedByOther && (
-                            <span className="text-[10px] font-bold text-[#577399] uppercase tracking-wider mt-0.5 shrink-0">
-                              Equipped
-                            </span>
-                          )}
-                          {isUsedByOther && (
-                            <span className="text-[10px] font-bold text-[#b9baa3] uppercase tracking-wider mt-0.5 shrink-0">
-                              {otherSlot}
-                            </span>
                           )}
                         </div>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
+                        {isSelected && (
+                          <span className="text-[10px] font-bold text-[#577399] uppercase tracking-wider mt-0.5 shrink-0">
+                            Equipped
+                          </span>
+                        )}
+                        {isOtherSlot && (
+                          <span className="text-[10px] font-bold text-[#b9baa3] uppercase tracking-wider mt-0.5 shrink-0">
+                            {otherSlot}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
 
-          <hr className="border-[#577399]/20" />
-
-          {/* Name */}
-          <div className="space-y-1.5">
-            <label htmlFor={`weapon-${slot}-name`} className={labelClass}>Name</label>
-            <input
-              id={`weapon-${slot}-name`}
-              type="text"
-              defaultValue={weapon.name ?? ""}
-              onChange={(e) => handleText("name", e.target.value)}
-              placeholder="e.g. Shortsword, Hunter's Bow…"
-              className={inputClass}
-            />
-          </div>
-
-          {/* Trait */}
-          <div className="space-y-1.5">
-            <label htmlFor={`weapon-${slot}-trait`} className={labelClass}>Trait</label>
-            <input
-              id={`weapon-${slot}-trait`}
-              type="text"
-              defaultValue={weapon.trait ?? ""}
-              onChange={(e) => handleText("trait", e.target.value)}
-              placeholder="e.g. Agility, Strength, Finesse…"
-              className={inputClass}
-            />
-            <p className="text-[11px] sidebar-text-secondary">The core trait used when making an attack roll.</p>
-          </div>
-
-          {/* Damage */}
-          <div className="space-y-1.5">
-            <label htmlFor={`weapon-${slot}-damage`} className={labelClass}>Damage</label>
-            <input
-              id={`weapon-${slot}-damage`}
-              type="text"
-              defaultValue={weapon.damage ?? ""}
-              onChange={(e) => handleText("damage", e.target.value)}
-              placeholder="e.g. 2d6+2, 1d8…"
-              className={inputClass}
-            />
-          </div>
-
-          {/* Range */}
-          <div className="space-y-1.5">
-            <label htmlFor={`weapon-${slot}-range`} className={labelClass}>Range</label>
-            <input
-              id={`weapon-${slot}-range`}
-              type="text"
-              defaultValue={weapon.range ?? ""}
-              onChange={(e) => handleText("range", e.target.value)}
-              placeholder="e.g. Melee, Close, Far…"
-              className={inputClass}
-            />
-          </div>
-
-          {/* Type */}
-          <div className="space-y-1.5">
-            <label htmlFor={`weapon-${slot}-type`} className={labelClass}>Damage Type</label>
-            <select
-              id={`weapon-${slot}-type`}
-              value={weapon.type ?? ""}
-              onChange={(e) => updateField(`${base}.type`, (e.target.value as WeaponDamageType) || null)}
-              className={selectClass}
+          {currentWeaponId && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="w-full rounded-xl border border-[#fe5f55]/30 bg-[#fe5f55]/10 px-4 py-2.5 text-sm font-semibold text-[#fe5f55] hover:bg-[#fe5f55]/20 focus:outline-none focus:ring-2 focus:ring-[#fe5f55]/40"
             >
-              <option value="">— Select type —</option>
-              {DAMAGE_TYPES.map((t) => (
-                <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Burden */}
-          <div className="space-y-1.5">
-            <label htmlFor={`weapon-${slot}-burden`} className={labelClass}>Burden</label>
-            <select
-              id={`weapon-${slot}-burden`}
-              value={weapon.burden ?? ""}
-              onChange={(e) => updateField(`${base}.burden`, (e.target.value as WeaponBurden) || null)}
-              className={selectClass}
-            >
-              <option value="">— Select burden —</option>
-              {BURDENS.map((b) => (
-                <option key={b} value={b}>{b.replace("-", " ")}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Tier */}
-          <div className="space-y-1.5">
-            <label htmlFor={`weapon-${slot}-tier`} className={labelClass}>Tier</label>
-            <select
-              id={`weapon-${slot}-tier`}
-              value={weapon.tier ?? ""}
-              onChange={(e) => updateField(`${base}.tier`, e.target.value ? parseInt(e.target.value, 10) : null)}
-              className={selectClass}
-            >
-              <option value="">— Select tier —</option>
-              {[1, 2, 3, 4].map((t) => <option key={t} value={t}>Tier {t}</option>)}
-            </select>
-          </div>
-
-          {/* Feature */}
-          <div className="space-y-1.5">
-            <label htmlFor={`weapon-${slot}-feature`} className={labelClass}>Feature</label>
-            <input
-              id={`weapon-${slot}-feature`}
-              type="text"
-              defaultValue={weapon.feature ?? ""}
-              onChange={(e) => handleText("feature", e.target.value)}
-              placeholder="e.g. Reliable, Slow, Thrown…"
-              className={inputClass}
-            />
-            <p className="text-[11px] sidebar-text-secondary">Optional keyword that modifies how the weapon is used.</p>
-          </div>
+              Unequip weapon
+            </button>
+          )}
         </div>
 
         {/* Footer */}
@@ -983,8 +846,7 @@ function WeaponSidebar({ open, onClose, slot }: WeaponSidebarProps) {
 }
 
 // ─── WeaponCard ───────────────────────────────────────────────────────────────
-// The entire card is a single <button> that opens WeaponSidebar.
-// Name is prominent; a kicker line shows the other properties.
+// Looks up the SRD record by weaponId and renders it. Opens WeaponSidebar.
 
 interface WeaponCardProps {
   slot: "primary" | "secondary";
@@ -996,27 +858,23 @@ function WeaponCard({ slot }: WeaponCardProps) {
 
   if (!activeCharacter) return null;
 
-  const weapon = activeCharacter.weapons[slot];
+  const weaponId  = activeCharacter.weapons[slot].weaponId;
+  const srdWeapon = weaponId ? ALL_TIER1_WEAPONS.find((w) => w.id === weaponId) ?? null : null;
 
-  // Build kicker from available data
-  const kickerParts = [
-    weapon.damage,
-    weapon.range,
-    weapon.type && (weapon.type.charAt(0).toUpperCase() + weapon.type.slice(1)),
-    weapon.trait,
-    weapon.burden && weapon.burden.replace("-", " "),
-    weapon.tier != null && `Tier ${weapon.tier}`,
-  ].filter(Boolean).join(" · ");
+  const kickerParts = srdWeapon
+    ? [srdWeapon.damageDie, srdWeapon.range, srdWeapon.trait, srdWeapon.burden === "Two-Handed" ? "Two-handed" : "One-handed"]
+        .filter(Boolean).join(" · ")
+    : null;
 
-  const ariaLabel = weapon.name
-    ? `Edit ${slot} weapon: ${weapon.name}${kickerParts ? `. ${kickerParts}` : ""}`
-    : `Add ${slot} weapon — tap to edit`;
+  const ariaLabel = srdWeapon
+    ? `Edit ${slot} weapon: ${srdWeapon.name}${kickerParts ? `. ${kickerParts}` : ""}`
+    : `Add ${slot} weapon — tap to select from inventory`;
 
   return (
     <>
-        <div className="rounded-lg border border-[#577399]/20 bg-slate-850 shadow-card overflow-hidden">
+      <div className="rounded-lg border border-[#577399]/20 bg-slate-850 shadow-card overflow-hidden">
         {/* Slot label */}
-          <div className="px-3 pt-2 pb-1 border-b border-[#577399]/20">
+        <div className="px-3 pt-2 pb-1 border-b border-[#577399]/20">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-[#577399]">
             {slot === "primary" ? "Primary Weapon" : "Secondary Weapon"}
           </span>
@@ -1036,26 +894,34 @@ function WeaponCard({ slot }: WeaponCardProps) {
             transition-colors cursor-pointer group
           "
         >
-          <p className="text-sm font-semibold text-parchment-100 group-hover:text-parchment-50 leading-snug">
-            {weapon.name ?? (
-              <span className="text-parchment-500 italic font-normal">Unnamed weapon…</span>
-            )}
-          </p>
-          {kickerParts && (
-            <p className="mt-0.5 text-xs text-parchment-500 truncate leading-snug">
-              {kickerParts}
-            </p>
+          {srdWeapon ? (
+            <>
+              <p className="text-sm font-semibold text-parchment-100 group-hover:text-parchment-50 leading-snug">
+                {srdWeapon.name}
+              </p>
+              {kickerParts && (
+                <p className="mt-0.5 text-xs text-parchment-500 truncate leading-snug">
+                  {kickerParts}
+                </p>
+              )}
+              {srdWeapon.feature && (
+                <p className="mt-0.5 text-[10px] text-gold-600 truncate">
+                  <span aria-label="Has feature" className="mr-1">✦</span>
+                  {srdWeapon.feature}
+                </p>
+              )}
+              <p className="mt-1 text-[10px] text-parchment-500 group-hover:text-parchment-300 transition-colors">
+                Tap to change
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-parchment-500 italic font-normal">No weapon selected…</p>
+              <p className="mt-1 text-[10px] text-parchment-500 group-hover:text-parchment-300 transition-colors">
+                Tap to select from inventory
+              </p>
+            </>
           )}
-          {weapon.feature && (
-            <p className="mt-0.5 text-[10px] text-gold-600 truncate">
-              <span aria-label="Has feature" className="mr-1">✦</span>
-              {weapon.feature}
-            </p>
-          )}
-          {/* Edit hint */}
-          <p className="mt-1 text-[10px] text-parchment-500 group-hover:text-parchment-300 transition-colors">
-            Tap to edit all fields
-          </p>
         </button>
       </div>
 

@@ -64,14 +64,10 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
   const [communityId, setCommunityId] = useState(character?.communityId ?? "");
   const [traitBonuses, setTraitBonuses] = useState<TraitBonuses>(character?.traitBonuses ?? {});
   const [primaryWeaponId, setPrimaryWeaponId] = useState<string | null>(
-    character?.weapons?.primary?.name
-      ? ALL_TIER1_WEAPONS.find((w) => w.name === character.weapons.primary.name)?.id ?? null
-      : null
+    character?.weapons?.primary?.weaponId ?? null
   );
   const [secondaryWeaponId, setSecondaryWeaponId] = useState<string | null>(
-    character?.weapons?.secondary?.name
-      ? ALL_TIER1_WEAPONS.find((w) => w.name === character.weapons.secondary.name)?.id ?? null
-      : null
+    character?.weapons?.secondary?.weaponId ?? null
   );
   const [armorId, setArmorId] = useState<string | null>(() => {
     // Recover armor from inventory: we store the armor name there on save.
@@ -145,6 +141,9 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
       const inventory: string[] = [
         ...UNIVERSAL_STARTING_ITEMS,
         ...(selectedArmor ? [selectedArmor.name] : []),
+        // Add selected weapons to inventory so the character sheet can resolve them
+        ...(primaryWeapon ? [primaryWeapon.name] : []),
+        ...(secondaryWeapon ? [secondaryWeapon.name] : []),
         ...(equipmentSelections.consumableId === "minor-health-potion"
           ? ["Minor Health Potion"]
           : equipmentSelections.consumableId === "minor-stamina-potion"
@@ -201,30 +200,8 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
         // Set activeArmorId so the live sheet and backend track which armor is equipped
         activeArmorId: armorId ?? null,
         weapons: {
-          primary: primaryWeapon
-            ? {
-                name: primaryWeapon.name,
-                trait: primaryWeapon.trait.toLowerCase() as Character["weapons"]["primary"]["trait"],
-                damage: primaryWeapon.damageDie,
-                range: primaryWeapon.range,
-                type: primaryWeapon.damageType.toLowerCase() as "physical" | "magic",
-                burden: (primaryWeapon.burden === "Two-Handed" ? "two-handed" : "one-handed") as "one-handed" | "two-handed",
-                tier: 1,
-                feature: primaryWeapon.feature,
-              }
-            : { name: null, trait: null, damage: null, range: null, type: null, burden: null, tier: null, feature: null },
-          secondary: secondaryWeapon
-            ? {
-                name: secondaryWeapon.name,
-                trait: secondaryWeapon.trait.toLowerCase() as Character["weapons"]["secondary"]["trait"],
-                damage: secondaryWeapon.damageDie,
-                range: secondaryWeapon.range,
-                type: secondaryWeapon.damageType.toLowerCase() as "physical" | "magic",
-                burden: (secondaryWeapon.burden === "Two-Handed" ? "two-handed" : "one-handed") as "one-handed" | "two-handed",
-                tier: 1,
-                feature: secondaryWeapon.feature,
-              }
-            : { name: null, trait: null, damage: null, range: null, type: null, burden: null, tier: null, feature: null },
+          primary:   { weaponId: primaryWeaponId   ?? null },
+          secondary: { weaponId: secondaryWeaponId ?? null },
         },
         gold: STARTING_GOLD,
         inventory,
