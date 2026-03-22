@@ -515,33 +515,33 @@ const SHORT_REST_ACTIONS: DowntimeAction[] = [
 
 const LONG_REST_ACTIONS: DowntimeAction[] = [
   {
-    id: "full-recovery",
-    name: "Full Recovery",
-    description: "Clear all HP, stress, and armor slots.",
+    id: "tend-all-wounds",
+    name: "Tend to All Wounds",
+    description: "Clear all Hit Points for yourself or an ally.",
     available: true,
   },
   {
-    id: "train",
-    name: "Train",
-    description: "Work toward your next level advancement.",
+    id: "clear-all-stress",
+    name: "Clear All Stress",
+    description: "Clear all Stress.",
     available: true,
   },
   {
-    id: "connect",
-    name: "Connect",
-    description: "Strengthen a bond with a companion.",
+    id: "repair-all-armor",
+    name: "Repair All Armor",
+    description: "Clear all Armor Slots from your or an ally's armor.",
     available: true,
   },
   {
-    id: "craft",
-    name: "Craft",
-    description: "Create or repair an item.",
+    id: "prepare",
+    name: "Prepare",
+    description: "Describe how you prepare, then gain a Hope. With allies, gain 2 Hope each.",
     available: true,
   },
   {
-    id: "seek-knowledge",
-    name: "Seek Knowledge",
-    description: "Research a topic or seek guidance.",
+    id: "work-on-project",
+    name: "Work on a Project",
+    description: "Pursue a long-term project. Advance its countdown.",
     available: true,
   },
 ];

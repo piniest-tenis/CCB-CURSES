@@ -8,7 +8,7 @@
  * Steps:
  *   1. Overview — shows target level, tier info, automatic bonuses
  *   2. Advancements — pick 2 slots worth of advancement choices
- *   3. Domain Card — pick a new domain card to acquire (or skip)
+ *   3. Domain Card — pick new domain card(s) to acquire (or skip)
  *   4. Confirm — review all choices and submit
  *
  * SRD rules enforced:
@@ -17,6 +17,9 @@
  *   - Tier achievements at levels 2, 5, 8: +1 proficiency (auto), +1 experience at +2
  *   - Damage thresholds +1 (auto)
  *   - Domain card level filter: card.level <= targetLevel
+ *   - "Extra Domain Card" advancement grants one extra pick on the Domain Card step
+ *
+ * Color scheme matches the base character sheet (#577399 steel-blue).
  */
 
 import React, { useState, useMemo, useCallback } from "react";
@@ -120,9 +123,9 @@ const ADVANCEMENT_OPTIONS: AdvancementOption[] = [
   {
     type: "additional-domain-card",
     label: "Extra Domain Card",
-    description: "Take an additional domain card from your domains.",
+    description: "Pick one additional domain card on the Domain Card step.",
     slotCost: 1,
-    needsDetail: true,
+    needsDetail: false,
     minLevel: 2,
   },
   {
@@ -168,7 +171,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
           key={i}
           className={`
             h-2 rounded-full transition-all duration-200
-            ${i === current ? "w-8 bg-gold-500" : i < current ? "w-2 bg-gold-700" : "w-2 bg-burgundy-800"}
+            ${i === current ? "w-8 bg-[#577399]" : i < current ? "w-2 bg-[#577399]/60" : "w-2 bg-slate-700"}
           `}
           aria-label={`Step ${i + 1} of ${total}${i === current ? " (current)" : ""}`}
         />
@@ -232,7 +235,7 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
     if (!opt) return null;
 
     return (
-      <div className="mt-3 rounded-lg border border-gold-800 bg-slate-850 p-3 space-y-2">
+      <div className="mt-3 rounded-lg border border-[#577399]/40 bg-slate-850 p-3 space-y-2">
         <p className="text-xs text-parchment-400">
           {opt.label}: specify detail
         </p>
@@ -244,7 +247,7 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
             aria-label="Select stat to increase"
             className="
               w-full rounded bg-slate-900 px-2 py-1.5 text-sm text-parchment-200
-              border border-burgundy-800 focus:outline-none focus:ring-1 focus:ring-gold-500
+              border border-[#577399]/40 focus:outline-none focus:ring-1 focus:ring-[#577399]
             "
           >
             <option value="">Select stat...</option>
@@ -263,7 +266,7 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
             aria-label="Select experience to increase"
             className="
               w-full rounded bg-slate-900 px-2 py-1.5 text-sm text-parchment-200
-              border border-burgundy-800 focus:outline-none focus:ring-1 focus:ring-gold-500
+              border border-[#577399]/40 focus:outline-none focus:ring-1 focus:ring-[#577399]
             "
           >
             <option value="">Select experience...</option>
@@ -275,7 +278,7 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
           </select>
         )}
 
-        {(pendingType === "new-experience" || pendingType === "multiclass" || pendingType === "additional-domain-card") && (
+        {(pendingType === "new-experience" || pendingType === "multiclass") && (
           <input
             type="text"
             value={detailValue}
@@ -283,20 +286,16 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
             placeholder={
               pendingType === "new-experience"
                 ? "Experience name"
-                : pendingType === "multiclass"
-                ? "Class ID for multiclass"
-                : "Card ID"
+                : "Class ID for multiclass"
             }
             aria-label={
               pendingType === "new-experience"
                 ? "New experience name"
-                : pendingType === "multiclass"
-                ? "Multiclass target class"
-                : "Additional domain card ID"
+                : "Multiclass target class"
             }
             className="
               w-full rounded bg-slate-900 px-2 py-1.5 text-sm text-parchment-200
-              border border-burgundy-800 focus:outline-none focus:ring-1 focus:ring-gold-500
+              border border-[#577399]/40 focus:outline-none focus:ring-1 focus:ring-[#577399]
               placeholder-parchment-700
             "
           />
@@ -309,10 +308,10 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
             disabled={!detailValue.trim()}
             className="
               rounded px-3 py-1.5 text-xs font-semibold
-              bg-gold-800/80 text-parchment-100 border border-gold-600
-              hover:bg-gold-700 transition-colors
+              bg-[#577399]/80 text-[#f7f7ff] border border-[#577399]
+              hover:bg-[#577399] transition-colors
               disabled:opacity-40 disabled:cursor-not-allowed
-              focus:outline-none focus:ring-2 focus:ring-gold-500
+              focus:outline-none focus:ring-2 focus:ring-[#577399]
             "
           >
             Add
@@ -322,9 +321,9 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
             onClick={handleCancelDetail}
             className="
               rounded px-3 py-1.5 text-xs font-semibold
-              bg-slate-800 text-parchment-400 border border-burgundy-800
+              bg-slate-800 text-parchment-400 border border-slate-700
               hover:bg-slate-700 transition-colors
-              focus:outline-none focus:ring-2 focus:ring-gold-500
+              focus:outline-none focus:ring-2 focus:ring-[#577399]
             "
           >
             Cancel
@@ -340,7 +339,7 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
         <h3 className="text-sm font-semibold text-parchment-200">
           Choose Advancements
         </h3>
-        <span className={`text-xs font-bold ${slotsRemaining === 0 ? "text-emerald-400" : "text-gold-500"}`}>
+        <span className={`text-xs font-bold ${slotsRemaining === 0 ? "text-emerald-400" : "text-[#577399]"}`}>
           {slotsUsed}/2 slots used
         </span>
       </div>
@@ -353,7 +352,7 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
             return (
               <div
                 key={i}
-                className="flex items-center justify-between rounded border border-gold-800/40 bg-gold-950/20 px-3 py-2"
+                className="flex items-center justify-between rounded border border-[#577399]/30 bg-[#577399]/10 px-3 py-2"
               >
                 <div>
                   <span className="text-sm text-parchment-200">{opt?.label ?? choice.type}</span>
@@ -361,14 +360,14 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
                     <span className="ml-2 text-xs text-parchment-500">({choice.detail})</span>
                   )}
                   {opt && opt.slotCost === 2 && (
-                    <span className="ml-2 text-[10px] text-gold-600 font-bold">2 SLOTS</span>
+                    <span className="ml-2 text-[10px] text-[#577399] font-bold">2 SLOTS</span>
                   )}
                 </div>
                 <button
                   type="button"
                   onClick={() => handleRemove(i)}
                   aria-label={`Remove ${opt?.label ?? choice.type}`}
-                  className="text-burgundy-500 hover:text-burgundy-300 text-xs px-1 transition-colors focus:outline-none focus:ring-1 focus:ring-gold-500 rounded"
+                  className="text-[#fe5f55] hover:text-[#fe5f55]/80 text-xs px-1 transition-colors focus:outline-none focus:ring-1 focus:ring-[#577399] rounded"
                 >
                   Remove
                 </button>
@@ -387,15 +386,15 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
               type="button"
               onClick={() => handleAdd(opt)}
               className="
-                flex flex-col items-start rounded-lg border border-burgundy-800 bg-slate-850 p-3
-                text-left transition-colors hover:border-gold-700 hover:bg-slate-800
-                focus:outline-none focus:ring-2 focus:ring-gold-500
+                flex flex-col items-start rounded-lg border border-[#577399]/30 bg-slate-900/80 p-3
+                text-left transition-colors hover:border-[#577399]/60 hover:bg-slate-800
+                focus:outline-none focus:ring-2 focus:ring-[#577399]
               "
             >
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold text-parchment-200">{opt.label}</span>
                 {opt.slotCost === 2 && (
-                  <span className="rounded bg-gold-900/50 px-1.5 text-[10px] font-bold text-gold-500">
+                  <span className="rounded bg-[#577399]/20 px-1.5 text-[10px] font-bold text-[#577399]">
                     2 slots
                   </span>
                 )}
@@ -417,17 +416,21 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
 interface DomainCardPickerProps {
   character: Character;
   targetLevel: number;
-  selectedCardId: string | null;
-  onSelect: (cardId: string | null) => void;
+  /** How many cards the user may select (1 = normal, 2 = has Extra Domain Card advancement) */
+  maxSelections: number;
+  selectedCardIds: string[];
+  onSelect: (cardIds: string[]) => void;
 }
 
-function DomainCardPicker({ character, targetLevel, selectedCardId, onSelect }: DomainCardPickerProps) {
+function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardIds, onSelect }: DomainCardPickerProps) {
   // Fetch cards for each domain the character has
   const domain0 = character.domains[0];
   const domain1 = character.domains[1];
 
-  const { data: domainData0 } = useDomain(domain0);
-  const { data: domainData1 } = useDomain(domain1);
+  const { data: domainData0, isLoading: loading0 } = useDomain(domain0);
+  const { data: domainData1, isLoading: loading1 } = useDomain(domain1);
+
+  const isLoading = (!!domain0 && loading0) || (!!domain1 && loading1);
 
   // Combine and filter cards
   const allCards = useMemo(() => {
@@ -437,20 +440,47 @@ function DomainCardPicker({ character, targetLevel, selectedCardId, onSelect }: 
     return cards;
   }, [domainData0, domainData1]);
 
-  // Filter: card.level <= targetLevel and not already owned
-  const ownedSet = useMemo(() => new Set([...character.domainVault, ...character.domainLoadout]), [character.domainVault, character.domainLoadout]);
+  // Build owned set using the same prefixed format as the builder: "domain/cardId"
+  const ownedSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const id of [...character.domainVault, ...character.domainLoadout]) {
+      set.add(id);
+      // Also add the raw cardId portion so both formats match
+      const slash = id.indexOf("/");
+      if (slash !== -1) set.add(id.slice(slash + 1));
+    }
+    return set;
+  }, [character.domainVault, character.domainLoadout]);
 
   const availableCards = useMemo(() => {
     return allCards
-      .filter((c) => c.level <= targetLevel && !ownedSet.has(c.cardId))
+      .filter((c) => {
+        if (c.level > targetLevel) return false;
+        // Check both "domain/cardId" prefixed and raw "cardId" against owned set
+        if (ownedSet.has(`${c.domain}/${c.cardId}`) || ownedSet.has(c.cardId)) return false;
+        return true;
+      })
       .sort((a, b) => a.level - b.level || a.domain.localeCompare(b.domain) || a.name.localeCompare(b.name));
   }, [allCards, targetLevel, ownedSet]);
 
+  const handleToggle = (cardId: string) => {
+    if (selectedCardIds.includes(cardId)) {
+      onSelect(selectedCardIds.filter((id) => id !== cardId));
+    } else if (selectedCardIds.length < maxSelections) {
+      onSelect([...selectedCardIds, cardId]);
+    }
+  };
+
   if (!domain0 && !domain1) {
     return (
-      <p className="text-xs text-parchment-600 italic">
-        No domains assigned. Select a class first.
-      </p>
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-parchment-200">
+          Acquire Domain Card
+        </h3>
+        <p className="text-xs text-parchment-600 italic">
+          No domains assigned. This character&apos;s class may not have domains configured.
+        </p>
+      </div>
     );
   }
 
@@ -458,70 +488,90 @@ function DomainCardPicker({ character, targetLevel, selectedCardId, onSelect }: 
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-parchment-200">
-          Acquire Domain Card
+          Acquire Domain Card{maxSelections > 1 ? "s" : ""}
         </h3>
-        {selectedCardId && (
-          <button
-            type="button"
-            onClick={() => onSelect(null)}
-            className="text-xs text-parchment-500 hover:text-parchment-300 transition-colors focus:outline-none focus:ring-1 focus:ring-gold-500 rounded px-1"
-          >
-            Clear selection
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {maxSelections > 1 && (
+            <span className={`text-xs font-bold ${selectedCardIds.length >= maxSelections ? "text-emerald-400" : "text-[#577399]"}`}>
+              {selectedCardIds.length}/{maxSelections} selected
+            </span>
+          )}
+          {selectedCardIds.length > 0 && (
+            <button
+              type="button"
+              onClick={() => onSelect([])}
+              className="text-xs text-parchment-500 hover:text-parchment-300 transition-colors focus:outline-none focus:ring-1 focus:ring-[#577399] rounded px-1"
+            >
+              Clear
+            </button>
+          )}
+        </div>
       </div>
 
       <p className="text-[11px] text-parchment-500">
-        Choose one card from your domains (level {targetLevel} or below).
-        Cards you already own are excluded. You may skip this step.
+        Choose {maxSelections > 1 ? `up to ${maxSelections} cards` : "one card"} from your domains
+        ({domain0 && domain1 ? `${domain0} & ${domain1}` : domain0 ?? domain1}, level {targetLevel} or below).
+        {maxSelections > 1 && " You chose Extra Domain Card as an advancement, granting one extra pick."}
+        {" "}Cards you already own are excluded.{maxSelections === 1 ? " You may skip this step." : ""}
       </p>
 
-      {availableCards.length === 0 ? (
+      {isLoading ? (
+        <div className="flex items-center gap-2 py-4">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#577399] border-t-transparent" aria-hidden="true" />
+          <span className="text-xs text-parchment-500">Loading domain cards...</span>
+        </div>
+      ) : availableCards.length === 0 ? (
         <p className="text-xs text-parchment-600 italic">
           No new cards available at this level.
         </p>
       ) : (
-        <ul className="space-y-1 max-h-64 overflow-y-auto pr-1" role="listbox" aria-label="Available domain cards">
-          {availableCards.map((card) => (
-            <li key={card.cardId}>
-              <button
-                type="button"
-                onClick={() => onSelect(card.cardId === selectedCardId ? null : card.cardId)}
-                role="option"
-                aria-selected={selectedCardId === card.cardId}
-                className={`
-                  w-full flex items-center gap-2 rounded px-3 py-2
-                  text-left transition-colors
-                  focus:outline-none focus:ring-1 focus:ring-gold-500
-                  ${selectedCardId === card.cardId
-                    ? "bg-gold-900/40 border border-gold-600"
-                    : "border border-transparent hover:bg-burgundy-900/30 hover:border-burgundy-800"
-                  }
-                `}
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-parchment-200 truncate">
-                      {card.name}
+        <ul className="space-y-1 max-h-64 overflow-y-auto pr-1" role="listbox" aria-label="Available domain cards" aria-multiselectable={maxSelections > 1}>
+          {availableCards.map((card) => {
+            const isSelected = selectedCardIds.includes(card.cardId);
+            const atMax = selectedCardIds.length >= maxSelections && !isSelected;
+            return (
+              <li key={card.cardId}>
+                <button
+                  type="button"
+                  onClick={() => handleToggle(card.cardId)}
+                  disabled={atMax}
+                  role="option"
+                  aria-selected={isSelected}
+                  className={`
+                    w-full flex items-center gap-2 rounded px-3 py-2
+                    text-left transition-colors
+                    focus:outline-none focus:ring-1 focus:ring-[#577399]
+                    disabled:opacity-40 disabled:cursor-not-allowed
+                    ${isSelected
+                      ? "bg-[#577399]/20 border border-[#577399]"
+                      : "border border-transparent hover:bg-[#577399]/10 hover:border-[#577399]/30"
+                    }
+                  `}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-parchment-200 truncate">
+                        {card.name}
+                      </span>
+                      {card.isCursed && (
+                        <span title="Cursed" className="text-xs text-[#fe5f55] font-bold">Cursed</span>
+                      )}
+                      {card.isLinkedCurse && (
+                        <span title="Linked Curse" className="text-xs text-[#fe5f55] font-bold">Linked</span>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-parchment-500 line-clamp-1">
+                      {card.description}
                     </span>
-                    {card.isCursed && (
-                      <span title="Cursed" className="text-xs text-burgundy-400 font-bold">Cursed</span>
-                    )}
-                    {card.isLinkedCurse && (
-                      <span title="Linked Curse" className="text-xs text-burgundy-400 font-bold">Linked</span>
-                    )}
                   </div>
-                  <span className="text-[10px] text-parchment-500 line-clamp-1">
-                    {card.description}
+                  <span className="text-[10px] text-parchment-600 uppercase shrink-0">{card.domain}</span>
+                  <span className="rounded-full border border-[#577399]/60 px-1.5 text-[10px] font-bold text-[#577399] shrink-0">
+                    Lv{card.level}
                   </span>
-                </div>
-                <span className="text-[10px] text-parchment-600 uppercase shrink-0">{card.domain}</span>
-                <span className="rounded-full border border-gold-800 px-1.5 text-[10px] font-bold text-gold-500 shrink-0">
-                  Lv{card.level}
-                </span>
-              </button>
-            </li>
-          ))}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
@@ -538,12 +588,18 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
 
   const [step, setStep]           = useState(0);
   const [advancements, setAdvancements] = useState<AdvancementChoice[]>([]);
-  const [newDomainCardId, setNewDomainCardId] = useState<string | null>(null);
+  // Tracks selected domain card IDs on the Domain Card step.
+  // First entry = newDomainCardId, second (if extra domain card advancement) = additional card.
+  const [selectedDomainCardIds, setSelectedDomainCardIds] = useState<string[]>([]);
 
   const levelUpMutation = useCharacterLevelUp(character.characterId);
 
   const slotsUsed = advancements.reduce((sum, c) => sum + advancementSlotCost(c.type), 0);
   const advancementsComplete = slotsUsed === 2;
+
+  // Check if user chose the "additional-domain-card" advancement
+  const hasExtraDomainCard = advancements.some((a) => a.type === "additional-domain-card");
+  const maxDomainCardSelections = hasExtraDomainCard ? 2 : 1;
 
   const STEPS = ["Overview", "Advancements", "Domain Card", "Confirm"];
 
@@ -558,10 +614,18 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
   }, [step, advancementsComplete]);
 
   const handleSubmit = () => {
+    // Build advancements with extra domain card detail filled in
+    const finalAdvancements = advancements.map((adv) => {
+      if (adv.type === "additional-domain-card" && selectedDomainCardIds.length > 1) {
+        return { ...adv, detail: selectedDomainCardIds[1] };
+      }
+      return adv;
+    });
+
     const input: LevelUpInput = {
       targetLevel,
-      advancements,
-      newDomainCardId,
+      advancements: finalAdvancements,
+      newDomainCardId: selectedDomainCardIds[0] ?? null,
     };
 
     levelUpMutation.mutate(input, {
@@ -571,9 +635,18 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
     });
   };
 
+  // When advancements change, trim extra domain card selections if no longer applicable
+  const handleAdvancementsChange = (newAdvancements: AdvancementChoice[]) => {
+    setAdvancements(newAdvancements);
+    const stillHasExtra = newAdvancements.some((a) => a.type === "additional-domain-card");
+    if (!stillHasExtra && selectedDomainCardIds.length > 1) {
+      setSelectedDomainCardIds(selectedDomainCardIds.slice(0, 1));
+    }
+  };
+
   if (targetLevel > 10) {
     return (
-      <div className="rounded-xl border border-burgundy-900 bg-slate-900/95 p-6 shadow-card-fantasy-hover">
+      <div className="rounded-xl border border-[#577399]/30 bg-slate-900/95 p-6 shadow-card-fantasy-hover">
         <h2 className="font-serif text-lg font-semibold text-parchment-200 mb-3">
           Maximum Level Reached
         </h2>
@@ -585,9 +658,9 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
           onClick={onClose}
           className="
             rounded-lg px-4 py-2 text-sm font-semibold
-            bg-burgundy-800 text-parchment-200 border border-burgundy-700
-            hover:bg-burgundy-700 transition-colors
-            focus:outline-none focus:ring-2 focus:ring-gold-500
+            bg-slate-800 text-parchment-200 border border-[#577399]/40
+            hover:bg-slate-700 transition-colors
+            focus:outline-none focus:ring-2 focus:ring-[#577399]
           "
         >
           Close
@@ -598,21 +671,21 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
 
   return (
     <div
-      className="rounded-xl border border-gold-800/60 bg-slate-900/98 p-6 shadow-card-fantasy-hover space-y-5"
+      className="rounded-xl border border-[#577399]/40 bg-slate-900/98 p-6 shadow-card-fantasy-hover space-y-5"
       role="dialog"
       aria-label={`Level up to level ${targetLevel}`}
       aria-modal="true"
     >
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="font-serif text-lg font-semibold text-gold-400">
+        <h2 className="font-serif text-lg font-semibold text-[#f7f7ff]">
           Level Up: {character.level} &rarr; {targetLevel}
         </h2>
         <button
           type="button"
           onClick={onClose}
           aria-label="Cancel level up"
-          className="text-parchment-600 hover:text-parchment-300 text-sm transition-colors focus:outline-none focus:ring-1 focus:ring-gold-500 rounded px-2 py-1"
+          className="text-parchment-600 hover:text-parchment-300 text-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#577399] rounded px-2 py-1"
         >
           Cancel
         </button>
@@ -629,15 +702,15 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
               {STEPS[0]}
             </h3>
 
-            <div className="rounded-lg border border-burgundy-800 bg-slate-850 p-4 space-y-2">
+            <div className="rounded-lg border border-[#577399]/30 bg-slate-900/80 p-4 space-y-2">
               <p className="text-sm text-parchment-300">
                 <span className="font-semibold text-parchment-200">{character.name}</span> will advance to level {targetLevel}.
               </p>
 
               {/* Tier info */}
               {newTier !== currentTier && (
-                <div className="rounded border border-gold-800 bg-gold-950/30 p-3">
-                  <p className="text-sm font-semibold text-gold-400">
+                <div className="rounded border border-[#577399]/50 bg-[#577399]/10 p-3">
+                  <p className="text-sm font-semibold text-[#f7f7ff]">
                     Tier {currentTier} &rarr; Tier {newTier}
                   </p>
                 </div>
@@ -660,12 +733,12 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
                   {hasTierAchievement && (
                     <>
                       <li className="flex items-center gap-2">
-                        <span className="text-gold-400 text-xs font-bold">+1</span>
-                        <span className="text-gold-300">Proficiency (Tier Achievement)</span>
+                        <span className="text-[#577399] text-xs font-bold">+1</span>
+                        <span className="text-[#b9baa3]">Proficiency (Tier Achievement)</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <span className="text-gold-400 text-xs font-bold">+1</span>
-                        <span className="text-gold-300">New Experience at +2 (Tier Achievement)</span>
+                        <span className="text-[#577399] text-xs font-bold">+1</span>
+                        <span className="text-[#b9baa3]">New Experience at +2 (Tier Achievement)</span>
                       </li>
                     </>
                   )}
@@ -681,7 +754,7 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
             targetLevel={targetLevel}
             character={character}
             choices={advancements}
-            onChange={setAdvancements}
+            onChange={handleAdvancementsChange}
           />
         )}
 
@@ -690,8 +763,9 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
           <DomainCardPicker
             character={character}
             targetLevel={targetLevel}
-            selectedCardId={newDomainCardId}
-            onSelect={setNewDomainCardId}
+            maxSelections={maxDomainCardSelections}
+            selectedCardIds={selectedDomainCardIds}
+            onSelect={setSelectedDomainCardIds}
           />
         )}
 
@@ -702,12 +776,12 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
               Confirm Level Up
             </h3>
 
-            <div className="rounded-lg border border-burgundy-800 bg-slate-850 p-4 space-y-3">
+            <div className="rounded-lg border border-[#577399]/30 bg-slate-900/80 p-4 space-y-3">
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-parchment-600 font-medium mb-1">
                   Target Level
                 </p>
-                <p className="text-lg font-bold text-gold-400">{targetLevel}</p>
+                <p className="text-lg font-bold text-[#f7f7ff]">{targetLevel}</p>
               </div>
 
               {hasTierAchievement && (
@@ -715,7 +789,7 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
                   <p className="text-[10px] uppercase tracking-wider text-parchment-600 font-medium mb-1">
                     Tier Achievement
                   </p>
-                  <p className="text-sm text-gold-300">+1 Proficiency, +1 Experience at +2</p>
+                  <p className="text-sm text-[#b9baa3]">+1 Proficiency, +1 Experience at +2</p>
                 </div>
               )}
 
@@ -736,10 +810,13 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
                   <ul className="space-y-1">
                     {advancements.map((adv, i) => {
                       const opt = ADVANCEMENT_OPTIONS.find((o) => o.type === adv.type);
+                      const displayDetail = adv.type === "additional-domain-card" && selectedDomainCardIds.length > 1
+                        ? selectedDomainCardIds[1]
+                        : adv.detail;
                       return (
                         <li key={i} className="text-sm text-parchment-300">
                           {opt?.label ?? adv.type}
-                          {adv.detail && <span className="text-parchment-500"> ({adv.detail})</span>}
+                          {displayDetail && <span className="text-parchment-500"> ({displayDetail})</span>}
                         </li>
                       );
                     })}
@@ -749,18 +826,27 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
 
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-parchment-600 font-medium mb-1">
-                  New Domain Card
+                  New Domain Card{selectedDomainCardIds.length > 1 ? "s" : ""}
                 </p>
-                <p className="text-sm text-parchment-300">
-                  {newDomainCardId ?? "None (skipped)"}
-                </p>
+                {selectedDomainCardIds.length === 0 ? (
+                  <p className="text-sm text-parchment-500 italic">None (skipped)</p>
+                ) : (
+                  <ul className="space-y-0.5">
+                    {selectedDomainCardIds.map((id, i) => (
+                      <li key={id} className="text-sm text-parchment-300">
+                        {id}
+                        {i === 1 && <span className="ml-1 text-xs text-[#577399]">(extra)</span>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
 
             {/* Error display */}
             {levelUpMutation.isError && (
-              <div role="alert" className="rounded border border-burgundy-600 bg-burgundy-950/50 px-3 py-2">
-                <p className="text-xs text-burgundy-300">
+              <div role="alert" className="rounded border border-[#fe5f55]/60 bg-[#fe5f55]/10 px-3 py-2">
+                <p className="text-xs text-[#fe5f55]">
                   {levelUpMutation.error instanceof ApiError
                     ? levelUpMutation.error.message
                     : levelUpMutation.error?.message ?? "Level up failed."}
@@ -772,17 +858,17 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
       </div>
 
       {/* Navigation buttons */}
-      <div className="flex items-center justify-between border-t border-burgundy-900/40 pt-4">
+      <div className="flex items-center justify-between border-t border-[#577399]/20 pt-4">
         <button
           type="button"
           onClick={() => step === 0 ? onClose() : setStep(step - 1)}
           disabled={levelUpMutation.isPending}
           className="
             rounded-lg px-4 py-2 text-sm font-semibold
-            bg-slate-800 text-parchment-400 border border-burgundy-800
+            bg-slate-800 text-parchment-400 border border-slate-700
             hover:bg-slate-700 transition-colors
             disabled:opacity-50
-            focus:outline-none focus:ring-2 focus:ring-gold-500
+            focus:outline-none focus:ring-2 focus:ring-[#577399]
           "
         >
           {step === 0 ? "Cancel" : "Back"}
@@ -795,10 +881,10 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
             disabled={!canProceed()}
             className="
               rounded-lg px-4 py-2 text-sm font-semibold
-              bg-gold-800/80 text-parchment-100 border border-gold-600
-              hover:bg-gold-700 transition-colors
+              bg-[#577399]/80 text-[#f7f7ff] border border-[#577399]
+              hover:bg-[#577399] transition-colors
               disabled:opacity-40 disabled:cursor-not-allowed
-              focus:outline-none focus:ring-2 focus:ring-gold-500
+              focus:outline-none focus:ring-2 focus:ring-[#577399]
             "
           >
             Next
@@ -811,11 +897,10 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
             aria-busy={levelUpMutation.isPending}
             className="
               rounded-lg px-6 py-2 text-sm font-bold
-              bg-gold-600 text-slate-900 border border-gold-500
-              hover:bg-gold-500 transition-colors
+              bg-[#577399] text-[#f7f7ff] border border-[#577399]
+              hover:bg-[#577399]/80 transition-colors
               disabled:opacity-40 disabled:cursor-not-allowed
-              focus:outline-none focus:ring-2 focus:ring-gold-500
-              shadow-glow-gold
+              focus:outline-none focus:ring-2 focus:ring-[#577399]
             "
           >
             {levelUpMutation.isPending ? (

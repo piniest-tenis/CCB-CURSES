@@ -6,18 +6,24 @@
  * Radix Dialog for short/long rest.
  *
  * Each rest action button calls POST /characters/{id}/actions with the
- * appropriate actionId. "Full Recovery" fires three sequential calls:
- *   clear-stress { n: all }, clear-hp { n: all }, clear-armor { n: all }
- * (or a single full-recovery actionId if the server supports it).
+ * appropriate actionId.
  *
  * On 422 INVALID_ACTION, an inline role="alert" appears near the button
  * that triggered it — never a toast.
  *
- * Action map:
- *   Clear Stress (short rest)  → clear-stress    { n: 2 }
- *   Tend Wounds  (short rest)  → clear-hp         { n: 1 }
- *   Full Recovery (long rest)  → full-recovery    (single call; server applies all three)
- *   Prepare      (short rest)  → roleplay only, no mechanical call
+ * SRD-compliant rest moves (SRD pp. 21–22):
+ *
+ * Short rest (choose 2):
+ *   Clear Stress         → clear-stress  { n: 2 }
+ *   Tend Wounds          → clear-hp      { n: 1 }
+ *   Prepare              → roleplay only
+ *
+ * Long rest (choose 2, may repeat):
+ *   Tend to All Wounds   → clear-hp      { n: 99 }  (server clamps to actual marked)
+ *   Clear All Stress     → clear-stress  { n: 99 }
+ *   Repair All Armor     → clear-armor   { n: 99 }
+ *   Prepare              → roleplay only
+ *   Work on a Project    → roleplay only (tracked via Downtime Projects panel)
  */
 
 import React, { useState } from "react";
@@ -177,82 +183,6 @@ function RestActionButton({
   );
 }
 
-// ─── FullRecoveryButton ───────────────────────────────────────────────────────
-// Fires a single full-recovery action (server applies all three clears).
-
-function FullRecoveryButton({ characterId }: { characterId: string }) {
-  const mutation = useCharacterAction(characterId);
-  const [inlineError, setInlineError] = useState<string | null>(null);
-  const [succeeded, setSucceeded] = useState(false);
-  const errorId = React.useId();
-
-  const handleClick = async () => {
-    setInlineError(null);
-    setSucceeded(false);
-    try {
-      await mutation.mutateAsync({ actionId: "full-recovery" });
-      setSucceeded(true);
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 422) {
-        setInlineError(err.message);
-      } else if (err instanceof Error) {
-        setInlineError(err.message);
-      } else {
-        setInlineError("An unexpected error occurred.");
-      }
-    }
-  };
-
-  return (
-    <div
-      className={`rounded border p-3 space-y-2 ${
-        succeeded
-          ? "border-gold-700 bg-gold-950/20"
-          : "border-burgundy-700 bg-burgundy-950/20"
-      }`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-parchment-100">Full Recovery</p>
-          <p className="text-xs text-parchment-500 mt-0.5">
-            Clear all Stress, all HP, and all Armor slots. Full long rest benefit.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={handleClick}
-          disabled={mutation.isPending}
-          aria-label="Perform full recovery"
-          aria-describedby={inlineError ? errorId : undefined}
-          aria-busy={mutation.isPending}
-          className={`
-            shrink-0 rounded px-3 py-1.5 text-xs font-semibold transition-colors
-            focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-1 focus:ring-offset-slate-900
-            disabled:opacity-50 disabled:cursor-wait
-            ${
-              succeeded
-                ? "bg-gold-800 text-gold-200"
-                : "bg-burgundy-700 text-parchment-100 hover:bg-burgundy-600"
-            }
-          `}
-        >
-          {mutation.isPending ? (
-            <span
-              aria-hidden="true"
-              className="inline-block h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"
-            />
-          ) : succeeded ? (
-            "✓ Done"
-          ) : (
-            "Recover"
-          )}
-        </button>
-      </div>
-      <InlineActionError message={inlineError} id={errorId} />
-    </div>
-  );
-}
-
 // ─── Main modal ───────────────────────────────────────────────────────────────
 
 export function DowntimeModal({ characterId, open, onClose }: DowntimeModalProps) {
@@ -291,30 +221,39 @@ export function DowntimeModal({ characterId, open, onClose }: DowntimeModalProps
   const longRestActions: RestActionButtonProps[] = [
     {
       characterId,
-      label: "Clear Stress",
-      description: "Clear 2 Stress. Part of a long rest.",
-      actionId: "clear-stress",
-      params: { n: 2 },
-    },
-    {
-      characterId,
-      label: "Tend Wounds",
-      description: "Clear 1 HP. Part of a long rest.",
+      label: "Tend to All Wounds",
+      description: "Clear all Hit Points for yourself or an ally.",
       actionId: "clear-hp",
-      params: { n: 1 },
+      params: { n: 99 },
     },
     {
       characterId,
-      label: "Repair Armor",
-      description: "Clear 1 Armor slot. Patch your armor during the rest.",
+      label: "Clear All Stress",
+      description: "Clear all Stress.",
+      actionId: "clear-stress",
+      params: { n: 99 },
+    },
+    {
+      characterId,
+      label: "Repair All Armor",
+      description: "Clear all Armor Slots from your or an ally's armor.",
       actionId: "clear-armor",
-      params: { n: 1 },
+      params: { n: 99 },
     },
     {
       characterId,
       label: "Prepare",
-      description: "Gain 1 Hope (or 2 with an ally). Roleplay only.",
+      description:
+        "Describe how you prepare for the next day's adventure, then gain a Hope. If you Prepare with one or more party members, you each gain 2 Hope.",
       actionId: "prepare-rest",
+      roleplaysOnly: true,
+    },
+    {
+      characterId,
+      label: "Work on a Project",
+      description:
+        "With GM approval, pursue a long-term project (e.g. deciphering a text, crafting a weapon). Advance your project's countdown.",
+      actionId: "work-on-project",
       roleplaysOnly: true,
     },
   ];
@@ -377,7 +316,7 @@ export function DowntimeModal({ characterId, open, onClose }: DowntimeModalProps
               ) : (
                 <p>
                   <span className="font-medium text-parchment-300">Long Rest (several hours).</span>{" "}
-                  Choose 2 downtime moves, or take a Full Recovery. Domain cards may be freely swapped.
+                  Choose 2 downtime moves (you may choose the same move twice). Domain cards may be freely swapped.
                 </p>
               )}
             </div>
@@ -388,11 +327,6 @@ export function DowntimeModal({ characterId, open, onClose }: DowntimeModalProps
                 <RestActionButton key={action.label} {...action} />
               ))}
             </div>
-
-            {/* Full Recovery — long rest only */}
-            {restType === "long" && (
-              <FullRecoveryButton characterId={characterId} />
-            )}
 
             <button
               onClick={handleClose}
