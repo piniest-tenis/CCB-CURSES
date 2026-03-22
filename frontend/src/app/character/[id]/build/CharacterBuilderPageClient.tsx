@@ -175,6 +175,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
         0;
       const baseEvasion = selectedClassData?.startingEvasion ?? 0;
       const derivedStats = {
+        baseEvasion,
         evasion: baseEvasion + evasionMod,
         armor: selectedArmor?.baseArmorScore ?? 0,
       };
@@ -197,6 +198,8 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
         stats,
         derivedStats,
         damageThresholds,
+        // Set activeArmorId so the live sheet and backend track which armor is equipped
+        activeArmorId: armorId ?? null,
         weapons: {
           primary: primaryWeapon
             ? {

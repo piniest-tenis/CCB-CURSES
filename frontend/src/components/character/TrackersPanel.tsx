@@ -32,6 +32,8 @@ import { EditableField } from "./EditSidebar";
 import {
   experienceNameField,
 } from "./editSidebarConfig";
+import { ALL_ARMOR, ALL_TIER1_WEAPONS } from "@/lib/srdEquipment";
+import type { SRDArmor, SRDWeapon } from "@/lib/srdEquipment";
 
 // ─── Props helper: characterId is provided by TrackersPanel from the store ────
 
@@ -696,6 +698,27 @@ function WeaponSidebar({ open, onClose, slot }: WeaponSidebarProps) {
   const weapon = activeCharacter.weapons[slot];
   const base   = `weapons.${slot}`;
   const title  = slot === "primary" ? "Primary Weapon" : "Secondary Weapon";
+  const otherSlot = slot === "primary" ? "secondary" : "primary";
+  const otherWeapon = activeCharacter.weapons[otherSlot];
+
+  // Inventory-based weapon picker: find SRD weapons whose names appear in inventory
+  const inventory = activeCharacter.inventory ?? [];
+  const inventoryWeaponOptions: SRDWeapon[] = ALL_TIER1_WEAPONS.filter((w) =>
+    inventory.some((item) => item.toLowerCase() === w.name.toLowerCase())
+  );
+  // The other slot's weapon name (to prevent double-selection)
+  const otherWeaponName = otherWeapon.name?.toLowerCase() ?? null;
+
+  const handleInventorySelect = (w: SRDWeapon) => {
+    updateField(`${base}.name`,    w.name);
+    updateField(`${base}.trait`,   w.trait.toLowerCase());
+    updateField(`${base}.damage`,  w.damageDie);
+    updateField(`${base}.range`,   w.range);
+    updateField(`${base}.type`,    w.damageType.toLowerCase() as "physical" | "magic");
+    updateField(`${base}.burden`,  w.burden === "Two-Handed" ? "two-handed" : "one-handed");
+    updateField(`${base}.tier`,    w.tier);
+    updateField(`${base}.feature`, w.feature ?? null);
+  };
 
   // Debounced text field — updates store immediately, then persists
   const debounceRefs = React.useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -763,6 +786,72 @@ function WeaponSidebar({ open, onClose, slot }: WeaponSidebarProps) {
               Weapons are defined by their trait, damage dice, range, burden, tier, and any special feature. Add your proficiency to damage if the weapon is in your proficiency tier. (SRD p. 23)
             </p>
           </div>
+
+          {/* Inventory weapon picker */}
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] sidebar-text">
+              Select from inventory
+            </p>
+            {inventoryWeaponOptions.length === 0 ? (
+              <p className="text-sm text-[#b9baa3]/60 italic text-center py-2">
+                No weapons found in inventory. Add weapons via the Equipment panel first.
+              </p>
+            ) : (
+              <ul className="space-y-1.5" role="listbox" aria-label="Inventory weapon options">
+                {inventoryWeaponOptions.map((w) => {
+                  const isSelected = w.name === weapon.name;
+                  const isUsedByOther = w.name.toLowerCase() === otherWeaponName;
+                  return (
+                    <li key={w.name}>
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={isSelected}
+                        disabled={isUsedByOther}
+                        onClick={() => { handleInventorySelect(w); onClose(); }}
+                        title={isUsedByOther ? `Already equipped as ${otherSlot} weapon` : undefined}
+                        className={[
+                          "w-full text-left rounded-xl border px-4 py-2.5 transition-all",
+                          "focus:outline-none focus:ring-2 focus:ring-[#577399]",
+                          "disabled:opacity-40 disabled:cursor-not-allowed",
+                          isSelected
+                            ? "border-[#577399] bg-[#577399]/20 shadow-md"
+                            : "border-[#577399]/25 bg-slate-900/60 hover:border-[#577399]/60 hover:bg-[#577399]/10",
+                        ].join(" ")}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-[#f7f7ff]">{w.name}</p>
+                            <p className="text-[11px] text-[#b9baa3] mt-0.5">
+                              {w.damageDie} · {w.range} · {w.trait} · {w.burden === "Two-Handed" ? "Two-handed" : "One-handed"}
+                            </p>
+                            {w.feature && (
+                              <p className="text-[11px] text-gold-500 mt-0.5">
+                                <span className="mr-1" aria-hidden="true">✦</span>
+                                {w.feature}
+                              </p>
+                            )}
+                          </div>
+                          {isSelected && !isUsedByOther && (
+                            <span className="text-[10px] font-bold text-[#577399] uppercase tracking-wider mt-0.5 shrink-0">
+                              Equipped
+                            </span>
+                          )}
+                          {isUsedByOther && (
+                            <span className="text-[10px] font-bold text-[#b9baa3] uppercase tracking-wider mt-0.5 shrink-0">
+                              {otherSlot}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+
+          <hr className="border-[#577399]/20" />
 
           {/* Name */}
           <div className="space-y-1.5">
@@ -974,6 +1063,284 @@ function WeaponCard({ slot }: WeaponCardProps) {
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         slot={slot}
+      />
+    </>
+  );
+}
+
+// ─── ArmorSidebar ─────────────────────────────────────────────────────────────
+// Slide-in panel for selecting active armor from inventory.
+// Only armor items present in character.inventory are shown.
+
+function ArmorSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { activeCharacter, updateField } = useCharacterStore();
+  const headingId = React.useId();
+  const panelRef  = React.useRef<HTMLDivElement>(null);
+
+  // Focus first focusable element when opened
+  React.useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => {
+      const first = panelRef.current?.querySelector<HTMLElement>(
+        'button, input, [tabindex]:not([tabindex="-1"])'
+      );
+      first?.focus();
+    }, 50);
+    return () => clearTimeout(t);
+  }, [open]);
+
+  // Escape to close
+  React.useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { e.stopPropagation(); onClose(); }
+    };
+    document.addEventListener("keydown", handler, true);
+    return () => document.removeEventListener("keydown", handler, true);
+  }, [open, onClose]);
+
+  // Tab trap
+  React.useEffect(() => {
+    if (!open || !panelRef.current) return;
+    const panel = panelRef.current;
+    const selector = 'button, input, [tabindex]:not([tabindex="-1"])';
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const focusable = Array.from(panel.querySelectorAll<HTMLElement>(selector)).filter(
+        (el) => !el.hasAttribute("disabled")
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last  = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault(); last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault(); first.focus();
+      }
+    };
+    panel.addEventListener("keydown", handleTab);
+    return () => panel.removeEventListener("keydown", handleTab);
+  }, [open]);
+
+  if (!activeCharacter) return null;
+
+  const inventory = activeCharacter.inventory ?? [];
+  const activeArmorId = activeCharacter.activeArmorId ?? null;
+
+  // Find SRD armor entries whose names appear in inventory
+  const inventoryArmorOptions: SRDArmor[] = ALL_ARMOR.filter((a) =>
+    inventory.some((item) => item.toLowerCase() === a.name.toLowerCase())
+  );
+
+  const handleSelect = (armorId: string) => {
+    updateField("activeArmorId", armorId);
+    onClose();
+  };
+
+  const handleClear = () => {
+    updateField("activeArmorId", null);
+    onClose();
+  };
+
+  return (
+    <>
+      {open && (
+        <div
+          aria-hidden="true"
+          onClick={onClose}
+          className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm lg:hidden"
+        />
+      )}
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={headingId}
+        aria-hidden={!open}
+        inert={!open ? ("" as unknown as boolean) : undefined}
+        className={[
+          "fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-[28rem] flex-col",
+          "border-l border-[#577399]/35 bg-[#0f1713] shadow-2xl",
+          "transition-transform duration-300 ease-in-out",
+          open ? "translate-x-0" : "translate-x-full",
+        ].join(" ")}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[#577399]/25 px-5 py-4">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.24em] sidebar-text">Armor</p>
+            <h2 id={headingId} className="font-serif text-lg font-semibold text-[#f7f7ff]">Active Armor</h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close armor selector"
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#577399]/30 text-[#b9baa3] hover:bg-[#577399]/12 hover:text-[#f7f7ff] focus:outline-none focus:ring-2 focus:ring-[#577399]"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+          {/* SRD guidance */}
+          <div className="rounded-xl border border-[#577399]/20 bg-[#b9baa3]/[0.06] px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] sidebar-text mb-1">SRD guidance</p>
+            <p className="text-sm leading-relaxed text-[#f7f7ff]">
+              Your active armor determines your Armor Score (slots), Evasion modifier, and Damage Thresholds.
+              Only armor items currently in your inventory can be selected. (SRD p. 29)
+            </p>
+          </div>
+
+          {inventoryArmorOptions.length === 0 ? (
+            <p className="text-sm text-[#b9baa3]/60 italic text-center pt-4">
+              No armor found in your inventory. Add armor via the Equipment panel first.
+            </p>
+          ) : (
+            <ul className="space-y-2" role="listbox" aria-label="Inventory armor options">
+              {inventoryArmorOptions.map((armor) => {
+                const isActive = armor.id === activeArmorId;
+                return (
+                  <li key={armor.id}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={isActive}
+                      onClick={() => handleSelect(armor.id)}
+                      className={[
+                        "w-full text-left rounded-xl border px-4 py-3 transition-all",
+                        "focus:outline-none focus:ring-2 focus:ring-[#577399]",
+                        isActive
+                          ? "border-[#577399] bg-[#577399]/20 shadow-md"
+                          : "border-[#577399]/25 bg-slate-900/60 hover:border-[#577399]/60 hover:bg-[#577399]/10",
+                      ].join(" ")}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-[#f7f7ff]">{armor.name}</p>
+                          <p className="text-[11px] text-[#b9baa3] mt-0.5">
+                            Tier {armor.tier} · Score {armor.baseArmorScore} · Major {armor.baseMajorThreshold}+ · Severe {armor.baseSevereThreshold}+
+                          </p>
+                          {armor.feature && (
+                            <p className="text-[11px] text-gold-500 mt-0.5">
+                              <span className="mr-1" aria-hidden="true">✦</span>
+                              {armor.feature}
+                            </p>
+                          )}
+                        </div>
+                        {isActive && (
+                          <span className="text-[10px] font-bold text-[#577399] uppercase tracking-wider mt-0.5 shrink-0">
+                            Active
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {activeArmorId && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="w-full rounded-xl border border-[#fe5f55]/30 bg-[#fe5f55]/10 px-4 py-2.5 text-sm font-semibold text-[#fe5f55] hover:bg-[#fe5f55]/20 focus:outline-none focus:ring-2 focus:ring-[#fe5f55]/40"
+            >
+              Clear active armor
+            </button>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-[#577399]/25 px-5 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-xl border border-[#577399]/40 bg-[#577399]/15 px-4 py-3 text-sm font-semibold text-[#f7f7ff] hover:bg-[#577399]/25 focus:outline-none focus:ring-2 focus:ring-[#577399]"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── ArmorCard ────────────────────────────────────────────────────────────────
+// Displays the currently active armor. Clicking opens ArmorSidebar.
+
+function ArmorCard() {
+  const { activeCharacter } = useCharacterStore();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  if (!activeCharacter) return null;
+
+  const activeArmorId = activeCharacter.activeArmorId ?? null;
+  const activeArmor = activeArmorId
+    ? ALL_ARMOR.find((a) => a.id === activeArmorId) ?? null
+    : null;
+
+  const ariaLabel = activeArmor
+    ? `Edit active armor: ${activeArmor.name}`
+    : "Select active armor — tap to choose from inventory";
+
+  return (
+    <>
+      <div className="rounded-lg border border-[#577399]/20 bg-slate-850 shadow-card overflow-hidden">
+        {/* Slot label */}
+        <div className="px-3 pt-2 pb-1 border-b border-[#577399]/20">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-[#577399]">
+            Armor
+          </span>
+        </div>
+
+        {/* Clickable body */}
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(true)}
+          aria-label={ariaLabel}
+          aria-haspopup="dialog"
+          aria-expanded={sidebarOpen}
+          className="
+            w-full text-left px-3 py-3
+            hover:bg-slate-800/60 focus:outline-none focus-visible:ring-2
+            focus-visible:ring-[#577399] focus-visible:ring-inset
+            transition-colors cursor-pointer group
+          "
+        >
+          {activeArmor ? (
+            <>
+              <p className="text-sm font-semibold text-parchment-100 group-hover:text-parchment-50 leading-snug">
+                {activeArmor.name}
+              </p>
+              <p className="mt-0.5 text-xs text-parchment-500 truncate leading-snug">
+                Tier {activeArmor.tier} · Score {activeArmor.baseArmorScore} · Major {activeArmor.baseMajorThreshold}+ · Severe {activeArmor.baseSevereThreshold}+
+              </p>
+              {activeArmor.feature && (
+                <p className="mt-0.5 text-[10px] text-gold-600 truncate">
+                  <span aria-label="Has feature" className="mr-1">✦</span>
+                  {activeArmor.feature}
+                </p>
+              )}
+              <p className="mt-1 text-[10px] text-parchment-500 group-hover:text-parchment-300 transition-colors">
+                Tap to change
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-parchment-500 italic font-normal">No armor selected…</p>
+              <p className="mt-1 text-[10px] text-parchment-500 group-hover:text-parchment-300 transition-colors">
+                Tap to select from inventory
+              </p>
+            </>
+          )}
+        </button>
+      </div>
+
+      <ArmorSidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
     </>
   );
@@ -1445,10 +1812,11 @@ export function TrackersPanel() {
           </div>
         </div>
 
-        {/* ── Right: Weapons ── */}
+        {/* ── Right: Weapons + Armor ── */}
         <div className="flex flex-col gap-3">
           <WeaponCard slot="primary" />
           <WeaponCard slot="secondary" />
+          <ArmorCard />
         </div>
       </div>
 

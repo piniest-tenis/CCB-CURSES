@@ -223,7 +223,7 @@ function EditSidebar({ characterId }: EditSidebarProps) {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
         void persistFieldValue(activeField, raw);
-      }, 300);
+      }, 700);
     },
     [activeField, persistFieldValue, updateField]
   );

@@ -24,6 +24,13 @@ export interface CoreStats {
 export interface DerivedStats {
   evasion: number;
   armor: number;
+  /**
+   * Class starting evasion before armor modifiers. Stored once at character
+   * creation / builder save so the backend can recompute evasion when armor is
+   * swapped without needing to look up the class record.
+   * Defaults to derivedStats.evasion if not yet set (legacy characters).
+   */
+  baseEvasion?: number;
 }
 
 // ─── Tracker Types ────────────────────────────────────────────────────────────
@@ -154,6 +161,14 @@ export interface Character extends CharacterSummary {
    */
   portraitKey: string | null;
   createdAt: string;
+
+  /**
+   * SRD armor id (from srdEquipment.ts ALL_ARMOR) currently equipped by the player.
+   * When set, derivedStats.evasion, derivedStats.armor, damageThresholds, and
+   * trackers.armor.max are all computed from this armor's SRD stats.
+   * Set to null to clear active armor (stats fall back to builder values).
+   */
+  activeArmorId: string | null;
 
   // ── Starting inventory ────────────────────────────────────────────────────
   /** SRD page 58: Gold amount in abstract tiers. */

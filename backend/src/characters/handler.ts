@@ -83,6 +83,69 @@ const PORTRAIT_ALLOWED_CONTENT_TYPES = [
   "image/webp",
 ] as const;
 
+// ─── SRD Armor Lookup (for active-armor derivedStats recompute) ───────────────
+// Mirrors srdEquipment.ts ALL_ARMOR — only the fields needed for stat math.
+
+interface SrdArmorEntry {
+  id: string;
+  name: string;
+  baseArmorScore: number;
+  baseMajorThreshold: number;
+  baseSevereThreshold: number;
+  /** "Flexible" → +1 evasion; "Heavy" → -1; "Very Heavy" → -2; else 0 */
+  featureType: string | null;
+}
+
+const SRD_ARMOR_TABLE: SrdArmorEntry[] = [
+  // Tier 1
+  { id: "gambeson",       name: "Gambeson Armor",       baseArmorScore: 2, baseMajorThreshold: 5,  baseSevereThreshold: 11, featureType: "Flexible"   },
+  { id: "leather",        name: "Leather Armor",        baseArmorScore: 3, baseMajorThreshold: 6,  baseSevereThreshold: 13, featureType: null         },
+  { id: "chainmail",      name: "Chainmail Armor",      baseArmorScore: 4, baseMajorThreshold: 7,  baseSevereThreshold: 15, featureType: "Heavy"      },
+  { id: "full-plate",     name: "Full Plate Armor",     baseArmorScore: 5, baseMajorThreshold: 8,  baseSevereThreshold: 17, featureType: "Very Heavy" },
+  // Tier 2
+  { id: "improved-gambeson",   name: "Improved Gambeson Armor",   baseArmorScore: 3, baseMajorThreshold: 7,  baseSevereThreshold: 16, featureType: "Flexible"   },
+  { id: "improved-leather",    name: "Improved Leather Armor",    baseArmorScore: 4, baseMajorThreshold: 9,  baseSevereThreshold: 20, featureType: null         },
+  { id: "improved-chainmail",  name: "Improved Chainmail Armor",  baseArmorScore: 5, baseMajorThreshold: 11, baseSevereThreshold: 24, featureType: "Heavy"      },
+  { id: "improved-full-plate", name: "Improved Full Plate Armor", baseArmorScore: 6, baseMajorThreshold: 13, baseSevereThreshold: 28, featureType: "Very Heavy" },
+  { id: "elundrian-chain",     name: "Elundrian Chain Armor",     baseArmorScore: 4, baseMajorThreshold: 9,  baseSevereThreshold: 21, featureType: "Warded"     },
+  { id: "harrowbone",          name: "Harrowbone Armor",          baseArmorScore: 4, baseMajorThreshold: 9,  baseSevereThreshold: 21, featureType: "Resilient"  },
+  { id: "irontree-breastplate",name: "Irontree Breastplate Armor",baseArmorScore: 4, baseMajorThreshold: 9,  baseSevereThreshold: 20, featureType: "Reinforced" },
+  { id: "runetan-floating",    name: "Runetan Floating Armor",    baseArmorScore: 3, baseMajorThreshold: 9,  baseSevereThreshold: 20, featureType: "Shifting"   },
+  { id: "tyris-soft",          name: "Tyris Soft Armor",          baseArmorScore: 3, baseMajorThreshold: 8,  baseSevereThreshold: 18, featureType: "Quiet"      },
+  { id: "rosewild",            name: "Rosewild Armor",            baseArmorScore: 5, baseMajorThreshold: 11, baseSevereThreshold: 23, featureType: "Hopeful"    },
+  // Tier 3
+  { id: "advanced-gambeson",   name: "Advanced Gambeson Armor",   baseArmorScore: 4, baseMajorThreshold: 9,  baseSevereThreshold: 23, featureType: "Flexible"   },
+  { id: "advanced-leather",    name: "Advanced Leather Armor",    baseArmorScore: 5, baseMajorThreshold: 11, baseSevereThreshold: 27, featureType: null         },
+  { id: "advanced-chainmail",  name: "Advanced Chainmail Armor",  baseArmorScore: 6, baseMajorThreshold: 13, baseSevereThreshold: 31, featureType: "Heavy"      },
+  { id: "advanced-full-plate", name: "Advanced Full Plate Armor", baseArmorScore: 7, baseMajorThreshold: 15, baseSevereThreshold: 35, featureType: "Very Heavy" },
+  { id: "bellamoi-fine",       name: "Bellamoi Fine Armor",       baseArmorScore: 5, baseMajorThreshold: 11, baseSevereThreshold: 27, featureType: "Gilded"     },
+  { id: "dragonscale",         name: "Dragonscale Armor",         baseArmorScore: 5, baseMajorThreshold: 11, baseSevereThreshold: 27, featureType: "Impenetrable" },
+  { id: "spiked-plate",        name: "Spiked Plate Armor",        baseArmorScore: 5, baseMajorThreshold: 10, baseSevereThreshold: 25, featureType: "Sharp"      },
+  { id: "bladefare",           name: "Bladefare Armor",           baseArmorScore: 6, baseMajorThreshold: 16, baseSevereThreshold: 39, featureType: "Physical"   },
+  { id: "monetts-cloak",       name: "Monett's Cloak",            baseArmorScore: 6, baseMajorThreshold: 16, baseSevereThreshold: 39, featureType: "Magic"      },
+  { id: "runes-of-fortification", name: "Runes of Fortification", baseArmorScore: 7, baseMajorThreshold: 17, baseSevereThreshold: 43, featureType: "Painful"    },
+  // Tier 4
+  { id: "legendary-gambeson",  name: "Legendary Gambeson Armor",  baseArmorScore: 5, baseMajorThreshold: 11, baseSevereThreshold: 32, featureType: "Flexible"   },
+  { id: "legendary-leather",   name: "Legendary Leather Armor",   baseArmorScore: 6, baseMajorThreshold: 13, baseSevereThreshold: 36, featureType: null         },
+  { id: "legendary-chainmail", name: "Legendary Chainmail Armor", baseArmorScore: 7, baseMajorThreshold: 15, baseSevereThreshold: 40, featureType: "Heavy"      },
+  { id: "legendary-full-plate",name: "Legendary Full Plate Armor",baseArmorScore: 8, baseMajorThreshold: 17, baseSevereThreshold: 44, featureType: "Very Heavy" },
+  { id: "dunamis-silkchain",   name: "Dunamis Silkchain",         baseArmorScore: 6, baseMajorThreshold: 13, baseSevereThreshold: 36, featureType: "Timeslowing" },
+  { id: "channeling-armor",    name: "Channeling Armor",          baseArmorScore: 6, baseMajorThreshold: 13, baseSevereThreshold: 36, featureType: "Channeling" },
+  { id: "emberwoven",          name: "Emberwoven Armor",          baseArmorScore: 6, baseMajorThreshold: 13, baseSevereThreshold: 36, featureType: "Burning"    },
+  { id: "full-fortified",      name: "Full Fortified Armor",      baseArmorScore: 7, baseMajorThreshold: 15, baseSevereThreshold: 40, featureType: "Fortified"  },
+  { id: "veritas-opal",        name: "Veritas Opal Armor",        baseArmorScore: 6, baseMajorThreshold: 13, baseSevereThreshold: 36, featureType: "Truthseeking" },
+  { id: "savior-chainmail",    name: "Savior Chainmail",          baseArmorScore: 8, baseMajorThreshold: 18, baseSevereThreshold: 48, featureType: "Difficult"  },
+];
+
+function srdArmorEvasionMod(featureType: string | null): number {
+  if (featureType === "Flexible") return 1;
+  if (featureType === "Heavy")    return -1;
+  if (featureType === "Very Heavy") return -2;
+  // "Difficult" armor also has −1 to all traits and Evasion
+  if (featureType === "Difficult") return -1;
+  return 0;
+}
+
 // ─── Zod Schemas ──────────────────────────────────────────────────────────────
 
 const WeaponSchema = z.object({
@@ -180,6 +243,7 @@ const PutCharacterSchema = z.object({
   derivedStats: z.object({
     evasion: z.number().int().min(0),
     armor: z.number().int().min(0),
+    baseEvasion: z.number().int().min(0).optional(),
   }),
   trackers: z.object({
     hp: SlotTrackerSchema,
@@ -227,6 +291,7 @@ const PutCharacterSchema = z.object({
     .optional(),
   notes: z.string().nullable().optional(),
   avatarKey: z.string().nullable().optional(),
+  activeArmorId: z.string().nullable().optional().default(null),
   /**
    * CDN URL for the character portrait image.
    * Set by the frontend after a successful direct S3 upload
@@ -551,6 +616,7 @@ function toCharacterResponse(
     // Portrait — stored key drives the CDN URL at read time
     portraitKey: record.portraitKey ?? null,
     portraitUrl: record.portraitUrl ?? buildPortraitUrl(record.portraitKey),
+    activeArmorId: record.activeArmorId ?? null,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
     // ── Campaign fields ───────────────────────────────────────────────────
@@ -697,6 +763,7 @@ async function createCharacter(
   const derivedStats: DerivedStats = {
     evasion: classRecord?.startingEvasion ?? 0,
     armor: 0,
+    baseEvasion: classRecord?.startingEvasion ?? 0,
   };
 
   const defaultFeatureState: ClassFeatureState = {};
@@ -739,6 +806,7 @@ async function createCharacter(
     avatarUrl: null,    // computed from avatarKey at read-time; null in storage
     portraitKey: null,
     portraitUrl: null,
+    activeArmorId: null,
     createdAt: now,
     updatedAt: now,
     // ── Inventory ─────────────────────────────────────────────────────────
@@ -892,6 +960,36 @@ async function patchCharacter(
        // If URL parsing fails, just store what was provided
        merged.portraitUrl = patch.portraitUrl;
      }
+   }
+
+   // ── Active armor → recompute derived stats ──────────────────────────────
+   // When activeArmorId is set, recompute evasion, armor score,
+   // damage thresholds, and the armor slot tracker max from SRD armor data.
+   // baseEvasion is the class starting evasion before any armor modifier.
+   const activeArmorId = merged.activeArmorId ?? null;
+   const activeArmor = activeArmorId
+     ? SRD_ARMOR_TABLE.find((a) => a.id === activeArmorId) ?? null
+     : null;
+
+   if (activeArmor) {
+     const baseEvasion =
+       merged.derivedStats?.baseEvasion ??
+       merged.derivedStats?.evasion ??
+       0;
+     const evasionMod = srdArmorEvasionMod(activeArmor.featureType);
+     const charLevel = merged.level ?? 1;
+
+     merged.derivedStats = {
+       ...(merged.derivedStats ?? {}),
+       baseEvasion,
+       evasion: baseEvasion + evasionMod,
+       armor: activeArmor.baseArmorScore,
+     };
+
+     merged.damageThresholds = {
+       major:  activeArmor.baseMajorThreshold  + charLevel,
+       severe: activeArmor.baseSevereThreshold + charLevel,
+     };
    }
 
    // Sync armor tracker max to the armor score (derivedStats.armor).
