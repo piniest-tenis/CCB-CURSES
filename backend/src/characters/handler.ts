@@ -678,7 +678,9 @@ async function createCharacter(
   const defaultTrackers: CharacterTrackers = {
     hp: { max: classRecord?.startingHitPoints ?? 6, marked: 0 },
     stress: { max: 6, marked: 0 },
-    armor: { max: 3, marked: 0 },
+    // armor.max is always driven by derivedStats.armor (the armor score).
+    // At creation both are 0; the builder immediately PATCHes both together.
+    armor: { max: 0, marked: 0 },
   };
 
   const defaultDamageThresholds: DamageThresholds = {
@@ -890,6 +892,18 @@ async function patchCharacter(
        // If URL parsing fails, just store what was provided
        merged.portraitUrl = patch.portraitUrl;
      }
+   }
+
+   // Sync armor tracker max to the armor score (derivedStats.armor).
+   // The armor score is the canonical source of truth for how many armor slots
+   // a character has. Clamp marked down if the score shrank.
+   const armorScore = merged.derivedStats?.armor ?? 0;
+   const currentArmorMarked = merged.trackers?.armor?.marked ?? 0;
+   if (merged.trackers?.armor) {
+     merged.trackers.armor = {
+       max: armorScore,
+       marked: Math.min(currentArmorMarked, armorScore),
+     };
    }
 
   const srdErrors = validateSrdRules(merged as Partial<Character>);

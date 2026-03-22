@@ -96,25 +96,33 @@ function ActionableSlotTracker({
             {marked}
           </span>
           <span className="text-parchment-600">/</span>
-          <input
-            type="number"
-            min={1}
-            max={hardMax ?? 20}
-            value={max}
-            onChange={(e) => {
-              const v = parseInt(e.target.value, 10);
-              if (!isNaN(v) && v > 0) onMaxChange(hardMax ? Math.min(v, hardMax) : v);
-            }}
-            aria-label={`${label} max slots`}
-            className="
-              w-7 bg-transparent text-center text-[#b9baa3]
-              border-b border-[#577399]/40 focus:outline-none focus:ring-1 focus:ring-[#577399] focus:border-[#577399]
-              [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none
-              transition-colors
-            "
-          />
-          {hardMax && (
-            <span className="text-parchment-500 text-[10px]">/{hardMax}</span>
+          {/* When hardMax is set the max is derived from the armor score — show
+              it as a plain read-only number rather than an editable input. */}
+          {hardMax != null ? (
+            <span
+              aria-label={`${label} max slots`}
+              className="w-7 text-center text-[#b9baa3] tabular-nums"
+            >
+              {hardMax}
+            </span>
+          ) : (
+            <input
+              type="number"
+              min={1}
+              max={20}
+              value={max}
+              onChange={(e) => {
+                const v = parseInt(e.target.value, 10);
+                if (!isNaN(v) && v > 0) onMaxChange(v);
+              }}
+              aria-label={`${label} max slots`}
+              className="
+                w-7 bg-transparent text-center text-[#b9baa3]
+                border-b border-[#577399]/40 focus:outline-none focus:ring-1 focus:ring-[#577399] focus:border-[#577399]
+                [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none
+                transition-colors
+              "
+            />
           )}
         </div>
       </div>
@@ -1351,7 +1359,7 @@ export function TrackersPanel() {
 
   if (!activeCharacter) return null;
 
-  const { trackers, damageThresholds } = activeCharacter;
+  const { trackers, damageThresholds, derivedStats } = activeCharacter;
 
   return (
     <section
@@ -1371,7 +1379,7 @@ export function TrackersPanel() {
           major={damageThresholds.major}
           severe={damageThresholds.severe}
           armorMarked={trackers.armor.marked}
-          armorMax={trackers.armor.max}
+          armorMax={derivedStats.armor}
           characterId={characterId}
         />
         <p className="mt-1.5 text-[11px] text-parchment-500 italic">
@@ -1414,6 +1422,7 @@ export function TrackersPanel() {
             characterId={characterId}
             onMaxChange={(v) => updateTracker("armor", "max", v)}
             colorFilled="bg-[#b9baa3]"
+            hardMax={derivedStats.armor}
           />
 
           {/* Hope — server-authoritative +/- */}

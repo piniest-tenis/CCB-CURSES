@@ -56,7 +56,9 @@ export default function LoginPage() {
       router.replace("/dashboard");
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : "Sign in failed. Please try again.";
+        err instanceof Error
+          ? err.message
+          : "Sign in failed. Please try again.";
 
       // Map Cognito error codes to field-level errors
       if (
@@ -90,12 +92,13 @@ export default function LoginPage() {
         className="absolute inset-0 h-full w-full object-cover pointer-events-none select-none"
         src="/videos/curses-logo-walk_60fps.webm"
       />
-      {/* Linear gradient overlay: 40% bg at top → 65% bg at bottom */}
+      {/* Linear gradient overlay: 80% bg at top → 85% bg at 80% → 95% bg at bottom */}
       <div
         aria-hidden="true"
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: "linear-gradient(to bottom, rgba(10,16,13,0.40) 0%, rgba(10,16,13,0.65) 100%)",
+          background:
+            "linear-gradient(rgba(10, 16, 13, 0.8) 0%, rgba(10, 16, 13, 0.85) 80%, rgba(10, 16, 13, 0.95) 100%)",
         }}
       />
       {/* Content — sits above video + overlay */}
@@ -122,7 +125,11 @@ export default function LoginPage() {
 
         {/* Card */}
         <div className="rounded-xl border border-burgundy-900 bg-slate-900 p-7 shadow-card-fantasy">
-          <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            noValidate
+            className="space-y-4"
+          >
             {/* Root error */}
             {errors.root && (
               <div
@@ -162,7 +169,13 @@ export default function LoginPage() {
                 placeholder="you@example.com"
               />
               {errors.email && (
-                <p id="email-error" role="alert" className="text-xs text-burgundy-400">{errors.email.message}</p>
+                <p
+                  id="email-error"
+                  role="alert"
+                  className="text-xs text-burgundy-400"
+                >
+                  {errors.email.message}
+                </p>
               )}
             </div>
 
@@ -179,7 +192,9 @@ export default function LoginPage() {
                 type="password"
                 autoComplete="current-password"
                 {...register("password")}
-                aria-describedby={errors.password ? "password-error" : undefined}
+                aria-describedby={
+                  errors.password ? "password-error" : undefined
+                }
                 aria-invalid={errors.password ? "true" : undefined}
                 className={`
                   w-full rounded-lg border bg-slate-850 px-3 py-2.5
@@ -194,7 +209,13 @@ export default function LoginPage() {
                 placeholder="••••••••••••"
               />
               {errors.password && (
-                <p id="password-error" role="alert" className="text-xs text-burgundy-400">{errors.password.message}</p>
+                <p
+                  id="password-error"
+                  role="alert"
+                  className="text-xs text-burgundy-400"
+                >
+                  {errors.password.message}
+                </p>
               )}
             </div>
 
