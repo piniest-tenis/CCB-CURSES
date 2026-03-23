@@ -955,14 +955,29 @@ async function getCharacter(
 ): Promise<APIGatewayProxyResultV2> {
   const userId = extractUserId(event);
   const characterId = requirePathParam(event, "characterId");
+  const admin = isAdminGroup(event);
 
-  const record = await getItem<CharacterRecord>({
-    TableName: CHARACTERS_TABLE,
-    Key: keys.character(userId, characterId),
-  });
+  let record: CharacterRecord | null = null;
+
+  if (admin) {
+    // Admin callers can load any character regardless of ownership.
+    // The DynamoDB key is PK=USER#{userId}, SK=CHARACTER#{characterId}, so we
+    // cannot do a direct get without knowing the owner.  Scan for the SK match.
+    const results = await scanItems<CharacterRecord>(
+      CHARACTERS_TABLE,
+      "SK = :sk",
+      { ":sk": `CHARACTER#${characterId}` }
+    );
+    record = results[0] ?? null;
+  } else {
+    record = await getItem<CharacterRecord>({
+      TableName: CHARACTERS_TABLE,
+      Key: keys.character(userId, characterId),
+    });
+  }
 
   if (!record) throw AppError.notFound("Character", characterId);
-  if (record.userId !== userId) throw AppError.forbidden();
+  if (!admin && record.userId !== userId) throw AppError.forbidden();
 
   const response = await enrichCharacter(record);
   return createSuccessResponse(response);
@@ -1618,27 +1633,37 @@ async function portraitUploadUrl(
 
 // ─── Route Dispatcher ─────────────────────────────────────────────────────────
 
-// ─── Admin: requireAdminGroup ─────────────────────────────────────────────────
-// Mirrors the same check in auth/handler.ts — asserts the caller belongs to
-// the Cognito "admin" group (injected as a JWT claim by API Gateway).
+// ─── Admin helpers ────────────────────────────────────────────────────────────
+// Parse the Cognito "cognito:groups" claim from the JWT.  API Gateway HTTP API
+// serialises the array as "[group1 group2]" (literal brackets, space-separated).
 
+function parseGroups(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): string[] {
+  const claims = event.requestContext?.authorizer?.jwt?.claims;
+  if (!claims) return [];
+  const raw = claims["cognito:groups"];
+  if (Array.isArray(raw)) return raw.map(String);
+  if (typeof raw !== "string") return [];
+  const stripped = raw.trim().replace(/^\[|\]$/g, "");
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map(String) : stripped.split(/[\s,]+/).filter(Boolean);
+  } catch {
+    return stripped.split(/[\s,]+/).filter(Boolean);
+  }
+}
+
+/** Returns true if the caller belongs to the Cognito "admin" group. */
+function isAdminGroup(event: APIGatewayProxyEventV2WithJWTAuthorizer): boolean {
+  return parseGroups(event).includes("admin");
+}
+
+/** Throws 403 if the caller does NOT belong to the Cognito "admin" group. */
 function requireAdminGroup(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): void {
-  const claims = event.requestContext?.authorizer?.jwt?.claims;
-  if (!claims) throw AppError.unauthorized();
-
-  const raw = claims["cognito:groups"];
-  let groups: string[] = [];
-  if (typeof raw === "string") {
-    try {
-      const parsed = JSON.parse(raw);
-      groups = Array.isArray(parsed) ? parsed.map(String) : raw.split(/[\s,]+/).filter(Boolean);
-    } catch {
-      groups = raw.split(/[\s,]+/).filter(Boolean);
-    }
-  }
-  if (!groups.includes("admin")) {
+  if (!isAdminGroup(event)) {
     throw AppError.forbidden("Admin group membership is required");
   }
 }

@@ -55,20 +55,25 @@ function requireAdminGroup(
   const claims = event.requestContext?.authorizer?.jwt?.claims;
   if (!claims) throw AppError.unauthorized();
 
-  // API GW HTTP API v2 serialises list claims as a JSON array string
+  // API GW HTTP API v2 serialises Cognito group arrays as "[group1 group2]" —
+  // literal square brackets around space-separated values. Strip them before splitting.
   const raw = claims["cognito:groups"];
   let groups: string[] = [];
 
-  if (typeof raw === "string") {
+  if (Array.isArray(raw)) {
+    // Native array — pass through directly
+    groups = raw.map(String);
+  } else if (typeof raw === "string") {
+    const stripped = raw.trim().replace(/^\[|\]$/g, "");
     try {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
         groups = parsed.map(String);
       } else {
-        groups = raw.split(/[\s,]+/).filter(Boolean);
+        groups = stripped.split(/[\s,]+/).filter(Boolean);
       }
     } catch {
-      groups = raw.split(/[\s,]+/).filter(Boolean);
+      groups = stripped.split(/[\s,]+/).filter(Boolean);
     }
   }
 
