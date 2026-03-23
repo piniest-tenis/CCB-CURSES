@@ -88,11 +88,16 @@ export interface AdminCharacterListData {
   characters: AdminCharacterSummary[];
 }
 
-export function useAdminAllCharacters(): UseQueryResult<AdminCharacterListData> {
+export function useAdminAllCharacters(
+  enabled = true
+): UseQueryResult<AdminCharacterListData> {
   return useQuery({
     queryKey: ["admin", "characters"],
     queryFn: () => apiClient.get<AdminCharacterListData>("/admin/characters"),
     staleTime: 30_000,
+    // Do not fire until the caller confirms auth is ready — prevents a
+    // token-less request racing ahead of Zustand's sessionStorage rehydration.
+    enabled,
   });
 }
 

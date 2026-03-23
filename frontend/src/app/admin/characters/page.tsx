@@ -96,7 +96,7 @@ function SortHeader({
       `}
     >
       {label}
-      <span className="text-[10px] leading-none">
+      <span className="text-xs leading-none">
         {active ? (dir === "asc" ? "▲" : "▼") : "⇅"}
       </span>
     </button>
@@ -107,7 +107,20 @@ function SortHeader({
 
 export default function AdminCharactersPage() {
   const router = useRouter();
-  const { isAuthenticated, isReady, user, idToken, signOut } = useAuthStore();
+  const { isAuthenticated, isReady, user, idToken, signOut, refreshTokens } = useAuthStore();
+
+  // ── Force a token refresh on mount so the JWT contains up-to-date group
+  // claims. Group membership added after the last sign-in won't appear in a
+  // cached token until it is refreshed.
+  const [refreshState, setRefreshState] = useState<"pending" | "done" | "failed">("pending");
+
+  useEffect(() => {
+    if (!isReady || !isAuthenticated) return;
+    refreshTokens()
+      .then((newToken) => setRefreshState(newToken ? "done" : "failed"))
+      .catch(() => setRefreshState("failed"));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReady, isAuthenticated]);
 
   // Derive admin status from the JWT claim
   const isAdmin = useMemo(() => {
@@ -140,22 +153,25 @@ export default function AdminCharactersPage() {
       router.replace("/auth/login");
       return;
     }
-    if (isAdmin === false && isReady) {
-      // Wait a tick in case the token just loaded — isAdmin derives from idToken
-      // which may lag isAuthenticated by one render.
+    // Only redirect away from admin once the refresh has settled — the token
+    // may not contain the cognito:groups claim until after refresh completes.
+    if (refreshState === "pending") return;
+    if (!isAdmin) {
       const t = setTimeout(() => {
         if (!isAdmin) router.replace("/dashboard");
       }, 500);
       return () => clearTimeout(t);
     }
-  }, [isReady, isAuthenticated, isAdmin, router]);
+  }, [isReady, isAuthenticated, isAdmin, refreshState, router]);
 
   // Sort + filter state
   const [sortField, setSortField] = useState<SortField>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [filter, setFilter] = useState("");
 
-  const { data, isLoading, isError, refetch } = useAdminAllCharacters();
+  const { data, isLoading, isError, refetch } = useAdminAllCharacters(
+    isReady && isAuthenticated && isAdmin && refreshState === "done"
+  );
 
   function handleSort(field: SortField) {
     if (sortField === field) {
@@ -186,6 +202,19 @@ export default function AdminCharactersPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a100d]">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#577399] border-t-transparent" />
+      </div>
+    );
+  }
+
+  // Hold the spinner until the forced token refresh settles — the admin claim
+  // may not be present in the old token, causing a false "Access denied".
+  if (refreshState === "pending") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0a100d]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#577399] border-t-transparent" />
+          <p className="text-xs text-[#b9baa3]/30 font-mono">refreshing session…</p>
+        </div>
       </div>
     );
   }
@@ -311,7 +340,7 @@ export default function AdminCharactersPage() {
         )}
 
         {/* Table */}
-        {!isLoading && !isError && (
+        {!isLoading && !isError && data && (
           <div className="rounded-xl border border-slate-700/40 bg-slate-900/40 overflow-hidden">
             {/* Table header */}
             <div className="grid grid-cols-[1fr_1fr_1fr_auto_auto] gap-x-4 px-4 py-2.5 border-b border-slate-700/40 bg-slate-900/60">

@@ -14,20 +14,29 @@ import { useAuthStore } from "@/store/authStore";
 import { ApiError } from "@/lib/api";
 import { LoadingInterstitial } from "@/components/LoadingInterstitial";
 
-// ── Global 403 handler ───────────────────────────────────────────────────────
-// A 403 means the server is actively refusing the request for this user
-// (expired session, revoked account, etc.).  Mirror the 401 path: sign out to
-// clear all stored credentials, then hard-navigate to login so every page is
-// covered without needing per-page error handling.
+// ── Global auth-error handler ────────────────────────────────────────────────
+// 401 = unauthenticated (bad/missing token) → sign out and send to login.
+// 403 = authenticated but not authorised (wrong group, etc.) → do NOT sign out;
+//       the session is still valid. Just redirect to the dashboard so the user
+//       isn't stuck, but keep all stored credentials intact.
 
 function handle403(error: unknown): void {
-  if (error instanceof ApiError && error.status === 403) {
-    // Only redirect after initialize() has completed. During initialization
-    // the app may fire queries with a stale persisted token before the session
-    // has been fully validated; we don't want to boot the user in that window.
-    if (!useAuthStore.getState().isReady) return;
+  if (!(error instanceof ApiError)) return;
+  if (!useAuthStore.getState().isReady) return;
+
+  if (error.status === 401) {
+    // Token is invalid or expired and couldn't be refreshed — clear the session.
     useAuthStore.getState().signOut();
     window.location.href = "/auth/login";
+    return;
+  }
+
+  if (error.status === 403) {
+    // The user is authenticated but lacks permission for this resource.
+    // Do NOT call signOut() — that would destroy the refresh token and force a
+    // full re-login even though the session is perfectly valid.
+    // Redirect to dashboard; page-level guards handle further access control.
+    window.location.href = "/dashboard";
   }
 }
 

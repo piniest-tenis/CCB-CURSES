@@ -530,11 +530,13 @@ export class ApiStack extends cdk.Stack {
     // Routes — PROTECTED (JWT required)
     // -----------------------------------------------------------------------
 
-    // Characters — full CRUD
+    // Characters — full CRUD + admin roster
     const characterRoutes: Array<{
       method: apigwv2.HttpMethod;
       path: string;
     }> = [
+      // Admin — all characters (admin group only, enforced in handler)
+      { method: apigwv2.HttpMethod.GET, path: "/admin/characters" },
       { method: apigwv2.HttpMethod.GET, path: "/characters" },
       { method: apigwv2.HttpMethod.POST, path: "/characters" },
       { method: apigwv2.HttpMethod.GET, path: "/characters/{characterId}" },
