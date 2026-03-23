@@ -12,5 +12,3 @@
 - [[(Level 5) Infiltrate]]
 
 %% End Waypoint %%
-
-Trickery cards are cons, misdirection, and social sabotage. Good for characters who win by making the other person think they've already lost.

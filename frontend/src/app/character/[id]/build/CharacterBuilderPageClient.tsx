@@ -616,17 +616,21 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                         </div>
                       )}
                       
-                      {selectedClassData.classFeature && (
+                      {(selectedClassData.classFeatures?.length ?? 0) > 0 && (
                         <div>
-                          <h4 className="font-semibold text-[#f7f7ff] mb-2">Class Feature</h4>
-                          <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3">
-                            <p className="text-sm font-semibold text-[#f7f7ff] mb-1">{selectedClassData.classFeature.name}</p>
-                            <MarkdownContent className="text-base text-[#b9baa3]/70">
-                              {[
-                                selectedClassData.classFeature.description,
-                                ...selectedClassData.classFeature.options.map((o) => `- ${o}`),
-                              ].filter(Boolean).join("\n\n")}
-                            </MarkdownContent>
+                          <h4 className="font-semibold text-[#f7f7ff] mb-2">Class Feature{selectedClassData.classFeatures.length > 1 ? "s" : ""}</h4>
+                          <div className="space-y-2">
+                            {selectedClassData.classFeatures.map((feature) => (
+                              <div key={feature.name} className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3">
+                                <p className="text-sm font-semibold text-[#f7f7ff] mb-1">{feature.name}</p>
+                                <MarkdownContent className="text-base text-[#b9baa3]/70">
+                                  {[
+                                    feature.description,
+                                    ...feature.options.map((o) => `- ${o}`),
+                                  ].filter(Boolean).join("\n\n")}
+                                </MarkdownContent>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       )}

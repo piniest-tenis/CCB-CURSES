@@ -1,3 +1,7 @@
+---
+einstructions: Add a button to create a project called "Sow Discontent" with 6 ticks to completion. When complete, prompt the player with the completion benefits from this card.
+---
+
 You gain a special downtime project called _Sow Discontent_ with a Countdown Tracker of 6. Choose a target [[Faction]] with whose [[Adherent|Adherents]] you have direct contact. When this downtime project is complete, a portion of the targeted faction splinters into a new Faction. Work with your GM to set the new [[Primary Goals]] of this faction, aligned against at least one primary goal of the original faction. 
 
 Only one _Sow Discontent_ project may be active at any time.

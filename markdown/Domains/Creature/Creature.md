@@ -13,5 +13,3 @@
 - [[(Level 5) Metamorphosis]]
 
 %% End Waypoint %%
-
-Creature cards lean into raw instinct — keen senses, physical toughness, and predatory cunning. Good for characters who rely on their body and animal nature more than tools or magic.

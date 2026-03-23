@@ -14,5 +14,3 @@
 - [[(Level 5) Disciple]]
 
 %% End Waypoint %%
-
-Faithful cards draw power from devotion — divine grace, sacred oaths, and the weight of belief. Good for characters whose strength comes from something larger than themselves.

@@ -652,40 +652,52 @@ function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
         Features
       </h2>
 
-      {/* Class Feature */}
-      {classData.classFeature && (
-        <div className="rounded-lg border border-[#577399]/20 bg-slate-850 p-4 space-y-3">
-          <div>
-            <h3 className="mb-1 font-serif text-sm font-semibold text-[#f7f7ff]">
-              {classData.classFeature.name}
+      {/* Class Features */}
+      {(classData.classFeatures?.length ?? 0) > 0 && (
+        <div className="space-y-2">
+          {classData.classFeatures.length > 1 && (
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#577399]">
+              Class Features
             </h3>
-            <MarkdownContent className="text-sm text-[#b9baa3] leading-relaxed">
-              {classData.classFeature.description}
-            </MarkdownContent>
-            {classData.classFeature.options.length > 0 && (
-              <ul className="mt-2 space-y-0.5 list-disc list-outside pl-4">
-                {classData.classFeature.options.map((opt) => (
-                  <li key={opt} className="text-sm text-[#b9baa3]">
-                    <MarkdownContent inline>{opt}</MarkdownContent>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          )}
+          {classData.classFeatures.map((feature) => (
+            <div
+              key={feature.name}
+              className="rounded-lg border border-[#577399]/20 bg-slate-850 p-4 space-y-3"
+            >
+              <div>
+                <h3 className="mb-1 font-serif text-sm font-semibold text-[#f7f7ff]">
+                  {feature.name}
+                </h3>
+                <MarkdownContent className="text-sm text-[#b9baa3] leading-relaxed">
+                  {feature.description}
+                </MarkdownContent>
+                {feature.options.length > 0 && (
+                  <ul className="mt-2 space-y-0.5 list-disc list-outside pl-4">
+                    {feature.options.map((opt) => (
+                      <li key={opt} className="text-sm text-[#b9baa3]">
+                        <MarkdownContent inline>{opt}</MarkdownContent>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
 
-          {/* Action button if this feature has a known mechanic */}
-          {(() => {
-            const action = classFeatureHasAction(classData.classFeature.name);
-            return action ? (
-              <FeatureActionButton
-                characterId={characterId}
-                label={`Use ${classData.classFeature.name}`}
-                actionId={action.actionId}
-                params={action.params}
-                costLabel={action.costLabel}
-              />
-            ) : null;
-          })()}
+              {/* Action button if this feature has a known mechanic */}
+              {(() => {
+                const action = classFeatureHasAction(feature.name);
+                return action ? (
+                  <FeatureActionButton
+                    characterId={characterId}
+                    label={`Use ${feature.name}`}
+                    actionId={action.actionId}
+                    params={action.params}
+                    costLabel={action.costLabel}
+                  />
+                ) : null;
+              })()}
+            </div>
+          ))}
         </div>
       )}
 
@@ -824,38 +836,50 @@ function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
             </span>
           </div>
 
-          {/* Multiclass class feature */}
-          {multiclassData.classFeature && (
-            <div className="rounded-lg border border-[#577399]/20 bg-slate-850 p-4 space-y-3">
-              <div>
-                <h4 className="mb-1 font-serif text-sm font-semibold text-[#f7f7ff]">
-                  {multiclassData.classFeature.name}
+          {/* Multiclass class features */}
+          {(multiclassData.classFeatures?.length ?? 0) > 0 && (
+            <div className="space-y-2">
+              {multiclassData.classFeatures.length > 1 && (
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-[#577399]">
+                  Class Features
                 </h4>
-                <MarkdownContent className="text-sm text-[#b9baa3] leading-relaxed">
-                  {multiclassData.classFeature.description}
-                </MarkdownContent>
-                {multiclassData.classFeature.options.length > 0 && (
-                  <ul className="mt-2 space-y-0.5 list-disc list-outside pl-4">
-                    {multiclassData.classFeature.options.map((opt) => (
-                      <li key={opt} className="text-sm text-[#b9baa3]">
-                        <MarkdownContent inline>{opt}</MarkdownContent>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              {(() => {
-                const action = classFeatureHasAction(multiclassData.classFeature.name);
-                return action ? (
-                  <FeatureActionButton
-                    characterId={characterId}
-                    label={`Use ${multiclassData.classFeature.name}`}
-                    actionId={action.actionId}
-                    params={action.params}
-                    costLabel={action.costLabel}
-                  />
-                ) : null;
-              })()}
+              )}
+              {multiclassData.classFeatures.map((feature) => (
+                <div
+                  key={feature.name}
+                  className="rounded-lg border border-[#577399]/20 bg-slate-850 p-4 space-y-3"
+                >
+                  <div>
+                    <h4 className="mb-1 font-serif text-sm font-semibold text-[#f7f7ff]">
+                      {feature.name}
+                    </h4>
+                    <MarkdownContent className="text-sm text-[#b9baa3] leading-relaxed">
+                      {feature.description}
+                    </MarkdownContent>
+                    {feature.options.length > 0 && (
+                      <ul className="mt-2 space-y-0.5 list-disc list-outside pl-4">
+                        {feature.options.map((opt) => (
+                          <li key={opt} className="text-sm text-[#b9baa3]">
+                            <MarkdownContent inline>{opt}</MarkdownContent>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  {(() => {
+                    const action = classFeatureHasAction(feature.name);
+                    return action ? (
+                      <FeatureActionButton
+                        characterId={characterId}
+                        label={`Use ${feature.name}`}
+                        actionId={action.actionId}
+                        params={action.params}
+                        costLabel={action.costLabel}
+                      />
+                    ) : null;
+                  })()}
+                </div>
+              ))}
             </div>
           )}
 

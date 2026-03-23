@@ -1,3 +1,7 @@
+---
+einstructions: Add token controls to this card.
+---
+
 You develop an aura of imposition and threat. When attempting to frighten, intimidate, or negotiate via threat, gain Advantage. When you succeed at a roll in this manner, gain a token on this card. You can spend a token to gain one of the following benefits:
 - Give a [[Character]] or [[Creature]] the Vulnerable condition. This condition lasts until the first successful attack against them.
 - Gain a bonus to a roll against an [[Adherent]] equal to double your negative reputation with their [[Faction]].

@@ -278,7 +278,7 @@ export interface ClassSummary {
 export interface ClassData extends ClassSummary {
   classItems: string[];
   hopeFeature: HopeFeature;
-  classFeature: ClassFeature;
+  classFeatures: ClassFeature[];
   backgroundQuestions: string[];
   connectionQuestions: string[];
   subclasses: SubclassData[];

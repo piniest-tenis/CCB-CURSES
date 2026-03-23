@@ -13,5 +13,3 @@
 - [[(Level 5) Champion]]
 
 %% End Waypoint %%
-
-Valiance cards project courage and moral authority — inspiring allies, weathering punishment, and standing firm when others break. Good for characters who lead from the front.

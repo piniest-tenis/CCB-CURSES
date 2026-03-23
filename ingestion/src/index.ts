@@ -234,7 +234,7 @@ async function runClasses(opts: CliOptions): Promise<CategorySummary> {
         startingHitPoints: data.startingHitPoints,
         classItems: data.classItems,
         hopeFeature: data.hopeFeature,
-        classFeature: data.classFeature,
+        classFeatures: data.classFeatures,
         backgroundQuestions: data.backgroundQuestions,
         connectionQuestions: data.connectionQuestions,
         mechanicalNotes: data.mechanicalNotes,

@@ -13,5 +13,3 @@
 - [[(Level 5) Wrecking Machine]]
 
 %% End Waypoint %%
-
-Violence cards are about fighting dirty, fighting hard, and not stopping. Good for characters who solve problems by getting in close and making the fight as short as possible.

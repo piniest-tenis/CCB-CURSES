@@ -14,5 +14,3 @@
 - [[(Level 5) Slithy Toves]]
 
 %% End Waypoint %%
-
-Oddity cards reflect bodies and minds that don't work like everyone else's. Good for characters who are genuinely strange — not by choice, but by nature.

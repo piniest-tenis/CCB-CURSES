@@ -102,7 +102,7 @@ function requirePositive(
  * Warnings (non-blocking):
  *   - classItems array is non-empty
  *   - hopeFeature.hopeCost >= 1
- *   - classFeature.name is non-empty (error if missing)
+ *   - classFeatures[0].name is non-empty (error if missing)
  *   - each subclass has subclassId, name, spellcastTrait (errors),
  *     2 foundationFeatures, specializationFeature.name, masteryFeature.name (warnings)
  *   - backgroundQuestions and connectionQuestions are non-empty arrays
@@ -158,8 +158,8 @@ export function validateClass(data: ClassData): ValidationResult {
     "hopeFeature.description"
   );
 
-  // Class feature
-  requireNonEmpty(result, data.classFeature?.name, "classFeature.name");
+  // Class features (array — validate first entry's name at minimum)
+  requireNonEmpty(result, data.classFeatures?.[0]?.name, "classFeatures[0].name");
 
   // Background questions
   if (!Array.isArray(data.backgroundQuestions) || data.backgroundQuestions.length === 0) {

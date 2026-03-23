@@ -1,3 +1,7 @@
+---
+einstructions: 'Add a button to mark a Stress called "1 stress: re-roll on failure"'
+---
+
 Once per long rest, you can make a Spellcast Roll against a [[Character]] with whom you are currently speaking. On a success, that character gains a +1 bonus to their [[Attitude]] towards you for the duration of the scene. On a failure, you may mark a Stress to re-attempt the roll.
 ***
 **Curse**: Whenever you use this ability, the weight of inauthenticity hits you by the next scene. Describe what steps you take to shake off this feeling or mark a Stress.

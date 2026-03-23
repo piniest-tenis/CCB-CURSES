@@ -209,54 +209,90 @@ function parseHopeFeature(
   return { name, description, hopeCost };
 }
 
-// ─── Class Feature ────────────────────────────────────────────────────────────
+// ─── Class Feature(s) ─────────────────────────────────────────────────────────
 
 /**
- * Parse the ### Class Feature section:
+ * Parse the ### Class Feature(s) section into an array of ClassFeature objects.
  *
- *   **FeatureName**
- *   Description text (possibly multi-paragraph).
- *   - option A
- *   - _option B_ (italic)
- *   - option C
+ * Supports both single-feature and multi-feature formats:
+ *
+ *   Single (### Class Feature):
+ *     **FeatureName**
+ *     Description text (possibly multi-paragraph).
+ *     - option A
+ *     - _option B_ (italic)
+ *     - option C
+ *
+ *   Multiple (### Class Features):
+ *     **FeatureOne**
+ *     Description for feature one.
+ *
+ *     **FeatureTwo**
+ *     Description for feature two.
+ *     - option A
+ *
+ * Algorithm:
+ *   1. Scan non-empty lines.
+ *   2. A `**BoldName**` standalone line starts a new feature (flushing any
+ *      current feature-in-progress to the results array).
+ *   3. Bullet lines (`- ` or `* `) accumulate as `options` for the current feature.
+ *   4. All other non-empty lines accumulate as `description` for the current feature.
+ *   5. At end-of-input the last in-progress feature is flushed.
  */
-function parseClassFeature(
+function parseClassFeatures(
   sectionLines: string[]
-): { name: string; description: string; options: string[] } {
+): Array<{ name: string; description: string; options: string[] }> {
   const nonEmpty = sectionLines.map((l) => l.trim()).filter((l) => l.length > 0);
-  if (nonEmpty.length === 0) return { name: "", description: "", options: [] };
+  if (nonEmpty.length === 0) return [{ name: "", description: "", options: [] }];
 
-  let name = "";
-  const descLines: string[] = [];
-  const options: string[] = [];
-  let i = 0;
+  const results: Array<{ name: string; description: string; options: string[] }> = [];
 
-  // First non-empty line: **FeatureName** (standalone bold)
-  const nameMatch = nonEmpty[0].match(/^\*\*([^*]+)\*\*\s*$/);
-  if (nameMatch) {
-    name = nameMatch[1].trim();
-    i = 1;
-  } else {
-    // Fallback: first line is the name
-    name = stripEmphasis(nonEmpty[0]);
-    i = 1;
-  }
+  let currentName: string | null = null;
+  let descLines: string[] = [];
+  let options: string[] = [];
 
-  for (; i < nonEmpty.length; i++) {
-    const l = nonEmpty[i];
-    // Bullet list items (with optional italic wrapping)
-    if (/^[-*]\s/.test(l)) {
-      options.push(stripEmphasis(l.replace(/^[-*]\s*/, "").trim()));
+  const flush = () => {
+    if (currentName !== null) {
+      results.push({
+        name: currentName,
+        description: descLines.join(" ").trim(),
+        options,
+      });
+    }
+    currentName = null;
+    descLines = [];
+    options = [];
+  };
+
+  for (const l of nonEmpty) {
+    const nameMatch = l.match(/^\*\*([^*]+)\*\*\s*$/);
+    if (nameMatch) {
+      // A new bold-name line: flush the previous feature and start the next
+      flush();
+      currentName = nameMatch[1].trim();
+    } else if (currentName !== null) {
+      // We are inside a feature block
+      if (/^[-*]\s/.test(l)) {
+        options.push(stripEmphasis(l.replace(/^[-*]\s*/, "").trim()));
+      } else {
+        descLines.push(l);
+      }
     } else {
-      descLines.push(l);
+      // No feature started yet — treat the first non-bold line as the name
+      // (fallback for malformed sections)
+      currentName = stripEmphasis(l);
     }
   }
 
-  return {
-    name,
-    description: descLines.join(" ").trim(),
-    options,
-  };
+  // Flush the last in-progress feature
+  flush();
+
+  // Guard: always return at least one entry
+  if (results.length === 0) {
+    return [{ name: "", description: "", options: [] }];
+  }
+
+  return results;
 }
 
 // ─── Subclass overview ────────────────────────────────────────────────────────
@@ -674,11 +710,11 @@ export function parseClassFile(filePath: string, className?: string): ClassData 
     ? parseHopeFeature(hopeSectionLines)
     : { name: "", description: "", hopeCost: 0 };
 
-  // 4. Class Feature
-  const classFeatureSection = extractSection(lines, /^###\s+Class Feature/i);
-  const classFeature = classFeatureSection
-    ? parseClassFeature(classFeatureSection)
-    : { name: "", description: "", options: [] };
+  // 4. Class Feature(s) — matches both "### Class Feature" and "### Class Features"
+  const classFeatureSection = extractSection(lines, /^###\s+Class Features?/i);
+  const classFeatures = classFeatureSection
+    ? parseClassFeatures(classFeatureSection)
+    : [{ name: "", description: "", options: [] }];
 
   // 5. Subclass summaries (from ### Subclasses overview)
   const subclassSummarySection = extractSection(lines, /^###\s+Subclasses/i);
@@ -711,7 +747,7 @@ export function parseClassFile(filePath: string, className?: string): ClassData 
     startingHitPoints,
     classItems,
     hopeFeature,
-    classFeature,
+    classFeatures,
     backgroundQuestions,
     connectionQuestions,
     subclasses,

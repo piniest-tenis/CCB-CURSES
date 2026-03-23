@@ -57,7 +57,9 @@ interface ClassMetaRecord {
   startingHitPoints: number;
   classItems: string[];
   hopeFeature: { name: string; description: string; hopeCost: number };
-  classFeature: { name: string; description: string; options: string[] };
+  classFeatures: Array<{ name: string; description: string; options: string[] }>;
+  /** @deprecated Legacy field from pre-array ingestion — read-time fallback only */
+  classFeature?: { name: string; description: string; options: string[] };
   backgroundQuestions: string[];
   connectionQuestions: string[];
   mechanicalNotes: string;
@@ -144,7 +146,7 @@ function toClassData(
     startingHitPoints: record.startingHitPoints,
     classItems: record.classItems ?? [],
     hopeFeature: record.hopeFeature,
-    classFeature: record.classFeature,
+    classFeatures: record.classFeatures ?? (record.classFeature ? [record.classFeature] : []),
     backgroundQuestions: record.backgroundQuestions ?? [],
     connectionQuestions: record.connectionQuestions ?? [],
     subclasses: subclasses.map((s) => ({

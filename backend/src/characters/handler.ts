@@ -413,7 +413,7 @@ interface ClassRecord {
   startingHitPoints: number;
   classItems?: string[];
   hopeFeature?: Record<string, unknown>;
-  classFeature?: Record<string, unknown>;
+  classFeatures?: Array<Record<string, unknown>>;
   backgroundQuestions?: string[];
   connectionQuestions?: string[];
   mechanicalNotes?: string;

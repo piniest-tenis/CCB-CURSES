@@ -334,23 +334,29 @@ export default function ClassDetailPage() {
               </div>
             </Section>
 
-            {/* Class Feature */}
-            <Section title="Class Feature">
-              <div className="rounded-lg border border-burgundy-900/60 bg-slate-850/50 px-4 py-4 space-y-2">
-                <p className="text-base font-semibold text-parchment-200">{cls.classFeature.name}</p>
-                <MarkdownContent className="text-base text-parchment-400 leading-relaxed">{cls.classFeature.description}</MarkdownContent>
-                {cls.classFeature.options.length > 0 && (
-                  <ul className="mt-2 space-y-1">
-                    {cls.classFeature.options.map((opt, i) => (
-                      <li key={i} className="flex items-start gap-2 text-base text-parchment-500">
-                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-burgundy-600" />
-                        <MarkdownContent inline>{opt}</MarkdownContent>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </Section>
+            {/* Class Features */}
+            {(cls.classFeatures?.length ?? 0) > 0 && (
+              <Section title={cls.classFeatures.length > 1 ? "Class Features" : "Class Feature"}>
+                <div className="space-y-3">
+                  {cls.classFeatures.map((feature) => (
+                    <div key={feature.name} className="rounded-lg border border-burgundy-900/60 bg-slate-850/50 px-4 py-4 space-y-2">
+                      <p className="text-base font-semibold text-parchment-200">{feature.name}</p>
+                      <MarkdownContent className="text-base text-parchment-400 leading-relaxed">{feature.description}</MarkdownContent>
+                      {feature.options.length > 0 && (
+                        <ul className="mt-2 space-y-1">
+                          {feature.options.map((opt, i) => (
+                            <li key={i} className="flex items-start gap-2 text-base text-parchment-500">
+                              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-burgundy-600" />
+                              <MarkdownContent inline>{opt}</MarkdownContent>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
 
             {/* Subclasses */}
             {cls.subclasses.length > 0 && (

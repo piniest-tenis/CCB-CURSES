@@ -27,7 +27,7 @@ As a Creep Enthusiast, choose between the following subclasses.
 _Play the Anomalist if you want to turn every manifestation of the Creep or Etherotaxia into a weapon or a tool, and remain clear-headed where others falter._
 
 **Exception Theorist**
-_Play the Exception Theorist if you want to build a working model of Forestdown's corruption — documenting, cross-referencing, and predicting what comes next._
+_Play the Exception Theorist if you want to build a working model of Forestdown's corruption by building a dossier to help explain its mysteries._
 
 ### Background Questions
 
@@ -71,7 +71,7 @@ _Acclimatized_: You are immune to fear and Stress from encountering the Creep, E
 
 ## **Exception Theorist**
 
-_Play the Exception Theorist if you want to build a working model of Forestdown's corruption — documenting, cross-referencing, and predicting what comes next._
+_Play the Exception Theorist if you want to build a working model of Forestdown's corruption by building a dossier to help explain its mysteries._
 
 ### Spellcast Trait
 
