@@ -30,7 +30,7 @@
  * Color scheme matches the base character sheet (#577399 steel-blue).
  */
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import type {
   AdvancementType,
   AdvancementChoice,
@@ -181,19 +181,27 @@ interface LevelUpWizardProps {
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
 
+const STEP_NAMES = ["Overview", "Advancements", "Domain Card", "Confirm"];
+
 function StepIndicator({ current, total }: { current: number; total: number }) {
   return (
-    <div className="flex items-center justify-center gap-2 mb-4">
-      {Array.from({ length: total }, (_, i) => (
-        <div
-          key={i}
-          className={`
-            h-2 rounded-full transition-all duration-200
-            ${i === current ? "w-8 bg-[#577399]" : i < current ? "w-2 bg-[#577399]/60" : "w-2 bg-slate-700"}
-          `}
-          aria-label={`Step ${i + 1} of ${total}${i === current ? " (current)" : ""}`}
-        />
-      ))}
+    <div className="flex flex-col items-center gap-1 mb-4">
+      <div className="flex items-center justify-center gap-2">
+        {Array.from({ length: total }, (_, i) => (
+          <div
+            key={i}
+            role="img"
+            className={`
+              h-2 rounded-full transition-all duration-200
+              ${i === current ? "w-8 bg-[#577399]" : i < current ? "w-2 bg-[#577399]/60" : "w-2 bg-slate-700"}
+            `}
+            aria-label={`Step ${i + 1} of ${total}: ${STEP_NAMES[i] ?? ""}${i === current ? " (current)" : ""}`}
+          />
+        ))}
+      </div>
+      <p className="text-sm font-semibold text-parchment-400">
+        Step {current + 1} of {total}: {STEP_NAMES[current] ?? ""}
+      </p>
     </div>
   );
 }
@@ -240,7 +248,7 @@ function MulticlassPicker({ currentClassId, value, onChange }: MulticlassPickerP
     return (
       <div className="flex items-center gap-2 py-4">
         <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#577399] border-t-transparent" aria-hidden="true" />
-        <span className="text-xs text-parchment-500">Loading classes...</span>
+        <span className="text-sm text-parchment-500">Loading classes...</span>
       </div>
     );
   }
@@ -250,7 +258,7 @@ function MulticlassPicker({ currentClassId, value, onChange }: MulticlassPickerP
   if (phase === "class") {
     return (
       <div className="space-y-2">
-        <p className="text-[11px] text-parchment-500">
+        <p className="text-sm text-parchment-500">
           Select the class you want to multiclass into. You will choose one of its domains and one of its subclass Foundation features.
         </p>
         <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
@@ -278,13 +286,13 @@ function MulticlassPicker({ currentClassId, value, onChange }: MulticlassPickerP
                     <span className="text-sm font-semibold text-[#f7f7ff]">{cls.name}</span>
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-xs text-[#b9baa3]/50 truncate">
+                    <span className="text-xs text-parchment-500 truncate">
                       {cls.domains.join(" & ")}
                     </span>
                   </div>
                 </div>
                 {isSelected && (
-                  <span className="ml-2 text-[#577399] text-lg leading-none shrink-0">✓</span>
+                  <span className="ml-2 text-[#577399] text-lg leading-none shrink-0" aria-hidden="true">✓</span>
                 )}
               </button>
             );
@@ -304,11 +312,11 @@ function MulticlassPicker({ currentClassId, value, onChange }: MulticlassPickerP
         <button
           type="button"
           onClick={() => setPhase("class")}
-          className="flex items-center gap-1.5 text-xs text-[#b9baa3]/50 hover:text-[#b9baa3] transition-colors"
+          className="flex items-center gap-1.5 text-sm text-parchment-500 hover:text-parchment-300 transition-colors focus:outline-none focus:ring-2 focus:ring-[#577399] rounded"
         >
-          ← Change class
+          <span aria-hidden="true">←</span> Change class
         </button>
-        <p className="text-[11px] text-parchment-500">
+        <p className="text-sm text-parchment-500">
           Choose <span className="font-semibold text-[#f7f7ff]">one domain</span> from{" "}
           <span className="font-semibold text-[#f7f7ff]">{chosenClassData?.name ?? selectedClassId}</span>.
           Cards from this domain will be available at up to half your character level (rounded up).
@@ -316,7 +324,7 @@ function MulticlassPicker({ currentClassId, value, onChange }: MulticlassPickerP
         {chosenClassLoading ? (
           <div className="flex items-center gap-2 py-2">
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#577399] border-t-transparent" aria-hidden="true" />
-            <span className="text-xs text-parchment-500">Loading class details...</span>
+            <span className="text-sm text-parchment-500">Loading class details...</span>
           </div>
         ) : (
           <div className="space-y-1.5">
@@ -340,10 +348,10 @@ function MulticlassPicker({ currentClassId, value, onChange }: MulticlassPickerP
                 >
                   <div className="flex-1 min-w-0">
                     <span className="text-sm font-semibold text-[#f7f7ff]">{domain}</span>
-                    <p className="text-xs text-[#b9baa3]/50 mt-0.5">Domain</p>
+                    <p className="text-xs text-parchment-500 mt-0.5">Domain</p>
                   </div>
                   {isSelected && (
-                    <span className="ml-2 text-[#577399] text-lg leading-none shrink-0">✓</span>
+                    <span className="ml-2 text-[#577399] text-lg leading-none shrink-0" aria-hidden="true">✓</span>
                   )}
                 </button>
               );
@@ -363,11 +371,11 @@ function MulticlassPicker({ currentClassId, value, onChange }: MulticlassPickerP
       <button
         type="button"
         onClick={() => setPhase("domain")}
-        className="flex items-center gap-1.5 text-xs text-[#b9baa3]/50 hover:text-[#b9baa3] transition-colors"
+        className="flex items-center gap-1.5 text-sm text-parchment-500 hover:text-parchment-300 transition-colors focus:outline-none focus:ring-2 focus:ring-[#577399] rounded"
       >
-        ← Change domain
+        <span aria-hidden="true">←</span> Change domain
       </button>
-      <p className="text-[11px] text-parchment-500">
+      <p className="text-sm text-parchment-500">
         Choose a <span className="font-semibold text-[#f7f7ff]">subclass</span> from{" "}
         <span className="font-semibold text-[#f7f7ff]">{chosenClassData?.name ?? selectedClassId}</span>{" "}
         to take its <span className="font-semibold text-[#f7f7ff]">Foundation</span> feature card.
@@ -376,7 +384,7 @@ function MulticlassPicker({ currentClassId, value, onChange }: MulticlassPickerP
       {chosenClassLoading ? (
         <div className="flex items-center gap-2 py-2">
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#577399] border-t-transparent" aria-hidden="true" />
-          <span className="text-xs text-parchment-500">Loading class details...</span>
+           <span className="text-sm text-parchment-500">Loading class details...</span>
         </div>
       ) : (
         <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
@@ -401,7 +409,7 @@ function MulticlassPicker({ currentClassId, value, onChange }: MulticlassPickerP
                 {/* Selection circle */}
                 <span
                   className={`
-                    mr-3 h-5 w-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors
+                    mr-3 h-6 w-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors
                     ${isSelected ? "border-[#577399] bg-[#577399]" : "border-slate-600"}
                   `}
                 >
@@ -410,7 +418,7 @@ function MulticlassPicker({ currentClassId, value, onChange }: MulticlassPickerP
                 <div className="flex-1 min-w-0">
                   <span className="text-sm font-semibold text-[#f7f7ff]">{sc.name}</span>
                   {sc.description && (
-                    <p className="text-xs text-[#b9baa3]/50 mt-0.5 truncate">{sc.description}</p>
+                    <p className="text-sm text-parchment-500 mt-0.5 truncate">{sc.description}</p>
                   )}
                 </div>
               </button>
@@ -422,7 +430,7 @@ function MulticlassPicker({ currentClassId, value, onChange }: MulticlassPickerP
       {/* Summary when all three are chosen */}
       {selectedClassId && selectedDomainId && selectedSubclassId && (
         <div className="rounded border border-[#577399]/40 bg-[#577399]/10 px-3 py-2 mt-2">
-          <p className="text-[11px] text-[#b9baa3]">
+          <p className="text-sm text-[#b9baa3]">
             <span className="font-semibold text-[#f7f7ff]">Multiclass Summary:</span>{" "}
             {chosenClassData?.name ?? selectedClassId} ·{" "}
             <span className="text-[#577399]">{selectedDomainId}</span> domain ·{" "}
@@ -603,13 +611,13 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
 
     return (
       <div className="mt-3 rounded-lg border border-[#577399]/40 bg-slate-850 p-3 space-y-2">
-        <p className="text-xs text-parchment-400">
+        <p className="text-sm text-parchment-400">
           {opt.label}: specify details
         </p>
 
         {pendingType === "trait-bonus" && (
           <>
-            <label className="block text-[10px] text-parchment-500 uppercase tracking-wider">First stat</label>
+            <label className="block text-sm text-parchment-500 uppercase tracking-wider">First stat</label>
             <select
               value={detailValue1}
               onChange={(e) => setDetailValue1(e.target.value)}
@@ -626,7 +634,7 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
                 </option>
               ))}
             </select>
-            <label className="block text-[10px] text-parchment-500 uppercase tracking-wider mt-1">Second stat</label>
+            <label className="block text-sm text-parchment-500 uppercase tracking-wider mt-1">Second stat</label>
             <select
               value={detailValue2}
               onChange={(e) => setDetailValue2(e.target.value)}
@@ -644,14 +652,14 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
               ))}
             </select>
             {detailValue1 && detailValue2 && detailValue1 === detailValue2 && (
-              <p className="text-[10px] text-[#fe5f55]">Must select two different stats</p>
+              <p className="text-sm text-[#fe5f55]">Must select two different stats</p>
             )}
           </>
         )}
 
         {pendingType === "experience-bonus" && (
           <>
-            <label className="block text-[10px] text-parchment-500 uppercase tracking-wider">First experience</label>
+            <label className="block text-sm text-parchment-500 uppercase tracking-wider">First experience</label>
             <select
               value={detailValue1}
               onChange={(e) => setDetailValue1(e.target.value)}
@@ -668,7 +676,7 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
                 </option>
               ))}
             </select>
-            <label className="block text-[10px] text-parchment-500 uppercase tracking-wider mt-1">Second experience</label>
+            <label className="block text-sm text-parchment-500 uppercase tracking-wider mt-1">Second experience</label>
             <select
               value={detailValue2}
               onChange={(e) => setDetailValue2(e.target.value)}
@@ -701,11 +709,12 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
             type="button"
             onClick={handleConfirmDetail}
             disabled={!isDetailValid()}
+            aria-label={`Add ${opt?.label ?? "advancement"}`}
             className="
-              rounded px-3 py-1.5 text-xs font-semibold
+              rounded px-3 py-1.5 text-sm font-semibold
               bg-[#577399]/80 text-[#f7f7ff] border border-[#577399]
               hover:bg-[#577399] transition-colors
-              disabled:opacity-40 disabled:cursor-not-allowed
+              disabled:opacity-60 disabled:cursor-not-allowed
               focus:outline-none focus:ring-2 focus:ring-[#577399]
             "
           >
@@ -714,8 +723,9 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
           <button
             type="button"
             onClick={handleCancelDetail}
+            aria-label={`Cancel ${opt?.label ?? "advancement"}`}
             className="
-              rounded px-3 py-1.5 text-xs font-semibold
+              rounded px-3 py-1.5 text-sm font-semibold
               bg-slate-800 text-parchment-400 border border-slate-700
               hover:bg-slate-700 transition-colors
               focus:outline-none focus:ring-2 focus:ring-[#577399]
@@ -751,7 +761,7 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
         <h3 className="text-sm font-semibold text-parchment-200">
           Choose Advancements
         </h3>
-        <span className={`text-xs font-bold ${slotsRemaining === 0 ? "text-emerald-400" : "text-[#577399]"}`}>
+        <span aria-live="polite" className={`text-xs font-bold ${slotsRemaining === 0 ? "text-emerald-400" : "text-[#577399]"}`}>
           {slotsUsed}/2 slots used
         </span>
       </div>
@@ -770,17 +780,17 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
                 <div>
                   <span className="text-sm text-parchment-200">{opt?.label ?? choice.type}</span>
                   {displayDetail && (
-                    <span className="ml-2 text-xs text-parchment-500">({displayDetail})</span>
+                    <span className="ml-2 text-sm text-parchment-500">({displayDetail})</span>
                   )}
                   {opt && opt.slotCost === 2 && (
-                    <span className="ml-2 text-[10px] text-[#577399] font-bold">2 SLOTS</span>
+                    <span className="ml-2 text-xs text-[#577399] font-bold">2 SLOTS</span>
                   )}
                 </div>
                 <button
                   type="button"
                   onClick={() => handleRemove(i)}
                   aria-label={`Remove ${opt?.label ?? choice.type}`}
-                  className="text-[#fe5f55] hover:text-[#fe5f55]/80 text-xs px-1 transition-colors focus:outline-none focus:ring-1 focus:ring-[#577399] rounded"
+                  className="text-[#fe5f55] hover:text-[#fe5f55]/80 text-sm px-2 py-1 transition-colors focus:outline-none focus:ring-1 focus:ring-[#577399] rounded"
                 >
                   Remove
                 </button>
@@ -807,12 +817,12 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold text-parchment-200">{opt.label}</span>
                 {opt.slotCost === 2 && (
-                  <span className="rounded bg-[#577399]/20 px-1.5 text-[10px] font-bold text-[#577399]">
+                  <span className="rounded bg-[#577399]/20 px-1.5 text-xs font-bold text-[#577399]">
                     2 slots
                   </span>
                 )}
               </div>
-              <span className="mt-0.5 text-[11px] text-parchment-500">{opt.description}</span>
+              <span className="mt-0.5 text-sm text-parchment-500">{opt.description}</span>
             </button>
           ))}
         </div>
@@ -855,37 +865,37 @@ function LevelUpCardDetail({
       <button
         type="button"
         onClick={onBack}
-        className="flex items-center gap-1.5 px-4 py-3 text-xs text-[#b9baa3]/50 hover:text-[#b9baa3] transition-colors shrink-0"
+        className="flex items-center gap-1.5 px-4 py-3 text-sm text-parchment-500 hover:text-parchment-300 transition-colors shrink-0 focus:outline-none focus:ring-2 focus:ring-[#577399] rounded"
       >
-        ← Back to cards
+        <span aria-hidden="true">←</span> Back to cards
       </button>
       <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4">
         {/* Header */}
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs uppercase tracking-wider text-[#b9baa3]/40">
+            <span className="text-xs uppercase tracking-wider text-parchment-500">
               {card.domain}
             </span>
-            <span className="text-[#b9baa3]/20">·</span>
-            <span className="text-xs uppercase tracking-wider text-[#b9baa3]/40">
+            <span className="text-parchment-700" aria-hidden="true">·</span>
+            <span className="text-xs uppercase tracking-wider text-parchment-500">
               Level {card.level}
             </span>
             {card.isGrimoire && (
               <>
-                <span className="text-[#b9baa3]/20">·</span>
-                <span className="text-xs uppercase tracking-wider text-[#daa520]/60">Grimoire</span>
+                <span className="text-parchment-700" aria-hidden="true">·</span>
+                <span className="text-xs uppercase tracking-wider text-[#daa520]">Grimoire</span>
               </>
             )}
             {card.isCursed && (
               <>
-                <span className="text-[#b9baa3]/20">·</span>
-                <span className="text-xs uppercase tracking-wider text-[#fe5f55]/60">Cursed</span>
+                <span className="text-parchment-700" aria-hidden="true">·</span>
+                <span className="text-xs uppercase tracking-wider text-[#fe5f55]">Cursed</span>
               </>
             )}
             {card.isLinkedCurse && (
               <>
-                <span className="text-[#b9baa3]/20">·</span>
-                <span className="text-xs uppercase tracking-wider text-[#fe5f55]/60">Linked Curse</span>
+                <span className="text-parchment-700" aria-hidden="true">·</span>
+                <span className="text-xs uppercase tracking-wider text-[#fe5f55]">Linked Curse</span>
               </>
             )}
           </div>
@@ -895,7 +905,7 @@ function LevelUpCardDetail({
         {/* Recall cost */}
         <div className="flex gap-4 text-sm">
           <div className="flex items-center gap-2">
-            <span className="text-xs uppercase tracking-wider text-[#b9baa3]/40">Recall Cost</span>
+            <span className="text-xs uppercase tracking-wider text-parchment-500">Recall Cost</span>
             <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 font-bold text-[#f7f7ff]">
               {typeof card.level === "number" ? card.level : "—"}
             </span>
@@ -909,14 +919,14 @@ function LevelUpCardDetail({
               {card.grimoire.map((ability, i) => (
                 <div key={i}>
                   <p className="text-sm font-semibold text-[#f7f7ff] mb-1">{ability.name}</p>
-                  <MarkdownContent className="text-sm text-[#b9baa3]/75">
+                  <MarkdownContent className="text-base text-parchment-300">
                     {ability.description}
                   </MarkdownContent>
                 </div>
               ))}
             </div>
           ) : (
-            <MarkdownContent className="text-sm text-[#b9baa3]/75">
+            <MarkdownContent className="text-base text-parchment-300">
               {card.description}
             </MarkdownContent>
           )}
@@ -924,8 +934,8 @@ function LevelUpCardDetail({
 
         {card.isCursed && card.curseText && (
           <div className="rounded-lg border border-[#fe5f55]/30 bg-[#fe5f55]/5 px-4 py-3">
-            <p className="text-xs uppercase tracking-wider text-[#fe5f55]/60 mb-1">Curse</p>
-            <MarkdownContent className="text-sm text-[#b9baa3]/70">
+            <p className="text-xs uppercase tracking-wider text-[#fe5f55] mb-1">Curse</p>
+            <MarkdownContent className="text-base text-parchment-400">
               {card.curseText}
             </MarkdownContent>
           </div>
@@ -942,7 +952,7 @@ function LevelUpCardDetail({
               ? "bg-[#577399]/20 border-2 border-[#577399] text-[#577399] hover:bg-[#577399]/30"
               : canSelect
                 ? "bg-[#577399] text-white hover:bg-[#577399]/80"
-                : "bg-slate-800/50 border border-slate-700/40 text-[#b9baa3]/30 cursor-not-allowed"
+                : "bg-slate-800/50 border border-slate-700/40 text-parchment-600 cursor-not-allowed"
             }
           `}
         >
@@ -972,9 +982,8 @@ function LevelUpCardRow({
 }) {
   return (
     <div
-      onClick={onDrill}
       className={`
-        flex items-center rounded-lg border transition-all cursor-pointer
+        flex items-center rounded-lg border transition-all
         ${isSelected
           ? "border-[#577399] bg-[#577399]/15"
           : "border-slate-700/60 bg-slate-900/30 hover:border-slate-600"
@@ -988,7 +997,7 @@ function LevelUpCardRow({
         disabled={!canSelect && !isSelected}
         aria-label={isSelected ? `Deselect ${card.name}` : `Select ${card.name}`}
         className={`
-          ml-3 h-5 w-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors
+          ml-3 h-6 w-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors
           ${isSelected
             ? "border-[#577399] bg-[#577399]"
             : !canSelect
@@ -1000,39 +1009,44 @@ function LevelUpCardRow({
         {isSelected && <span className="h-2 w-2 rounded-full bg-white" />}
       </button>
 
-      {/* Text — fills remaining space, clicking goes to drill-down via parent */}
-      <div className="flex-1 flex items-center gap-3 px-3 py-3 min-w-0">
+      {/* Text — drill-down button */}
+      <button
+        type="button"
+        onClick={onDrill}
+        aria-label={`View details for ${card.name}`}
+        className="flex-1 flex items-center gap-3 px-3 py-3 min-w-0 text-left focus:outline-none focus:ring-2 focus:ring-[#577399] rounded-r-lg"
+      >
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-[#f7f7ff] truncate">{card.name}</span>
-            <span className="text-xs text-[#b9baa3]/40 shrink-0">{card.domain}</span>
+            <span className="text-xs text-parchment-500 shrink-0">{card.domain}</span>
             {isMulticlassDomain && (
-              <span className="text-[10px] text-[#577399]/70 font-bold shrink-0 border border-[#577399]/30 rounded px-1">MC</span>
+              <span className="text-xs text-[#577399] font-bold shrink-0 border border-[#577399]/30 rounded px-1">MC</span>
             )}
             {card.isCursed && (
-              <span className="text-[10px] text-[#fe5f55] font-bold shrink-0">Cursed</span>
+              <span className="text-xs text-[#fe5f55] font-bold shrink-0">Cursed</span>
             )}
             {card.isLinkedCurse && (
-              <span className="text-[10px] text-[#fe5f55] font-bold shrink-0">Linked</span>
+              <span className="text-xs text-[#fe5f55] font-bold shrink-0">Linked</span>
             )}
             {card.isGrimoire && (
-              <span className="text-[10px] text-[#daa520]/60 font-bold shrink-0">Grimoire</span>
+              <span className="text-xs text-[#daa520] font-bold shrink-0">Grimoire</span>
             )}
           </div>
           <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-xs text-[#b9baa3]/40">Lvl {card.level}</span>
-            <span className="text-[#b9baa3]/20 text-xs">·</span>
-            <span className="text-xs text-[#b9baa3]/50 truncate">
+            <span className="text-xs text-parchment-500">Lvl {card.level}</span>
+            <span className="text-parchment-700 text-xs" aria-hidden="true">·</span>
+            <span className="text-xs text-parchment-500 truncate">
               {truncateCardText(card.isGrimoire
                 ? (card.grimoire[0]?.description ?? card.description)
                 : card.description)}
             </span>
           </div>
         </div>
-      </div>
+      </button>
 
       {/* Drill-down chevron */}
-      <span className="pr-3 text-[#b9baa3]/30 text-lg leading-none shrink-0">›</span>
+      <span className="pr-3 text-parchment-600 text-lg leading-none shrink-0" aria-hidden="true">›</span>
     </div>
   );
 }
@@ -1141,7 +1155,7 @@ function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardI
         <h3 className="text-sm font-semibold text-parchment-200">
           Acquire Domain Card
         </h3>
-        <p className="text-xs text-parchment-600 italic">
+        <p className="text-sm text-parchment-600 italic">
           No domains assigned. This character&apos;s class may not have domains configured.
         </p>
       </div>
@@ -1164,7 +1178,7 @@ function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardI
           <h3 className="text-sm font-semibold text-parchment-200">
             Acquire Domain Card{maxSelections > 1 ? "s" : ""}
           </h3>
-          <span className={`text-xs font-bold ${selectedCardIds.length >= 1 ? "text-emerald-400" : "text-[#fe5f55]"}`}>
+          <span aria-live="polite" className={`text-xs font-bold ${selectedCardIds.length >= 1 ? "text-emerald-400" : "text-[#fe5f55]"}`}>
             {selectedCardIds.length}/{maxSelections} selected
           </span>
         </div>
@@ -1187,14 +1201,14 @@ function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardI
           Acquire Domain Card{maxSelections > 1 ? "s" : ""}
         </h3>
         <div className="flex items-center gap-3">
-          <span className={`text-xs font-bold ${selectedCardIds.length >= 1 ? "text-emerald-400" : "text-[#fe5f55]"}`}>
+          <span aria-live="polite" className={`text-xs font-bold ${selectedCardIds.length >= 1 ? "text-emerald-400" : "text-[#fe5f55]"}`}>
             {selectedCardIds.length}/{maxSelections} selected
           </span>
           {selectedCardIds.length > 0 && (
             <button
               type="button"
               onClick={() => onSelect([])}
-              className="text-xs text-parchment-500 hover:text-parchment-300 transition-colors focus:outline-none focus:ring-1 focus:ring-[#577399] rounded px-1"
+              className="text-sm text-parchment-500 hover:text-parchment-300 transition-colors focus:outline-none focus:ring-1 focus:ring-[#577399] rounded px-1"
             >
               Clear
             </button>
@@ -1202,7 +1216,7 @@ function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardI
         </div>
       </div>
 
-      <p className="text-[11px] text-parchment-500">
+      <p className="text-sm text-parchment-500">
         Choose {maxSelections > 1 ? `up to ${maxSelections} cards` : "one card"} from your domains
         ({domainDescription}).
         {maxSelections > 1 && " You chose Extra Domain Card as an advancement, granting one extra pick."}
@@ -1210,17 +1224,17 @@ function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardI
         {" "}Domain card acquisition is required.
         {" "}Tap a card to view its full details.
         {multiclassDomain && (
-          <span className="ml-1 text-[#577399]/70">Cards marked <span className="font-bold">MC</span> are from your multiclass domain.</span>
+          <span className="ml-1 text-[#577399]">Cards marked <span className="font-bold">MC</span> are from your multiclass domain.</span>
         )}
       </p>
 
       {isLoading ? (
         <div className="flex items-center gap-2 py-4">
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#577399] border-t-transparent" aria-hidden="true" />
-          <span className="text-xs text-parchment-500">Loading domain cards...</span>
+          <span className="text-sm text-parchment-500">Loading domain cards...</span>
         </div>
       ) : availableCards.length === 0 ? (
-        <p className="text-xs text-parchment-600 italic">
+        <p className="text-sm text-parchment-600 italic">
           No new cards available at this level. You may proceed without selecting a card.
         </p>
       ) : (
@@ -1261,6 +1275,8 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
   // Tracks selected domain card IDs on the Domain Card step.
   // First entry = newDomainCardId, second (if extra domain card advancement) = additional card.
   const [selectedDomainCardIds, setSelectedDomainCardIds] = useState<string[]>([]);
+  // Maps cardId → human-readable card name for display in the confirm step
+  const [cardNameMap, setCardNameMap] = useState<Record<string, string>>({});
 
   const levelUpMutation = useCharacterLevelUp(character.characterId);
 
@@ -1285,6 +1301,60 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
   const domainCardSatisfied = selectedDomainCardIds.length >= 1 || noCardsAvailable;
 
   const STEPS = ["Overview", "Advancements", "Domain Card", "Confirm"];
+
+  // ── Refs for focus management ──────────────────────────────────────────────
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const stepHeadingRef = useRef<HTMLHeadingElement>(null);
+
+  // ── Focus trap + Escape key handler ────────────────────────────────────────
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    // Focus dialog on mount
+    dialog.focus();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (e.key === "Tab") {
+        const focusable = dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    };
+
+    dialog.addEventListener("keydown", handleKeyDown);
+    return () => dialog.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  // ── Focus step heading on step change ──────────────────────────────────────
+  useEffect(() => {
+    // Small delay to ensure the DOM has updated with new step content
+    const timer = setTimeout(() => {
+      stepHeadingRef.current?.focus();
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [step]);
 
   const canProceed = useCallback((): boolean => {
     switch (step) {
@@ -1354,7 +1424,9 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
 
   return (
     <div
-      className="rounded-xl border border-[#577399]/40 bg-slate-900/98 p-6 shadow-card-fantasy-hover space-y-5"
+      ref={dialogRef}
+      tabIndex={-1}
+      className="rounded-xl border border-[#577399]/40 bg-slate-900 p-6 shadow-card-fantasy-hover space-y-5 outline-none"
       role="dialog"
       aria-label={`Level up to level ${targetLevel}`}
       aria-modal="true"
@@ -1368,7 +1440,7 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
           type="button"
           onClick={onClose}
           aria-label="Cancel level up"
-          className="text-parchment-600 hover:text-parchment-300 text-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#577399] rounded px-2 py-1"
+          className="text-parchment-600 hover:text-parchment-300 text-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#577399] rounded px-3 py-2"
         >
           Cancel
         </button>
@@ -1378,12 +1450,18 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
 
       {/* Step content */}
       <div className="min-h-[200px]">
+        {/* Focusable step heading for screen reader + focus management */}
+        <h3
+          ref={stepHeadingRef}
+          tabIndex={-1}
+          className="text-sm font-semibold text-parchment-200 outline-none mb-3"
+        >
+          {STEPS[step]}
+        </h3>
+
         {/* Step 0: Overview */}
         {step === 0 && (
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-parchment-200">
-              {STEPS[0]}
-            </h3>
 
             <div className="rounded-lg border border-[#577399]/30 bg-slate-900/80 p-4 space-y-2">
               <p className="text-sm text-parchment-300">
@@ -1397,7 +1475,7 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
                     Tier {currentTier} &rarr; Tier {newTier}
                   </p>
                   {targetLevel === 5 && (
-                    <p className="text-xs text-parchment-400 mt-1">
+                    <p className="text-sm text-parchment-400 mt-1">
                       Multiclassing becomes available at Tier 3 (level 5+).
                     </p>
                   )}
@@ -1406,7 +1484,7 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
 
               {/* Automatic bonuses */}
               <div className="space-y-1.5 pt-2">
-                <p className="text-[10px] uppercase tracking-wider text-parchment-600 font-medium">
+                <p className="text-xs uppercase tracking-wider text-parchment-500 font-medium">
                   Automatic Bonuses
                 </p>
                 <ul className="space-y-1 text-sm text-parchment-400">
@@ -1456,7 +1534,7 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
               )}
 
               {/* Domain card mandatory notice */}
-              <div className="mt-2 text-[11px] text-parchment-500 italic">
+              <div className="mt-2 text-sm text-parchment-500 italic">
                 You will be required to select a domain card in step 3.
               </div>
             </div>
@@ -1483,6 +1561,7 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
             selectedDomainCardIds={selectedDomainCardIds}
             setSelectedDomainCardIds={setSelectedDomainCardIds}
             onNoCardsAvailable={setNoCardsAvailable}
+            onCardNameMap={setCardNameMap}
             pendingMulticlassDomain={pendingMulticlassDomain}
           />
         )}
@@ -1497,6 +1576,7 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
             advancements={advancements}
             slotsUsed={slotsUsed}
             selectedDomainCardIds={selectedDomainCardIds}
+            cardNameMap={cardNameMap}
             levelUpError={levelUpMutation.isError ? levelUpMutation.error : null}
           />
         )}
@@ -1528,7 +1608,7 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
               rounded-lg px-4 py-2 text-sm font-semibold
               bg-[#577399]/80 text-[#f7f7ff] border border-[#577399]
               hover:bg-[#577399] transition-colors
-              disabled:opacity-40 disabled:cursor-not-allowed
+              disabled:opacity-60 disabled:cursor-not-allowed
               focus:outline-none focus:ring-2 focus:ring-[#577399]
             "
           >
@@ -1542,10 +1622,10 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
             aria-busy={levelUpMutation.isPending}
             className="
               rounded-lg px-6 py-2 text-sm font-bold
-              bg-[#577399] text-[#f7f7ff] border border-[#577399]
-              hover:bg-[#577399]/80 transition-colors
-              disabled:opacity-40 disabled:cursor-not-allowed
-              focus:outline-none focus:ring-2 focus:ring-[#577399]
+              bg-emerald-600 text-white border border-emerald-500
+              hover:bg-emerald-500 transition-colors
+              disabled:opacity-60 disabled:cursor-not-allowed
+              focus:outline-none focus:ring-2 focus:ring-emerald-400
             "
           >
             {levelUpMutation.isPending ? (
@@ -1576,6 +1656,7 @@ function ConfirmStep({
   advancements,
   slotsUsed,
   selectedDomainCardIds,
+  cardNameMap,
   levelUpError,
 }: {
   character: Character;
@@ -1585,6 +1666,7 @@ function ConfirmStep({
   advancements: AdvancementChoice[];
   slotsUsed: number;
   selectedDomainCardIds: string[];
+  cardNameMap: Record<string, string>;
   levelUpError: unknown;
 }) {
   const formatAdvancementDetail = (adv: AdvancementChoice): string | null => {
@@ -1610,7 +1692,7 @@ function ConfirmStep({
 
       <div className="rounded-lg border border-[#577399]/30 bg-slate-900/80 p-4 space-y-3">
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-parchment-600 font-medium mb-1">
+          <p className="text-xs uppercase tracking-wider text-parchment-500 font-medium mb-1">
             Target Level
           </p>
           <p className="text-lg font-bold text-[#f7f7ff]">{targetLevel}</p>
@@ -1618,7 +1700,7 @@ function ConfirmStep({
 
         {hasTierAchievement && (
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-parchment-600 font-medium mb-1">
+            <p className="text-xs uppercase tracking-wider text-parchment-500 font-medium mb-1">
               Tier Achievement
             </p>
             <p className="text-sm text-[#b9baa3]">
@@ -1629,18 +1711,18 @@ function ConfirmStep({
         )}
 
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-parchment-600 font-medium mb-1">
+          <p className="text-xs uppercase tracking-wider text-parchment-500 font-medium mb-1">
             Automatic
           </p>
           <p className="text-sm text-parchment-400">+1 Major Threshold, +1 Severe Threshold</p>
         </div>
 
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-parchment-600 font-medium mb-1">
+          <p className="text-xs uppercase tracking-wider text-parchment-500 font-medium mb-1">
             Advancements ({slotsUsed}/2 slots)
           </p>
           {advancements.length === 0 ? (
-            <p className="text-xs text-parchment-600 italic">None selected</p>
+            <p className="text-sm text-parchment-600 italic">None selected</p>
           ) : (
             <ul className="space-y-1">
               {advancements.map((adv, i) => {
@@ -1658,7 +1740,7 @@ function ConfirmStep({
         </div>
 
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-parchment-600 font-medium mb-1">
+          <p className="text-xs uppercase tracking-wider text-parchment-500 font-medium mb-1">
             New Domain Card{selectedDomainCardIds.length > 1 ? "s" : ""}
           </p>
           {selectedDomainCardIds.length === 0 ? (
@@ -1667,7 +1749,7 @@ function ConfirmStep({
             <ul className="space-y-0.5">
               {selectedDomainCardIds.map((id, i) => (
                 <li key={id} className="text-sm text-parchment-300">
-                  {id}
+                  {cardNameMap[id] ?? id}
                   {i === 1 && <span className="ml-1 text-xs text-[#577399]">(extra)</span>}
                 </li>
               ))}
@@ -1701,6 +1783,7 @@ function DomainCardPickerWrapper({
   selectedDomainCardIds,
   setSelectedDomainCardIds,
   onNoCardsAvailable,
+  onCardNameMap,
   pendingMulticlassDomain,
 }: {
   character: Character;
@@ -1710,6 +1793,7 @@ function DomainCardPickerWrapper({
   selectedDomainCardIds: string[];
   setSelectedDomainCardIds: (ids: string[]) => void;
   onNoCardsAvailable: (v: boolean) => void;
+  onCardNameMap: (map: Record<string, string>) => void;
   pendingMulticlassDomain?: string | null;
 }) {
   // Fetch authoritative domain names from class data (matches DomainCardPicker/DomainLoadout pattern)
@@ -1725,6 +1809,21 @@ function DomainCardPickerWrapper({
   const { data: dmc } = useDomain(multiclassDomain || undefined);
 
   const mcCardCap = multiclassDomainCardCap(targetLevel);
+
+  // Build card name map from loaded domain data and propagate to parent
+  React.useEffect(() => {
+    const map: Record<string, string> = {};
+    for (const cards of [d0?.cards, d1?.cards, dmc?.cards]) {
+      if (cards) {
+        for (const card of cards) {
+          map[card.cardId] = card.name;
+        }
+      }
+    }
+    if (Object.keys(map).length > 0) {
+      onCardNameMap(map);
+    }
+  }, [d0, d1, dmc, onCardNameMap]);
 
   // Detect no-cards scenario
   React.useEffect(() => {
