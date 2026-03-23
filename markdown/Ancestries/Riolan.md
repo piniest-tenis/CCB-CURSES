@@ -10,6 +10,6 @@ Cave Riolans tend to be larger and paler than their City Riolan cousins.
 
 # Ancestry
 
-**Cud-munication**: When interacting with another Riolan within Close range, you may make a Presence Roll (12). On a success, you may convey specific information that will propagate to all other characters within Riolan ancestry over a period of a few days.
+**Cud-munication**: When interacting with another Riolan within Close range, you may make a Presence roll (12). On a success, you may convey specific information that will propagate to all other characters within Riolan ancestry over a period of a few days.
 
 **Communal**: When you take a downtime action to Tend to Wounds or Tend to All Wounds, you can choose an additional target.

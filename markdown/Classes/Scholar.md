@@ -37,7 +37,7 @@ Presence
 
 ### Foundation Features
 
-_Mover and Shaker_: When you first meet a new [[Faction]], you can spend a Hope to gain advantage on any roll to influence its [[Adherent|Adherents]].
+_Mover and Shaker_: When you first meet a new [[Faction]], you can spend a Hope to gain Advantage on any roll to influence its [[Adherent|Adherents]].
 _Calculated Pressure_: When you _Prepare_ as a downtime move, you can choose a character that you know to give the _Mark_ condition. When you attempt to influence a character with the _Mark_ condition, treat a success with Hope as a _Critical Success_. The _Mark_ condition ends after your first roll to influence that character.
 
 ### Specialization Feature
@@ -56,7 +56,7 @@ Knowledge
 
 ### Foundation Features
 
-_Eidetic Memory_: Spend a Hope to gain Advantage on your next Knowledge Roll.
+_Eidetic Memory_: Spend a Hope to gain Advantage on your next Knowledge roll.
 _Deep Research_: When you _Prepare_ as a downtime move, you can clear 1 Stress in addition to the normal benefits.
 
 ### Specialization Feature

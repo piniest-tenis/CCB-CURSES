@@ -79,9 +79,9 @@ Presence
 
 ### Foundation Features
 
-_Penitent's Endurance_: When you use Broken Vow, heal 1 Hit Point in addition to the chosen effect. The divine wound feeds you even as it punishes you.
+_Penitent's Endurance_: When you use Broken Vow, clear 1 Hit Point in addition to the chosen effect. The divine wound feeds you even as it punishes you.
 
-_Sacred Scar_: Once per rest, when you take damage, mark a Stress instead of a Hit Point. When you do, add a token to this card. At the end of the scene, spend these tokens to add +2 per token to your next Spellcast Roll.
+_Sacred Scar_: Once per rest, when you take damage, mark a Stress instead of a Hit Point. When you do, place a token on this card. At the end of the scene, spend these tokens to add +2 per token to your next Spellcast Roll.
 
 ### Specialization Feature
 

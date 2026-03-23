@@ -1,4 +1,4 @@
-Once per scene make an attack with your primary weapon against a target within Very Close range. On a success, deal your normal weapon damage plus d8 additional damage using your proficiency. The target gains the _Blazing_ condition. While _Blazing_, attacks on the target gain Advantage. 
+Once per scene make an attack with your primary weapon against a target within Very Close range. On a success, deal your normal weapon damage plus d8 additional damage using your Proficiency. The target gains the _Blazing_ condition. While _Blazing_, attacks on the target gain Advantage. 
 
 If the target acts while _Blazing_, they must take an extra 2d8 magic damage if they are still _Blazing_ at the end of their action.
 ***

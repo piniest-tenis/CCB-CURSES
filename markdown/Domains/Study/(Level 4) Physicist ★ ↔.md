@@ -6,4 +6,4 @@ You deeply understand the physical world around you, and can apply this fundamen
 Clear unspent tokens at the beginning of a long rest.
 
 ---
-**Curse**: Your knowledge is seen as heretical by the majority of religious communities within Tidwell due to your attempts to explain occurrences best left to religion. Religious adherents treat you worse have a worsened attitude towards you. If you have the [[(Level 4) Heretic ★ ↔]] Domain Card in your loadout, you may spend one of the tokens on this card to dismiss a religious adherent from the scene.
+**Curse**: Your knowledge is seen as heretical by the majority of religious communities within Tidwell due to your attempts to explain occurrences best left to religion. Religious adherents have a worsened attitude towards you. If you have the [[(Level 4) Heretic ★ ↔]] Domain Card in your loadout, you may spend one of the tokens on this card to dismiss a religious adherent from the scene.

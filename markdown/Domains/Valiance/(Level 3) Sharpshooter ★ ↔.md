@@ -6,6 +6,6 @@ You are particularly deadly at range. After a long rest, add a number of tokens 
 When you take a long rest, clear any unspent tokens.
 
 ---
-**Curse**: You've become extremely vulnerable in close range. When you take damage from an adversary in Close or Melee range, treat it as if it hit at a damage threshold one higher (e.g. Minor => Major).
+**Curse**: You've become extremely vulnerable at Close range. When you take damage from an adversary in Close or Melee range, treat it as if it hit at a damage threshold one higher (e.g. Minor => Major).
 
 If you have the [[(Level 4) Gifted ★ ↔]] Domain Card in your loadout, you may add your Knowledge to your armor score.

@@ -6,6 +6,6 @@ Intensely strategic, Spittletusk find great success historically in societies st
 
 # Ancestry
 
-**Dexterous**: When you make an Agility roll, you can mark a Stress to gain advantage on that roll.
+**Dexterous**: When you make an Agility roll, you can mark a Stress to gain Advantage on that roll.
 
-**Venomous**: When you succeed on an attack against a target within Melee range, you can spend a Hope to inject a paralytic nerve agent via your tusks, causing the target to become _Restrained_ until the end of the Scene. _Restrained_ characters cannot move unless they succeed a Strength Roll (13) or mark a Stress.
+**Venomous**: When you succeed on an attack against a target within Melee range, you can spend a Hope to inject a paralytic nerve agent via your tusks, causing the target to become _Restrained_ until the end of the Scene. _Restrained_ characters cannot move unless they succeed a Strength roll (13) or mark a Stress.

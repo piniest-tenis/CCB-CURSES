@@ -8,7 +8,7 @@ _A heavy chain wrap or collar_ or _an ornamental tabard bearing a symbol_
 
 ### Hope Feature
 
-_Proud Defense_: Spend 3 Hope to reduce incoming damage by your minor damage threshold.
+_Proud Defense_: Spend 3 Hope. If incoming damage does not meet your Major damage threshold, you take no damage instead.
 
 ### Class Features
 

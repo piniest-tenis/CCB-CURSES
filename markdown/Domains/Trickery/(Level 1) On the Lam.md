@@ -1,1 +1,1 @@
-As a reaction to an Attack, you can spend a Hope to gain a +2 bonus to your evasion until the attack resolves.
+When you are the target of an Attack, you can spend a Hope to gain a +2 bonus to your evasion until the attack resolves.

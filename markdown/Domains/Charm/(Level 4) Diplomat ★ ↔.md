@@ -5,7 +5,7 @@ einstructions: include a button to add Proficiency value's worth of tokens to th
 You're an adept and practiced interlocutor, and have gained the ability to influence others effectively via communication. Place an amount of tokens equal to your Proficiency on this card. You may spend a token to gain one of the following benefits:
 
 - When influencing another [[Character]], you may re-roll a duality die of your choosing before the result of the roll is known.
-- Gain advantage on a roll to de-escalate a situation
+- Gain Advantage on a roll to de-escalate a situation
 - When influencing another Character, swap a success with Fear to a success with Hope.
 - Once per scene, gain a +1 bonus to your [[Reputation]] score with a target [[Faction]].
 

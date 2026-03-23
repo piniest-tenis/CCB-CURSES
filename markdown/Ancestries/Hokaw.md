@@ -4,6 +4,6 @@ Their culture is one that glorifies suicidal altruism. Hokaw culture is replete 
 
 # Ancestry
 
-**Eagle-Eyed**: You have advantage on Instinct trait rolls related to sight.
+**Eagle-Eyed**: You have Advantage on Instinct trait rolls related to sight.
 
 **Commanding Voice**: Once per session, you can mark a Stress to reroll a Presence trait roll with Advantage.

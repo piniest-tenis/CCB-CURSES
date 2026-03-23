@@ -60,7 +60,7 @@ _Between Moments_: Once per rest after you use Between Places, you may remain in
 
 ### Specialization Feature
 
-**Fold Point**: The first time you use Fold Point in a scene, designate a location within Far range as a fold point. Once per scene hereafter, you may teleport to that point as an immediate action, including as a reaction to being targeted by an attack, which then resolves with Disadvantage against you. You may otherwise move to that location as an Action until the end of the scene.
+**Fold Point**: The first time you use Fold Point in a scene, designate a location within Far range as a fold point. Once per scene hereafter, you may teleport to that point, including when you are targeted by an attack (which then resolves with Disadvantage against you). You may otherwise move to that location as an Action until the end of the scene.
 
 ### Mastery Feature
 
@@ -78,7 +78,7 @@ Finesse
 
 _Clean Hands_: Whenever you use Between Places to enter a space, you may take one item from that space that is not actively held by a character. Describe what you take. If it is not secured or locked, no additional roll is required.
 
-_Quick Exit_: Once per rest immediately after a Thievery action, you may use Between Places as a reaction, even if you've already used it this scene.
+_Quick Exit_: Once per rest immediately after a Thievery action, you may use Between Places even if you've already used it this scene.
 
 ### Specialization Feature
 
@@ -86,7 +86,7 @@ _Quick Exit_: Once per rest immediately after a Thievery action, you may use Bet
 
 ### Mastery Feature
 
-**The Take**: Once per session, plan and execute a theft without requiring a separate downtime project. State what you intend to take and where it is. The GM tells you the difficulty. Make a Finesse roll against that difficulty. On a success, you have it.
+**The Take**: Once per session, plan and execute a theft without requiring a separate downtime project. State what you intend to take and where it is. The GM tells you the Difficulty. Make a Finesse roll against that Difficulty. On a success, you have it.
 
 ## Mechanical Notes
 

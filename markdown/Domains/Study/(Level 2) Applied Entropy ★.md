@@ -1,3 +1,3 @@
-Make a Spellcast Roll against a target within Far range. On a success, the target takes 1d20 damage and is _Decaying_ until after its next action. While a target is _Decaying_, it takes a -2 penalty to its Evasion score.
+Make a Spellcast Roll against a target within Far range. On a success, roll d20 dice using your Proficiency and deal damage to the target equal to the highest result. The target is also _Decaying_ until after its next action. While a target is _Decaying_, it takes a -2 penalty to its Evasion score.
 ***
 **Curse**: Whenever you use this class feature, you visibly age. Cumulative uses cause you to age further. Though this aging has no mechanical effects on you, the perception of others may be affected. After a long rest, half of this visible aging is reversed.

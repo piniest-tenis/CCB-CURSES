@@ -37,7 +37,7 @@ Make a Spellcast Roll to connect with your companion and
 command them to take action. Spend a Hope to add an
 applicable Companion Experience to the roll. On a success
 with Hope, if your next action builds on their success, you gain
-advantage on the roll.
+Advantage on the roll.
 ### ATTACKING WITH YOUR COMPANION
 When you command your companion to attack, they gain any
 benefits that would normally only apply to you (such as the

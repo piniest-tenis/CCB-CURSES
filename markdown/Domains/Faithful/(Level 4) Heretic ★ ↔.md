@@ -1,4 +1,4 @@
 You have made an enemy of an order of religion, and sought protection from its machinations. This may be any [[Faction]] with whom you have a positive [[Reputation]]. Gain a +1 improvement to the [[Attitude]] of [[Adherent]]s in factions that oppose the faction you have chosen.
 
 ---
-**Curse**: You develop a physical brand on your body that tells others of your hereticism. Characters who hold religious beliefs are suspicious of you and will seek to avoid contact with you. During the first scene where you encounter adherents of a new faction, you have a -1 penalty to Attitude. If you have the [[(Level 3) Intimidator ★ ↔]] Domain Card in your loadout, you gain advantage on any rolls to intimidate these characters.
+**Curse**: You develop a physical brand on your body that tells others of your hereticism. Characters who hold religious beliefs are suspicious of you and will seek to avoid contact with you. During the first scene where you encounter adherents of a new faction, you have a -1 penalty to Attitude. If you have the [[(Level 3) Intimidator ★ ↔]] Domain Card in your loadout, you gain Advantage on any rolls to intimidate these characters.

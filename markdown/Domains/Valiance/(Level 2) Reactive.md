@@ -1,4 +1,4 @@
-After a long rest, place a number of tokens equal to your Strength on this card. When you are the target of an incoming attack, you can spend a token before the result of the roll to take one of the following reactions:
+After a long rest, place a number of tokens equal to your Strength on this card. When you are the target of an incoming attack, you can spend a token before the result of the roll to take one of the following options:
 - _Divert_: Make a Spellcast Roll against your target. On a success, the attack is instead made against a target within Very Close range.
 - _Fortify:_ Until the attack is resolved, if you would mark a Hit Point, you mark a Stress instead.
-- _Counter:_ After the attack resolves, you can make immediately make an attack. Successes with Hope on this attack do not retain the spotlight.
+- _Counter:_ After the attack resolves, you can immediately make an attack. Successes with Hope on this attack do not retain the spotlight.

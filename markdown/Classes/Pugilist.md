@@ -14,7 +14,7 @@ _Stick and Move_: Spend 3 Hope and gain a +1 bonus to your Evasion until the end
 ### Class Feature
 
 **Showmanship**
-When you make an attack, you can describe the flashy way you engage the adversary. When you do, add your Spellcast Trait instead of your Strength on the Attack Roll.
+When you make an attack, you can describe the flashy way you engage the adversary. When you do, add your Spellcast Trait instead of your Strength on the attack roll.
 
 ### Subclasses
 
@@ -75,7 +75,7 @@ Presence
 
 ### Foundation Features
 
-_Powerful Mind, Powerful Body_: When you spend an action studying a target, you gain a +3 bonus to all damage rolls against that target. Similarly, when you roll a successful Instinct Trait Roll against a [[Character]], you gain a +3 bonus to Presence rolls concerning that character.
+_Powerful Mind, Powerful Body_: When you spend an action studying a target, you gain a +3 bonus to all damage rolls against that target. Similarly, when you roll a successful Instinct roll against a [[Character]], you gain a +3 bonus to Presence rolls concerning that character.
 _Snub Nose_: When you fail a roll with Fear, you can mark 2 Stress to change the failure to Hope.
 
 ### Specialization Feature

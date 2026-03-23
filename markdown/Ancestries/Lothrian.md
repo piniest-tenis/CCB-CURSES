@@ -6,6 +6,6 @@ Lothrians can come both in pygmy and mammoth, with the latter rivaling a [[Human
 
 # Ancestry
 
-**Camouflage**: Gain advantage on rolls to Hide.
+**Camouflage**: Gain Advantage on rolls to Hide.
 
 **Lucky**: When you spend a Hope, roll a six-sided die. On a 6, you gain a Hope and re-roll this die.

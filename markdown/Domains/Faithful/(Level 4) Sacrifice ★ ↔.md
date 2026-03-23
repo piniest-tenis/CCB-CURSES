@@ -2,9 +2,9 @@ You are destined to be sacrificed as part of a ritual to a higher power. You may
 
 You may spend these tokens for one of the following benefits:
 
-- Gain advantage on any roll to endure a psychological effect
+- Gain Advantage on any roll to endure a psychological effect
 - Clear a Stress
-- Gain resistance towards one type of damage until the end of the Scene
+- Halve all incoming damage of one type until the end of the Scene (round down)
 
 ---
 

@@ -78,7 +78,7 @@ Presence
 
 ### Foundation Features
 
-_Blistering Sermon_: Once per long rest, you can invoke your deity's name in proselytizing to others. All adversaries within Far Range take a -1 penalty to their Difficulty.
+_Blistering Sermon_: Once per long rest, you can invoke your deity's name in proselytizing to others. All adversaries within Far range take a -1 penalty to their Difficulty.
 _Righteous Indignation_: When you make a roll to influence a target within Far who has a negative [[Attitude]] towards you, you can mark any number of Stress. For each 2 Stress marked, the target gains a +1 bonus to [[Attitude]] for your next interaction.
 
 ### Specialization Feature

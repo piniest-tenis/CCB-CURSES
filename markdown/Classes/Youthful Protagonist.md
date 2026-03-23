@@ -8,7 +8,7 @@ _Something handed down from someone who believed in you before you believed in y
 
 ### Hope Feature
 
-_Against All Odds_: Spend 3 Hope. Not Done Yet lasts until the end of the scene rather than the end of your next turn. While active, whenever an ally within Close range takes damage, you may absorb it instead as a free action.
+_Against All Odds_: Spend 3 Hope. Not Done Yet lasts until the end of the scene rather than the end of your next turn. While active, whenever an ally within Close range takes damage, you may absorb it instead.
 
 ### Class Feature
 

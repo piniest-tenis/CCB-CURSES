@@ -1,6 +1,6 @@
-You are preternaturally gifted with locks of all types. When dealing with any magical or mundane lock, gain advantage when attempting to bypass it. If you successfully bypass the lock, place a token on this card. 
+You are preternaturally gifted with locks of all types. When dealing with any magical or mundane lock, gain Advantage when attempting to bypass it. If you successfully bypass the lock, place a token on this card. 
 You may spend a token from this card to gain any of the following effects:
-- Gain advantage on an Instinct roll
+- Gain Advantage on an Instinct roll
 - Gain a +5 bonus to the result of an attempt to bypass a device securing an area
 - Ignore a target's Hidden condition until the end of the scene
 ***

@@ -1,1 +1,1 @@
-When you are the first to attack, gain advantage on your attack roll. On a success, spend a Hope to deal an additional d8 physical damage using your Proficiency.
+When you are the first to attack, gain Advantage on your attack roll. On a success, spend a Hope to deal an additional d8 physical damage using your Proficiency.

@@ -83,7 +83,7 @@ Instinct
 
 ### Foundation Features
 
-_Weak Spots_: Make an Instinct Action Roll against an adversary. On a success, you deal double damage to that adversary until the end of the scene.
+_Weak Spots_: Make an Instinct Action Roll against an adversary. On a success, roll your damage dice again and add the result to the damage dealt to that adversary until the end of the scene.
 _Quick Snap_: When you take damage from an adversary, you can spend a Hope to gain Advantage on all rolls against that adversary.
 
 ### Specialization Feature

@@ -63,7 +63,7 @@ _Applied Physics_: Once per rest, before making an attack, spend a moment calcul
 
 ### Specialization Feature
 
-**Optimal Angle**: Once per scene, when you succeed on an attack, immediately direct an ally within Close range to attack the same target as a reaction. Their attack is made with Advantage.
+**Optimal Angle**: Once per scene, when you succeed on an attack, immediately direct an ally within Close range to attack the same target. Their attack is made with Advantage.
 
 ### Mastery Feature
 
@@ -79,7 +79,7 @@ Knowledge
 
 ### Foundation Features
 
-_Pain Informs_: When you mark a Hit Point in combat, you may immediately use Combat Assessment as a free action and choose either of the first two options, without consuming your scene use.
+_Pain Informs_: When you mark a Hit Point in combat, you may immediately use Combat Assessment and choose either of the first two options, without consuming your scene use.
 
 _Aggressive Adaptation_: Once per rest, after you take damage, your next attack against the source of that damage deals an additional d8 damage using your Proficiency.
 

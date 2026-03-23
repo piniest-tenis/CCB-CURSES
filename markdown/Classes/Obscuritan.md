@@ -61,7 +61,7 @@ _Gnasher_: You can make an attack roll against a target in Melee range. On a suc
 
 **Mind over Matter**: Mark a Stress to give yourself one of the following conditions:
 
-- _Ethereal_: An _Ethereal_ creature takes no physical damage, gains a bonus to its Evasion equal to its proficiency. Once per scene, an _Ethereal_ creature can move up to Very Close range through stone, wood, or dirt as if it were open air. This condition ends at the start of your next rest or within 1 hour of activation, whichever comes first.
+- _Ethereal_: An _Ethereal_ creature takes no physical damage, gains a bonus to its Evasion equal to its Proficiency. Once per scene, an _Ethereal_ creature can move up to Very Close range through stone, wood, or dirt as if it were open air. This condition ends at the start of your next rest or within 1 hour of activation, whichever comes first.
 - _Enraged_: An _Enraged_ target gains a bonus to its attack rolls equal to its Proficiency. Attack rolls against an _Enraged_ target gain Advantage. This condition ends at the end of the Scene or when the target is successfully attacked.
 - _Docile_: A _Docile_ target deals no damage on attacks, gains a +2 bonus to Presence -2 penalty to Knowledge and Instinct. The _Docile_ condition ends after the affected target makes a successful attack against a [[Creature]] or [[Character]].
 

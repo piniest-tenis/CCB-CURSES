@@ -79,7 +79,7 @@ Presence
 
 ### Foundation Features
 
-_Sharp Comeback_: If you fail a roll with Hope to influence a character, you can mark a Stress to immediately attack them. This attack has advantage and does double damage if it hits.
+_Sharp Comeback_: If you fail a roll with Hope to influence a character, you can mark a Stress to immediately attack them. This attack is made with Advantage and, if it hits, you roll your damage dice again and add the result to the damage dealt.
 _Wink and a Smile_: When you attempt to deceive a character, you can spend a Hope to gain Advantage on the roll.
 
 ### Specialization Feature

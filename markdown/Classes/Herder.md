@@ -39,7 +39,7 @@ Instinct
 
 ### Foundation Features
 
-_Animal Intuition_: You can spend a Hope to key into your intuitive understanding of the world. If you are within close range of a character or creature that intends to harm you, you pick up on subtle clues invisible to others and can anticipate this before it happens.
+_Animal Intuition_: You can spend a Hope to key into your intuitive understanding of the world. If you are within Close range of a character or creature that intends to harm you, you pick up on subtle clues invisible to others and can anticipate this before it happens.
 _Creature Ambassador_: Animals have an [[Attitude]] score towards you that can be affected in the same way as Characters.
 
 ### Specialization Feature
@@ -63,7 +63,7 @@ _Dominant Energy_: Make a Spellcast Roll against a creature within Close range. 
 
 ### Specialization Feature
 
-**Culling the Herd**: Once per rest when you receive damage from a Creature, you can give it the _Marked for Destruction_ condition. Creatures with _Marked for Destruction_ receive double damage from your attacks. This condition is cleared when the creature dies or your next rest.
+**Culling the Herd**: Once per rest when you receive damage from a Creature, you can give it the _Marked for Destruction_ condition. When you deal damage to a creature with _Marked for Destruction_, roll your damage dice again and add the result to the damage dealt. This condition is cleared when the creature dies or your next rest.
 
 ### Mastery Feature
 

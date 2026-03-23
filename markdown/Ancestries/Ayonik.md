@@ -4,6 +4,6 @@ Ayonik bear great resemblance to fat otters, and their cherubic faces and round 
 
 # Ancestry
 
-**Adorable**: Spend 2 Hope to gain Advantage on a Presence Roll
+**Adorable**: Spend 2 Hope to gain Advantage on a Presence roll
 
 **They Sleep Holding Hands!**: When using Prepare as a downtime action with one or more members of your party, you each gain 1 additional Hope.

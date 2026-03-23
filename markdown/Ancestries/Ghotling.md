@@ -6,4 +6,4 @@ Their skills as spies, managers and engineers have them often found in places of
 
 **Long Arms**: Treat any weapon, ability, spell or other feature that has a Melee range as though it has a Very Close range instead.
 
-**Shrewd**: Spend a Hope to gain advantage on an Instinct trait roll.
+**Shrewd**: Spend a Hope to gain Advantage on an Instinct trait roll.

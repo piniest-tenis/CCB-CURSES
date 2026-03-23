@@ -8,7 +8,7 @@ _Scars or natural weapons that have been maintained and used_ or _a weapon that 
 
 ### Hope Feature
 
-_Hunt's End_: Spend 3 Hope. Your next attack against your Prey is made with Advantage. On a Critical Success, they take double damage and gain the _Slowed_ condition until the end of their next turn.
+_Hunt's End_: Spend 3 Hope. Your next attack against your Prey is made with Advantage. On a Critical Success, they take double damage and gain the _Slowed_ condition until the end of their next turn. While _Slowed_, a creature may only move up to Very Close range on their turn.
 
 ### Class Feature
 
@@ -53,7 +53,7 @@ Instinct
 
 ### Foundation Features
 
-_Chase Instinct_: When your Prey moves away from you, you may immediately move up to Very Close range as a reaction without spending your action. This cannot place you in immediate danger beyond the act of pursuit.
+_Chase Instinct_: When your Prey moves away from you, you may immediately move up to Very Close range without spending your action. This cannot place you in immediate danger beyond the act of pursuit.
 
 _Sense the Wound_: When your Prey has marked at least one Hit Point, you gain Advantage on all rolls against them.
 

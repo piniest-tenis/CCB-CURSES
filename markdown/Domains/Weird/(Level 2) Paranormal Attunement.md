@@ -1,1 +1,1 @@
-When you spend a few minutes concentrating, you can spend a Hope and determine whether magic or supernatural entities have recently been in the area. You can make a Knowledge or Instinct role to determine some specific details.
+When you spend a few minutes concentrating, you can spend a Hope and determine whether magic or supernatural entities have recently been in the area. You can make a Knowledge or Instinct roll to determine some specific details.

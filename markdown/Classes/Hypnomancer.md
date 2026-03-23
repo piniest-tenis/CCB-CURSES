@@ -13,11 +13,11 @@ _Hex_: Spend 3 Hope to give an adversary a penalty to their next roll equal to y
 ### Class Feature
 
 **Invader of Dreams**
-Once per Session, on a successful Spellcast Roll against a target with whom you have talked in the past day, infiltrate their dreams to gain specific of information about the target's inner thoughts, feelings and plans.
+Once per session, on a successful Spellcast Roll against a target with whom you have talked in the past day, infiltrate their dreams to gain specific of information about the target's inner thoughts, feelings and plans.
 
 **Sleepwalkers**: Sleepwalkers follow your movements to the best of their abilities. When you enter into combat, Sleepwalkers will converge on a target you set for them.
 
-Roll attacks for your Sleepwalkers as a group. They use a d20 + your Knowledge score. On a success, deal 2d6 damage for every Sleepwalker under your control, and they immediately are destroyed. If your Sleepwalkers are targeted, use your Evasion as their own. If the attack is successful, remove a Sleepwalker for every point 2 points of damage.
+Roll attacks for your Sleepwalkers as a group. Make a Knowledge roll for them. On a success, deal 2d6 damage for every Sleepwalker under your control, and they immediately are destroyed. If your Sleepwalkers are targeted, use your Evasion as their own. If the attack is successful, remove a Sleepwalker for every point 2 points of damage.
 
 ### Subclasses
 
@@ -81,7 +81,7 @@ Presence
 
 ### Foundation Features
 
-_In the Know_: You can divine information from first impressions. Make investigation rolls with your Presence score, on a success you learn a bit of history about any [[Character|Characters]] involved in the investigation.
+_In the Know_: You can divine information from first impressions. Make Presence rolls when investigating a character, on a success you learn a bit of history about any [[Character|Characters]] involved in the investigation.
 
 _Charmed, I'm Sure_: You can spend a Hope to gain a temporary +1 bonus to the [[Attitude]] of a character with whom you're interacting. You cannot increase a character's attitude of you beyond +2 via this ability.
 

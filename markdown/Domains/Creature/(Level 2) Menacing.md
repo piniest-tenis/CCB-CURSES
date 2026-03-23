@@ -1,1 +1,1 @@
-When you succeed with Fear on an Attack Roll against an adversary, they mark a Stress. If you mark three such attacks in one combat, remaining adversaries gain the _Unsteady_ condition. While _Unsteady_, a [[Character]] or [[Creature]] cannot attack without marking a Stress.
+When you succeed with Fear on an attack roll against an adversary, they mark a Stress. If you mark three such attacks in one combat, remaining adversaries gain the _Unsteady_ condition. While _Unsteady_, a [[Character]] or [[Creature]] cannot attack without marking a Stress.
