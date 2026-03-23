@@ -41,6 +41,7 @@ import {
   CHARACTERS_TABLE,
   CLASSES_TABLE,
   GAME_DATA_TABLE,
+  USERS_TABLE,
   getItem,
   putItem,
   deleteItem,
@@ -1679,6 +1680,8 @@ function requireAdminGroup(
 interface AdminCharacterSummary {
   characterId: string;
   userId: string;
+  /** Display name or email of the account that owns this character. */
+  ownerName: string;
   name: string;
   classId: string;
   className: string;
@@ -1706,10 +1709,14 @@ async function listAllCharacters(
     { ":skPrefix": "CHARACTER#" }
   );
 
-  // Resolve class names in parallel
+  // Resolve class names and owner display names in parallel
   const classCache = new Map<string, string>();
+  // userId → "displayName or email" — resolved once per unique user
+  const userCache = new Map<string, string>();
+
   const summaries: AdminCharacterSummary[] = await Promise.all(
     records.map(async (record) => {
+      // Resolve class name
       let className = classCache.get(record.classId);
       if (!className) {
         const classRecord = await getItem<ClassRecord>({
@@ -1719,9 +1726,22 @@ async function listAllCharacters(
         className = classRecord?.name ?? record.classId;
         classCache.set(record.classId, className);
       }
+
+      // Resolve owner name (displayName falling back to email)
+      let ownerName = userCache.get(record.userId);
+      if (ownerName === undefined) {
+        const userRecord = await getItem<{ displayName: string; email: string }>({
+          TableName: USERS_TABLE,
+          Key: keys.user(record.userId),
+        });
+        ownerName = userRecord?.displayName || userRecord?.email || record.userId;
+        userCache.set(record.userId, ownerName);
+      }
+
       return {
         characterId: record.characterId,
         userId: record.userId,
+        ownerName,
         name: record.name,
         classId: record.classId,
         className,

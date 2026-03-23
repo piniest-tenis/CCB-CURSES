@@ -5,8 +5,8 @@
  *
  * Admin-only view: lists every character in the system.
  * Accessible only to users in the Cognito "admin" group.
- * Sortable by name, class, ancestry, and date created.
- * Filterable by free-text search across name, class, and ancestry.
+ * Sortable by name, class, ancestry, owner, and date created.
+ * Filterable by free-text search across name, class, ancestry, and owner.
  */
 
 import React, { useState, useMemo, useEffect } from "react";
@@ -21,7 +21,7 @@ import {
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
-type SortField = "name" | "className" | "ancestryId" | "createdAt";
+type SortField = "name" | "className" | "ancestryId" | "ownerName" | "createdAt";
 type SortDir = "asc" | "desc";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -58,6 +58,9 @@ function sortCharacters(
         break;
       case "ancestryId":
         result = cmp(a.ancestryId ?? "", b.ancestryId ?? "");
+        break;
+      case "ownerName":
+        result = cmp(a.ownerName, b.ownerName);
         break;
       case "createdAt":
         result =
@@ -190,7 +193,8 @@ export default function AdminCharactersPage() {
           (c) =>
             c.name.toLowerCase().includes(q) ||
             c.className.toLowerCase().includes(q) ||
-            (c.ancestryId ?? "").toLowerCase().includes(q)
+            (c.ancestryId ?? "").toLowerCase().includes(q) ||
+            c.ownerName.toLowerCase().includes(q)
         )
       : chars;
     return sortCharacters(filtered, sortField, sortDir);
@@ -303,7 +307,7 @@ export default function AdminCharactersPage() {
         <div className="mb-4">
           <input
             type="search"
-            placeholder="Filter by name, class, or ancestry…"
+            placeholder="Filter by name, class, ancestry, or owner…"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="
@@ -343,7 +347,7 @@ export default function AdminCharactersPage() {
         {!isLoading && !isError && data && (
           <div className="rounded-xl border border-slate-700/40 bg-slate-900/40 overflow-hidden">
             {/* Table header */}
-            <div className="grid grid-cols-[1fr_1fr_1fr_auto_auto] gap-x-4 px-4 py-2.5 border-b border-slate-700/40 bg-slate-900/60">
+            <div className="grid grid-cols-[1fr_1fr_1fr_1fr_auto_auto] gap-x-4 px-4 py-2.5 border-b border-slate-700/40 bg-slate-900/60">
               <SortHeader
                 field="name"
                 label="Name"
@@ -361,6 +365,13 @@ export default function AdminCharactersPage() {
               <SortHeader
                 field="ancestryId"
                 label="Ancestry"
+                current={sortField}
+                dir={sortDir}
+                onSort={handleSort}
+              />
+              <SortHeader
+                field="ownerName"
+                label="Owner"
                 current={sortField}
                 dir={sortDir}
                 onSort={handleSort}
@@ -389,7 +400,7 @@ export default function AdminCharactersPage() {
                     key={c.characterId}
                     href={`/character/${c.characterId}`}
                     className="
-                      grid grid-cols-[1fr_1fr_1fr_auto_auto] gap-x-4
+                      grid grid-cols-[1fr_1fr_1fr_1fr_auto_auto] gap-x-4
                       px-4 py-3 items-center
                       hover:bg-slate-800/30 transition-colors
                       group
@@ -407,6 +418,9 @@ export default function AdminCharactersPage() {
                             .replace(/-/g, " ")
                             .replace(/\b\w/g, (ch) => ch.toUpperCase())
                         : <span className="text-[#b9baa3]/25 italic">—</span>}
+                    </span>
+                    <span className="text-sm text-[#b9baa3]/50 truncate">
+                      {c.ownerName}
                     </span>
                     <span className="text-xs text-[#b9baa3]/40 whitespace-nowrap">
                       {formatDate(c.createdAt)}

@@ -74,6 +74,8 @@ export function useCharacters(
 export interface AdminCharacterSummary {
   characterId: string;
   userId: string;
+  /** Display name or email of the account that owns this character. */
+  ownerName: string;
   name: string;
   classId: string;
   className: string;
