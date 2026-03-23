@@ -350,7 +350,9 @@ export type ActionId =
   | "mark-armor"
   | "clear-armor"
   | "swap-loadout-card"
-  | "acquire-domain-card";
+  | "acquire-domain-card"
+  | "gain-favor"
+  | "spend-favor";
 
 export interface ActionParams {
   /** cardId for token / aura actions */
@@ -372,6 +374,8 @@ export interface ActionParams {
   restType?: "short" | "long" | "none";
   /** For swap-loadout-card: whether this is a Linked Curse (↔) card */
   isLinkedCurse?: boolean;
+  /** factionId (or freeform source label) for gain-favor / spend-favor */
+  factionId?: string;
 }
 
 /**
@@ -803,6 +807,38 @@ export function applyAction(
       return {
         ...character,
         domainVault: [...character.domainVault, cardId],
+      };
+    }
+
+    // ── Favor: gain N for a faction/source ────────────────────────────────
+    case "gain-favor": {
+      const factionId = params.factionId;
+      if (!factionId) {
+        invalidAction("factionId is required for gain-favor", "factionId");
+      }
+      const current = character.favors?.[factionId] ?? 0;
+      return {
+        ...character,
+        favors: { ...character.favors, [factionId]: current + n },
+      };
+    }
+
+    // ── Favor: spend N for a faction/source ───────────────────────────────
+    case "spend-favor": {
+      const factionId = params.factionId;
+      if (!factionId) {
+        invalidAction("factionId is required for spend-favor", "factionId");
+      }
+      const current = character.favors?.[factionId] ?? 0;
+      if (current < n) {
+        invalidAction(
+          `Not enough Favors with '${factionId}' (have ${current}, need ${n})`,
+          `favors.${factionId}`
+        );
+      }
+      return {
+        ...character,
+        favors: { ...character.favors, [factionId]: current - n },
       };
     }
 

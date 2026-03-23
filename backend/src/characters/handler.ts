@@ -321,6 +321,7 @@ const PutCharacterSchema = z.object({
   activeAuras: z.array(z.string()).optional().default([]),
   companionState: CompanionStateSchema.nullable().optional().default(null),
   reputationBonuses: z.record(z.string(), z.number().int()).optional().default({}),
+  favors: z.record(z.string(), z.number().int().min(0)).optional().default({}),
   customConditions: z.array(CustomConditionSchema).optional().default([]),
   // ── Level-up history ────────────────────────────────────────────────────
   levelUpHistory: z.record(z.string(), z.array(AdvancementChoiceSchema)).optional().default({}),
@@ -375,6 +376,8 @@ const ActionSchema = z.object({
     "clear-armor",
     "swap-loadout-card",
     "acquire-domain-card",
+    "gain-favor",
+    "spend-favor",
   ] as const),
   params: z.record(z.unknown()).optional().default({}),
 });
@@ -676,6 +679,7 @@ function toCharacterResponse(
     activeAuras: record.activeAuras ?? [],
     companionState: record.companionState ?? null,
     reputationBonuses: record.reputationBonuses ?? {},
+    favors: record.favors ?? {},
     customConditions: record.customConditions ?? [],
     levelUpHistory: record.levelUpHistory ?? {},
     markedTraits: record.markedTraits ?? [],
@@ -920,6 +924,7 @@ async function createCharacter(
     activeAuras: [],
     companionState: null,
     reputationBonuses: {},
+    favors: {},
     customConditions: [],
     levelUpHistory: {},
     markedTraits: [],
@@ -1444,6 +1449,7 @@ async function executeAction(
                      ? (params["restType"] as "short" | "long" | "none")
                      : undefined,
     isLinkedCurse: params["isLinkedCurse"] === true,
+    factionId:     typeof params["factionId"] === "string"     ? params["factionId"]     : undefined,
   };
 
   // applyAction throws AppError(422) on validity failure

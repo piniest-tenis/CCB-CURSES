@@ -212,6 +212,14 @@ export interface Character extends CharacterSummary {
    * Stacked on top of the GM-tracked party score.
    */
   reputationBonuses: Record<string, number>;
+  /**
+   * Per-character Favor tokens keyed by factionId (or a freeform source label).
+   * Favors are consumable social currency: spend one to make a reasonable request
+   * of a faction or adherent (+2 Attitude). Retained if denied, consumed on success.
+   * No cap; cannot go negative. Earned narratively at GM discretion or via
+   * domain cards (Orator, Fence) and class features (Evangelist Altar Call).
+   */
+  favors: Record<string, number>;
   /** Conditions beyond SRD's Hidden / Restrained / Vulnerable. */
   customConditions: CustomCondition[];
   /**

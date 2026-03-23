@@ -298,6 +298,7 @@ export function createValidCharacter(
     activeAuras: [],
     companionState: null,
     reputationBonuses: {},
+    favors: {},
     customConditions: [],
   };
 

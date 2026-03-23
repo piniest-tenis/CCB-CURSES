@@ -220,6 +220,7 @@ export async function handlePostCharacter(
       activeAuras: [],
       companionState: null,
       reputationBonuses: {},
+      favors: {},
       customConditions: [],
     };
 

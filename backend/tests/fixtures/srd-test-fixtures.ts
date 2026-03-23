@@ -256,6 +256,7 @@ export function createValidCharacterAtLevel(level: number, classId: string = "ba
     activeAuras: [],
     companionState: null,
     reputationBonuses: {},
+    favors: {},
     customConditions: [],
 
     domains: classData.domains,

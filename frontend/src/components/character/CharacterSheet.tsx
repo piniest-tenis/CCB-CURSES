@@ -41,6 +41,7 @@ import { useActionButton, InlineActionError } from "./ActionButton";
 import { EditSidebarProvider, EditableField } from "./EditSidebar";
 import { CHARACTER_NAME_FIELD, CHARACTER_NOTES_FIELD } from "./editSidebarConfig";
 import { EquipmentPanel }           from "./EquipmentPanel";
+import { FavorsPanel }              from "./FavorsPanel";
 import { PortraitDisplay }          from "./PortraitUpload";
 import type { Character, ClassData, CoreStatName, CustomCondition } from "@shared/types";
 
@@ -1130,6 +1131,11 @@ function CharacterSheetContent({
 
       {/* Equipment and gold */}
       <EquipmentPanel />
+
+      <SheetDivider spellcastTrait={spellcastTrait} />
+
+      {/* Favors — per-faction social currency */}
+      <FavorsPanel />
 
       <SheetDivider spellcastTrait={spellcastTrait} />
 
