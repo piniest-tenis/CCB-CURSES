@@ -120,7 +120,7 @@ function CharacterCard({
           onClick={onOpen}
           aria-label={`Open character sheet for ${character.name}`}
           className="
-            flex-1 rounded-lg py-2 text-sm font-semibold
+            flex-1 rounded-lg py-2 text-base font-semibold
             bg-[#577399] text-[#f7f7ff] hover:bg-[#577399]/80
             transition-colors shadow-sm
             focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2 focus:ring-offset-slate-900
@@ -133,7 +133,7 @@ function CharacterCard({
           onClick={onEdit}
           aria-label={`Edit ${character.name}`}
           className="
-            rounded-lg px-3 py-2 text-sm font-semibold
+            rounded-lg px-3 py-2 text-base font-semibold
             border border-gold-800/60 bg-gold-950/20 text-gold-300
             hover:bg-gold-900/30 hover:border-gold-700
             transition-colors
@@ -266,14 +266,14 @@ function CreateCharacterModal({ onClose }: CreateModalProps) {
 
         {/* Body */}
         <div className="px-6 py-6 space-y-4">
-          <p className="text-sm text-[#b9baa3]/60 leading-relaxed">
+          <p className="text-base text-[#b9baa3]/60 leading-relaxed">
             Name your character to begin. You&apos;ll choose your class, heritage, and equipment next.
           </p>
 
           <div>
             <label
               htmlFor="char-name"
-              className="block text-[10px] font-semibold uppercase tracking-widest text-[#b9baa3]/50 mb-1.5"
+              className="block text-xs font-semibold uppercase tracking-widest text-[#b9baa3]/50 mb-1.5"
             >
               Character Name <span className="text-[#fe5f55]">*</span>
             </label>
@@ -313,7 +313,7 @@ function CreateCharacterModal({ onClose }: CreateModalProps) {
             type="button"
             onClick={onClose}
             className="
-              rounded-lg px-4 py-2.5 text-sm font-medium
+              rounded-lg px-4 py-2.5 text-base font-medium
               border border-slate-700/60 text-[#b9baa3]/60
               hover:border-slate-600 hover:text-[#b9baa3]
               transition-colors
@@ -326,7 +326,7 @@ function CreateCharacterModal({ onClose }: CreateModalProps) {
             onClick={handleCreate}
             disabled={!canCreate || createMutation.isPending}
             className="
-              rounded-lg px-6 py-2.5 font-semibold text-sm
+              rounded-lg px-6 py-2.5 font-semibold text-base
               bg-[#577399] text-[#f7f7ff]
               hover:bg-[#577399]/80
               disabled:opacity-40 disabled:cursor-not-allowed
@@ -428,7 +428,7 @@ export default function DashboardPage() {
             onClick={() => setShowCreate(true)}
             className="
               rounded-xl border border-[#577399]/60 bg-[#577399]/10
-              px-5 py-2.5 font-semibold text-sm text-[#577399]
+              px-5 py-2.5 font-semibold text-base text-[#577399]
               hover:bg-[#577399]/20 hover:border-[#577399]
               transition-all duration-150 shadow-sm
               flex items-center gap-2 shrink-0
@@ -467,7 +467,7 @@ export default function DashboardPage() {
               <p className="font-serif text-xl text-[#f7f7ff]/70">
                 No characters yet
               </p>
-              <p className="text-sm text-[#b9baa3]/40 max-w-xs mx-auto leading-relaxed">
+               <p className="text-base text-[#b9baa3]/40 max-w-xs mx-auto leading-relaxed">
                 Create your first Daggerheart character and begin your adventure.
               </p>
             </div>
@@ -476,7 +476,7 @@ export default function DashboardPage() {
               className="
                 mt-2 inline-flex items-center gap-2 rounded-xl
                 border border-[#577399]/60 bg-[#577399]/10
-                px-7 py-3 text-sm font-semibold text-[#577399]
+                px-7 py-3 text-base font-semibold text-[#577399]
                 hover:bg-[#577399]/20 hover:border-[#577399]
                 transition-all duration-150
               "

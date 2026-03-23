@@ -159,7 +159,7 @@ export default function LoginPage() {
             <div className="space-y-1">
               <label
                 htmlFor="email"
-                className="block text-xs font-medium uppercase tracking-wider text-parchment-500"
+                className="block text-sm font-medium uppercase tracking-wider text-parchment-500"
               >
                 Email
               </label>
@@ -172,7 +172,7 @@ export default function LoginPage() {
                 aria-invalid={errors.email ? "true" : undefined}
                 className={`
                   w-full rounded-lg border bg-slate-850 px-3 py-2.5
-                  text-sm text-parchment-200 placeholder-parchment-700
+                  text-base text-parchment-200 placeholder-parchment-700
                   focus:outline-none focus:ring-2 transition-colors
                   ${
                     errors.email
@@ -186,7 +186,7 @@ export default function LoginPage() {
                 <p
                   id="email-error"
                   role="alert"
-                  className="text-xs text-burgundy-400"
+                  className="text-sm text-burgundy-400"
                 >
                   {errors.email.message}
                 </p>
@@ -197,7 +197,7 @@ export default function LoginPage() {
             <div className="space-y-1">
               <label
                 htmlFor="password"
-                className="block text-xs font-medium uppercase tracking-wider text-parchment-500"
+                className="block text-sm font-medium uppercase tracking-wider text-parchment-500"
               >
                 Password
               </label>
@@ -212,7 +212,7 @@ export default function LoginPage() {
                 aria-invalid={errors.password ? "true" : undefined}
                 className={`
                   w-full rounded-lg border bg-slate-850 px-3 py-2.5
-                  text-sm text-parchment-200 placeholder-parchment-700
+                  text-base text-parchment-200 placeholder-parchment-700
                   focus:outline-none focus:ring-2 transition-colors
                   ${
                     errors.password
@@ -226,7 +226,7 @@ export default function LoginPage() {
                 <p
                   id="password-error"
                   role="alert"
-                  className="text-xs text-burgundy-400"
+                  className="text-sm text-burgundy-400"
                 >
                   {errors.password.message}
                 </p>
@@ -238,7 +238,7 @@ export default function LoginPage() {
               type="submit"
               disabled={isLoading || googleLoading}
               className="
-                mt-2 w-full rounded-lg py-2.5 font-semibold text-sm
+                mt-2 w-full rounded-lg py-2.5 font-semibold text-base
                 bg-burgundy-700 text-parchment-100
                 hover:bg-burgundy-600 disabled:opacity-50 disabled:cursor-not-allowed
                 transition-colors shadow-glow-burgundy
@@ -269,7 +269,7 @@ export default function LoginPage() {
             className="
               w-full flex items-center justify-center gap-2.5 rounded-lg
               border border-burgundy-800 bg-slate-850 px-3 py-2.5
-              text-sm font-medium text-parchment-200
+              text-base font-medium text-parchment-200
               hover:bg-slate-800 hover:border-burgundy-700
               disabled:opacity-50 disabled:cursor-not-allowed
               transition-colors
@@ -308,7 +308,7 @@ export default function LoginPage() {
             Create account
           </Link>
         </p>
-        <p className="text-center text-xs text-parchment-700">
+        <p className="text-center text-sm text-parchment-700">
           <Link
             href="/auth/forgot-password"
             className="hover:text-parchment-500 transition-colors"

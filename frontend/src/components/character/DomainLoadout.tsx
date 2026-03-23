@@ -149,9 +149,9 @@ function AcquireCardPicker({
       </p>
 
       {isLoading ? (
-        <p className="text-xs text-parchment-500 italic">Loading available cards…</p>
+        <p className="text-sm text-parchment-500 italic">Loading available cards…</p>
       ) : eligibleCards.length === 0 ? (
-        <p className="text-xs text-parchment-600 italic">
+        <p className="text-sm text-parchment-600 italic">
           No new cards available. Level up to unlock more!
         </p>
       ) : (
@@ -181,8 +181,8 @@ function AcquireCardPicker({
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium">{card.name}</span>
                     <span className="flex items-center gap-1.5 flex-shrink-0">
-                      <span className="text-[10px] text-parchment-600 uppercase">{card.domain}</span>
-                      <span className="text-[10px] font-bold text-gold-600">Lv{card.level}</span>
+                      <span className="text-xs text-parchment-600 uppercase">{card.domain}</span>
+                      <span className="text-xs font-bold text-gold-600">Lv{card.level}</span>
                     </span>
                   </div>
                 </button>
@@ -258,7 +258,7 @@ function TokenTracker({ cardId, cardName, characterId, count }: TokenTrackerProp
   return (
     <div className="mt-2 flex flex-col gap-1">
       <div className="flex items-center gap-2">
-        <span className="text-[10px] uppercase tracking-wider text-parchment-600">
+        <span className="text-xs uppercase tracking-wider text-parchment-600">
           Tokens
         </span>
         <div
@@ -320,7 +320,7 @@ function TokenTracker({ cardId, cardName, characterId, count }: TokenTrackerProp
             aria-label={`Clear all tokens from ${cardName}`}
             className="
               h-6 w-6 rounded border border-slate-700 bg-slate-900
-              text-[10px] text-parchment-600 hover:bg-slate-800 hover:text-parchment-300
+              text-xs text-parchment-600 hover:bg-slate-800 hover:text-parchment-300
               disabled:opacity-50 disabled:cursor-wait
               transition-colors flex items-center justify-center
               focus:outline-none focus:ring-1 focus:ring-gold-500
@@ -380,13 +380,13 @@ function AuraToggle({ cardId, cardName, characterId, isActive, anotherAuraActive
       </button>
 
       {isActive && (
-        <p className="text-[11px] text-[#6a8fb5] leading-snug" role="status">
+        <p className="text-sm text-[#6a8fb5] leading-snug" role="status">
           Aura active — when hit, make a Spellcast Roll to maintain.
         </p>
       )}
 
       {!isActive && anotherAuraActive && (
-        <p className="text-[11px] text-parchment-600 leading-snug">
+        <p className="text-sm text-parchment-600 leading-snug">
           Activating will deactivate your current aura.
         </p>
       )}
@@ -457,7 +457,7 @@ function DomainCardDetailSidebar({ card, onClose }: DomainCardDetailSidebarProps
         <div className="flex items-center justify-between border-b border-[#577399]/25 px-5 py-4 shrink-0">
           <div>
             {card && (
-              <p className="text-[11px] uppercase tracking-[0.24em] text-parchment-500">
+              <p className="text-xs uppercase tracking-[0.24em] text-parchment-500">
                 {card.domain} · Level {card.level}
               </p>
             )}
@@ -480,24 +480,24 @@ function DomainCardDetailSidebar({ card, onClose }: DomainCardDetailSidebarProps
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
             {/* Badges */}
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-gold-800 px-2 py-0.5 text-[11px] font-bold text-gold-500">
+              <span className="rounded-full border border-gold-800 px-2 py-0.5 text-xs font-bold text-gold-500">
                 Lv {card.level}
               </span>
-              <span className="rounded-full border border-slate-700 px-2 py-0.5 text-[11px] text-parchment-500 uppercase tracking-wider">
+              <span className="rounded-full border border-slate-700 px-2 py-0.5 text-xs text-parchment-500 uppercase tracking-wider">
                 Recall Cost {card.recallCost}⚡
               </span>
               {card.isGrimoire && (
-                <span className="rounded bg-gold-900/50 px-1.5 py-0.5 text-[11px] font-semibold text-gold-400">
+                <span className="rounded bg-gold-900/50 px-1.5 py-0.5 text-xs font-semibold text-gold-400">
                   Grimoire
                 </span>
               )}
               {card.isCursed && (
-                <span className="rounded bg-burgundy-900/50 px-1.5 py-0.5 text-[11px] font-semibold text-burgundy-400">
+                <span className="rounded bg-burgundy-900/50 px-1.5 py-0.5 text-xs font-semibold text-burgundy-400">
                   ★ Cursed
                 </span>
               )}
               {card.isLinkedCurse && (
-                <span className="rounded bg-burgundy-900/50 px-1.5 py-0.5 text-[11px] font-semibold text-burgundy-400">
+                <span className="rounded bg-burgundy-900/50 px-1.5 py-0.5 text-xs font-semibold text-burgundy-400">
                   ↔ Linked Curse
                 </span>
               )}
@@ -510,14 +510,14 @@ function DomainCardDetailSidebar({ card, onClose }: DomainCardDetailSidebarProps
                   {card.grimoire.map((ability, i) => (
                     <div key={i}>
                       <p className="text-sm font-semibold text-[#f7f7ff] mb-1">{ability.name}</p>
-                      <MarkdownContent className="text-sm text-[#b9baa3]/75">
+                      <MarkdownContent className="text-base text-[#b9baa3]/75">
                         {ability.description}
                       </MarkdownContent>
                     </div>
                   ))}
                 </div>
               ) : (
-                <MarkdownContent className="text-sm text-[#b9baa3]/75">
+                <MarkdownContent className="text-base text-[#b9baa3]/75">
                   {card.description}
                 </MarkdownContent>
               )}
@@ -527,7 +527,7 @@ function DomainCardDetailSidebar({ card, onClose }: DomainCardDetailSidebarProps
             {card.isCursed && card.curseText && (
               <div className="rounded-lg border border-[#fe5f55]/30 bg-[#fe5f55]/5 px-4 py-3">
                 <p className="text-xs uppercase tracking-wider text-[#fe5f55]/60 mb-1">Curse</p>
-                <MarkdownContent className="text-sm text-[#b9baa3]/70">
+                <MarkdownContent className="text-base text-[#b9baa3]/70">
                   {card.curseText}
                 </MarkdownContent>
               </div>
@@ -635,17 +635,17 @@ function LoadoutCardSlot({
                   </span>
                 )}
                 {card.isGrimoire && (
-                  <span className="rounded bg-gold-900/50 px-1 text-[10px] font-semibold text-gold-400">
+                  <span className="rounded bg-gold-900/50 px-1 text-xs font-semibold text-gold-400">
                     Grimoire
                   </span>
                 )}
                 <span className="ml-auto text-parchment-600 text-xs opacity-0 group-hover:opacity-100 transition-opacity">›</span>
               </div>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-[10px] text-parchment-500 uppercase tracking-wider">
+                <span className="text-xs text-parchment-500 uppercase tracking-wider">
                   {card.domain}
                 </span>
-                <span className="rounded-full border border-gold-800 px-1.5 text-[10px] font-bold text-gold-500">
+                <span className="rounded-full border border-gold-800 px-1.5 text-xs font-bold text-gold-500">
                   Lv {card.level}
                 </span>
               </div>
@@ -790,12 +790,12 @@ function VaultPicker({ vaultIds, loadoutIds, characterId, characterLevel, onClos
 
       {/* Vault card selection */}
       {available.length === 0 ? (
-        <p className="text-xs text-parchment-600 italic">
+        <p className="text-sm text-parchment-600 italic">
           No more cards in vault (all are already in loadout or vault is empty).
         </p>
       ) : (
         <>
-          <p className="text-[11px] text-parchment-500">
+          <p className="text-sm text-parchment-500">
             Select a card to add to your loadout{isFull ? ". Your loadout is full — you must also choose a card to displace." : "."}
           </p>
           <ul className="space-y-1 max-h-48 overflow-y-auto pr-1" role="listbox" aria-label="Vault cards">
@@ -815,7 +815,7 @@ function VaultPicker({ vaultIds, loadoutIds, characterId, characterLevel, onClos
       {/* Loadout displacement selection (only when loadout is full) */}
       {isFull && selectedVaultCard && (
         <div className="border-t border-burgundy-900/40 pt-3">
-          <p className="text-[11px] text-parchment-500 mb-2">
+          <p className="text-sm text-parchment-500 mb-2">
             Choose a card to move from loadout to vault:
           </p>
           <ul className="space-y-1 max-h-36 overflow-y-auto pr-1" role="listbox" aria-label="Loadout cards to displace">
@@ -901,17 +901,17 @@ function VaultPickerItem({
         {card && (
           <>
             {card.isLinkedCurse && (
-              <span title="Linked Curse — long rest only, 6 stress" className="text-[10px] text-burgundy-400 font-bold">
+              <span title="Linked Curse — long rest only, 6 stress" className="text-xs text-burgundy-400 font-bold">
                 ↔
               </span>
             )}
             {card.isCursed && (
-              <span title="Cursed" className="text-[10px] text-burgundy-400 font-bold">
+              <span title="Cursed" className="text-xs text-burgundy-400 font-bold">
                 ★
               </span>
             )}
-            <span className="text-[10px] text-parchment-600 uppercase">{card.domain}</span>
-            <span className={`text-[10px] font-bold ${aboveLevel ? "text-burgundy-500" : "text-gold-600"}`}>
+            <span className="text-xs text-parchment-600 uppercase">{card.domain}</span>
+            <span className={`text-xs font-bold ${aboveLevel ? "text-burgundy-500" : "text-gold-600"}`}>
               Lv{card.level}
             </span>
           </>
@@ -959,8 +959,8 @@ function DisplacePickerItem({
         </span>
         {card && (
           <>
-            <span className="text-[10px] text-parchment-600 uppercase">{card.domain}</span>
-            <span className="text-[10px] font-bold text-gold-600">Lv{card.level}</span>
+            <span className="text-xs text-parchment-600 uppercase">{card.domain}</span>
+            <span className="text-xs font-bold text-gold-600">Lv{card.level}</span>
           </>
         )}
       </button>
@@ -1058,7 +1058,7 @@ export function DomainLoadout() {
 
       {/* Loadout slots */}
       {domainLoadout.length === 0 ? (
-        <p className="text-xs text-parchment-600 italic">
+        <p className="text-sm text-parchment-600 italic">
           No cards in loadout.
         </p>
       ) : (

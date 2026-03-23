@@ -345,7 +345,7 @@ function DamageCalculatorSidebar({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[#577399]/25 px-5 py-4">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.24em] sidebar-text">Damage</p>
+            <p className="text-xs uppercase tracking-[0.24em] sidebar-text">Damage</p>
             <h2 id={headingId} className="font-serif text-lg font-semibold text-[#f7f7ff]">Damage Calculator</h2>
           </div>
           <button
@@ -362,7 +362,7 @@ function DamageCalculatorSidebar({
         <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
           {/* Current thresholds reference */}
           <div className="rounded-xl border border-[#577399]/20 bg-[#b9baa3]/[0.06] px-4 py-3 space-y-1">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] sidebar-text">Your thresholds</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] sidebar-text">Your thresholds</p>
             <div className="flex items-center gap-3 text-sm">
               <span className="text-parchment-500">Minor</span>
               <span className="sidebar-text-secondary">·</span>
@@ -372,14 +372,14 @@ function DamageCalculatorSidebar({
               <span className="font-bold text-[#f7f7ff] tabular-nums">{severe}</span>
               <span className="text-parchment-500">Severe</span>
             </div>
-            <p className="text-[11px] sidebar-text-secondary italic">
+            <p className="text-sm sidebar-text-secondary italic">
               Damage ≥ {severe} = Severe · ≥ {major} = Major · &lt; {major} = Minor (SRD p. 20)
             </p>
           </div>
 
           {/* Damage input */}
           <div className="space-y-1.5">
-            <label htmlFor="damage-calc-input" className="text-[11px] font-semibold uppercase tracking-[0.18em] sidebar-text">
+            <label htmlFor="damage-calc-input" className="text-xs font-semibold uppercase tracking-[0.18em] sidebar-text">
               Damage received
             </label>
             <input
@@ -398,10 +398,10 @@ function DamageCalculatorSidebar({
           <div className="rounded-xl border border-[#577399]/20 bg-[#b9baa3]/[0.04] px-4 py-3 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] sidebar-text">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] sidebar-text">
                   Mark armor slot
                 </p>
-                <p className="text-[11px] sidebar-text-secondary mt-0.5">
+                <p className="text-sm sidebar-text-secondary mt-0.5">
                   {armorAvailable} of {armorMax} available · drops severity 1 tier (SRD p. 29)
                 </p>
               </div>
@@ -466,7 +466,7 @@ function DamageCalculatorSidebar({
               finalTier === "severe" ? "border-[#fe5f55]/40 bg-[#fe5f55]/10"     : "",
             ].join(" ")}>
               {useArmor && baseTier !== finalTier && (
-                <p className="text-[11px] sidebar-text-secondary line-through">
+                <p className="text-sm sidebar-text-secondary line-through">
                   {TIER_LABEL[baseTier!]} → {TIER_HP[baseTier!]} HP (before armor)
                 </p>
               )}
@@ -603,7 +603,7 @@ function DamageThresholdBar({ major, severe, armorMarked, armorMax, characterId 
           aria-haspopup="dialog"
           className="
             flex items-center gap-1.5 rounded-lg border border-[#577399]/30 bg-slate-900
-            px-2.5 py-1.5 text-[11px] font-semibold text-[#b9baa3]
+            px-2.5 py-1.5 text-xs font-semibold text-[#b9baa3]
             hover:border-[#577399] hover:text-[#f7f7ff] hover:bg-slate-800
             focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-1 focus:ring-offset-slate-900
             transition-colors flex-shrink-0
@@ -738,7 +738,7 @@ function WeaponSidebar({ open, onClose, slot }: WeaponSidebarProps) {
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[#577399]/25 px-5 py-4">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.24em] sidebar-text">Weapon</p>
+            <p className="text-xs uppercase tracking-[0.24em] sidebar-text">Weapon</p>
             <h2 id={headingId} className="font-serif text-lg font-semibold text-[#f7f7ff]">{title}</h2>
           </div>
           <button
@@ -755,7 +755,7 @@ function WeaponSidebar({ open, onClose, slot }: WeaponSidebarProps) {
         <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
           {/* SRD guidance */}
           <div className="rounded-xl border border-[#577399]/20 bg-[#b9baa3]/[0.06] px-4 py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] sidebar-text mb-1">SRD guidance</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] sidebar-text mb-1">SRD guidance</p>
             <p className="text-sm leading-relaxed text-[#f7f7ff]">
               Select a weapon from your inventory. Add weapons via the Equipment panel to make them available here. (SRD p. 23)
             </p>
@@ -791,23 +791,23 @@ function WeaponSidebar({ open, onClose, slot }: WeaponSidebarProps) {
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-[#f7f7ff]">{w.name}</p>
-                          <p className="text-[11px] text-[#b9baa3] mt-0.5">
+                          <p className="text-sm text-[#b9baa3] mt-0.5">
                             {w.damageDie} · {w.range} · {w.trait} · {w.burden === "Two-Handed" ? "Two-handed" : "One-handed"}
                           </p>
                           {w.feature && (
-                            <p className="text-[11px] text-gold-500 mt-0.5">
+                            <p className="text-sm text-gold-500 mt-0.5">
                               <span className="mr-1" aria-hidden="true">✦</span>
                               {w.feature}
                             </p>
                           )}
                         </div>
                         {isSelected && (
-                          <span className="text-[10px] font-bold text-[#577399] uppercase tracking-wider mt-0.5 shrink-0">
+                          <span className="text-xs font-bold text-[#577399] uppercase tracking-wider mt-0.5 shrink-0">
                             Equipped
                           </span>
                         )}
                         {isOtherSlot && (
-                          <span className="text-[10px] font-bold text-[#b9baa3] uppercase tracking-wider mt-0.5 shrink-0">
+                          <span className="text-xs font-bold text-[#b9baa3] uppercase tracking-wider mt-0.5 shrink-0">
                             {otherSlot}
                           </span>
                         )}
@@ -875,7 +875,7 @@ function WeaponCard({ slot }: WeaponCardProps) {
       <div className="rounded-lg border border-[#577399]/20 bg-slate-850 shadow-card overflow-hidden">
         {/* Slot label */}
         <div className="px-3 pt-2 pb-1 border-b border-[#577399]/20">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-[#577399]">
+          <span className="text-xs font-semibold uppercase tracking-wider text-[#577399]">
             {slot === "primary" ? "Primary Weapon" : "Secondary Weapon"}
           </span>
         </div>
@@ -905,19 +905,19 @@ function WeaponCard({ slot }: WeaponCardProps) {
                 </p>
               )}
               {srdWeapon.feature && (
-                <p className="mt-0.5 text-[10px] text-gold-600 truncate">
+                <p className="mt-0.5 text-xs text-gold-600 truncate">
                   <span aria-label="Has feature" className="mr-1">✦</span>
                   {srdWeapon.feature}
                 </p>
               )}
-              <p className="mt-1 text-[10px] text-parchment-500 group-hover:text-parchment-300 transition-colors">
+              <p className="mt-1 text-xs text-parchment-500 group-hover:text-parchment-300 transition-colors">
                 Tap to change
               </p>
             </>
           ) : (
             <>
               <p className="text-sm text-parchment-500 italic font-normal">No weapon selected…</p>
-              <p className="mt-1 text-[10px] text-parchment-500 group-hover:text-parchment-300 transition-colors">
+              <p className="mt-1 text-xs text-parchment-500 group-hover:text-parchment-300 transition-colors">
                 Tap to select from inventory
               </p>
             </>
@@ -1034,7 +1034,7 @@ function ArmorSidebar({ open, onClose }: { open: boolean; onClose: () => void })
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[#577399]/25 px-5 py-4">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.24em] sidebar-text">Armor</p>
+            <p className="text-xs uppercase tracking-[0.24em] sidebar-text">Armor</p>
             <h2 id={headingId} className="font-serif text-lg font-semibold text-[#f7f7ff]">Active Armor</h2>
           </div>
           <button
@@ -1051,7 +1051,7 @@ function ArmorSidebar({ open, onClose }: { open: boolean; onClose: () => void })
         <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
           {/* SRD guidance */}
           <div className="rounded-xl border border-[#577399]/20 bg-[#b9baa3]/[0.06] px-4 py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] sidebar-text mb-1">SRD guidance</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] sidebar-text mb-1">SRD guidance</p>
             <p className="text-sm leading-relaxed text-[#f7f7ff]">
               Your active armor determines your Armor Score (slots), Evasion modifier, and Damage Thresholds.
               Only armor items currently in your inventory can be selected. (SRD p. 29)
@@ -1084,18 +1084,18 @@ function ArmorSidebar({ open, onClose }: { open: boolean; onClose: () => void })
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-[#f7f7ff]">{armor.name}</p>
-                          <p className="text-[11px] text-[#b9baa3] mt-0.5">
+                          <p className="text-sm text-[#b9baa3] mt-0.5">
                             Tier {armor.tier} · Score {armor.baseArmorScore} · Major {armor.baseMajorThreshold}+ · Severe {armor.baseSevereThreshold}+
                           </p>
                           {armor.feature && (
-                            <p className="text-[11px] text-gold-500 mt-0.5">
+                            <p className="text-sm text-gold-500 mt-0.5">
                               <span className="mr-1" aria-hidden="true">✦</span>
                               {armor.feature}
                             </p>
                           )}
                         </div>
                         {isActive && (
-                          <span className="text-[10px] font-bold text-[#577399] uppercase tracking-wider mt-0.5 shrink-0">
+                          <span className="text-xs font-bold text-[#577399] uppercase tracking-wider mt-0.5 shrink-0">
                             Active
                           </span>
                         )}
@@ -1156,7 +1156,7 @@ function ArmorCard() {
       <div className="rounded-lg border border-[#577399]/20 bg-slate-850 shadow-card overflow-hidden">
         {/* Slot label */}
         <div className="px-3 pt-2 pb-1 border-b border-[#577399]/20">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-[#577399]">
+          <span className="text-xs font-semibold uppercase tracking-wider text-[#577399]">
             Armor
           </span>
         </div>
@@ -1184,19 +1184,19 @@ function ArmorCard() {
                 Tier {activeArmor.tier} · Score {activeArmor.baseArmorScore} · Major {activeArmor.baseMajorThreshold}+ · Severe {activeArmor.baseSevereThreshold}+
               </p>
               {activeArmor.feature && (
-                <p className="mt-0.5 text-[10px] text-gold-600 truncate">
+                <p className="mt-0.5 text-xs text-gold-600 truncate">
                   <span aria-label="Has feature" className="mr-1">✦</span>
                   {activeArmor.feature}
                 </p>
               )}
-              <p className="mt-1 text-[10px] text-parchment-500 group-hover:text-parchment-300 transition-colors">
+              <p className="mt-1 text-xs text-parchment-500 group-hover:text-parchment-300 transition-colors">
                 Tap to change
               </p>
             </>
           ) : (
             <>
               <p className="text-sm text-parchment-500 italic font-normal">No armor selected…</p>
-              <p className="mt-1 text-[10px] text-parchment-500 group-hover:text-parchment-300 transition-colors">
+              <p className="mt-1 text-xs text-parchment-500 group-hover:text-parchment-300 transition-colors">
                 Tap to select from inventory
               </p>
             </>
@@ -1427,7 +1427,7 @@ function ExperiencesList() {
       </span>
 
       {experiences.length === 0 && (
-        <p className="text-xs text-parchment-500 italic">No experiences yet.</p>
+        <p className="text-sm text-parchment-500 italic">No experiences yet.</p>
       )}
 
       {experiences.map((exp, i) => (
@@ -1502,7 +1502,7 @@ function HeritageFeature({
       </p>
 
       {/* Feature text — the actual rule description */}
-      <p className="text-[11px] text-[#b9baa3] leading-snug">
+      <p className="text-sm text-[#b9baa3] leading-snug">
         {featureText}
       </p>
     </article>
@@ -1615,7 +1615,7 @@ export function TrackersPanel() {
           armorMax={derivedStats.armor}
           characterId={characterId}
         />
-        <p className="mt-1.5 text-[11px] text-parchment-500 italic">
+        <p className="mt-1.5 text-sm text-parchment-500 italic">
           Derived from armor base threshold + level (SRD p. 3, 22).
         </p>
       </div>
@@ -1673,7 +1673,7 @@ export function TrackersPanel() {
             </div>
             <div>
               <span className="text-xs font-semibold uppercase tracking-wider text-parchment-400 block">Proficiency</span>
-              <p className="text-[10px] text-parchment-500 italic">Increases at levels 2, 5, 8.</p>
+              <p className="text-sm text-parchment-500 italic">Increases at levels 2, 5, 8.</p>
             </div>
           </div>
         </div>

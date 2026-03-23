@@ -64,7 +64,7 @@ function ConsumableDetail({
           <h4 className="font-serif text-xl font-bold text-[#f7f7ff]">{item.name}</h4>
         </div>
         <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 px-4 py-3">
-          <MarkdownContent className="text-sm text-[#b9baa3]/80 whitespace-pre-line">
+          <MarkdownContent className="text-base text-[#b9baa3]/80 whitespace-pre-line">
             {item.fullText}
           </MarkdownContent>
         </div>

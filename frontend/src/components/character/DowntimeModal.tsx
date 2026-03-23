@@ -136,7 +136,7 @@ function RestActionButton({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-medium text-parchment-200">{label}</p>
-          <p className="text-xs text-parchment-500 mt-0.5">{description}</p>
+          <p className="text-sm text-parchment-500 mt-0.5">{description}</p>
         </div>
 
         {!roleplaysOnly && (
@@ -172,7 +172,7 @@ function RestActionButton({
         )}
 
         {roleplaysOnly && (
-          <span className="shrink-0 rounded px-2 py-1 text-[10px] font-semibold bg-slate-800 text-parchment-600 border border-slate-700">
+          <span className="shrink-0 rounded px-2 py-1 text-xs font-semibold bg-slate-800 text-parchment-600 border border-slate-700">
             Roleplay
           </span>
         )}
@@ -284,7 +284,7 @@ export function DowntimeModal({ characterId, open, onClose }: DowntimeModalProps
               <Dialog.Title className="font-serif text-lg font-semibold text-parchment-100">
                 Downtime
               </Dialog.Title>
-              <Dialog.Description className="mt-0.5 text-xs text-parchment-500">
+              <Dialog.Description className="mt-0.5 text-sm text-parchment-500">
                 {activeCharacter?.name
                   ? `${activeCharacter.name} — choose rest actions below.`
                   : "Choose rest actions and apply their mechanical effects."}
@@ -307,7 +307,7 @@ export function DowntimeModal({ characterId, open, onClose }: DowntimeModalProps
             <RestTypeToggle value={restType} onChange={setRestType} />
 
             {/* Contextual note */}
-            <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-3 text-xs text-parchment-400">
+            <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-3 text-sm text-parchment-400">
               {restType === "short" ? (
                 <p>
                   <span className="font-medium text-parchment-300">Short Rest (~1 hour).</span>{" "}

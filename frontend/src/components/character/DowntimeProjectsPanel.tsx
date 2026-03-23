@@ -183,7 +183,7 @@ function AbandonButton({ characterId, projectId, projectName }: AbandonButtonPro
   if (confirmOpen) {
     return (
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-parchment-400">
+        <span className="text-sm text-parchment-400">
           Abandon <span className="font-semibold text-parchment-200">{projectName}</span>?
         </span>
         <button
@@ -220,7 +220,7 @@ function AbandonButton({ characterId, projectId, projectName }: AbandonButtonPro
           Keep
         </button>
         {deleteError && (
-          <p role="alert" className="w-full text-[11px] text-[#fe5f55]" id={errorId}>
+          <p role="alert" className="w-full text-sm text-[#fe5f55]" id={errorId}>
             {deleteError}
           </p>
         )}
@@ -302,7 +302,7 @@ function ProjectCard({ project, characterId }: ProjectCardProps) {
 
           {/* Source card name (resolved via hook if possible) */}
           {project.cardId && (
-            <p className="text-[10px] text-parchment-600 mt-0.5">
+            <p className="text-sm text-parchment-600 mt-0.5">
               From card:{" "}
               <span className="text-parchment-500">
                 <CardNameDisplay cardId={project.cardId} />
@@ -340,7 +340,7 @@ function ProjectCard({ project, characterId }: ProjectCardProps) {
             </button>
           ) : (
             <span
-              className="rounded px-2 py-1 text-[10px] font-semibold bg-slate-800 text-parchment-600 border border-slate-700"
+              className="rounded px-2 py-1 text-xs font-semibold bg-slate-800 text-parchment-600 border border-slate-700"
               aria-label="Project completed — ticking disabled"
             >
               Done
@@ -362,7 +362,7 @@ function ProjectCard({ project, characterId }: ProjectCardProps) {
           current={project.countdownCurrent}
           max={project.countdownMax}
         />
-        <p className="text-[10px] text-parchment-600">
+        <p className="text-sm text-parchment-600">
           {project.countdownCurrent}/{project.countdownMax}
           {isCompleted && " — Complete"}
         </p>
@@ -458,7 +458,7 @@ function NewProjectForm({ characterId, onCreated, onCancel }: NewProjectFormProp
         <div>
           <label
             htmlFor="new-project-name"
-            className="text-[10px] uppercase tracking-wider text-parchment-600 block mb-0.5"
+            className="text-xs uppercase tracking-wider text-parchment-600 block mb-0.5"
           >
             Name *
           </label>
@@ -482,7 +482,7 @@ function NewProjectForm({ characterId, onCreated, onCancel }: NewProjectFormProp
         <div>
           <label
             htmlFor="new-project-countdown"
-            className="text-[10px] uppercase tracking-wider text-parchment-600 block mb-0.5"
+            className="text-xs uppercase tracking-wider text-parchment-600 block mb-0.5"
           >
             Countdown Steps
           </label>
@@ -543,7 +543,7 @@ function NewProjectForm({ characterId, onCreated, onCancel }: NewProjectFormProp
         <div>
           <label
             htmlFor="new-project-card"
-            className="text-[10px] uppercase tracking-wider text-parchment-600 block mb-0.5"
+            className="text-xs uppercase tracking-wider text-parchment-600 block mb-0.5"
           >
             Source Card (optional)
           </label>
@@ -555,7 +555,7 @@ function NewProjectForm({ characterId, onCreated, onCancel }: NewProjectFormProp
               if (e.target.value !== "__freetext__") setFreeTextCard("");
             }}
             className="
-              w-full rounded bg-slate-850 px-2 py-1.5 text-xs text-parchment-300
+               w-full rounded bg-slate-850 px-2 py-1.5 text-sm text-parchment-300
               border border-burgundy-800 focus:outline-none focus:ring-2 focus:ring-gold-500
               transition-colors
             "
@@ -576,7 +576,7 @@ function NewProjectForm({ characterId, onCreated, onCancel }: NewProjectFormProp
               placeholder="Card ID or name…"
               aria-label="Custom card source"
               className="
-                mt-1.5 w-full rounded bg-slate-850 px-2 py-1.5 text-xs text-parchment-300
+                mt-1.5 w-full rounded bg-slate-850 px-2 py-1.5 text-sm text-parchment-300
                 border border-burgundy-800 focus:outline-none focus:ring-2 focus:ring-gold-500
                 placeholder-parchment-700 transition-colors
               "
@@ -594,7 +594,7 @@ function NewProjectForm({ characterId, onCreated, onCancel }: NewProjectFormProp
           aria-busy={isSubmitting}
           aria-describedby={error ? errorId : undefined}
           className="
-            rounded px-3 py-1.5 text-xs font-semibold
+            rounded px-3 py-1.5 text-sm font-semibold
             bg-burgundy-700 text-parchment-100 hover:bg-burgundy-600
             disabled:opacity-50 disabled:cursor-not-allowed
             transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500
@@ -606,7 +606,7 @@ function NewProjectForm({ characterId, onCreated, onCancel }: NewProjectFormProp
           type="button"
           onClick={onCancel}
           className="
-            rounded px-3 py-1.5 text-xs font-semibold
+            rounded px-3 py-1.5 text-sm font-semibold
             bg-slate-700 text-parchment-400 hover:bg-slate-600
             transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500
           "
@@ -672,7 +672,7 @@ export function DowntimeProjectsPanel() {
             <span
               className="
                 rounded-full bg-[#577399]/20 border border-[#577399]/40
-                px-2 py-0 text-[10px] font-bold text-[#577399]
+                px-2 py-0 text-xs font-bold text-[#577399]
               "
               aria-label={`${activeProjects.length} active project${activeProjects.length !== 1 ? "s" : ""}`}
             >
@@ -720,7 +720,7 @@ export function DowntimeProjectsPanel() {
 
           {/* Empty state */}
           {displayProjects.length === 0 && !showNewForm && (
-            <p className="text-xs text-parchment-600 italic">
+            <p className="text-sm text-parchment-600 italic">
               No active projects. Domain cards with downtime projects will appear here
               when added to your loadout.
             </p>
@@ -742,7 +742,7 @@ export function DowntimeProjectsPanel() {
               onClick={() => setShowCompleted((v) => !v)}
               aria-pressed={showCompleted}
               className="
-                text-xs text-parchment-600 hover:text-parchment-400
+                text-sm text-parchment-600 hover:text-parchment-400
                 transition-colors focus:outline-none focus:ring-1 focus:ring-gold-500 rounded
               "
             >

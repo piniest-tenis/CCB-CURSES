@@ -263,7 +263,7 @@ function EditSidebar({ characterId }: EditSidebarProps) {
       >
         <div className="flex items-center justify-between border-b border-[#577399]/25 px-4 py-4 sm:px-5">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.24em] text-[#b9baa3]/70">Field editor</p>
+            <p className="text-xs uppercase tracking-[0.24em] text-[#b9baa3]/70">Field editor</p>
             <h2 id={headingId} className="font-serif text-lg font-semibold text-[#f7f7ff]">
               {activeField?.label ?? "Edit"}
             </h2>
@@ -286,13 +286,13 @@ function EditSidebar({ characterId }: EditSidebarProps) {
           )}
 
           <section className="space-y-2 rounded-xl border border-[#577399]/20 bg-[#b9baa3]/[0.06] p-4">
-            <h3 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#b9baa3]/70">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-[#b9baa3]/70">
               SRD guidance
             </h3>
             {isRuleLoading && activeField?.helpRuleId ? (
               <p className="text-sm text-[#b9baa3]/70">Loading rules text…</p>
             ) : helpText ? (
-              <p id={descriptionId} className="text-sm leading-relaxed text-[#f7f7ff] whitespace-pre-wrap">
+              <p id={descriptionId} className="text-base leading-relaxed text-[#f7f7ff] whitespace-pre-wrap">
                 {helpText}
               </p>
             ) : (
@@ -304,7 +304,7 @@ function EditSidebar({ characterId }: EditSidebarProps) {
             <div className="space-y-2">
               <label
                 htmlFor="edit-sidebar-input"
-                className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#b9baa3]/75"
+                className="text-xs font-semibold uppercase tracking-[0.2em] text-[#b9baa3]/75"
               >
                 {activeField.label}
               </label>
@@ -335,7 +335,7 @@ function EditSidebar({ characterId }: EditSidebarProps) {
                 />
               )}
 
-              <div className="min-h-[1.25rem] text-[11px]">
+              <div className="min-h-[1.25rem] text-xs">
                 {saveError ? (
                   <p role="alert" className="text-[#fe5f55]">{saveError}</p>
                 ) : saveState === "saving" ? (

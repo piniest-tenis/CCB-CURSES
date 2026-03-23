@@ -92,7 +92,7 @@ function CardTile({ card }: { card: DomainCard }) {
         <div id={bodyId} className="px-4 pb-4 space-y-3 border-t border-slate-700/40">
           {/* Simple description */}
           {!card.isGrimoire && card.description && (
-            <MarkdownContent className="text-sm text-parchment-400 leading-relaxed pt-3">
+            <MarkdownContent className="text-base text-parchment-400 leading-relaxed pt-3">
               {card.description}
             </MarkdownContent>
           )}
@@ -103,7 +103,7 @@ function CardTile({ card }: { card: DomainCard }) {
               {card.grimoire.map((ability) => (
                 <div key={ability.name} className="rounded border border-teal-900/50 bg-teal-950/10 px-3 py-2">
                   <p className="text-xs font-semibold text-teal-300 mb-1">{ability.name}</p>
-                  <MarkdownContent className="text-sm text-parchment-400 leading-relaxed">
+                  <MarkdownContent className="text-base text-parchment-400 leading-relaxed">
                     {ability.description}
                   </MarkdownContent>
                 </div>

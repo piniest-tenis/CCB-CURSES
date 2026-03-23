@@ -37,7 +37,7 @@ export function InlineActionError({ message, id }: InlineActionErrorProps) {
       id={id}
       role="alert"
       aria-live="assertive"
-      className="mt-1 text-[11px] text-[#fe5f55] leading-snug"
+      className="mt-1 text-sm text-[#fe5f55] leading-snug"
     >
       {message}
     </p>

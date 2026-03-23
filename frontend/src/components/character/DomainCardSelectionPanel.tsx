@@ -90,14 +90,14 @@ function CardDetail({
               {card.grimoire.map((ability, i) => (
                 <div key={i}>
                   <p className="text-sm font-semibold text-[#f7f7ff] mb-1">{ability.name}</p>
-                  <MarkdownContent className="text-sm text-[#b9baa3]/75">
+                  <MarkdownContent className="text-base text-[#b9baa3]/75">
                     {ability.description}
                   </MarkdownContent>
                 </div>
               ))}
             </div>
           ) : (
-            <MarkdownContent className="text-sm text-[#b9baa3]/75">
+            <MarkdownContent className="text-base text-[#b9baa3]/75">
               {card.description}
             </MarkdownContent>
           )}
@@ -106,7 +106,7 @@ function CardDetail({
         {card.isCursed && card.curseText && (
           <div className="rounded-lg border border-[#fe5f55]/30 bg-[#fe5f55]/5 px-4 py-3">
             <p className="text-xs uppercase tracking-wider text-[#fe5f55]/60 mb-1">Curse</p>
-            <MarkdownContent className="text-sm text-[#b9baa3]/70">
+            <MarkdownContent className="text-base text-[#b9baa3]/70">
               {card.curseText}
             </MarkdownContent>
           </div>

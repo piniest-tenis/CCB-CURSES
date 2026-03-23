@@ -65,7 +65,7 @@ function DomainCard({ summary }: { summary: DomainSummary }) {
       </div>
 
       {description && (
-        <p className="text-xs opacity-60 mb-3">{description}</p>
+        <p className="text-sm opacity-60 mb-3">{description}</p>
       )}
 
       {/* Per-level breakdown */}

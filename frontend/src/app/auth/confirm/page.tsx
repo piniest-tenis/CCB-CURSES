@@ -130,7 +130,7 @@ function ConfirmForm() {
               <div className="space-y-1">
                 <label
                   htmlFor="email"
-                  className="block text-xs font-medium uppercase tracking-wider text-parchment-500"
+                  className="block text-sm font-medium uppercase tracking-wider text-parchment-500"
                 >
                   Email
                 </label>
@@ -143,7 +143,7 @@ function ConfirmForm() {
                   {...register("email")}
                   className={`
                     w-full rounded-lg border bg-slate-850 px-3 py-2.5
-                    text-sm text-parchment-200 placeholder-parchment-700
+                    text-base text-parchment-200 placeholder-parchment-700
                     focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-slate-900 transition-colors
                     ${
                       errors.email
@@ -154,7 +154,7 @@ function ConfirmForm() {
                   placeholder="you@example.com"
                 />
                 {errors.email && (
-                  <p id="email-error" role="alert" className="text-xs text-burgundy-400">{errors.email.message}</p>
+                  <p id="email-error" role="alert" className="text-sm text-burgundy-400">{errors.email.message}</p>
                 )}
               </div>
 
@@ -162,7 +162,7 @@ function ConfirmForm() {
               <div className="space-y-1">
                 <label
                   htmlFor="code"
-                  className="block text-xs font-medium uppercase tracking-wider text-parchment-500"
+                  className="block text-sm font-medium uppercase tracking-wider text-parchment-500"
                 >
                   Verification Code
                 </label>
@@ -189,7 +189,7 @@ function ConfirmForm() {
                   placeholder="000000"
                 />
                 {errors.code && (
-                  <p id="code-error" role="alert" className="text-xs text-burgundy-400">{errors.code.message}</p>
+                  <p id="code-error" role="alert" className="text-sm text-burgundy-400">{errors.code.message}</p>
                 )}
               </div>
 
@@ -198,7 +198,7 @@ function ConfirmForm() {
                 type="submit"
                 disabled={isSubmitting}
                 className="
-                  mt-2 w-full rounded-lg py-2.5 font-semibold text-sm
+                   mt-2 w-full rounded-lg py-2.5 font-semibold text-base
                   bg-burgundy-700 text-parchment-100
                   hover:bg-burgundy-600 disabled:opacity-50 disabled:cursor-not-allowed
                   transition-colors shadow-glow-burgundy
@@ -222,7 +222,7 @@ function ConfirmForm() {
               Sign in
             </Link>
           </p>
-          <p className="text-xs text-parchment-700">
+          <p className="text-sm text-parchment-700">
             Didn&apos;t receive a code?{" "}
             <Link
               href="/auth/register"

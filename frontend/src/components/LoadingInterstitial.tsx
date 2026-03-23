@@ -275,7 +275,7 @@ export function LoadingInterstitial({ isVisible }: LoadingInterstitialProps) {
             />
             {/* "Lore & Legend" label — sits above scrim */}
             <span
-              className="relative text-[10px] font-semibold uppercase tracking-[0.25em] select-none"
+              className="relative text-xs font-semibold uppercase tracking-[0.25em] select-none"
               aria-hidden="true"
               style={{
                 color: "#577399",
@@ -290,7 +290,7 @@ export function LoadingInterstitial({ isVisible }: LoadingInterstitialProps) {
           <div className="px-8 py-6 space-y-3">
             {item ? (
               <>
-                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#577399] font-serif">
+                <p className="text-xs font-bold uppercase tracking-[0.25em] text-[#577399] font-serif">
                   {item.title}
                 </p>
                 <MarkdownContent
@@ -323,7 +323,7 @@ export function LoadingInterstitial({ isVisible }: LoadingInterstitialProps) {
               </button>
             ) : (
               <>
-                <span className="text-[10px] uppercase tracking-[0.2em] text-[#b9baa3]/30 select-none">
+                <span className="text-xs uppercase tracking-[0.2em] text-[#b9baa3]/30 select-none">
                   Loading
                 </span>
                 <LoadingDots />

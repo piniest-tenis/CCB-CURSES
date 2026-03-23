@@ -130,7 +130,7 @@ export default function RegisterPage() {
             <div className="space-y-1">
               <label
                 htmlFor="displayName"
-                className="block text-xs font-medium uppercase tracking-wider text-parchment-500"
+                className="block text-sm font-medium uppercase tracking-wider text-parchment-500"
               >
                 Display Name
               </label>
@@ -143,7 +143,7 @@ export default function RegisterPage() {
                 {...register("displayName")}
                 className={`
                   w-full rounded-lg border bg-slate-850 px-3 py-2.5
-                  text-sm text-parchment-200 placeholder-parchment-700
+                  text-base text-parchment-200 placeholder-parchment-700
                   focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-slate-900 transition-colors
                   ${
                     errors.displayName
@@ -154,7 +154,7 @@ export default function RegisterPage() {
                 placeholder="Aldric Stormweave"
               />
               {errors.displayName && (
-                <p id="displayName-error" role="alert" className="text-xs text-burgundy-400">{errors.displayName.message}</p>
+                <p id="displayName-error" role="alert" className="text-sm text-burgundy-400">{errors.displayName.message}</p>
               )}
             </div>
 
@@ -162,7 +162,7 @@ export default function RegisterPage() {
             <div className="space-y-1">
               <label
                 htmlFor="email"
-                className="block text-xs font-medium uppercase tracking-wider text-parchment-500"
+                className="block text-sm font-medium uppercase tracking-wider text-parchment-500"
               >
                 Email
               </label>
@@ -175,7 +175,7 @@ export default function RegisterPage() {
                 {...register("email")}
                 className={`
                   w-full rounded-lg border bg-slate-850 px-3 py-2.5
-                  text-sm text-parchment-200 placeholder-parchment-700
+                  text-base text-parchment-200 placeholder-parchment-700
                   focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-slate-900 transition-colors
                   ${
                     errors.email
@@ -186,7 +186,7 @@ export default function RegisterPage() {
                 placeholder="you@example.com"
               />
               {errors.email && (
-                <p id="email-error" role="alert" className="text-xs text-burgundy-400">{errors.email.message}</p>
+                <p id="email-error" role="alert" className="text-sm text-burgundy-400">{errors.email.message}</p>
               )}
             </div>
 
@@ -194,7 +194,7 @@ export default function RegisterPage() {
             <div className="space-y-1">
               <label
                 htmlFor="password"
-                className="block text-xs font-medium uppercase tracking-wider text-parchment-500"
+                className="block text-sm font-medium uppercase tracking-wider text-parchment-500"
               >
                 Password
               </label>
@@ -207,7 +207,7 @@ export default function RegisterPage() {
                 {...register("password")}
                 className={`
                   w-full rounded-lg border bg-slate-850 px-3 py-2.5
-                  text-sm text-parchment-200 placeholder-parchment-700
+                  text-base text-parchment-200 placeholder-parchment-700
                   focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-slate-900 transition-colors
                   ${
                     errors.password
@@ -218,10 +218,10 @@ export default function RegisterPage() {
                 placeholder="••••••••••••"
               />
               {errors.password && (
-                <p id="password-error" role="alert" className="text-xs text-burgundy-400">{errors.password.message}</p>
+                <p id="password-error" role="alert" className="text-sm text-burgundy-400">{errors.password.message}</p>
               )}
               {!errors.password && (
-                <p id="password-hint" className="text-xs text-parchment-700">
+                <p id="password-hint" className="text-sm text-parchment-700">
                   12+ characters, upper &amp; lowercase, and a number
                 </p>
               )}
@@ -231,7 +231,7 @@ export default function RegisterPage() {
             <div className="space-y-1">
               <label
                 htmlFor="confirmPassword"
-                className="block text-xs font-medium uppercase tracking-wider text-parchment-500"
+                className="block text-sm font-medium uppercase tracking-wider text-parchment-500"
               >
                 Confirm Password
               </label>
@@ -244,7 +244,7 @@ export default function RegisterPage() {
                 {...register("confirmPassword")}
                 className={`
                   w-full rounded-lg border bg-slate-850 px-3 py-2.5
-                  text-sm text-parchment-200 placeholder-parchment-700
+                  text-base text-parchment-200 placeholder-parchment-700
                   focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-slate-900 transition-colors
                   ${
                     errors.confirmPassword
@@ -255,7 +255,7 @@ export default function RegisterPage() {
                 placeholder="••••••••••••"
               />
               {errors.confirmPassword && (
-                <p id="confirmPassword-error" role="alert" className="text-xs text-burgundy-400">{errors.confirmPassword.message}</p>
+                <p id="confirmPassword-error" role="alert" className="text-sm text-burgundy-400">{errors.confirmPassword.message}</p>
               )}
             </div>
 
@@ -264,7 +264,7 @@ export default function RegisterPage() {
               type="submit"
               disabled={isSubmitting || googleLoading}
               className="
-                mt-2 w-full rounded-lg py-2.5 font-semibold text-sm
+                mt-2 w-full rounded-lg py-2.5 font-semibold text-base
                 bg-burgundy-700 text-parchment-100
                 hover:bg-burgundy-600 disabled:opacity-50 disabled:cursor-not-allowed
                 transition-colors shadow-glow-burgundy
@@ -295,7 +295,7 @@ export default function RegisterPage() {
             className="
               w-full flex items-center justify-center gap-2.5 rounded-lg
               border border-burgundy-800 bg-slate-850 px-3 py-2.5
-              text-sm font-medium text-parchment-200
+              text-base font-medium text-parchment-200
               hover:bg-slate-800 hover:border-burgundy-700
               disabled:opacity-50 disabled:cursor-not-allowed
               transition-colors

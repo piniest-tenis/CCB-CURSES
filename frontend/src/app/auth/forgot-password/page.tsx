@@ -204,7 +204,7 @@ function ForgotPasswordForm() {
               <div className="space-y-1">
                 <label
                   htmlFor="email"
-                  className="block text-xs font-medium uppercase tracking-wider text-parchment-500"
+                  className="block text-sm font-medium uppercase tracking-wider text-parchment-500"
                 >
                   Email
                 </label>
@@ -219,7 +219,7 @@ function ForgotPasswordForm() {
                   {...requestForm.register("email")}
                   className={`
                     w-full rounded-lg border bg-slate-850 px-3 py-2.5
-                    text-sm text-parchment-200 placeholder-parchment-700
+                    text-base text-parchment-200 placeholder-parchment-700
                     focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-slate-900 transition-colors
                     ${
                       requestForm.formState.errors.email
@@ -230,7 +230,7 @@ function ForgotPasswordForm() {
                   placeholder="you@example.com"
                 />
                 {requestForm.formState.errors.email && (
-                  <p id="email-error" role="alert" className="text-xs text-burgundy-400">
+                  <p id="email-error" role="alert" className="text-sm text-burgundy-400">
                     {requestForm.formState.errors.email.message}
                   </p>
                 )}
@@ -240,12 +240,12 @@ function ForgotPasswordForm() {
                 type="submit"
                 disabled={requestForm.formState.isSubmitting}
                 className="
-                  mt-2 w-full rounded-lg py-2.5 font-semibold text-sm
-                  bg-burgundy-700 text-parchment-100
-                  hover:bg-burgundy-600 disabled:opacity-50 disabled:cursor-not-allowed
-                  transition-colors shadow-glow-burgundy
-                  focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-2 focus:ring-offset-slate-900
-                "
+                   mt-2 w-full rounded-lg py-2.5 font-semibold text-base
+                   bg-burgundy-700 text-parchment-100
+                   hover:bg-burgundy-600 disabled:opacity-50 disabled:cursor-not-allowed
+                   transition-colors shadow-glow-burgundy
+                   focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-2 focus:ring-offset-slate-900
+                 "
               >
                 {requestForm.formState.isSubmitting
                   ? "Sending reset code…"
@@ -281,7 +281,7 @@ function ForgotPasswordForm() {
               <div className="space-y-1">
                 <label
                   htmlFor="confirm-email"
-                  className="block text-xs font-medium uppercase tracking-wider text-parchment-500"
+                  className="block text-sm font-medium uppercase tracking-wider text-parchment-500"
                 >
                   Email
                 </label>
@@ -296,7 +296,7 @@ function ForgotPasswordForm() {
                   {...confirmForm.register("email")}
                   className={`
                     w-full rounded-lg border bg-slate-850 px-3 py-2.5
-                    text-sm text-parchment-200 placeholder-parchment-700
+                    text-base text-parchment-200 placeholder-parchment-700
                     focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-slate-900 transition-colors
                     ${
                       confirmForm.formState.errors.email
@@ -310,7 +310,7 @@ function ForgotPasswordForm() {
                   <p
                     id="confirm-email-error"
                     role="alert"
-                    className="text-xs text-burgundy-400"
+                    className="text-sm text-burgundy-400"
                   >
                     {confirmForm.formState.errors.email.message}
                   </p>
@@ -320,7 +320,7 @@ function ForgotPasswordForm() {
               <div className="space-y-1">
                 <label
                   htmlFor="code"
-                  className="block text-xs font-medium uppercase tracking-wider text-parchment-500"
+                  className="block text-sm font-medium uppercase tracking-wider text-parchment-500"
                 >
                   Reset Code
                 </label>
@@ -347,7 +347,7 @@ function ForgotPasswordForm() {
                   placeholder="000000"
                 />
                 {confirmForm.formState.errors.code && (
-                  <p id="code-error" role="alert" className="text-xs text-burgundy-400">
+                  <p id="code-error" role="alert" className="text-sm text-burgundy-400">
                     {confirmForm.formState.errors.code.message}
                   </p>
                 )}
@@ -356,7 +356,7 @@ function ForgotPasswordForm() {
               <div className="space-y-1">
                 <label
                   htmlFor="password"
-                  className="block text-xs font-medium uppercase tracking-wider text-parchment-500"
+                  className="block text-sm font-medium uppercase tracking-wider text-parchment-500"
                 >
                   New Password
                 </label>
@@ -371,7 +371,7 @@ function ForgotPasswordForm() {
                   {...confirmForm.register("password")}
                   className={`
                     w-full rounded-lg border bg-slate-850 px-3 py-2.5
-                    text-sm text-parchment-200 placeholder-parchment-700
+                    text-base text-parchment-200 placeholder-parchment-700
                     focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-slate-900 transition-colors
                     ${
                       confirmForm.formState.errors.password
@@ -382,11 +382,11 @@ function ForgotPasswordForm() {
                   placeholder="••••••••••••"
                 />
                 {confirmForm.formState.errors.password ? (
-                  <p id="password-error" role="alert" className="text-xs text-burgundy-400">
+                  <p id="password-error" role="alert" className="text-sm text-burgundy-400">
                     {confirmForm.formState.errors.password.message}
                   </p>
                 ) : (
-                  <p id="password-hint" className="text-xs text-parchment-700">
+                  <p id="password-hint" className="text-sm text-parchment-700">
                     12+ characters, upper &amp; lowercase, and a number
                   </p>
                 )}
@@ -395,7 +395,7 @@ function ForgotPasswordForm() {
               <div className="space-y-1">
                 <label
                   htmlFor="confirmPassword"
-                  className="block text-xs font-medium uppercase tracking-wider text-parchment-500"
+                  className="block text-sm font-medium uppercase tracking-wider text-parchment-500"
                 >
                   Confirm New Password
                 </label>
@@ -412,7 +412,7 @@ function ForgotPasswordForm() {
                   {...confirmForm.register("confirmPassword")}
                   className={`
                     w-full rounded-lg border bg-slate-850 px-3 py-2.5
-                    text-sm text-parchment-200 placeholder-parchment-700
+                    text-base text-parchment-200 placeholder-parchment-700
                     focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-slate-900 transition-colors
                     ${
                       confirmForm.formState.errors.confirmPassword
@@ -426,7 +426,7 @@ function ForgotPasswordForm() {
                   <p
                     id="confirm-password-error"
                     role="alert"
-                    className="text-xs text-burgundy-400"
+                    className="text-sm text-burgundy-400"
                   >
                     {confirmForm.formState.errors.confirmPassword.message}
                   </p>
@@ -437,12 +437,12 @@ function ForgotPasswordForm() {
                 type="submit"
                 disabled={confirmForm.formState.isSubmitting}
                 className="
-                  mt-2 w-full rounded-lg py-2.5 font-semibold text-sm
-                  bg-burgundy-700 text-parchment-100
-                  hover:bg-burgundy-600 disabled:opacity-50 disabled:cursor-not-allowed
-                  transition-colors shadow-glow-burgundy
-                  focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-2 focus:ring-offset-slate-900
-                "
+                   mt-2 w-full rounded-lg py-2.5 font-semibold text-base
+                   bg-burgundy-700 text-parchment-100
+                   hover:bg-burgundy-600 disabled:opacity-50 disabled:cursor-not-allowed
+                   transition-colors shadow-glow-burgundy
+                   focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-2 focus:ring-offset-slate-900
+                 "
               >
                 {confirmForm.formState.isSubmitting
                   ? "Updating password…"
@@ -455,7 +455,7 @@ function ForgotPasswordForm() {
                   setIsRequestSuccessful(false);
                   setStep("request");
                 }}
-                className="w-full text-xs text-parchment-600 transition-colors hover:text-parchment-400"
+                className="w-full text-sm text-parchment-600 transition-colors hover:text-parchment-400"
               >
                 Need a new code?
               </button>
@@ -474,7 +474,7 @@ function ForgotPasswordForm() {
             </Link>
           </p>
           {step === "confirm" && (
-            <p className="text-xs text-parchment-700">
+            <p className="text-sm text-parchment-700">
               Need to start over?{" "}
               <button
                 type="button"

@@ -212,7 +212,7 @@ function GoldTracker({ gold, onChange }: GoldTrackerProps) {
               : "border-[#577399]/30 bg-transparent hover:border-[#577399]",
           ].join(" ")}
         />
-        <p className="text-[10px] text-[#b9baa3]/60 italic">
+        <p className="text-xs text-[#b9baa3]/60 italic">
           10 handfuls = 1 bag · 10 bags = 1 chest (SRD)
         </p>
       </div>
@@ -297,7 +297,7 @@ function AddEquipmentSidebar({ open, onClose, onAdd, current }: AddEquipmentSide
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[#577399]/25 px-5 py-4">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.24em] text-[#b9baa3]">Equipment</p>
+            <p className="text-xs uppercase tracking-[0.24em] text-[#b9baa3]">Equipment</p>
             <h2 id={headingId} className="font-serif text-lg font-semibold text-[#f7f7ff]">Add Equipment</h2>
           </div>
           <button
@@ -326,7 +326,7 @@ function AddEquipmentSidebar({ open, onClose, onAdd, current }: AddEquipmentSide
               type="button"
               onClick={() => setActiveCategory(null)}
               className={[
-                "rounded-full px-2.5 py-0.5 text-[10px] font-semibold border transition-colors",
+                "rounded-full px-2.5 py-0.5 text-xs font-semibold border transition-colors",
                 activeCategory === null
                   ? "bg-[#577399] border-[#577399] text-[#f7f7ff]"
                   : "border-[#577399]/30 text-[#b9baa3] hover:border-[#577399] hover:text-[#f7f7ff]",
@@ -340,7 +340,7 @@ function AddEquipmentSidebar({ open, onClose, onAdd, current }: AddEquipmentSide
                 type="button"
                 onClick={() => setActiveCategory(cat === activeCategory ? null : cat)}
                 className={[
-                  "rounded-full px-2.5 py-0.5 text-[10px] font-semibold border transition-colors",
+                  "rounded-full px-2.5 py-0.5 text-xs font-semibold border transition-colors",
                   activeCategory === cat
                     ? "bg-[#577399] border-[#577399] text-[#f7f7ff]"
                     : "border-[#577399]/30 text-[#b9baa3] hover:border-[#577399] hover:text-[#f7f7ff]",
@@ -356,7 +356,7 @@ function AddEquipmentSidebar({ open, onClose, onAdd, current }: AddEquipmentSide
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
           {Object.entries(groupedItems).map(([category, items]) => (
             <div key={category}>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#577399] mb-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#577399] mb-2">
                 {category}
               </p>
               <ul className="space-y-1" role="list">
@@ -379,12 +379,12 @@ function AddEquipmentSidebar({ open, onClose, onAdd, current }: AddEquipmentSide
                         <span className="flex items-center justify-between">
                           <span className="text-sm font-medium text-[#f7f7ff]">{item.name}</span>
                           {alreadyHave ? (
-                            <span className="text-[10px] text-[#577399] font-semibold">✓ Have</span>
+                            <span className="text-xs text-[#577399] font-semibold">✓ Have</span>
                           ) : (
-                            <span className="text-[10px] text-[#577399]/60">+ Add</span>
+                            <span className="text-xs text-[#577399]/60">+ Add</span>
                           )}
                         </span>
-                        <span className="text-[11px] text-[#b9baa3] leading-snug block mt-0.5">
+                        <span className="text-sm text-[#b9baa3] leading-snug block mt-0.5">
                           {item.description}
                         </span>
                       </button>

@@ -135,7 +135,7 @@ function ConditionsSidebar({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[#577399]/25 px-5 py-4">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.24em] sidebar-text-secondary">Character</p>
+            <p className="text-xs uppercase tracking-[0.24em] sidebar-text-secondary">Character</p>
             <h2 id={headingId} className="font-serif text-lg font-semibold text-[#f7f7ff]">Conditions</h2>
           </div>
           <button
@@ -152,7 +152,7 @@ function ConditionsSidebar({
         <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
           {/* SRD conditions */}
           <fieldset>
-            <legend className="text-[11px] font-semibold uppercase tracking-[0.2em] sidebar-text-secondary mb-3">
+            <legend className="text-xs font-semibold uppercase tracking-[0.2em] sidebar-text-secondary mb-3">
               SRD Conditions
             </legend>
             <ul className="space-y-1" role="list">
@@ -189,7 +189,7 @@ function ConditionsSidebar({
           {/* Campaign conditions */}
           {customConditions.length > 0 && (
             <fieldset>
-              <legend className="text-[11px] font-semibold uppercase tracking-[0.2em] sidebar-text-secondary mb-3">
+              <legend className="text-xs font-semibold uppercase tracking-[0.2em] sidebar-text-secondary mb-3">
                 Campaign Conditions <span className="normal-case font-normal opacity-60">(domain cards)</span>
               </legend>
               <ul className="space-y-1" role="list">
@@ -217,11 +217,11 @@ function ConditionsSidebar({
                         />
                         <span className="flex flex-col gap-0.5">
                           <span className="text-sm font-medium">
-                            <span aria-hidden="true" className="mr-1 text-[10px] sidebar-text-secondary">✦</span>
+                            <span aria-hidden="true" className="mr-1 text-xs sidebar-text-secondary">✦</span>
                             {cond.name}
                           </span>
                           {cond.description && (
-                            <span className="text-xs sidebar-text-secondary">{cond.description}</span>
+                            <span className="text-sm sidebar-text-secondary">{cond.description}</span>
                           )}
                         </span>
                       </label>
@@ -378,7 +378,7 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
               </svg>
               <span className="
                 pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2
-                whitespace-nowrap rounded bg-slate-800 px-2 py-1 text-[10px] text-[#f7f7ff]
+                whitespace-nowrap rounded bg-slate-800 px-2 py-1 text-xs text-[#f7f7ff]
                 opacity-0 group-hover:opacity-100 transition-opacity
                 border border-slate-700
               ">
@@ -397,7 +397,7 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
         {/* Evasion + Armor Score — derived stats in the header */}
         <div className="flex-shrink-0 flex gap-2">
           <div className="flex flex-col items-center gap-1">
-            <span className="text-[10px] uppercase tracking-widest text-parchment-500 font-medium hidden sm:block">
+            <span className="text-xs uppercase tracking-widest text-parchment-500 font-medium hidden sm:block">
               Evasion
             </span>
             <output
@@ -408,7 +408,7 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
             </output>
           </div>
           <div className="flex flex-col items-center gap-1">
-            <span className="text-[10px] uppercase tracking-widest text-parchment-500 font-medium hidden sm:block">
+            <span className="text-xs uppercase tracking-widest text-parchment-500 font-medium hidden sm:block">
               Armor
             </span>
             <output
@@ -422,7 +422,7 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
 
         {/* Conditions — compact column, same width as Level */}
         <div className="flex-shrink-0 flex flex-col items-center gap-1">
-          <span className="text-[10px] uppercase tracking-widest text-parchment-500 font-medium hidden sm:block">
+          <span className="text-xs uppercase tracking-widest text-parchment-500 font-medium hidden sm:block">
             Conditions
           </span>
           <button
@@ -450,13 +450,13 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
                 {visibleChips.map((label) => (
                   <span
                     key={label}
-                    className="w-full text-center truncate rounded border border-[#577399]/60 bg-[#577399]/20 px-1 py-px text-[10px] font-semibold text-[#f7f7ff] leading-tight"
+                    className="w-full text-center truncate rounded border border-[#577399]/60 bg-[#577399]/20 px-1 py-px text-xs font-semibold text-[#f7f7ff] leading-tight"
                   >
                     {label}
                   </span>
                 ))}
                 {overflowCount > 0 && (
-                <span className="text-[10px] text-[#b9baa3] leading-tight">+{overflowCount}</span>
+                <span className="text-xs text-[#b9baa3] leading-tight">+{overflowCount}</span>
                 )}
               </>
             )}
@@ -465,7 +465,7 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
 
         {/* Level — flex-shrink-0 so it never wraps into the name */}
         <div className="flex-shrink-0 flex flex-col items-center gap-1" role="group" aria-label="Character Level">
-          <span className="text-[10px] uppercase tracking-widest text-parchment-500 font-medium hidden sm:block">
+          <span className="text-xs uppercase tracking-widest text-parchment-500 font-medium hidden sm:block">
             Level
           </span>
           <output
@@ -482,7 +482,7 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
               aria-label="Level up character"
               className="
                 min-h-[36px] rounded border border-[#577399]/40 bg-[#577399]/10 px-2 py-1
-                text-[10px] font-semibold text-[#f7f7ff] whitespace-nowrap
+                text-xs font-semibold text-[#f7f7ff] whitespace-nowrap
                 hover:bg-[#577399]/20 hover:border-[#577399]
                 transition-all duration-150
                 focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-1 focus:ring-offset-slate-900
@@ -497,7 +497,7 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
       {/* ── Subclass ─────────────────────────────────────────────── */}
       {!!classData?.subclasses.length && activeCharacter.subclassId && (
         <div className="pt-2 border-t border-[#577399]/20">
-          <p className="text-[10px] uppercase tracking-widest text-[#b9baa3] font-medium">Subclass</p>
+          <p className="text-xs uppercase tracking-widest text-[#b9baa3] font-medium">Subclass</p>
           <p className="mt-0.5 text-sm font-medium text-[#f7f7ff]">
             {classData.subclasses.find((sc) => sc.subclassId === activeCharacter.subclassId)?.name ?? "Unknown"}
           </p>
@@ -567,7 +567,7 @@ function FeatureActionButton({
           )}
         </button>
         {costLabel && (
-          <span className="text-[10px] text-[#b9baa3] font-medium">{costLabel}</span>
+          <span className="text-xs text-[#b9baa3] font-medium">{costLabel}</span>
         )}
       </div>
       <InlineActionError message={inlineError} id={errorId} />
@@ -658,13 +658,13 @@ function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
             <h3 className="mb-1 font-serif text-sm font-semibold text-[#f7f7ff]">
               {classData.classFeature.name}
             </h3>
-            <MarkdownContent className="text-xs text-[#b9baa3] leading-relaxed">
+            <MarkdownContent className="text-sm text-[#b9baa3] leading-relaxed">
               {classData.classFeature.description}
             </MarkdownContent>
             {classData.classFeature.options.length > 0 && (
               <ul className="mt-2 space-y-0.5 list-disc list-outside pl-4">
                 {classData.classFeature.options.map((opt) => (
-                  <li key={opt} className="text-xs text-[#b9baa3]">
+                  <li key={opt} className="text-sm text-[#b9baa3]">
                     <MarkdownContent inline>{opt}</MarkdownContent>
                   </li>
                 ))}
@@ -696,11 +696,11 @@ function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
               <h3 className="font-serif text-sm font-semibold text-[#f7f7ff]">
                 {classData.hopeFeature.name}
               </h3>
-              <span className="rounded bg-[#577399]/30 px-1.5 text-[10px] font-bold text-[#f7f7ff]">
+              <span className="rounded bg-[#577399]/30 px-1.5 text-xs font-bold text-[#f7f7ff]">
                 {classData.hopeFeature.hopeCost} Hope
               </span>
             </div>
-            <MarkdownContent className="text-xs text-[#b9baa3] leading-relaxed">
+            <MarkdownContent className="text-sm text-[#b9baa3] leading-relaxed">
               {classData.hopeFeature.description}
             </MarkdownContent>
           </div>
@@ -732,7 +732,7 @@ function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
               >
                 <div>
                   <p className="text-sm font-medium text-[#f7f7ff]">{feat.name}</p>
-                  <MarkdownContent className="mt-0.5 text-xs text-[#b9baa3] leading-relaxed">
+                  <MarkdownContent className="mt-0.5 text-sm text-[#b9baa3] leading-relaxed">
                     {feat.description}
                   </MarkdownContent>
                 </div>
@@ -756,11 +756,11 @@ function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
                   <p className="text-sm font-medium text-[#f7f7ff]">
                     {activeSubclass.specializationFeature.name}
                   </p>
-                  <span className="rounded bg-[#577399]/25 px-1.5 text-[10px] font-bold text-[#f7f7ff]">
+                  <span className="rounded bg-[#577399]/25 px-1.5 text-xs font-bold text-[#f7f7ff]">
                     Specialization
                   </span>
                 </div>
-                <MarkdownContent className="text-xs text-[#b9baa3] leading-relaxed">
+                <MarkdownContent className="text-sm text-[#b9baa3] leading-relaxed">
                   {activeSubclass.specializationFeature.description}
                 </MarkdownContent>
               </div>
@@ -786,11 +786,11 @@ function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
                   <p className="text-sm font-medium text-[#f7f7ff]">
                     {activeSubclass.masteryFeature.name}
                   </p>
-                  <span className="rounded bg-[#577399]/35 px-1.5 text-[10px] font-bold text-[#f7f7ff]">
+                  <span className="rounded bg-[#577399]/35 px-1.5 text-xs font-bold text-[#f7f7ff]">
                     Mastery
                   </span>
                 </div>
-                <MarkdownContent className="text-xs text-[#b9baa3] leading-relaxed">
+                <MarkdownContent className="text-sm text-[#b9baa3] leading-relaxed">
                   {activeSubclass.masteryFeature.description}
                 </MarkdownContent>
               </div>
@@ -818,7 +818,7 @@ function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
             <h3 className="text-xs font-semibold uppercase tracking-wider text-[#577399]">
               {multiclassData.name} — Multiclass Features
             </h3>
-            <span className="rounded bg-[#577399]/20 px-1.5 text-[10px] font-bold text-[#f7f7ff]">
+            <span className="rounded bg-[#577399]/20 px-1.5 text-xs font-bold text-[#f7f7ff]">
               Multiclass
             </span>
           </div>
@@ -830,13 +830,13 @@ function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
                 <h4 className="mb-1 font-serif text-sm font-semibold text-[#f7f7ff]">
                   {multiclassData.classFeature.name}
                 </h4>
-                <MarkdownContent className="text-xs text-[#b9baa3] leading-relaxed">
+                <MarkdownContent className="text-sm text-[#b9baa3] leading-relaxed">
                   {multiclassData.classFeature.description}
                 </MarkdownContent>
                 {multiclassData.classFeature.options.length > 0 && (
                   <ul className="mt-2 space-y-0.5 list-disc list-outside pl-4">
                     {multiclassData.classFeature.options.map((opt) => (
-                      <li key={opt} className="text-xs text-[#b9baa3]">
+                      <li key={opt} className="text-sm text-[#b9baa3]">
                         <MarkdownContent inline>{opt}</MarkdownContent>
                       </li>
                     ))}
@@ -869,11 +869,11 @@ function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
                 <div>
                   <div className="flex items-center gap-2 mb-0.5">
                     <p className="text-sm font-medium text-[#f7f7ff]">{feat.name}</p>
-                    <span className="rounded bg-[#577399]/15 px-1.5 text-[10px] font-semibold text-[#b9baa3]">
+                    <span className="rounded bg-[#577399]/15 px-1.5 text-xs font-semibold text-[#b9baa3]">
                       Foundation
                     </span>
                   </div>
-                  <MarkdownContent className="text-xs text-[#b9baa3] leading-relaxed">
+                  <MarkdownContent className="text-sm text-[#b9baa3] leading-relaxed">
                     {feat.description}
                   </MarkdownContent>
                 </div>

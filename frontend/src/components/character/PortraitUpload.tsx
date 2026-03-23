@@ -320,7 +320,7 @@ function PortraitUploadSidebar({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[#577399]/25 px-5 py-4">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.24em] text-[#b9baa3]">
+            <p className="text-xs uppercase tracking-[0.24em] text-[#b9baa3]">
               Character
             </p>
             <h2

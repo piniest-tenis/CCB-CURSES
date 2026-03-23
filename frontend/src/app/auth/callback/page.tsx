@@ -58,11 +58,11 @@ function CallbackHandler() {
           <h1 className="font-serif text-xl font-bold text-parchment-100 mb-3">
             Sign in failed
           </h1>
-          <p className="text-sm text-burgundy-300 mb-6">{error}</p>
+          <p className="text-base text-burgundy-300 mb-6">{error}</p>
           <Link
             href="/auth/login"
             className="
-              inline-block rounded-lg px-6 py-2.5 font-semibold text-sm
+              inline-block rounded-lg px-6 py-2.5 font-semibold text-base
               bg-burgundy-700 text-parchment-100
               hover:bg-burgundy-600 transition-colors shadow-glow-burgundy
               focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-2 focus:ring-offset-slate-900
@@ -77,7 +77,7 @@ function CallbackHandler() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950">
-      <p className="text-sm text-parchment-600">Completing sign in...</p>
+      <p className="text-base text-parchment-600">Completing sign in...</p>
     </div>
   );
 }
@@ -87,7 +87,7 @@ export default function AuthCallbackPage() {
     <Suspense
       fallback={
         <div className="flex min-h-screen items-center justify-center bg-slate-950">
-          <p className="text-sm text-parchment-600">Completing sign in...</p>
+          <p className="text-base text-parchment-600">Completing sign in...</p>
         </div>
       }
     >

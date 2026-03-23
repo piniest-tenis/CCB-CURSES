@@ -414,7 +414,7 @@ function SharedCharacterViewContent() {
                 <h2 className="mb-3 font-serif text-lg font-semibold text-parchment-200">
                   Notes
                 </h2>
-                <MarkdownContent className="text-sm text-parchment-400 leading-relaxed">
+                <MarkdownContent className="text-base text-parchment-400 leading-relaxed">
                   {character.notes}
                 </MarkdownContent>
               </div>

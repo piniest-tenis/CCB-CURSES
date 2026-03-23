@@ -127,7 +127,7 @@ export function ArmorSelectionPanel({
             transition-colors
           "
         />
-        <p className="text-[10px] text-[#b9baa3]/30 mt-1.5" aria-hidden="true">
+        <p className="text-xs text-[#b9baa3]/30 mt-1.5" aria-hidden="true">
           Filter by name, feature, or armor score
         </p>
       </div>
@@ -174,7 +174,7 @@ export function ArmorSelectionPanel({
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-semibold text-[#f7f7ff]">{armor.name}</span>
                     {isSuggested && (
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#577399]/30 text-[#577399] border border-[#577399]/40 whitespace-nowrap">
+                      <span className="text-xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#577399]/30 text-[#577399] border border-[#577399]/40 whitespace-nowrap">
                         Suggested Armor
                       </span>
                     )}
@@ -255,7 +255,7 @@ function ArmorDrillDown({ armor, isSuggested, onBack }: ArmorDrillDownProps) {
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <h3 className="font-serif text-2xl font-bold text-[#f7f7ff]">{armor.name}</h3>
             {isSuggested && (
-              <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#577399]/30 text-[#577399] border border-[#577399]/40">
+              <span className="text-xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#577399]/30 text-[#577399] border border-[#577399]/40">
                 Suggested Armor
               </span>
             )}
@@ -298,7 +298,7 @@ function ArmorDrillDown({ armor, isSuggested, onBack }: ArmorDrillDownProps) {
         {armor.description && (
           <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3">
             <p className="text-xs font-semibold uppercase text-[#b9baa3]/50 mb-1">Notes</p>
-            <p className="text-sm text-[#b9baa3]/70">{armor.description}</p>
+            <p className="text-base text-[#b9baa3]/70">{armor.description}</p>
           </div>
         )}
 
@@ -314,7 +314,7 @@ function ArmorDrillDown({ armor, isSuggested, onBack }: ArmorDrillDownProps) {
 function StatBlock({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 px-3 py-2">
-      <p className="text-[10px] uppercase tracking-wider text-[#b9baa3]/50 mb-0.5">{label}</p>
+      <p className="text-xs uppercase tracking-wider text-[#b9baa3]/50 mb-0.5">{label}</p>
       <p className="text-sm font-semibold text-[#f7f7ff]">{value}</p>
     </div>
   );

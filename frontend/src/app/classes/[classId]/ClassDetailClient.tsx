@@ -58,10 +58,10 @@ function DomainBadge({ domain }: { domain: string }) {
       {domain}
       {description && (
         <span className="domain-tip-popup" aria-hidden="true">
-          <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-[#577399] mb-1">
+          <span className="block text-xs font-bold uppercase tracking-[0.18em] text-[#577399] mb-1">
             Domain Scope
           </span>
-          <span className="block text-xs text-[#b9baa3] leading-relaxed">
+          <span className="block text-sm text-[#b9baa3] leading-relaxed">
             {description}
           </span>
         </span>
@@ -372,7 +372,7 @@ export default function ClassDetailPage() {
                 <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-[#577399]">
                   How to Play {cls.name}
                 </h2>
-                <MarkdownContent className="text-sm text-parchment-400 leading-relaxed">{cls.mechanicalNotes}</MarkdownContent>
+                <MarkdownContent className="text-base text-parchment-400 leading-relaxed">{cls.mechanicalNotes}</MarkdownContent>
               </aside>
             )}
 

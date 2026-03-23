@@ -128,7 +128,7 @@ function StatInput({ name, label, value, onChange }: StatInputProps) {
           "
           aria-hidden="true"
         >
-          <span className="block text-center text-[10px] font-semibold text-[#0a100d] leading-tight tracking-wide">
+          <span className="block text-center text-xs font-semibold text-[#0a100d] leading-tight tracking-wide">
             {label}
           </span>
         </div>

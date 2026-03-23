@@ -84,20 +84,20 @@ function DomainCardSummary({ cardId }: { cardId: string }) {
           Recall {card.level}⚡
         </span>
       </div>
-      <div className="text-xs text-[#b9baa3]/60 leading-relaxed">
+      <div className="text-sm text-[#b9baa3]/60 leading-relaxed">
         {card.isGrimoire && card.grimoire.length > 0 ? (
           <div className="space-y-2">
             {card.grimoire.map((ability, i) => (
               <div key={i}>
                 <span className="font-semibold text-[#b9baa3]/80">{ability.name}: </span>
-                <MarkdownContent className="inline text-xs text-[#b9baa3]/60">
+                <MarkdownContent className="inline text-sm text-[#b9baa3]/60">
                   {ability.description}
                 </MarkdownContent>
               </div>
             ))}
           </div>
         ) : (
-          <MarkdownContent className="text-xs text-[#b9baa3]/60">
+          <MarkdownContent className="text-sm text-[#b9baa3]/60">
             {card.description}
           </MarkdownContent>
         )}
@@ -484,7 +484,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
               <h2 id="builder-title" className="font-serif text-xl font-semibold text-[#f7f7ff]">
                 Edit Character
               </h2>
-              <p className="text-xs text-[#b9baa3]/60 mt-0.5">
+              <p className="text-sm text-[#b9baa3]/60 mt-0.5">
                 {character.name} • Step {step} of 9
               </p>
             </div>
@@ -520,7 +520,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                 />
               ))}
             </div>
-            <p className="text-[10px] text-[#b9baa3]/60 mt-1">
+            <p className="text-xs text-[#b9baa3]/60 mt-1">
               Step {step} of 9
             </p>
           </div>
@@ -559,7 +559,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                       >
                         <p className="text-sm font-semibold text-[#f7f7ff]">{c.name}</p>
                         {c.subclasses.length > 0 && (
-                          <p className="text-xs italic text-[#b9baa3]/50 mt-0.5">
+                          <p className="text-sm italic text-[#b9baa3]/50 mt-0.5">
                             {c.subclasses.map((s) => s.name).join(" · ")}
                           </p>
                         )}
@@ -621,7 +621,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                           <h4 className="font-semibold text-[#f7f7ff] mb-2">Class Feature</h4>
                           <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3">
                             <p className="text-sm font-semibold text-[#f7f7ff] mb-1">{selectedClassData.classFeature.name}</p>
-                            <MarkdownContent className="text-sm text-[#b9baa3]/70">
+                            <MarkdownContent className="text-base text-[#b9baa3]/70">
                               {[
                                 selectedClassData.classFeature.description,
                                 ...selectedClassData.classFeature.options.map((o) => `- ${o}`),
@@ -670,7 +670,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
                           <h4 className="font-semibold text-[#f7f7ff] mb-1">{subclass.name}</h4>
-                          <MarkdownContent className="text-sm text-[#b9baa3]/70">
+                          <MarkdownContent className="text-base text-[#b9baa3]/70">
                             {subclass.description}
                           </MarkdownContent>
                         </div>
@@ -696,7 +696,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                           {selectedSubclass.foundationFeatures.map((f) => (
                             <div key={f.name}>
                               <p className="text-sm font-semibold text-[#f7f7ff]">{f.name}</p>
-                              <MarkdownContent className="text-xs text-[#b9baa3]/70">
+                              <MarkdownContent className="text-sm text-[#b9baa3]/70">
                                 {f.description}
                               </MarkdownContent>
                             </div>
@@ -775,7 +775,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                         `}
                       >
                         <p className="text-sm font-semibold text-[#f7f7ff]">{a.name}</p>
-                        <p className="text-xs text-[#b9baa3]/50 truncate">
+                        <p className="text-sm text-[#b9baa3]/50 truncate">
                           {a.traitName}{a.secondTraitName ? ` · ${a.secondTraitName}` : ""}
                         </p>
                       </button>
@@ -824,7 +824,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                       <div>
                         <h3 className="font-serif text-2xl font-bold text-[#f7f7ff]">{selectedAncestry.name}</h3>
                         {selectedAncestry.flavorText && (
-                          <MarkdownContent className="mt-2 text-sm italic text-[#b9baa3]/60">
+                          <MarkdownContent className="mt-2 text-base italic text-[#b9baa3]/60">
                             {selectedAncestry.flavorText}
                           </MarkdownContent>
                         )}
@@ -832,7 +832,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                       <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3 space-y-2">
                         <p className="text-xs font-semibold uppercase text-[#577399]">Primary Trait</p>
                         <p className="text-sm font-semibold text-[#f7f7ff]">{selectedAncestry.traitName}</p>
-                        <MarkdownContent className="text-sm text-[#b9baa3]/70">
+                        <MarkdownContent className="text-base text-[#b9baa3]/70">
                           {selectedAncestry.traitDescription}
                         </MarkdownContent>
                       </div>
@@ -841,7 +841,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                           <p className="text-xs font-semibold uppercase text-[#577399]">Secondary Trait</p>
                           <p className="text-sm font-semibold text-[#f7f7ff]">{selectedAncestry.secondTraitName}</p>
                           {selectedAncestry.secondTraitDescription && (
-                            <MarkdownContent className="text-sm text-[#b9baa3]/70">
+                            <MarkdownContent className="text-base text-[#b9baa3]/70">
                               {selectedAncestry.secondTraitDescription}
                             </MarkdownContent>
                           )}
@@ -855,7 +855,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                       <div>
                         <h3 className="font-serif text-2xl font-bold text-[#f7f7ff]">{selectedCommunity.name}</h3>
                         {selectedCommunity.flavorText && (
-                          <MarkdownContent className="mt-2 text-sm italic text-[#b9baa3]/60">
+                          <MarkdownContent className="mt-2 text-base italic text-[#b9baa3]/60">
                             {selectedCommunity.flavorText}
                           </MarkdownContent>
                         )}
@@ -863,7 +863,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                       <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3 space-y-2">
                         <p className="text-xs font-semibold uppercase text-[#577399]">Trait</p>
                         <p className="text-sm font-semibold text-[#f7f7ff]">{selectedCommunity.traitName}</p>
-                        <MarkdownContent className="text-sm text-[#b9baa3]/70">
+                        <MarkdownContent className="text-base text-[#b9baa3]/70">
                           {selectedCommunity.traitDescription}
                         </MarkdownContent>
                       </div>
@@ -1144,7 +1144,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                             Armor
                           </p>
                           <p className="text-lg font-semibold text-[#f7f7ff]">{armor.name}</p>
-                          <p className="text-xs text-[#b9baa3]/50 mt-0.5">
+                          <p className="text-sm text-[#b9baa3]/50 mt-0.5">
                             Score {armor.baseArmorScore} · Major {armor.baseMajorThreshold + 1}+ · Severe {armor.baseSevereThreshold + 1}+
                             {armor.featureType && ` · ${armor.featureType}`}
                           </p>
@@ -1264,7 +1264,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
               ];
               return (
                 <div className="hidden md:flex flex-col w-44 shrink-0 border-l border-slate-700/40 overflow-y-auto py-3">
-                  <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-wider text-[#b9baa3]/30">
+                  <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-[#b9baa3]/30">
                     Steps
                   </p>
                   {steps.map((s) => (
@@ -1293,7 +1293,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                         </span>
                       </div>
                       {s.summary && (
-                        <p className="text-[10px] text-[#b9baa3]/35 truncate pl-4 mt-0.5 leading-tight">
+                        <p className="text-xs text-[#b9baa3]/35 truncate pl-4 mt-0.5 leading-tight">
                           {s.summary}
                         </p>
                       )}
@@ -1315,7 +1315,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                  }
                }}
                className="
-                 rounded-lg px-4 py-3 text-sm font-medium min-h-[44px]
+                 rounded-lg px-4 py-3 text-base font-medium min-h-[44px]
                  border border-slate-700/60 text-[#b9baa3]/60
                  hover:border-slate-600 hover:text-[#b9baa3]
                  transition-colors
@@ -1340,7 +1340,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                      (step === 8 && !canGoNext8)
                    }
                     className="
-                      rounded-lg px-6 py-3 font-semibold text-sm min-h-[44px]
+                       rounded-lg px-6 py-3 font-semibold text-base min-h-[44px]
                       bg-[#577399] text-[#f7f7ff]
                       hover:bg-[#577399]/80
                       disabled:opacity-50 disabled:cursor-not-allowed
@@ -1357,7 +1357,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                    onClick={handleSave}
                    disabled={updateMutation.isPending}
                     className="
-                      rounded-lg px-6 py-3 font-semibold text-sm min-h-[44px]
+                       rounded-lg px-6 py-3 font-semibold text-base min-h-[44px]
                       bg-[#577399] text-[#f7f7ff]
                       hover:bg-[#577399]/80
                       disabled:opacity-50 disabled:cursor-not-allowed

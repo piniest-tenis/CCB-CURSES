@@ -153,7 +153,7 @@ export function CompanionPanel() {
             <div className="flex-1 min-w-0">
               <label
                 htmlFor="companion-name"
-                className="text-[10px] uppercase tracking-widest text-parchment-600 block mb-0.5"
+                className="text-xs uppercase tracking-widest text-parchment-600 block mb-0.5"
               >
                 Name
               </label>
@@ -172,7 +172,7 @@ export function CompanionPanel() {
               />
             </div>
             <div className="shrink-0 flex flex-col items-center gap-0.5">
-              <span className="text-[10px] uppercase tracking-widest text-parchment-600">
+              <span className="text-xs uppercase tracking-widest text-parchment-600">
                 Evasion
               </span>
               <span
@@ -238,7 +238,7 @@ export function CompanionPanel() {
           {/* Attack info */}
           <div className="grid grid-cols-2 gap-2">
             <div className="col-span-2">
-              <label className="text-[10px] uppercase tracking-widest text-parchment-600 block mb-0.5">
+              <label className="text-xs uppercase tracking-widest text-parchment-600 block mb-0.5">
                 Attack
               </label>
               <input
@@ -256,7 +256,7 @@ export function CompanionPanel() {
             </div>
 
             <div>
-              <label className="text-[10px] uppercase tracking-widest text-parchment-600 block mb-0.5">
+              <label className="text-xs uppercase tracking-widest text-parchment-600 block mb-0.5">
                 Damage Die
               </label>
               <input
@@ -274,7 +274,7 @@ export function CompanionPanel() {
             </div>
 
             <div>
-              <label className="text-[10px] uppercase tracking-widest text-parchment-600 block mb-0.5">
+              <label className="text-xs uppercase tracking-widest text-parchment-600 block mb-0.5">
                 Damage Type
               </label>
               <select
@@ -295,7 +295,7 @@ export function CompanionPanel() {
             </div>
 
             <div className="col-span-2">
-              <label className="text-[10px] uppercase tracking-widest text-parchment-600 block mb-0.5">
+              <label className="text-xs uppercase tracking-widest text-parchment-600 block mb-0.5">
                 Range
               </label>
               <input
