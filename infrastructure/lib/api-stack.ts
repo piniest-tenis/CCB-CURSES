@@ -104,6 +104,8 @@ export class ApiStack extends cdk.Stack {
 
     // Read+Write on Characters table
     dataStack.charactersTable.grantReadWriteData(charactersHandler);
+    // Read-only on Users table (for admin character list — resolves ownerName)
+    dataStack.usersTable.grantReadData(charactersHandler);
     // Read-only on reference tables (for validation)
     dataStack.classesTable.grantReadData(charactersHandler);
     dataStack.gameDataTable.grantReadData(charactersHandler);

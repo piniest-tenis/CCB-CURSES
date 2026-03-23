@@ -35,6 +35,7 @@
     "@aws-sdk/client-apigatewayv2": "^3.1014.0",
     "@aws-sdk/client-cloudwatch-logs": "^3.1014.0",
     "@aws-sdk/client-cognito-identity-provider": "^3.1014.0",
+    "@aws-sdk/client-iam": "^3.1014.0",
     "@types/aws-lambda": "^8.10.161",
     "@types/jest": "^30.0.0",
     "@types/node": "^20.14.0",
