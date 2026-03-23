@@ -3,6 +3,22 @@
  * Syncs the Next.js static export (`out/`) to S3 and invalidates CloudFront.
  * Run via: node scripts/deploy-s3.mjs
  *
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │ WARNING: This script deploys to whichever S3 bucket is in the env.    │
+ * │                                                                       │
+ * │ When run directly, it loads .env.local via load-env.mjs, so it        │
+ * │ targets the DEV bucket. This is correct for dev deployments.          │
+ * │                                                                       │
+ * │ For PRODUCTION deploys, NEVER run this script directly.               │
+ * │ Use one of:                                                           │
+ * │   • npm run deploy:prod     (build:prod + _deploy-prod.mjs)           │
+ * │   • node scripts/_deploy-prod.mjs   (deploy only, build must exist)   │
+ * │                                                                       │
+ * │ _deploy-prod.mjs injects .env.production vars into this script's      │
+ * │ environment so it targets the prod S3 bucket and CloudFront dist.     │
+ * │ It also verifies the build contains prod Cognito/IDP values.          │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ *
  * Required env vars — set in frontend/.env.local (or repo-root .env) for local use:
  *   AWS_ACCESS_KEY_ID       — IAM deploy user access key
  *   AWS_SECRET_ACCESS_KEY   — IAM deploy user secret key

@@ -1,7 +1,16 @@
 @echo off
 :: deploy-frontend.bat
-:: Builds the Next.js frontend and syncs the static export to S3.
+:: Builds the Next.js frontend and syncs the static export to the DEV S3 bucket.
 :: Run from the repo root: deploy-frontend.bat
+::
+:: This script uses .env.local (dev values). For PRODUCTION deploys, use:
+::   cd frontend && npm run deploy:prod
+::
+:: IMPORTANT: Do NOT use this script for production deployments.
+:: Next.js loads .env.local with higher priority than .env.production,
+:: so a plain `next build` bakes DEV Cognito/IDP values into the bundle.
+:: The deploy:prod npm script uses build-prod.mjs which injects .env.production
+:: values before Next.js can load .env.local.
 ::
 :: Required variables in frontend\.env.local (or set in shell):
 ::   AWS_ACCESS_KEY_ID       — IAM deploy user access key
