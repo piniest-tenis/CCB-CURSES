@@ -10,6 +10,7 @@
 
 import React, { useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { useCampaigns } from "@/hooks/useCampaigns";
@@ -48,21 +49,20 @@ export default function CampaignsPage() {
         style={{ backgroundColor: "rgba(10,16,13,0.90)" }}
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <button
-            type="button"
-            onClick={() => router.push("/dashboard")}
+          <Link
+            href="/dashboard"
             className="focus:outline-none focus:ring-2 focus:ring-[#577399] rounded"
             aria-label="Back to dashboard"
           >
             <Image
               src="/images/curses-isolated-logo.png"
-              alt="Curses! Custom Character Builder"
+              alt="Curses!"
               width={140}
               height={40}
               className="object-contain"
               priority
             />
-          </button>
+          </Link>
 
           {user && (
             <div className="flex items-center gap-3">

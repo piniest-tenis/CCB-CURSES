@@ -164,6 +164,107 @@ const AddCharacterSchema = z.object({
   characterId: z.string().uuid("characterId must be a valid UUID"),
 });
 
+// ─── Helper: compute nextSessionAt from SessionSchedule ──────────────────────
+
+const DAY_ORDER: Record<string, number> = {
+  sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
+  thursday: 4, friday: 5, saturday: 6,
+};
+
+function computeNextSessionAt(
+  schedule: import("@shared/types").SessionSchedule | null | undefined,
+  fromMs: number = Date.now()
+): string | null {
+  if (!schedule || schedule.slots.length === 0) return null;
+
+  let earliest: Date | null = null;
+
+  for (const slot of schedule.slots) {
+    const targetDow = DAY_ORDER[slot.day];
+    if (targetDow === undefined) continue;
+
+    // Parse time, defaulting to 00:00 if missing
+    const [hh, mm] = (slot.time ?? "00:00").split(":").map(Number);
+
+    // Start from today in the given timezone (or UTC as fallback)
+    const tz = slot.timezone ?? "UTC";
+    const now = new Date(fromMs);
+
+    // Build a candidate date by finding the next occurrence of targetDow
+    for (let dayOffset = 0; dayOffset <= 7; dayOffset++) {
+      const candidate = new Date(now.getTime() + dayOffset * 86_400_000);
+
+      // Get the candidate's wall-clock day of week in the target timezone
+      let candidateDow: number;
+      try {
+        const parts = new Intl.DateTimeFormat("en-US", {
+          timeZone: tz,
+          weekday: "short",
+        }).formatToParts(candidate);
+        const wdStr = parts.find((p) => p.type === "weekday")?.value ?? "";
+        const WD: Record<string, number> = {
+          Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+        };
+        candidateDow = WD[wdStr] ?? -1;
+      } catch {
+        // Intl not available or bad timezone — fall back to UTC
+        candidateDow = candidate.getUTCDay();
+      }
+
+      if (candidateDow !== targetDow) continue;
+
+      // Build ISO string for "this day at HH:MM in tz"
+      try {
+        const dateParts = new Intl.DateTimeFormat("en-CA", {
+          timeZone: tz,
+          year: "numeric", month: "2-digit", day: "2-digit",
+        }).formatToParts(candidate);
+        const year  = dateParts.find((p) => p.type === "year")?.value  ?? "1970";
+        const month = dateParts.find((p) => p.type === "month")?.value ?? "01";
+        const day   = dateParts.find((p) => p.type === "day")?.value   ?? "01";
+        const h = String(hh ?? 0).padStart(2, "0");
+        const m = String(mm ?? 0).padStart(2, "0");
+        const isoLocal = `${year}-${month}-${day}T${h}:${m}:00`;
+        // Convert local time to UTC via a dummy Date parse trick
+        const utcMs = new Date(
+          new Intl.DateTimeFormat("en-US", {
+            timeZone: tz,
+            year: "numeric", month: "2-digit", day: "2-digit",
+            hour: "2-digit", minute: "2-digit", second: "2-digit",
+            hour12: false,
+          }).format(new Date(`${isoLocal}Z`))
+        ).getTime();
+        // A more reliable approach: offset calculation
+        const localMs = new Date(isoLocal).getTime();
+        const offsetMs = new Date(
+          new Date(isoLocal + "Z").toLocaleString("en-US", { timeZone: tz })
+        ).getTime() - new Date(isoLocal + "Z").getTime();
+        void utcMs; // unused path above
+        const sessionUtcMs = localMs - offsetMs;
+        if (sessionUtcMs > fromMs) {
+          const sessionDate = new Date(sessionUtcMs);
+          if (earliest === null || sessionDate < earliest) {
+            earliest = sessionDate;
+          }
+          break;
+        }
+      } catch {
+        // Fallback: treat time as UTC
+        const candidateUtc = new Date(candidate);
+        candidateUtc.setUTCHours(hh ?? 0, mm ?? 0, 0, 0);
+        if (candidateUtc.getTime() > fromMs) {
+          if (earliest === null || candidateUtc < earliest) {
+            earliest = candidateUtc;
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  return earliest ? earliest.toISOString() : null;
+}
+
 // ─── Helper: generate invite code ─────────────────────────────────────────────
 
 function generateInviteCode(): string {
@@ -566,6 +667,7 @@ async function listCampaigns(
         memberCount: members.length,
         callerRole: idx.role,
         callerCharacterId: callerChar?.characterId ?? null,
+        nextSessionAt: computeNextSessionAt(campaign.schedule),
       };
       return summary;
     })
@@ -1308,6 +1410,55 @@ async function removeCharacter(
   return createSuccessResponse({ removed: true });
 }
 
+
+// GET /invites/{inviteCode} — public preview (no membership required)
+// Returns enough info for the join page to display the campaign name and invite details.
+async function getInvitePreview(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<APIGatewayProxyResultV2> {
+  const inviteCode = requirePathParam(event, "inviteCode");
+
+  // Look up the invite via the inviteCode GSI
+  const inviteItems = await queryItems<CampaignInviteRecord>(
+    CAMPAIGNS_TABLE,
+    "inviteCode_gsi = :code",
+    { ":code": inviteCode },
+    undefined,
+    "inviteCode-index"
+  );
+
+  if (inviteItems.length === 0) {
+    throw AppError.notFound("Invite", inviteCode);
+  }
+
+  const invite = inviteItems[0]!;
+
+  // Check expiration — return 410 Gone so the frontend can distinguish expired vs. not found
+  if (invite.expiresAt && new Date(invite.expiresAt) < new Date()) {
+    throw new AppError("INVITE_EXPIRED", "This invite link has expired", 410);
+  }
+
+  // Check maxUses
+  if (invite.maxUses !== null && invite.useCount >= invite.maxUses) {
+    throw new AppError("INVITE_EXPIRED", "This invite has reached its maximum uses", 410);
+  }
+
+  // Fetch campaign metadata for the name
+  const campaign = await getCampaignOrThrow(invite.campaignId);
+
+  const preview = {
+    campaignId:   invite.campaignId,
+    campaignName: campaign.name,
+    description:  campaign.description,
+    grantRole:    invite.grantRole,
+    expiresAt:    invite.expiresAt,
+    useCount:     invite.useCount,
+    maxUses:      invite.maxUses,
+  };
+
+  return createSuccessResponse(preview);
+}
+
 // ─── Main Handler ─────────────────────────────────────────────────────────────
 
 async function campaignsHandler(
@@ -1348,6 +1499,9 @@ async function campaignsHandler(
 
     case "DELETE /campaigns/{campaignId}/invites/{inviteCode}":
       return revokeInvite(event);
+
+    case "GET /invites/{inviteCode}":
+      return getInvitePreview(event);
 
     case "POST /invites/{inviteCode}/accept":
       return acceptInvite(event);

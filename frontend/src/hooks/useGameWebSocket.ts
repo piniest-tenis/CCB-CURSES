@@ -29,8 +29,12 @@ export interface UseGameWebSocketOptions {
 }
 
 export interface UseGameWebSocketReturn {
-  /** Send a ping targeting this session's character at the given field key. */
-  sendPing: (fieldKey: string) => void;
+  /**
+   * Send a ping to a specific character's sheet field.
+   * @param targetCharacterId - The character ID of the player being pinged.
+   * @param fieldKey          - The data-field-key of the sheet element to highlight.
+   */
+  sendPing: (targetCharacterId: string, fieldKey: string) => void;
   isConnected: boolean;
 }
 
@@ -137,15 +141,17 @@ export function useGameWebSocket(
   }, [campaignId, characterId, idToken, connect]);
 
   // ── sendPing ─────────────────────────────────────────────────────────────────
+  // GMs call this to ping a specific player character's sheet field.
+  // targetCharacterId is the character the GM is currently viewing (not the GM's own).
   const sendPing = useCallback(
-    (fieldKey: string) => {
+    (targetCharacterId: string, fieldKey: string) => {
       const ws = wsRef.current;
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
       const message = {
-        action:      "ping",
+        action:            "ping",
         campaignId,
-        characterId,
+        targetCharacterId,
         fieldKey,
       };
 
@@ -155,7 +161,7 @@ export function useGameWebSocket(
         // Send failed — connection dropped between check and send
       }
     },
-    [campaignId, characterId]
+    [campaignId]
   );
 
   return { sendPing, isConnected };

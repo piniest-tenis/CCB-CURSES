@@ -1519,7 +1519,7 @@ function PublicSheetContent() {
                     paddingBottom: "1px",
                   }}
                 >
-                  Curses! Custom Character Builder
+                  Curses!
                 </Link>
                 {" · "}
                 <Link

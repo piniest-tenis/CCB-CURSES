@@ -113,7 +113,9 @@ export default function JoinCampaignClient() {
 
     try {
       const result = await acceptMutation.mutateAsync(code);
-      setState({ status: "success", campaignId: result.campaignId, campaignName: result.campaignName });
+      // Use the campaignName from the already-fetched preview (the backend accept
+      // response does not return campaignName; it returns { joined, campaignId, role }).
+      setState({ status: "success", campaignId: result.campaignId, campaignName: state.preview.campaignName });
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 409 || err.code === "ALREADY_MEMBER") {

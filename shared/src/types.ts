@@ -639,6 +639,12 @@ export interface CampaignSummary extends Campaign {
   memberCount: number;
   callerRole: CampaignMemberRole | null;
   callerCharacterId: string | null;
+  /**
+   * ISO 8601 timestamp of the next upcoming session, computed server-side
+   * from the campaign's SessionSchedule. Null if no schedule is set or no
+   * future occurrence can be determined.
+   */
+  nextSessionAt: string | null;
 }
 
 export interface CampaignDetail extends Campaign {

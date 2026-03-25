@@ -190,8 +190,9 @@ export function useRevokeInvite(
 // POST /invites/{code}/accept
 
 export interface AcceptInviteResponse {
+  joined: true;
   campaignId: string;
-  campaignName: string;
+  role: "gm" | "player";
 }
 
 export function useAcceptInvite(): UseMutationResult<

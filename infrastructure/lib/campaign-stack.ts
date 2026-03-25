@@ -175,7 +175,8 @@ export class CampaignStack extends cdk.Stack {
       { method: apigwv2.HttpMethod.POST, path: "/campaigns/{campaignId}/invites" },
       { method: apigwv2.HttpMethod.GET, path: "/campaigns/{campaignId}/invites" },
       { method: apigwv2.HttpMethod.DELETE, path: "/campaigns/{campaignId}/invites/{inviteCode}" },
-      // Invite acceptance (no campaign in path)
+      // Invite preview + acceptance (no campaign in path)
+      { method: apigwv2.HttpMethod.GET,  path: "/invites/{inviteCode}" },
       { method: apigwv2.HttpMethod.POST, path: "/invites/{inviteCode}/accept" },
       // Characters
       { method: apigwv2.HttpMethod.POST, path: "/campaigns/{campaignId}/characters" },
@@ -273,9 +274,28 @@ export class CampaignStack extends cdk.Stack {
 
     // Access logging on API Gateway stages requires a CloudWatch Logs IAM role
     // to be configured at the AWS account level (a one-time account setting).
-    // Enable it only in prod where that account setting is expected to exist;
-    // skip it for dev/staging to avoid a deployment-blocking BadRequestException.
+    // We provision that role here (idempotent) and wire it up via AWS::ApiGateway::Account,
+    // then enable stage access logging in prod only.
     if (isProd) {
+      const apiGwCwRole = new iam.Role(this, "ApiGwCloudWatchRole", {
+        assumedBy: new iam.ServicePrincipal("apigateway.amazonaws.com"),
+        managedPolicies: [
+          iam.ManagedPolicy.fromAwsManagedPolicyName(
+            "service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+          ),
+        ],
+      });
+
+      // Set the account-level CloudWatch role for API Gateway (applies to all API GW in account/region)
+      const cfnApiGwAccount = new cdk.CfnResource(this, "ApiGwAccountSettings", {
+        type: "AWS::ApiGateway::Account",
+        properties: {
+          CloudWatchRoleArn: apiGwCwRole.roleArn,
+        },
+      });
+      cfnApiGwAccount.node.addDependency(apiGwCwRole);
+      wsStage.node.addDependency(cfnApiGwAccount);
+
       const cfnWsStage = wsStage.node.defaultChild as apigwv2.CfnStage;
       cfnWsStage.accessLogSettings = {
         destinationArn: wsLogGroup.logGroupArn,

@@ -59,6 +59,8 @@ export interface CampaignSummary extends Campaign {
   memberCount: number;
   callerRole: CampaignMemberRole | null;
   callerCharacterId: string | null;
+  /** ISO-8601 UTC timestamp of the next scheduled session, or null. */
+  nextSessionAt: string | null;
 }
 
 // ─── Full detail (returned by GET /campaigns/{id}) ────────────────────────────
