@@ -121,6 +121,7 @@ export function CompanionPanel() {
     <section
       className="rounded-xl border border-[#577399]/40 bg-slate-900/80 p-5 shadow-card"
       aria-label="Companion"
+      data-field-key="companion"
     >
       {/* Header */}
       <button

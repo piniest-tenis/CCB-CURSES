@@ -12,7 +12,6 @@
 // All routes are protected by Cognito JWT; userId is extracted from token.
 
 import type {
-  APIGatewayProxyEventV2WithJWTAuthorizer,
   APIGatewayProxyResultV2,
 } from "aws-lambda";
 
@@ -24,9 +23,7 @@ import type {
 } from "@shared/types";
 
 import {
-  AppError,
   createErrorResponse,
-  extractUserId,
 } from "../common/middleware";
 
 import {
@@ -98,12 +95,10 @@ export function formatValidationError(
   }));
 
   return createErrorResponse(
-    {
-      code: "SRD_VALIDATION_FAILED",
-      message: `Character sheet fails SRD compliance checks (${result.errors.length} errors)`,
-      details: details as any,
-    },
-    400
+    "SRD_VALIDATION_FAILED",
+    `Character sheet fails SRD compliance checks (${result.errors.length} errors)`,
+    400,
+    details as any
   );
 }
 
@@ -195,7 +190,7 @@ export async function validateResourceChange(
   updatedTrackers: Partial<Character["trackers"]>,
   updatedHope?: number
 ): Promise<{ valid: true } | APIGatewayProxyResultV2> {
-  const { srdValidator } = await import("./srdValidator");
+  const { validators: srdValidator } = await import("./srdValidator");
   const errors = [];
 
   if (updatedTrackers?.hp) {
@@ -382,7 +377,7 @@ export async function validateDomainSwapRequest(
  * not validated here.
  */
 export async function validateRestRequest(
-  character: Character,
+  _character: Character,
   restType: "short" | "long"
 ): Promise<{ valid: true } | APIGatewayProxyResultV2> {
   const errors = [];

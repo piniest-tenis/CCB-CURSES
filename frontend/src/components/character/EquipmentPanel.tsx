@@ -446,6 +446,7 @@ export function EquipmentPanel() {
       <section
         className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-5 shadow-card space-y-6"
         aria-label="Equipment and Gold"
+        data-field-key="equipment"
       >
         <h2 className="font-serif text-sm font-semibold uppercase tracking-widest text-[#577399]">
           Equipment &amp; Gold

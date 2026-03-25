@@ -64,7 +64,7 @@ const VALID_TYPES: CmsContentType[] = ["interstitial", "splash"];
 
 // ─── Zod Schemas ──────────────────────────────────────────────────────────────
 
-const CmsTypeSchema = z.enum(["interstitial", "splash"]);
+// (CmsTypeSchema removed; type validation is handled by validateType() helper below)
 
 const CreateCmsItemSchema = z.object({
   title: z.string().min(1, "title is required").max(200),
@@ -233,10 +233,10 @@ async function createItem(
     type,
     title: input.title,
     body: input.body,
-    imageKey: input.imageKey,
-    imageUrl: buildImageUrl(input.imageKey),
-    active: input.active,
-    order: input.order,
+    imageKey: (input.imageKey ?? null) as string | null,
+    imageUrl: buildImageUrl((input.imageKey ?? null) as string | null),
+    active: input.active ?? true,
+    order: input.order ?? 0,
     createdAt: now,
     updatedAt: now,
   };
@@ -273,10 +273,10 @@ async function updateItem(
     ...existing,
     title: input.title,
     body: input.body,
-    imageKey: input.imageKey,
-    imageUrl: buildImageUrl(input.imageKey),
-    active: input.active,
-    order: input.order,
+    imageKey: (input.imageKey ?? null) as string | null,
+    imageUrl: buildImageUrl((input.imageKey ?? null) as string | null),
+    active: input.active ?? true,
+    order: input.order ?? 0,
     updatedAt: now,
   };
 

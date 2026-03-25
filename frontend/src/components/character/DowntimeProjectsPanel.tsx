@@ -653,6 +653,7 @@ export function DowntimeProjectsPanel() {
     <section
       className="rounded-xl border border-burgundy-900 bg-slate-900/80 p-5 shadow-card"
       aria-label="Downtime Projects"
+      data-field-key="downtime"
     >
       {/* Header row: toggle + count badge + "New" button */}
       <div className="flex items-center justify-between">

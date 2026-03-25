@@ -59,7 +59,7 @@
    * override this naturally.
    */
   *:focus-visible {
-    outline: 2px solid hsl(var(--ring));
+    outline: 2px solid #fbbf24;
     outline-offset: 2px;
   }
 
@@ -109,5 +109,37 @@
      rgba(185, 186, 163, 0.70) ≈ 3.8:1 on #0f1713 sidebar background — passes AA for large/bold text. */
   .sidebar-text-secondary {
     color: rgba(185, 186, 163, 0.70);
+  }
+}
+
+/* ─── Campaign Ping Animation ─────────────────────────────────────────────────
+   Applied by usePingEffect.ts when a GM pings a character sheet element.
+   Three pulses at 1 s each (total 3 s) using a double-throb pattern.
+   prefers-reduced-motion: animation is suppressed; static gold outline remains.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+@keyframes ping-pulse {
+  0%   {
+    box-shadow:    0 0 0 0px rgba(251, 191, 36, 0.8);
+    outline-color: rgb(251, 191, 36);
+  }
+  33%  { box-shadow: 0 0 0 10px rgba(251, 191, 36, 0); }
+  66%  { box-shadow: 0 0 0 0px  rgba(251, 191, 36, 0.6); }
+  100% { box-shadow: 0 0 0 10px rgba(251, 191, 36, 0); }
+}
+
+.ping-active {
+  outline:        2px solid rgb(251, 191, 36);
+  outline-offset: 3px;
+  animation:      ping-pulse 1s ease-out 3;
+  position:       relative;
+  z-index:        1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ping-active {
+    animation:      none;
+    outline:        3px solid rgb(251, 191, 36);
+    outline-offset: 3px;
   }
 }

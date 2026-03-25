@@ -49,7 +49,7 @@ function StatInput({ name, label, value, onChange }: StatInputProps) {
   const cardImage = STAT_CARD_IMAGES[name];
 
   return (
-    <div className="group flex flex-col items-center">
+    <div className="group flex flex-col items-center" data-field-key={`stats.${name}`}>
       {/* Dial + label as a single visually-connected unit */}
       <div className="flex flex-col items-center w-24">
         {/* Dial with SVG card background and +/- controls */}
@@ -153,6 +153,7 @@ export function StatsPanel() {
     <section
       className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-5 shadow-card"
       aria-label="Core Statistics"
+      data-field-key="stats"
     >
       <h2 className="mb-5 font-serif text-sm font-semibold uppercase tracking-widest text-[#577399]">
         Traits

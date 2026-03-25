@@ -1598,6 +1598,7 @@ export function TrackersPanel() {
     <section
       className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-5 shadow-card space-y-6"
       aria-label="Character Trackers"
+      data-field-key="trackers"
     >
       <h2 className="font-serif text-sm font-semibold uppercase tracking-widest text-[#577399]">
         Trackers
@@ -1624,42 +1625,50 @@ export function TrackersPanel() {
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         {/* ── Left: HP / Stress / Armor stacked + Proficiency ── */}
         <div className="flex flex-col gap-4">
-          <ActionableSlotTracker
-            label="Hit Points"
-            marked={trackers.hp.marked}
-            max={trackers.hp.max}
-            markActionId="mark-hp"
-            clearActionId="clear-hp"
-            characterId={characterId}
-            onMaxChange={(v) => updateTracker("hp", "max", v)}
-            colorFilled="bg-[#fe5f55]"
-            hardMax={12}
-          />
-          <ActionableSlotTracker
-            label="Stress"
-            marked={trackers.stress.marked}
-            max={trackers.stress.max}
-            markActionId="mark-stress"
-            clearActionId="clear-stress"
-            characterId={characterId}
-            onMaxChange={(v) => updateTracker("stress", "max", v)}
-            colorFilled="bg-[#577399]"
-            hardMax={12}
-          />
-          <ActionableSlotTracker
-            label="Armor"
-            marked={trackers.armor.marked}
-            max={trackers.armor.max}
-            markActionId="mark-armor"
-            clearActionId="clear-armor"
-            characterId={characterId}
-            onMaxChange={(v) => updateTracker("armor", "max", v)}
-            colorFilled="bg-[#b9baa3]"
-            hardMax={derivedStats.armor}
-          />
+          <div data-field-key="trackers.hp">
+            <ActionableSlotTracker
+              label="Hit Points"
+              marked={trackers.hp.marked}
+              max={trackers.hp.max}
+              markActionId="mark-hp"
+              clearActionId="clear-hp"
+              characterId={characterId}
+              onMaxChange={(v) => updateTracker("hp", "max", v)}
+              colorFilled="bg-[#fe5f55]"
+              hardMax={12}
+            />
+          </div>
+          <div data-field-key="trackers.stress">
+            <ActionableSlotTracker
+              label="Stress"
+              marked={trackers.stress.marked}
+              max={trackers.stress.max}
+              markActionId="mark-stress"
+              clearActionId="clear-stress"
+              characterId={characterId}
+              onMaxChange={(v) => updateTracker("stress", "max", v)}
+              colorFilled="bg-[#577399]"
+              hardMax={12}
+            />
+          </div>
+          <div data-field-key="trackers.armor">
+            <ActionableSlotTracker
+              label="Armor"
+              marked={trackers.armor.marked}
+              max={trackers.armor.max}
+              markActionId="mark-armor"
+              clearActionId="clear-armor"
+              characterId={characterId}
+              onMaxChange={(v) => updateTracker("armor", "max", v)}
+              colorFilled="bg-[#b9baa3]"
+              hardMax={derivedStats.armor}
+            />
+          </div>
 
           {/* Hope — server-authoritative +/- */}
-          <ActionableHopeTracker characterId={characterId} />
+          <div data-field-key="trackers.hope">
+            <ActionableHopeTracker characterId={characterId} />
+          </div>
 
           {/* Proficiency — read-only */}
           <div className="flex items-center gap-3">

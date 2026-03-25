@@ -145,6 +145,9 @@ function handler(event) {
     { pattern: /^\\/character\\/[^/]+(\\/)?$/, target: "/character/__placeholder__/index.html" },
     { pattern: /^\\/classes\\/[^/]+(\\/)?$/, target: "/classes/__placeholder__/index.html" },
     { pattern: /^\\/domains\\/[^/]+(\\/)?$/, target: "/domains/__placeholder__/index.html" },
+    { pattern: /^\\/campaigns\\/[^/]+\\/settings(\\/)?$/, target: "/campaigns/__placeholder__/settings/index.html" },
+    { pattern: /^\\/campaigns\\/[^/]+(\\/)?$/, target: "/campaigns/__placeholder__/index.html" },
+    { pattern: /^\\/join\\/[^/]+(\\/)?$/, target: "/join/__placeholder__/index.html" },
   ];
 
   for (var i = 0; i < dynamicRoutes.length; i++) {

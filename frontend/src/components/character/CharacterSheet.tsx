@@ -719,6 +719,7 @@ function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
     <section
       className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-5 shadow-card space-y-4"
       aria-label="Features"
+      data-field-key="features"
     >
       <h2 className="font-serif text-sm font-semibold uppercase tracking-widest text-[#577399]">
         Features
@@ -1194,7 +1195,10 @@ function CharacterSheetContent({
       </div>
 
       {/* Header card */}
-      <section className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-5 shadow-card">
+      <section
+        className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-5 shadow-card"
+        data-field-key="header"
+      >
         <SheetHeader characterId={characterId} classData={classData} onLevelUp={() => setLevelUpOpen(true)} />
       </section>
 
@@ -1245,6 +1249,7 @@ function CharacterSheetContent({
       <section
         className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-5 shadow-card"
         aria-label="Notes"
+        data-field-key="notes"
       >
         <h2 className="mb-3 font-serif text-sm font-semibold uppercase tracking-widest text-[#577399]">
           Notes

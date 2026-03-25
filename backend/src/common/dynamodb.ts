@@ -36,6 +36,12 @@ export const USERS_TABLE = process.env["USERS_TABLE"] ?? "DaggerheartUsers";
 export const CMS_TABLE =
   process.env["CMS_TABLE"] ?? "daggerheart-cms-dev";
 
+export const CAMPAIGNS_TABLE =
+  process.env["CAMPAIGNS_TABLE"] ?? "daggerheart-campaigns-dev";
+
+export const CONNECTIONS_TABLE =
+  process.env["CONNECTIONS_TABLE"] ?? "daggerheart-connections-dev";
+
 
 
 const rawClient = new DynamoDBClient({
@@ -406,5 +412,51 @@ export const keys = {
   /** PK prefix for querying all CMS items of a given type. */
   cmsByType: (type: string) => ({
     PK: `CMS#${type}`,
+  }),
+
+  // ─── Campaign Key Builders ─────────────────────────────────────────────────
+
+  /** Full key for a campaign's metadata record. */
+  campaign: (campaignId: string) => ({
+    PK: `CAMPAIGN#${campaignId}`,
+    SK: "METADATA",
+  }),
+
+  /** Full key for a campaign member record. role should be "GM" or "PLAYER". */
+  campaignMember: (campaignId: string, role: string, userId: string) => ({
+    PK: `CAMPAIGN#${campaignId}`,
+    SK: `MEMBER#${role.toUpperCase()}#${userId}`,
+  }),
+
+  /** Full key for a character assignment record within a campaign. */
+  campaignCharacter: (campaignId: string, characterId: string) => ({
+    PK: `CAMPAIGN#${campaignId}`,
+    SK: `CHARACTER#${characterId}`,
+  }),
+
+  /** Full key for a campaign invite record. */
+  campaignInvite: (campaignId: string, inviteCode: string) => ({
+    PK: `CAMPAIGN#${campaignId}`,
+    SK: `INVITE#${inviteCode}`,
+  }),
+
+  /** Full key for the user→campaign reverse index record. */
+  userCampaignIndex: (userId: string, campaignId: string) => ({
+    PK: `USER#${userId}`,
+    SK: `CAMPAIGN#${campaignId}`,
+  }),
+
+  // ─── WebSocket Connection Key Builders ────────────────────────────────────
+
+  /** Full key for a WebSocket connection metadata record. */
+  connection: (connectionId: string) => ({
+    PK: `CONNECTION#${connectionId}`,
+    SK: "METADATA",
+  }),
+
+  /** Full key for a character→connection reverse index record. */
+  characterConnection: (characterId: string, connectionId: string) => ({
+    PK: `CHARACTER#${characterId}`,
+    SK: `CONNECTION#${connectionId}`,
   }),
 };

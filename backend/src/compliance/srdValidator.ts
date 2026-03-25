@@ -21,7 +21,6 @@ import type {
   Character,
   ClassData,
   DomainCard,
-  ValidationResult,
   CoreStatName,
   AdvancementChoice,
   LevelUpChoices,
@@ -325,7 +324,7 @@ export function validateHpTracker(
   marked: number,
   max: number,
   classStartingHp: number,
-  characterLevel: number
+  _characterLevel: number
 ): ValidationError[] {
   const errors: ValidationError[] = [];
 
@@ -458,7 +457,7 @@ export function validateStressTracker(
 export function validateArmorTracker(
   marked: number,
   max: number,
-  characterLevel: number
+  _characterLevel: number
 ): ValidationError[] {
   const errors: ValidationError[] = [];
 

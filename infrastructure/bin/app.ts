@@ -6,6 +6,7 @@ import { AuthStack } from "../lib/auth-stack";
 import { DataStack } from "../lib/data-stack";
 import { StorageStack } from "../lib/storage-stack";
 import { ApiStack } from "../lib/api-stack";
+import { CampaignStack } from "../lib/campaign-stack";
 import { FrontendStack } from "../lib/frontend-stack";
 
 const app = new cdk.App();
@@ -34,6 +35,29 @@ const apiStack = new ApiStack(app, `DaggerheartApi-${stage}`, {
   authStack,
   dataStack,
   storageStack,
+});
+
+// CORS origins mirror what ApiStack computes — keep them in sync.
+const isProd = stage === "prod";
+const corsAllowedOrigins = isProd
+  ? [
+      "https://curses-ccb.maninjumpsuit.com",
+      "https://localhost:8080",
+      "https://ajls8isp75nequgerzql4vipnfrzzi.ext-twitch.tv",
+    ]
+  : [
+      "http://localhost:3000",
+      "http://localhost:3001",
+      `https://${stage}.curses-ccb.example.com`,
+      "https://dqt96kbhxdqy3.cloudfront.net",
+    ];
+
+new CampaignStack(app, `DaggerheartCampaign-${stage}`, {
+  ...stackProps,
+  authStack,
+  dataStack,
+  httpApi: apiStack.httpApi,
+  corsAllowedOrigins,
 });
 
 // CloudFront requires ACM certificates to be in us-east-1 regardless of the
