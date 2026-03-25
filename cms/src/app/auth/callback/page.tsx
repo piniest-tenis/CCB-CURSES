@@ -4,7 +4,7 @@
 // Cognito redirects here after Google SSO. Exchanges the authorization code
 // for tokens via PKCE, verifies the email, then redirects to the dashboard.
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { handleCallback } from "@/lib/auth";
 
@@ -12,8 +12,13 @@ export default function AuthCallbackPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState("");
+  // Prevent double-execution in React strict mode.
+  const handled = useRef(false);
 
   useEffect(() => {
+    if (handled.current) return;
+    handled.current = true;
+
     const code = searchParams.get("code");
     const errorParam = searchParams.get("error");
     const errorDescription = searchParams.get("error_description");

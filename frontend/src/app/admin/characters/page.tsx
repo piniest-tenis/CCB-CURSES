@@ -9,11 +9,12 @@
  * Filterable by free-text search across name, class, ancestry, and owner.
  */
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
+import { apiClient } from "@/lib/api";
 import {
   useAdminAllCharacters,
   type AdminCharacterSummary,
@@ -23,6 +24,7 @@ import {
 
 type SortField = "name" | "className" | "ancestryId" | "ownerName" | "createdAt";
 type SortDir = "asc" | "desc";
+type ShareState = "idle" | "loading" | "copied" | "error";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -101,6 +103,95 @@ function SortHeader({
       {label}
       <span className="text-xs leading-none">
         {active ? (dir === "asc" ? "▲" : "▼") : "⇅"}
+      </span>
+    </button>
+  );
+}
+
+// ─── ShareButton ───────────────────────────────────────────────────────────────
+
+function ShareButton({ characterId }: { characterId: string }) {
+  const [state, setState] = useState<ShareState>("idle");
+
+  const handleShare = useCallback(
+    async (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (state === "loading") return;
+      setState("loading");
+      try {
+        const data = await apiClient.get<{ shareToken: string; shareUrl: string }>(
+          `/admin/characters/${characterId}/share`
+        );
+        // Build the public URL using the share token — rewrite to /public path
+        // regardless of what FRONTEND_URL the API was configured with.
+        const origin = typeof window !== "undefined" ? window.location.origin : "";
+        const url = `${origin}/character/${characterId}/public?token=${data.shareToken}`;
+        await navigator.clipboard.writeText(url);
+        setState("copied");
+        setTimeout(() => setState("idle"), 2500);
+      } catch {
+        setState("error");
+        setTimeout(() => setState("idle"), 2500);
+      }
+    },
+    [characterId, state]
+  );
+
+  const label =
+    state === "copied" ? "Copied!" :
+    state === "error"  ? "Failed"  :
+    "Copy share link";
+
+  return (
+    <button
+      type="button"
+      onClick={handleShare}
+      disabled={state === "loading"}
+      aria-label={label}
+      title={label}
+      className={[
+        "group relative flex items-center justify-center",
+        "w-7 h-7 rounded border transition-colors",
+        "focus:outline-none focus:ring-2 focus:ring-[#577399]",
+        "disabled:opacity-50 disabled:cursor-wait",
+        state === "copied"
+          ? "border-green-700/60 bg-green-900/20 text-green-400"
+          : state === "error"
+          ? "border-red-700/60 bg-red-900/20 text-red-400"
+          : "border-slate-700/60 bg-transparent text-[#b9baa3]/40 hover:border-[#577399]/60 hover:text-[#577399]",
+      ].join(" ")}
+    >
+      {state === "loading" ? (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 animate-spin">
+          <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.389zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clipRule="evenodd" />
+        </svg>
+      ) : state === "copied" ? (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+          <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+        </svg>
+      ) : state === "error" ? (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+        </svg>
+      ) : (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+          <path d="M13 4.5a2.5 2.5 0 11.702 1.737L6.97 9.604a2.518 2.518 0 010 .792l6.733 3.367a2.5 2.5 0 11-.671 1.341l-6.733-3.367a2.5 2.5 0 110-3.474l6.733-3.366A2.52 2.52 0 0113 4.5z" />
+        </svg>
+      )}
+      {/* Tooltip */}
+      <span className={[
+        "pointer-events-none absolute right-full mr-2 top-1/2 -translate-y-1/2",
+        "whitespace-nowrap rounded px-2 py-1 text-xs",
+        "opacity-0 group-hover:opacity-100 transition-opacity z-10",
+        "border",
+        state === "copied"
+          ? "bg-green-900 border-green-700 text-green-200"
+          : state === "error"
+          ? "bg-red-900 border-red-700 text-red-200"
+          : "bg-slate-800 border-slate-700 text-[#f7f7ff]",
+      ].join(" ")}>
+        {label}
       </span>
     </button>
   );
@@ -347,7 +438,7 @@ export default function AdminCharactersPage() {
         {!isLoading && !isError && data && (
           <div className="rounded-xl border border-slate-700/40 bg-slate-900/40 overflow-hidden">
             {/* Table header */}
-            <div className="grid grid-cols-[1fr_1fr_1fr_1fr_auto_auto] gap-x-4 px-4 py-2.5 border-b border-slate-700/40 bg-slate-900/60">
+            <div className="grid grid-cols-[1fr_1fr_1fr_1fr_auto_auto_auto] gap-x-4 px-4 py-2.5 border-b border-slate-700/40 bg-slate-900/60">
               <SortHeader
                 field="name"
                 label="Name"
@@ -386,6 +477,9 @@ export default function AdminCharactersPage() {
               <span className="text-xs font-semibold uppercase tracking-wider text-[#b9baa3]/40 select-none">
                 Lvl
               </span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-[#b9baa3]/40 select-none">
+                Share
+              </span>
             </div>
 
             {/* Rows */}
@@ -396,39 +490,48 @@ export default function AdminCharactersPage() {
             ) : (
               <div className="divide-y divide-slate-800/60">
                 {displayed.map((c) => (
-                  <Link
+                  <div
                     key={c.characterId}
-                    href={`/character/${c.characterId}`}
                     className="
-                      grid grid-cols-[1fr_1fr_1fr_1fr_auto_auto] gap-x-4
+                      grid grid-cols-[1fr_1fr_1fr_1fr_auto_auto_auto] gap-x-4
                       px-4 py-3 items-center
                       hover:bg-slate-800/30 transition-colors
                       group
                     "
                   >
-                    <span className="text-sm font-medium text-[#f7f7ff] truncate group-hover:text-[#daa520] transition-colors">
-                      {c.name}
-                    </span>
-                    <span className="text-sm text-[#b9baa3]/70 truncate">
-                      {c.className}
-                    </span>
-                    <span className="text-sm text-[#b9baa3]/50 truncate">
-                      {c.ancestryId
-                        ? c.ancestryId
-                            .replace(/-/g, " ")
-                            .replace(/\b\w/g, (ch) => ch.toUpperCase())
-                        : <span className="text-[#b9baa3]/25 italic">—</span>}
-                    </span>
-                    <span className="text-sm text-[#b9baa3]/50 truncate">
-                      {c.ownerName}
-                    </span>
-                    <span className="text-xs text-[#b9baa3]/40 whitespace-nowrap">
-                      {formatDate(c.createdAt)}
-                    </span>
-                    <span className="text-xs font-semibold text-[#577399] text-right">
-                      {c.level}
-                    </span>
-                  </Link>
+                    {/* Clickable cells — navigate to character sheet */}
+                    <Link
+                      href={`/character/${c.characterId}`}
+                      className="contents"
+                    >
+                      <span className="text-sm font-medium text-[#f7f7ff] truncate group-hover:text-[#daa520] transition-colors">
+                        {c.name}
+                      </span>
+                      <span className="text-sm text-[#b9baa3]/70 truncate">
+                        {c.className}
+                      </span>
+                      <span className="text-sm text-[#b9baa3]/50 truncate">
+                        {c.ancestryId
+                          ? c.ancestryId
+                              .replace(/-/g, " ")
+                              .replace(/\b\w/g, (ch) => ch.toUpperCase())
+                          : <span className="text-[#b9baa3]/25 italic">—</span>}
+                      </span>
+                      <span className="text-sm text-[#b9baa3]/50 truncate">
+                        {c.ownerName}
+                      </span>
+                      <span className="text-xs text-[#b9baa3]/40 whitespace-nowrap">
+                        {formatDate(c.createdAt)}
+                      </span>
+                      <span className="text-xs font-semibold text-[#577399] text-right">
+                        {c.level}
+                      </span>
+                    </Link>
+                    {/* Share button — outside the Link so click doesn't navigate */}
+                    <div className="flex items-center justify-end">
+                      <ShareButton characterId={c.characterId} />
+                    </div>
+                  </div>
                 ))}
               </div>
             )}

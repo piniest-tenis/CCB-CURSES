@@ -29,6 +29,7 @@ import {
   useCommunities,
 } from "@/hooks/useGameData";
 import { useCharacterStore } from "@/store/characterStore";
+import { apiClient } from "@/lib/api";
 import { StatsPanel }               from "./StatsPanel";
 import { TrackersPanel }            from "./TrackersPanel";
 import { DomainLoadout }            from "./DomainLoadout";
@@ -292,6 +293,8 @@ interface SheetHeaderProps {
   onLevelUp: () => void;
 }
 
+type ShareState = "idle" | "loading" | "copied" | "error";
+
 function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
   const router = useRouter();
   const { activeCharacter, toggleCondition } = useCharacterStore();
@@ -299,6 +302,25 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
   const { data: communitiesData } = useCommunities();
   const { data: ancestriesData }  = useAncestries();
   const [conditionsOpen, setConditionsOpen] = React.useState(false);
+  const [shareState, setShareState] = React.useState<ShareState>("idle");
+
+  const handleShare = React.useCallback(async () => {
+    if (shareState === "loading") return;
+    setShareState("loading");
+    try {
+      const data = await apiClient.get<{ shareToken: string; shareUrl: string }>(
+        `/characters/${characterId}/share`
+      );
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const url = `${origin}/character/${characterId}/public?token=${data.shareToken}`;
+      await navigator.clipboard.writeText(url);
+      setShareState("copied");
+      setTimeout(() => setShareState("idle"), 2500);
+    } catch {
+      setShareState("error");
+      setTimeout(() => setShareState("idle"), 2500);
+    }
+  }, [characterId, shareState]);
 
   if (!activeCharacter) return null;
 
@@ -384,6 +406,56 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
                 border border-slate-700
               ">
                 Character Builder
+              </span>
+            </button>
+
+            {/* Share icon → copy public sheet URL */}
+            <button
+              type="button"
+              onClick={handleShare}
+              disabled={shareState === "loading"}
+              className="
+                group relative shrink-0 p-1.5 rounded-md
+                text-[#b9baa3]/40 hover:text-[#577399] hover:bg-[#577399]/10
+                transition-colors
+                focus:outline-none focus:ring-2 focus:ring-[#577399]
+                disabled:opacity-50 disabled:cursor-wait
+              "
+              aria-label={
+                shareState === "copied" ? "Link copied!" :
+                shareState === "error"  ? "Copy failed" :
+                "Copy public sheet link"
+              }
+            >
+              {shareState === "loading" ? (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 animate-spin">
+                  <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.389zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clipRule="evenodd" />
+                </svg>
+              ) : shareState === "copied" ? (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-green-400">
+                  <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                </svg>
+              ) : shareState === "error" ? (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-red-400">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                  <path d="M13 4.5a2.5 2.5 0 11.702 1.737L6.97 9.604a2.518 2.518 0 010 .792l6.733 3.367a2.5 2.5 0 11-.671 1.341l-6.733-3.367a2.5 2.5 0 110-3.474l6.733-3.366A2.52 2.52 0 0113 4.5z" />
+                </svg>
+              )}
+              <span className={[
+                "pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2",
+                "whitespace-nowrap rounded px-2 py-1 text-xs",
+                "opacity-0 group-hover:opacity-100 transition-opacity",
+                "border",
+                shareState === "copied"
+                  ? "bg-green-900 border-green-700 text-green-200"
+                  : shareState === "error"
+                  ? "bg-red-900 border-red-700 text-red-200"
+                  : "bg-slate-800 border-slate-700 text-[#f7f7ff]",
+              ].join(" ")}>
+                {shareState === "copied" ? "Copied!" : shareState === "error" ? "Copy failed" : "Copy public link"}
               </span>
             </button>
           </div>

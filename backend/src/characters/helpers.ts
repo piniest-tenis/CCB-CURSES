@@ -69,11 +69,11 @@ export function decodeCursor(cursor: string): Record<string, unknown> {
 
 /**
  * Sign a share token in JWT-like format: base64url(header).base64url(payload).HMAC
+ * Tokens do not expire — they are permanently valid until the SHARE_TOKEN_SECRET rotates.
  */
 export function signShareToken(
   characterId: string,
-  userId: string,
-  exp: number
+  userId: string
 ): string {
   const secret =
     process.env["SHARE_TOKEN_SECRET"] ?? "dev-secret-change-in-prod";
@@ -81,7 +81,7 @@ export function signShareToken(
     JSON.stringify({ alg: "HS256", typ: "share" })
   ).toString("base64url");
   const payload = Buffer.from(
-    JSON.stringify({ type: "share", characterId, userId, exp })
+    JSON.stringify({ type: "share", characterId, userId })
   ).toString("base64url");
   const signature = createHmac("sha256", secret)
     .update(`${header}.${payload}`)
@@ -91,11 +91,12 @@ export function signShareToken(
 
 /**
  * Verify a share token. Returns the decoded payload or throws an AppError.
+ * Tokens do not carry an expiry claim — they are valid indefinitely.
  */
 export function verifyShareToken(
   token: string,
   expectedCharacterId: string
-): { characterId: string; userId: string; exp: number } {
+): { characterId: string; userId: string } {
   const parts = token.split(".");
   if (parts.length !== 3) {
     throw AppError.badRequest("Invalid share token format");
@@ -113,7 +114,7 @@ export function verifyShareToken(
     throw AppError.unauthorized("Invalid share token");
   }
 
-  let payload: { type: string; characterId: string; userId: string; exp: number };
+  let payload: { type: string; characterId: string; userId: string };
   try {
     payload = JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf8"));
   } catch {
@@ -126,11 +127,8 @@ export function verifyShareToken(
   if (payload.characterId !== expectedCharacterId) {
     throw AppError.forbidden("Token does not match character");
   }
-  if (payload.exp < Math.floor(Date.now() / 1000)) {
-    throw AppError.unauthorized("Share token has expired");
-  }
 
-  return { characterId: payload.characterId, userId: payload.userId, exp: payload.exp };
+  return { characterId: payload.characterId, userId: payload.userId };
 }
 
 // ─── SRD Validation ───────────────────────────────────────────────────────────

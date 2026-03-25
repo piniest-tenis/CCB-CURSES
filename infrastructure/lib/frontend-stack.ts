@@ -140,6 +140,7 @@ function handler(event) {
   // client-side router handles the actual param at runtime.
   var dynamicRoutes = [
     { pattern: /^\\/character\\/[^/]+\\/build(\\/)?$/, target: "/character/__placeholder__/build/index.html" },
+    { pattern: /^\\/character\\/[^/]+\\/public(\\/)?$/, target: "/character/__placeholder__/public/index.html" },
     { pattern: /^\\/character\\/[^/]+\\/view(\\/)?$/, target: "/character/__placeholder__/view/index.html" },
     { pattern: /^\\/character\\/[^/]+(\\/)?$/, target: "/character/__placeholder__/index.html" },
     { pattern: /^\\/classes\\/[^/]+(\\/)?$/, target: "/classes/__placeholder__/index.html" },

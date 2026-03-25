@@ -20,6 +20,15 @@ import type { Components } from "react-markdown";
 const OBSIDIAN_BASE = "https://publish.obsidian.md/tidwell";
 
 /**
+ * Strip Obsidian %% comment %% blocks (single-line and multi-line).
+ * These are internal authoring notes that should never appear in rendered output.
+ */
+function stripObsidianComments(text: string): string {
+  // %% ... %% may span multiple lines
+  return text.replace(/%%[\s\S]*?%%/g, "").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+/**
  * Replace [[Target]] and [[Target|Alias]] with a standard markdown link.
  * Target may contain path separators — we use only the last segment as the
  * URL slug (matching how Obsidian Publish resolves short links).
@@ -156,7 +165,7 @@ export function MarkdownContent({
   linkClassName = "underline decoration-[#577399]/60 hover:decoration-[#577399] text-[#8fbad6] hover:text-[#b0d0e6] transition-colors",
   inline = false,
 }: MarkdownContentProps) {
-  const processed = resolveWikiLinks(children);
+  const processed = resolveWikiLinks(stripObsidianComments(children));
 
   return (
     <div className={className}>

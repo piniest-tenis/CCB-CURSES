@@ -85,7 +85,18 @@ export default function LoginPage() {
   const handleGoogleSignIn = async () => {
     try {
       setGoogleLoading(true);
-      await startGoogleLogin();
+      // Pass the store's current idToken so startGoogleLogin can detect an
+      // existing SRP session and skip the OAuth redirect.
+      const { idToken } = useAuthStore.getState();
+      const outcome = await startGoogleLogin(idToken);
+      // A valid session already exists in this browser (e.g. another tab is
+      // open). Skip the OAuth round-trip and go straight to the dashboard.
+      if (outcome === "reused") {
+        router.replace("/dashboard");
+        return;
+      }
+      // outcome === "redirecting" — browser is navigating away; keep the
+      // loading state active so the button stays disabled during the redirect.
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Google sign in failed.";

@@ -32,8 +32,15 @@ export default function AuthGate({ children }: AuthGateProps) {
   async function handleSignIn() {
     setLoading(true);
     const origin = window.location.origin;
-    await startGoogleLogin(`${origin}/auth/callback`);
-    // page will redirect — loading state stays true
+    const outcome = await startGoogleLogin(`${origin}/auth/callback`);
+    if (outcome === "reused") {
+      // A valid session already exists in sessionStorage — no need to go
+      // through Google again. Treat the user as authenticated immediately.
+      setAuthed(true);
+      setLoading(false);
+      return;
+    }
+    // outcome === "redirecting" — page is navigating away; keep loading state.
   }
 
   return (

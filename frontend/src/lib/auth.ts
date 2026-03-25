@@ -366,13 +366,37 @@ export function getFederatedIdToken(): string | null {
 /**
  * Begins the Google SSO flow by redirecting the user to the Cognito Hosted UI
  * with the Google identity provider pre-selected.
+ *
+ * Pass the caller's current `idToken` (from the auth store) so that an
+ * existing SRP session in the same tab is detected and reused without
+ * launching a redundant OAuth round-trip.
+ *
+ * Returns `"reused"` when a valid session already exists (the caller should
+ * redirect to the dashboard instead of waiting for a new OAuth round-trip).
+ * Returns `"redirecting"` when the browser is being sent to Google.
  */
-export async function startGoogleLogin(): Promise<void> {
+export async function startGoogleLogin(
+  existingStoreToken?: string | null,
+): Promise<"reused" | "redirecting"> {
   if (!HOSTED_DOMAIN || !CLIENT_ID) {
     throw new Error(
       "Google SSO is not configured: " +
         "NEXT_PUBLIC_COGNITO_HOSTED_DOMAIN and NEXT_PUBLIC_COGNITO_CLIENT_ID are required.",
     );
+  }
+
+  // If the store already holds a valid token (e.g. the user is logged in via
+  // SRP in this tab, or a federated token was loaded during initialize()),
+  // skip the OAuth redirect entirely.
+  if (existingStoreToken) {
+    return "reused";
+  }
+
+  // Also check sessionStorage for a live federated token (covers the case
+  // where the user opened a second tab without the store being hydrated yet).
+  const existingToken = getFederatedIdToken();
+  if (existingToken) {
+    return "reused";
   }
 
   const verifier = await generateCodeVerifier();
@@ -394,6 +418,7 @@ export async function startGoogleLogin(): Promise<void> {
   window.location.assign(
     `https://${HOSTED_DOMAIN}/oauth2/authorize?${params}`,
   );
+  return "redirecting";
 }
 
 // Exchange authorization code for tokens (called from /auth/callback) ---------

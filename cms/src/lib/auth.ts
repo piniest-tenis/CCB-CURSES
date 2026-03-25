@@ -66,7 +66,14 @@ async function generateCodeChallenge(verifier: string): Promise<string> {
 // Redirect to Cognito Hosted UI (Google only)
 // ---------------------------------------------------------------------------
 
-export async function startGoogleLogin(callbackUrl: string): Promise<void> {
+export async function startGoogleLogin(callbackUrl: string): Promise<"reused" | "redirecting"> {
+  // If a JWT is already stored in this tab's sessionStorage (e.g. the user
+  // opened a second tab while already logged in), skip the OAuth round-trip
+  // entirely and signal to the caller that the session can be reused.
+  if (isAuthenticated()) {
+    return "reused";
+  }
+
   const verifier = await generateCodeVerifier();
   const challenge = await generateCodeChallenge(verifier);
   sessionStorage.setItem(PKCE_VERIFIER_KEY, verifier);
@@ -82,6 +89,7 @@ export async function startGoogleLogin(callbackUrl: string): Promise<void> {
   });
 
   window.location.assign(`https://${HOSTED_DOMAIN}/oauth2/authorize?${params}`);
+  return "redirecting";
 }
 
 // ---------------------------------------------------------------------------

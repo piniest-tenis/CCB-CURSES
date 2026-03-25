@@ -1231,17 +1231,44 @@ async function getShareToken(
   if (!existing) throw AppError.notFound("Character", characterId);
   if (existing.userId !== userId) throw AppError.forbidden();
 
-  // exp = now + 7 days, in Unix epoch seconds
-  const exp = Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60;
-  const expiresAt = new Date(exp * 1000).toISOString();
-
-  const shareToken = signShareToken(characterId, userId, exp);
+  const shareToken = signShareToken(characterId, userId);
 
   const frontendUrl =
     process.env["FRONTEND_URL"] ?? "https://app.curses-ccb.example.com";
-  const shareUrl = `${frontendUrl}/character/${characterId}/view?token=${shareToken}`;
+  const shareUrl = `${frontendUrl}/character/${characterId}/public?token=${shareToken}`;
 
-  return createSuccessResponse({ shareToken, shareUrl, expiresAt });
+  return createSuccessResponse({ shareToken, shareUrl });
+}
+
+/**
+ * GET /admin/characters/{characterId}/share
+ * Admin-only: generate a share token for any character in the system.
+ * The admin does not need to own the character — admin group membership is
+ * checked instead. The returned share URL points to the public sheet.
+ */
+async function getAdminShareToken(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<APIGatewayProxyResultV2> {
+  requireAdminGroup(event);
+  const characterId = requirePathParam(event, "characterId");
+
+  // Scan for the character (admin doesn't know the owner's userId, which is
+  // the DynamoDB partition key).
+  const results = await scanItems<CharacterRecord>(
+    CHARACTERS_TABLE,
+    "SK = :sk",
+    { ":sk": `CHARACTER#${characterId}` }
+  );
+  const record = results[0] ?? null;
+  if (!record) throw AppError.notFound("Character", characterId);
+
+  const shareToken = signShareToken(characterId, record.userId);
+
+  const frontendUrl =
+    process.env["FRONTEND_URL"] ?? "https://app.curses-ccb.example.com";
+  const shareUrl = `${frontendUrl}/character/${characterId}/public?token=${shareToken}`;
+
+  return createSuccessResponse({ shareToken, shareUrl });
 }
 
 /**
@@ -1259,7 +1286,7 @@ async function getSharedCharacter(
     return createErrorResponse("UNAUTHORIZED", "Share token is required", 401);
   }
 
-  let payload: { characterId: string; userId: string; exp: number };
+  let payload: { characterId: string; userId: string };
   try {
     payload = verifyShareToken(token, characterId);
   } catch (err) {
@@ -1778,6 +1805,8 @@ export const handler = withErrorHandling(
     switch (routeKey) {
       case "GET /admin/characters":
         return listAllCharacters(event);
+      case "GET /admin/characters/{characterId}/share":
+        return getAdminShareToken(event);
       case "GET /characters":
         return listCharacters(event);
       case "POST /characters":

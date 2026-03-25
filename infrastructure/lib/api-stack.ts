@@ -45,7 +45,11 @@ export class ApiStack extends cdk.Stack {
     // CORS allowed origins — shared between API Gateway config and Lambda env
     // -----------------------------------------------------------------------
     const corsAllowOrigins = isProd
-      ? ["https://curses-ccb.maninjumpsuit.com"]
+      ? [
+          "https://curses-ccb.maninjumpsuit.com",
+          "https://localhost:8080",                                      // Twitch extension local test
+          "https://ajls8isp75nequgerzql4vipnfrzzi.ext-twitch.tv",       // Twitch extension hosted test / prod
+        ]
       : [
           "http://localhost:3000",
           "http://localhost:3001",
@@ -539,6 +543,7 @@ export class ApiStack extends cdk.Stack {
     }> = [
       // Admin — all characters (admin group only, enforced in handler)
       { method: apigwv2.HttpMethod.GET, path: "/admin/characters" },
+      { method: apigwv2.HttpMethod.GET, path: "/admin/characters/{characterId}/share" },
       { method: apigwv2.HttpMethod.GET, path: "/characters" },
       { method: apigwv2.HttpMethod.POST, path: "/characters" },
       { method: apigwv2.HttpMethod.GET, path: "/characters/{characterId}" },
