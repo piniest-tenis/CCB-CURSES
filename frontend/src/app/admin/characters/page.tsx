@@ -19,6 +19,12 @@ import {
   useAdminAllCharacters,
   type AdminCharacterSummary,
 } from "@/hooks/useCharacter";
+import {
+  useCampaigns,
+  useAddCharacterToCampaign,
+  useRemoveCharacterFromCampaign,
+} from "@/hooks/useCampaigns";
+import { useQueryClient } from "@tanstack/react-query";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -197,6 +203,237 @@ function ShareButton({ characterId }: { characterId: string }) {
   );
 }
 
+// ─── AddToCampaignModal ─────────────────────────────────────────────────────────
+
+interface AddToCampaignModalProps {
+  character: AdminCharacterSummary;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function AddToCampaignModal({ character, onClose, onSuccess }: AddToCampaignModalProps) {
+  const { data: campaigns, isLoading: campaignsLoading } = useCampaigns();
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+
+  const addMutation = useAddCharacterToCampaign(selectedCampaignId);
+  const removeMutation = useRemoveCharacterFromCampaign(character.campaignId ?? "");
+
+  const currentCampaign = useMemo(
+    () => campaigns?.find((c) => c.campaignId === character.campaignId),
+    [campaigns, character.campaignId]
+  );
+
+  const handleAdd = useCallback(async () => {
+    if (!selectedCampaignId) return;
+    setError(null);
+    try {
+      await addMutation.mutateAsync({ characterId: character.characterId });
+      onSuccess();
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add character to campaign");
+    }
+  }, [selectedCampaignId, addMutation, character.characterId, onSuccess, onClose]);
+
+  const handleRemove = useCallback(async () => {
+    if (!character.campaignId) return;
+    setError(null);
+    try {
+      await removeMutation.mutateAsync(character.characterId);
+      onSuccess();
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to remove character from campaign");
+    }
+  }, [character, removeMutation, onSuccess, onClose]);
+
+  const isBusy = addMutation.isPending || removeMutation.isPending;
+
+  // Close on backdrop click
+  const handleBackdrop = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) onClose();
+  }, [onClose]);
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      onClick={handleBackdrop}
+    >
+      <div className="w-full max-w-md mx-4 rounded-xl border border-slate-700/60 bg-[#0f1a14] shadow-2xl">
+        {/* Modal header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700/40">
+          <div>
+            <h2 className="font-serif text-lg font-semibold text-[#f7f7ff]">Campaign Assignment</h2>
+            <p className="text-xs text-[#b9baa3]/50 mt-0.5 truncate max-w-xs">{character.name}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-[#b9baa3]/40 hover:text-[#b9baa3] transition-colors p-1"
+            aria-label="Close"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+              <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Modal body */}
+        <div className="px-5 py-4 space-y-4">
+          {/* Current campaign */}
+          {character.campaignId && (
+            <div className="rounded-lg border border-slate-700/40 bg-slate-900/40 px-3 py-3">
+              <p className="text-xs text-[#b9baa3]/50 uppercase tracking-wider mb-1">Currently in</p>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-[#f7f7ff] font-medium truncate">
+                  {currentCampaign?.name ?? character.campaignId}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleRemove}
+                  disabled={isBusy}
+                  className="shrink-0 text-xs text-[#fe5f55]/70 hover:text-[#fe5f55] border border-[#fe5f55]/30 hover:border-[#fe5f55]/60 rounded px-2 py-1 transition-colors disabled:opacity-40"
+                >
+                  {removeMutation.isPending ? "Removing…" : "Remove"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Campaign selector */}
+          <div>
+            <label className="block text-xs text-[#b9baa3]/50 uppercase tracking-wider mb-1.5">
+              {character.campaignId ? "Move to campaign" : "Add to campaign"}
+            </label>
+            {campaignsLoading ? (
+              <div className="flex items-center gap-2 py-2 text-sm text-[#b9baa3]/40">
+                <div className="h-4 w-4 animate-spin rounded-full border border-[#577399] border-t-transparent" />
+                Loading campaigns…
+              </div>
+            ) : !campaigns || campaigns.length === 0 ? (
+              <p className="text-sm text-[#b9baa3]/40 italic">No campaigns found.</p>
+            ) : (
+              <select
+                value={selectedCampaignId}
+                onChange={(e) => setSelectedCampaignId(e.target.value)}
+                disabled={isBusy}
+                className="w-full rounded-lg border border-slate-700/60 bg-slate-900/60 px-3 py-2 text-sm text-[#f7f7ff] focus:outline-none focus:border-[#577399]/60 transition-colors disabled:opacity-40"
+              >
+                <option value="">Select a campaign…</option>
+                {campaigns.map((campaign) => (
+                  <option key={campaign.campaignId} value={campaign.campaignId}>
+                    {campaign.name}
+                    {campaign.campaignId === character.campaignId ? " (current)" : ""}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {error && (
+            <p className="text-xs text-[#fe5f55]/80 bg-[#fe5f55]/10 border border-[#fe5f55]/20 rounded px-3 py-2">
+              {error}
+            </p>
+          )}
+        </div>
+
+        {/* Modal footer */}
+        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-slate-700/40">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isBusy}
+            className="px-3 py-1.5 text-sm text-[#b9baa3]/60 hover:text-[#b9baa3] border border-slate-700/40 hover:border-slate-600 rounded transition-colors disabled:opacity-40"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleAdd}
+            disabled={!selectedCampaignId || isBusy || selectedCampaignId === character.campaignId}
+            className="px-3 py-1.5 text-sm font-medium bg-[#577399]/20 hover:bg-[#577399]/30 text-[#577399] border border-[#577399]/40 hover:border-[#577399]/60 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {addMutation.isPending ? "Saving…" : character.campaignId ? "Move" : "Add"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── CampaignCell ───────────────────────────────────────────────────────────────
+
+function CampaignCell({
+  character,
+  onRefetch,
+}: {
+  character: AdminCharacterSummary;
+  onRefetch: () => void;
+}) {
+  const [showModal, setShowModal] = useState(false);
+  const { data: campaigns } = useCampaigns();
+
+  const campaignName = useMemo(
+    () => campaigns?.find((c) => c.campaignId === character.campaignId)?.name ?? null,
+    [campaigns, character.campaignId]
+  );
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setShowModal(true);
+        }}
+        title={character.campaignId ? `Campaign: ${campaignName ?? character.campaignId}` : "Add to campaign"}
+        className={[
+          "group relative flex items-center justify-center gap-1.5",
+          "max-w-[120px] rounded border px-2 py-1 text-xs transition-colors",
+          "focus:outline-none focus:ring-2 focus:ring-[#577399]",
+          character.campaignId
+            ? "border-[#daa520]/30 bg-[#daa520]/10 text-[#daa520]/80 hover:border-[#daa520]/60 hover:text-[#daa520]"
+            : "border-slate-700/40 text-[#b9baa3]/30 hover:border-[#577399]/40 hover:text-[#577399]/60",
+        ].join(" ")}
+      >
+        {character.campaignId ? (
+          <>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3 shrink-0">
+              <path d="M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
+              <path fillRule="evenodd" d="M1.38 8.28a.87.87 0 0 1 0-.566 7.003 7.003 0 0 1 13.238.006.87.87 0 0 1 0 .566A7.003 7.003 0 0 1 1.379 8.28ZM11 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" clipRule="evenodd" />
+            </svg>
+            <span className="truncate">{campaignName ?? "Assigned"}</span>
+          </>
+        ) : (
+          <>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3 shrink-0">
+              <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
+            </svg>
+            <span>Campaign</span>
+          </>
+        )}
+      </button>
+
+      {showModal && (
+        <AddToCampaignModal
+          character={character}
+          onClose={() => setShowModal(false)}
+          onSuccess={onRefetch}
+        />
+      )}
+    </>
+  );
+}
+
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AdminCharactersPage() {
@@ -335,7 +572,7 @@ export default function AdminCharactersPage() {
           <div className="flex items-center gap-4">
             <Image
               src="/images/curses-isolated-logo.png"
-              alt="Curses!"
+              alt="Curses! Custom Character Builder"
               width={120}
               height={34}
               className="object-contain"
@@ -438,7 +675,7 @@ export default function AdminCharactersPage() {
         {!isLoading && !isError && data && (
           <div className="rounded-xl border border-slate-700/40 bg-slate-900/40 overflow-hidden">
             {/* Table header */}
-            <div className="grid grid-cols-[1fr_1fr_1fr_1fr_auto_auto_auto] gap-x-4 px-4 py-2.5 border-b border-slate-700/40 bg-slate-900/60">
+            <div className="grid grid-cols-[1fr_1fr_1fr_1fr_auto_auto_auto_auto] gap-x-4 px-4 py-2.5 border-b border-slate-700/40 bg-slate-900/60">
               <SortHeader
                 field="name"
                 label="Name"
@@ -478,6 +715,9 @@ export default function AdminCharactersPage() {
                 Lvl
               </span>
               <span className="text-xs font-semibold uppercase tracking-wider text-[#b9baa3]/40 select-none">
+                Campaign
+              </span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-[#b9baa3]/40 select-none">
                 Share
               </span>
             </div>
@@ -493,7 +733,7 @@ export default function AdminCharactersPage() {
                   <div
                     key={c.characterId}
                     className="
-                      grid grid-cols-[1fr_1fr_1fr_1fr_auto_auto_auto] gap-x-4
+                      grid grid-cols-[1fr_1fr_1fr_1fr_auto_auto_auto_auto] gap-x-4
                       px-4 py-3 items-center
                       hover:bg-slate-800/30 transition-colors
                       group
@@ -527,6 +767,10 @@ export default function AdminCharactersPage() {
                         {c.level}
                       </span>
                     </Link>
+                    {/* Campaign cell — outside the Link so click doesn't navigate */}
+                    <div className="flex items-center justify-start">
+                      <CampaignCell character={c} onRefetch={() => refetch()} />
+                    </div>
                     {/* Share button — outside the Link so click doesn't navigate */}
                     <div className="flex items-center justify-end">
                       <ShareButton characterId={c.characterId} />

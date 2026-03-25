@@ -82,6 +82,7 @@ export interface AdminCharacterSummary {
   ancestryId: string | null;
   communityId: string | null;
   level: number;
+  campaignId: string | null;
   createdAt: string;
   updatedAt: string;
 }

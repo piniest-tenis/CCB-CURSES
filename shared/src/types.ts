@@ -124,6 +124,8 @@ export interface CharacterSummary {
    */
   portraitUrl: string | null;
   updatedAt: string;
+  /** The campaign this character is currently assigned to, or null if unassigned. */
+  campaignId: string | null;
 
   // ── Multiclass fields (SRD p.43: available Tier 3+, costs both slots) ────
   /**
@@ -609,4 +611,124 @@ export interface LevelUpChoices {
    * new card level ≤ exchanged card level; SRD p.22).
    */
   exchangeCardId?: string | null;
+}
+
+// ─── Campaign System ──────────────────────────────────────────────────────────
+
+export type CampaignMemberRole = "gm" | "player";
+
+export interface Campaign {
+  campaignId: string;
+  name: string;
+  description: string | null;
+  primaryGmId: string;
+  /** Recurring session schedule, or null if none has been configured. */
+  schedule: SessionSchedule | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CampaignMember {
+  campaignId: string;
+  userId: string;
+  role: CampaignMemberRole;
+  joinedAt: string;
+}
+
+export interface CampaignSummary extends Campaign {
+  memberCount: number;
+  callerRole: CampaignMemberRole | null;
+  callerCharacterId: string | null;
+}
+
+export interface CampaignDetail extends Campaign {
+  members: CampaignMemberDetail[];
+  characters: CampaignCharacterDetail[];
+  callerRole: CampaignMemberRole | null;
+  invites?: CampaignInvite[];
+}
+
+export interface CampaignMemberDetail {
+  userId: string;
+  displayName: string;
+  avatarUrl: string | null;
+  role: CampaignMemberRole;
+  joinedAt: string;
+  characterId: string | null;
+}
+
+export interface CampaignCharacterDetail {
+  characterId: string;
+  userId: string;
+  name: string;
+  className: string;
+  level: number;
+  avatarUrl: string | null;
+  portraitUrl: string | null;
+}
+
+export interface CampaignInvite {
+  campaignId: string;
+  inviteCode: string;
+  createdByUserId: string;
+  maxUses: number | null;
+  useCount: number;
+  expiresAt: string | null;
+  grantRole: CampaignMemberRole;
+  createdAt: string;
+}
+
+export interface PingEvent {
+  type: "ping";
+  campaignId: string;
+  targetCharacterId: string;
+  fieldKey: string;
+  senderUserId: string;
+  timestamp: string;
+}
+
+// ─── Session Schedule ─────────────────────────────────────────────────────────
+
+export type DayOfWeek =
+  | "monday"
+  | "tuesday"
+  | "wednesday"
+  | "thursday"
+  | "friday"
+  | "saturday"
+  | "sunday";
+
+export type RecurrenceFrequency = "weekly" | "biweekly" | "monthly";
+
+/**
+ * A single scheduled session slot — one day/time combination.
+ * A campaign may have multiple slots (e.g. Mon at 7pm + Fri at 8pm).
+ */
+export interface SessionSlot {
+  /** Day of the week this slot falls on. */
+  day: DayOfWeek;
+  /** 24-hour local time string ("HH:MM"), or null if no specific time is set. */
+  time: string | null;
+  /** IANA timezone identifier, e.g. "America/New_York". Null = unspecified. */
+  timezone: string | null;
+  /** Optional human-readable label, e.g. "Evening session". */
+  description: string | null;
+}
+
+/**
+ * The full recurring session schedule for a campaign.
+ * Stored as a JSON blob on the campaign METADATA record.
+ */
+export interface SessionSchedule {
+  frequency: RecurrenceFrequency;
+  /** One entry per scheduled day. Most campaigns will have exactly one. */
+  slots: SessionSlot[];
+  /**
+   * How many minutes before the session to send reminder emails.
+   * 0 = midnight GMT the night before (default).
+   * Negative values are not valid.
+   */
+  reminderOffsetMinutes: number;
+  /** Whether reminder emails are enabled for this campaign. */
+  reminderEnabled: boolean;
 }
