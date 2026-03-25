@@ -143,3 +143,45 @@
     outline-offset: 3px;
   }
 }
+
+/* ─── Long-press hold pulse ───────────────────────────────────────────────────
+   Applied to body (data-long-press-active="true") while a GM long-press is
+   pending. Renders a gold ring around the pressed element as visual feedback.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+@keyframes ping-hold-pulse {
+  0%   { box-shadow: 0 0 0 0px rgba(251, 191, 36, 0.6); }
+  50%  { box-shadow: 0 0 0 6px rgba(251, 191, 36, 0.2); }
+  100% { box-shadow: 0 0 0 6px rgba(251, 191, 36, 0.0); }
+}
+
+[data-long-press-active="true"] * {
+  cursor: context-menu;
+}
+
+/* ─── Lore carousel slide-in ──────────────────────────────────────────────────
+   Used by LorePanel: new card slides in from the right and fades in.
+   prefers-reduced-motion: just fades, no translate.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+@keyframes lore-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-lore-in {
+  animation: lore-slide-in 0.35s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-lore-in {
+    animation: none;
+    opacity: 1;
+  }
+}

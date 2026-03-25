@@ -689,6 +689,7 @@ function toCharacterResponse(
     multiclassClassName: enrichment?.multiclassClassName ?? record.multiclassClassName ?? null,
     multiclassSubclassId: record.multiclassSubclassId ?? null,
     multiclassDomainId: record.multiclassDomainId ?? null,
+    campaignId: record.campaignId ?? null,
   };
 }
 
@@ -791,6 +792,7 @@ async function listCharacters(
         multiclassClassName: record.multiclassClassName ?? null,
         multiclassSubclassId: record.multiclassSubclassId ?? null,
         multiclassDomainId: record.multiclassDomainId ?? null,
+        campaignId: record.campaignId ?? null,
       };
     })
   );
@@ -934,6 +936,8 @@ async function createCharacter(
     multiclassClassName:  null,
     multiclassSubclassId: null,
     multiclassDomainId:   null,
+    // ── Campaign (unassigned at creation) ─────────────────────────────────
+    campaignId: null,
   };
 
   // ── SRD Validation ─────────────────────────────────────────────────────────
@@ -1715,6 +1719,7 @@ interface AdminCharacterSummary {
   ancestryId: string | null;
   communityId: string | null;
   level: number;
+  campaignId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -1775,6 +1780,7 @@ async function listAllCharacters(
         ancestryId: record.ancestryId ?? null,
         communityId: record.communityId ?? null,
         level: record.level,
+        campaignId: record.campaignId ?? null,
         createdAt: record.createdAt ?? record.updatedAt,
         updatedAt: record.updatedAt,
       };

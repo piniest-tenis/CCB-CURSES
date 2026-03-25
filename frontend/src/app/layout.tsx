@@ -10,8 +10,8 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "Curses! Custom Character Builder",
-  description: "Create and manage your character for the Tidwell campaign.",
+  title: "Curses!",
+  description: "Build and manage your Daggerheart characters and campaigns.",
   icons: {
     icon: "/images/curses-favicon-tilt.png",
     shortcut: "/images/curses-favicon-tilt.png",
