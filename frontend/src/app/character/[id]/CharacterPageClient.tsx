@@ -12,7 +12,8 @@ import { CharacterSheet } from "@/components/character/CharacterSheet";
 import { LoadingInterstitial } from "@/components/LoadingInterstitial";
 import { useCharacter } from "@/hooks/useCharacter";
 import { useDiceStore } from "@/store/diceStore";
-import React, { useEffect } from "react";
+import { useGameWebSocket } from "@/hooks/useGameWebSocket";
+import React, { useEffect, useRef } from "react";
 import Link from "next/link";
 
 export default function CharacterPage() {
@@ -38,6 +39,8 @@ export default function CharacterPage() {
     isAuthenticated ? characterId : undefined
   );
 
+  const campaignId = character?.campaignId ?? "";
+
   // Scope dice broadcasts to this character's campaign so the campaign-specific
   // OBS overlay (obs/dice?campaign=<id>) receives rolls from this sheet.
   const setCampaignId = useDiceStore((s) => s.setCampaignId);
@@ -47,6 +50,23 @@ export default function CharacterPage() {
     }
     return () => { setCampaignId(null); };
   }, [character?.campaignId, setCampaignId]);
+
+  // ── WebSocket — send dice rolls to all campaign connections (incl. OBS) ──────
+  // Only connects when campaignId and characterId are available (player must be
+  // assigned to a campaign). sendDiceRoll fans out via the dice_roll WS handler.
+  const { sendDiceRoll } = useGameWebSocket(
+    campaignId,
+    characterId,
+  );
+
+  const diceLog = useDiceStore((s) => s.log);
+  const lastRollId = diceLog[0]?.id;
+  const prevBroadcastIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!lastRollId || lastRollId === prevBroadcastIdRef.current) return;
+    prevBroadcastIdRef.current = lastRollId;
+    sendDiceRoll(diceLog[0]);
+  }, [lastRollId, diceLog, sendDiceRoll]);
 
   // Show the interstitial while auth is still resolving OR character is loading.
   const showInterstitial = !isReady || isLoading || charLoading;
