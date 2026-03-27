@@ -445,6 +445,36 @@ export default function CampaignDetailClient() {
               >
                 Invite
               </button>
+              <a
+                href="/obs/dice"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Open OBS dice roller overlay in new tab"
+                className="
+                  rounded-lg px-4 py-2 text-sm font-medium
+                  border border-slate-700/60 text-[#b9baa3]/60
+                  hover:border-slate-600 hover:text-[#b9baa3]
+                  transition-colors
+                  focus:outline-none focus:ring-2 focus:ring-[#577399]
+                "
+              >
+                OBS Dice
+              </a>
+              <a
+                href="/obs/dice-log"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Open OBS dice log overlay in new tab"
+                className="
+                  rounded-lg px-4 py-2 text-sm font-medium
+                  border border-slate-700/60 text-[#b9baa3]/60
+                  hover:border-slate-600 hover:text-[#b9baa3]
+                  transition-colors
+                  focus:outline-none focus:ring-2 focus:ring-[#577399]
+                "
+              >
+                OBS Log
+              </a>
               <button
                 type="button"
                 onClick={() => router.push(`/campaigns/${campaignId}/settings`)}
