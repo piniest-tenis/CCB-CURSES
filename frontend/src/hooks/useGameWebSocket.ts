@@ -25,10 +25,21 @@ const BASE_BACKOFF_MS = 1_000; // 1s → 2s → 4s
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+/** Inbound force_crit event broadcast to all campaign connections. */
+export interface ForceCritEvent {
+  type: "force_crit";
+  campaignId: string;
+  targetCharacterId: string;
+  /** true = armed, false = disarmed */
+  active: boolean;
+}
+
 export interface UseGameWebSocketOptions {
   onPing?: (event: PingEvent) => void;
   /** Called when a dice roll result is broadcast from another client */
   onDiceRoll?: (result: RollResult) => void;
+  /** Called when the GM arms or disarms a force-crit for a character */
+  onForceCrit?: (event: ForceCritEvent) => void;
 }
 
 export interface UseGameWebSocketReturn {
@@ -40,6 +51,12 @@ export interface UseGameWebSocketReturn {
   sendPing: (targetCharacterId: string, fieldKey: string) => void;
   /** Broadcast a dice roll result to all campaign participants */
   sendDiceRoll: (result: RollResult) => void;
+  /**
+   * GM only: arm or disarm a forced critical for a character's next roll.
+   * @param targetCharacterId - The character whose next roll will be forced.
+   * @param active            - true to arm, false to disarm.
+   */
+  sendForceCrit: (targetCharacterId: string, active: boolean) => void;
   isConnected: boolean;
 }
 
@@ -58,10 +75,12 @@ export function useGameWebSocket(
   const isUnmountedRef    = useRef(false);
 
   // Keep options callback fresh without re-running connect effect
-  const onPingRef     = useRef(options?.onPing);
-  const onDiceRollRef = useRef(options?.onDiceRoll);
-  useEffect(() => { onPingRef.current     = options?.onPing;     }, [options?.onPing]);
-  useEffect(() => { onDiceRollRef.current = options?.onDiceRoll; }, [options?.onDiceRoll]);
+  const onPingRef       = useRef(options?.onPing);
+  const onDiceRollRef   = useRef(options?.onDiceRoll);
+  const onForceCritRef  = useRef(options?.onForceCrit);
+  useEffect(() => { onPingRef.current      = options?.onPing;      }, [options?.onPing]);
+  useEffect(() => { onDiceRollRef.current  = options?.onDiceRoll;  }, [options?.onDiceRoll]);
+  useEffect(() => { onForceCritRef.current = options?.onForceCrit; }, [options?.onForceCrit]);
 
   const [isConnected, setIsConnected] = useState(false);
 
@@ -108,6 +127,14 @@ export function useGameWebSocket(
       ) {
         const payload = (data as Record<string, unknown>).result as RollResult;
         if (payload) onDiceRollRef.current?.(payload);
+      }
+
+      if (
+        data !== null &&
+        typeof data === "object" &&
+        (data as Record<string, unknown>).type === "force_crit"
+      ) {
+        onForceCritRef.current?.(data as ForceCritEvent);
       }
     };
 
@@ -203,5 +230,28 @@ export function useGameWebSocket(
     [campaignId, characterId]
   );
 
-  return { sendPing, sendDiceRoll, isConnected };
+  // ── sendForceCrit ─────────────────────────────────────────────────────────────
+  // GM only: arms or disarms a forced critical for a character's next roll.
+  const sendForceCrit = useCallback(
+    (targetCharacterId: string, active: boolean) => {
+      const ws = wsRef.current;
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+      const message = {
+        action: "force_crit",
+        campaignId,
+        targetCharacterId,
+        active,
+      };
+
+      try {
+        ws.send(JSON.stringify(message));
+      } catch {
+        // Send failed — connection dropped between check and send
+      }
+    },
+    [campaignId]
+  );
+
+  return { sendPing, sendDiceRoll, sendForceCrit, isConnected };
 }

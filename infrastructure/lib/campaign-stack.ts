@@ -251,6 +251,18 @@ export class CampaignStack extends cdk.Stack {
 
     this.connectionsTable.grantReadWriteData(wsDiceRollHandler);
 
+    // ── Force Crit Lambda ─────────────────────────────────────────────────────
+    const wsForceCritHandler = new lambda.Function(this, "WsForceCritHandler", {
+      ...commonLambdaProps,
+      functionName: `daggerheart-ws-force-crit-${stage}`,
+      description: "WebSocket force_crit action — GM arms/disarms a forced critical for a player's next roll",
+      handler: "index.handler",
+      code: lambda.Code.fromAsset("../backend/dist/ws-force-crit-handler"),
+      logGroup: makeLambdaLogGroup("ws-force-crit"),
+    } as lambda.FunctionProps);
+
+    this.connectionsTable.grantReadWriteData(wsForceCritHandler);
+
     // ── WebSocket API ─────────────────────────────────────────────────────────
     const wsApi = new apigwv2.WebSocketApi(this, "WsApi", {
       apiName: `daggerheart-ws-${stage}`,
@@ -282,6 +294,14 @@ export class CampaignStack extends cdk.Stack {
       integration: new apigwv2Integrations.WebSocketLambdaIntegration(
         "WsDiceRollIntegration",
         wsDiceRollHandler
+      ),
+    });
+
+    // Add the force_crit route
+    wsApi.addRoute("force_crit", {
+      integration: new apigwv2Integrations.WebSocketLambdaIntegration(
+        "WsForceCritIntegration",
+        wsForceCritHandler
       ),
     });
 
@@ -338,6 +358,7 @@ export class CampaignStack extends cdk.Stack {
     // Grant the WS API permission to invoke Lambda functions
     wsApi.grantManageConnections(wsPingHandler);
     wsApi.grantManageConnections(wsDiceRollHandler);
+    wsApi.grantManageConnections(wsForceCritHandler);
 
     // Grant ping handler permission to post to connections (execute-api:ManageConnections)
     wsPingHandler.addToRolePolicy(
@@ -363,6 +384,18 @@ export class CampaignStack extends cdk.Stack {
       })
     );
 
+    // Grant force_crit handler permission to post to connections
+    wsForceCritHandler.addToRolePolicy(
+      new iam.PolicyStatement({
+        sid: "WsForceCritManageConnections",
+        effect: iam.Effect.ALLOW,
+        actions: ["execute-api:ManageConnections"],
+        resources: [
+          `arn:aws:execute-api:${this.region}:${this.account}:${wsApi.apiId}/${stage}/POST/@connections/*`,
+        ],
+      })
+    );
+
     // Set WS_API_ENDPOINT env var on ping handler after WS API is created
     wsPingHandler.addEnvironment(
       "WS_API_ENDPOINT",
@@ -371,6 +404,12 @@ export class CampaignStack extends cdk.Stack {
 
     // Set WS_API_ENDPOINT env var on dice_roll handler after WS API is created
     wsDiceRollHandler.addEnvironment(
+      "WS_API_ENDPOINT",
+      `https://${wsApi.apiId}.execute-api.${this.region}.amazonaws.com/${stage}`
+    );
+
+    // Set WS_API_ENDPOINT env var on force_crit handler after WS API is created
+    wsForceCritHandler.addEnvironment(
       "WS_API_ENDPOINT",
       `https://${wsApi.apiId}.execute-api.${this.region}.amazonaws.com/${stage}`
     );
@@ -425,6 +464,11 @@ export class CampaignStack extends cdk.Stack {
     new cdk.CfnOutput(this, "WsDiceRollHandlerArn", {
       exportName: `DaggerheartWsDiceRollHandlerArn-${stage}`,
       value: wsDiceRollHandler.functionArn,
+    });
+
+    new cdk.CfnOutput(this, "WsForceCritHandlerArn", {
+      exportName: `DaggerheartWsForceCritHandlerArn-${stage}`,
+      value: wsForceCritHandler.functionArn,
     });
   }
 }

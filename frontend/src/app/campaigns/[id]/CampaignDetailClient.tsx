@@ -40,6 +40,7 @@ import { DiceLog } from "@/components/dice/DiceLog";
 import { useCharacters } from "@/hooks/useCharacter";
 import { SheetContextMenu, type ContextMenuPosition } from "@/components/campaign/SheetContextMenu";
 import { useLongPress } from "@/hooks/useLongPress";
+import type { ForceCritEvent } from "@/hooks/useGameWebSocket";
 
 // ─── Loading skeleton ─────────────────────────────────────────────────────────
 
@@ -304,6 +305,8 @@ export default function CampaignDetailClient() {
 
   const { selectedCharacterId, setActiveCampaign, setSelectedCharacter } = useCampaignStore();
   const [showInviteModal, setShowInviteModal] = useState(false);
+  /** GM-only: which character (by characterId) has force-crit armed. null = none. */
+  const [forceCritCharId, setForceCritCharId] = useState<string | null>(null);
 
   const titleId = useId();
 
@@ -336,7 +339,7 @@ export default function CampaignDetailClient() {
   // ── WebSocket: ping sending (GM) & receiving (player) ───────────────────────
   const { triggerPing } = usePingEffect();
 
-  const { sendPing, sendDiceRoll, isConnected } = useGameWebSocket(
+  const { sendPing, sendDiceRoll, sendForceCrit, isConnected } = useGameWebSocket(
     campaignId,
     wsCharacterId,
     {
@@ -350,11 +353,16 @@ export default function CampaignDetailClient() {
         [myCharId, triggerPing]
       ),
       // GM screen: received dice roll from a player → add to local log display.
-      // No re-broadcast needed: the character page now calls setCampaignId so
-      // rolls are already broadcast on the scoped channel by diceStore.resolveRoll.
       onDiceRoll: useCallback(
         (_result: RollResult) => {
           // (Future: show whose roll it was in the GM view.)
+        },
+        []
+      ),
+      // Keep local forceCritCharId in sync when another GM window sends force_crit
+      onForceCrit: useCallback(
+        (evt: ForceCritEvent) => {
+          setForceCritCharId(evt.active ? evt.targetCharacterId : null);
         },
         []
       ),
@@ -377,6 +385,23 @@ export default function CampaignDetailClient() {
       sendPing(selectedCharacterId, fieldKey);
     },
     [isGm, selectedCharacterId, sendPing]
+  );
+
+  // GM: toggle force-crit for a character. Arming one automatically disarms any
+  // previously armed character so only one is ever active at a time.
+  const handleForceCritToggle = useCallback(
+    (charId: string) => {
+      if (!isGm) return;
+      const isCurrentlyArmed = forceCritCharId === charId;
+      // Disarm old target if different
+      if (forceCritCharId && forceCritCharId !== charId) {
+        sendForceCrit(forceCritCharId, false);
+      }
+      const nextActive = !isCurrentlyArmed;
+      sendForceCrit(charId, nextActive);
+      setForceCritCharId(nextActive ? charId : null);
+    },
+    [isGm, forceCritCharId, sendForceCrit]
   );
 
   // ── Render guards ───────────────────────────────────────────────────────────
@@ -532,26 +557,53 @@ export default function CampaignDetailClient() {
               const charId = member.characterId;
 
               return (
-                <MemberCard
-                  key={member.userId}
-                  member={member}
-                  primaryGmId={campaign.primaryGmId}
-                  characterName={memberChar?.name ?? null}
-                  isSelected={selectedCharacterId === charId}
-                  isGm={isGm}
-                  isRemoving={
-                    removeMemberMutation.isPending &&
-                    removeMemberMutation.variables === member.userId
-                  }
-                  onSelect={() => {
-                    if (charId) setSelectedCharacter(charId);
-                  }}
-                  onRemove={
-                    isGm && member.userId !== campaign.primaryGmId
-                      ? () => removeMemberMutation.mutate(member.userId)
-                      : undefined
-                  }
-                />
+                <div key={member.userId}>
+                  <MemberCard
+                    member={member}
+                    primaryGmId={campaign.primaryGmId}
+                    characterName={memberChar?.name ?? null}
+                    isSelected={selectedCharacterId === charId}
+                    isGm={isGm}
+                    isRemoving={
+                      removeMemberMutation.isPending &&
+                      removeMemberMutation.variables === member.userId
+                    }
+                    onSelect={() => {
+                      if (charId) setSelectedCharacter(charId);
+                    }}
+                    onRemove={
+                      isGm && member.userId !== campaign.primaryGmId
+                        ? () => removeMemberMutation.mutate(member.userId)
+                        : undefined
+                    }
+                  />
+
+                  {/* Force-crit toggle — GM only, players with a character only */}
+                  {isGm && charId && member.role === "player" && (
+                    <button
+                      type="button"
+                      onClick={() => handleForceCritToggle(charId)}
+                      title={
+                        forceCritCharId === charId
+                          ? `Disarm forced critical for ${memberChar?.name ?? "this player"}`
+                          : `Force next roll to critical for ${memberChar?.name ?? "this player"}`
+                      }
+                      aria-pressed={forceCritCharId === charId}
+                      className={[
+                        "mt-1 w-full flex items-center justify-center gap-1.5",
+                        "rounded-md px-2 py-1 text-xs font-semibold",
+                        "border transition-colors",
+                        "focus:outline-none focus:ring-2 focus:ring-[#DAA520] focus:ring-offset-1 focus:ring-offset-slate-900",
+                        forceCritCharId === charId
+                          ? "border-[#DAA520] bg-[#DAA520]/20 text-[#DAA520]"
+                          : "border-slate-700/50 bg-transparent text-[#b9baa3]/40 hover:border-[#DAA520]/50 hover:text-[#DAA520]/60",
+                      ].join(" ")}
+                    >
+                      <span aria-hidden="true">⚡</span>
+                      {forceCritCharId === charId ? "Crit Armed" : "Force Crit"}
+                    </button>
+                  )}
+                </div>
               );
             })}
           </div>

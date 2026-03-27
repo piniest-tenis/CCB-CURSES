@@ -33,6 +33,14 @@ interface DiceStoreExtended extends DiceStore {
    * pass as before_roll so the overlay lands on the exact same faces.
    */
   seededValues: number[] | null;
+  /**
+   * When true, the next resolveRoll call will force a critical outcome by
+   * making both hope and fear dice land on the same random value (1–12).
+   * Automatically cleared after resolveRoll consumes it.
+   */
+  forceCrit: boolean;
+  /** Set/unset the force-crit flag (called from CharacterPageClient on WS event). */
+  setForceCrit: (active: boolean) => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -78,9 +86,13 @@ export const useDiceStore = create<DiceStoreExtended>((set, get) => ({
   log:            [],
   campaignId:     null,
   seededValues:   null,
+  forceCrit:      false,
 
   // ── setCampaignId ──────────────────────────────────────────────────────────
   setCampaignId: (id: string | null) => set({ campaignId: id }),
+
+  // ── setForceCrit ───────────────────────────────────────────────────────────
+  setForceCrit: (active: boolean) => set({ forceCrit: active }),
 
   // ── stageRoll ──────────────────────────────────────────────────────────────
   // Sets the staged request so the pre-roll modal can display it (Phase 1).
@@ -125,6 +137,20 @@ export const useDiceStore = create<DiceStoreExtended>((set, get) => ({
     }
 
     const req = pendingRequest;
+
+    // ── Force-crit override ───────────────────────────────────────────────────
+    // If the GM armed a force-crit for this character, override the raw values
+    // so that both the hope and fear dice show the same random face (1–12).
+    // All other dice keep their physics-engine values.
+    // The flag is consumed (cleared) immediately so it fires exactly once.
+    if (get().forceCrit) {
+      set({ forceCrit: false });
+      const critValue = Math.floor(Math.random() * 12) + 1; // 1–12 inclusive
+      rawValues = rawValues.map((v, i) => {
+        const role = req.dice[i]?.role;
+        return role === "hope" || role === "fear" ? critValue : v;
+      });
+    }
 
     // Build per-die results
     // rawValues come from dice.js get_dice_value(). A value of -1 means the

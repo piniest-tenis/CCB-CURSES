@@ -12,7 +12,7 @@ import { CharacterSheet } from "@/components/character/CharacterSheet";
 import { LoadingInterstitial } from "@/components/LoadingInterstitial";
 import { useCharacter } from "@/hooks/useCharacter";
 import { useDiceStore } from "@/store/diceStore";
-import { useGameWebSocket } from "@/hooks/useGameWebSocket";
+import { useGameWebSocket, type ForceCritEvent } from "@/hooks/useGameWebSocket";
 import React, { useEffect, useRef } from "react";
 import Link from "next/link";
 
@@ -54,9 +54,22 @@ export default function CharacterPage() {
   // ── WebSocket — send dice rolls to all campaign connections (incl. OBS) ──────
   // Only connects when campaignId and characterId are available (player must be
   // assigned to a campaign). sendDiceRoll fans out via the dice_roll WS handler.
+  // onForceCrit: received when the GM arms/disarms a force-crit for this character.
+  const setForceCrit = useDiceStore((s) => s.setForceCrit);
   const { sendDiceRoll } = useGameWebSocket(
     campaignId,
     characterId,
+    {
+      onForceCrit: React.useCallback(
+        (evt: ForceCritEvent) => {
+          // Only apply if this event targets our character
+          if (evt.targetCharacterId === characterId) {
+            setForceCrit(evt.active);
+          }
+        },
+        [characterId, setForceCrit]
+      ),
+    }
   );
 
   const diceLog = useDiceStore((s) => s.log);
