@@ -150,18 +150,15 @@ export default function DiceOverlayClient() {
   const opacity    = fade === "idle" ? 0 : 1;
   const transition = fade === "fading" ? "opacity 1s ease-out" : "none";
 
-  // Crit glow is visible during rolling + holding; fades with the outer wrapper
-  const critGlowOpacity = (isCrit && fade !== "idle") ? 1 : 0;
-  const critGlowTransition = fade === "fading" ? "opacity 1s ease-out" : "opacity 0.3s ease-in";
-
   return (
     <>
       {/* Keyframe for the inset pulse — injected once, no Tailwind needed */}
       <style>{`
         @keyframes crit-pulse {
-          0%   { box-shadow: inset 0 0 60px 20px rgba(${CRIT_COLOR}, 0.55); }
-          50%  { box-shadow: inset 0 0 120px 50px rgba(${CRIT_COLOR}, 0.85); }
-          100% { box-shadow: inset 0 0 60px 20px rgba(${CRIT_COLOR}, 0.55); }
+          0%   { opacity: 0;   box-shadow: inset 0 0 30px 10px rgba(${CRIT_COLOR}, 0.55); }
+          15%  { opacity: 0.5;                                                             }
+          75%  { opacity: 0.5; box-shadow: inset 0 0 60px 25px rgba(${CRIT_COLOR}, 0.85); }
+          100% { opacity: 0;   box-shadow: inset 0 0 30px 10px rgba(${CRIT_COLOR}, 0.55); }
         }
       `}</style>
 
@@ -181,12 +178,10 @@ export default function DiceOverlayClient() {
         <div
           aria-hidden="true"
           style={{
-            position:   "absolute",
-            inset:      0,
+            position:      "absolute",
+            inset:         0,
             pointerEvents: "none",
-            opacity:    critGlowOpacity,
-            transition: critGlowTransition,
-            animation:  (isCrit && fade !== "idle") ? "crit-pulse 1.4s ease-in-out infinite" : "none",
+            animation:     (isCrit && fade !== "idle") ? "crit-pulse 1.4s ease-in-out infinite" : "none",
           }}
         />
       </div>
