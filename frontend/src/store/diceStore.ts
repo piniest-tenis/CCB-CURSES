@@ -120,10 +120,13 @@ export const useDiceStore = create<DiceStoreExtended>((set, get) => ({
     const req = pendingRequest;
 
     // Build per-die results
+    // rawValues come from dice.js get_dice_value(). A value of -1 means the
+    // physics engine couldn't determine the face (e.g. die not yet settled or
+    // geometry was degenerate). Clamp to minimum 1 — die faces never show < 1.
     const diceResults: DieResult[] = req.dice.map((spec, i) => ({
       size:  spec.size,
       role:  spec.role,
-      value: rawValues[i] ?? 1,
+      value: Math.max(1, rawValues[i] ?? 1),
       label: spec.label,
     }));
 
@@ -181,4 +184,21 @@ export const useDiceStore = create<DiceStoreExtended>((set, get) => ({
 
   // ── resetRolling ──────────────────────────────────────────────────────────
   resetRolling: () => set({ isRolling: false, pendingRequest: null }),
+
+  // ── playAnimation ─────────────────────────────────────────────────────────
+  // Visual-only animation driver for the OBS dice overlay.
+  // Sets isRolling + pendingRequest exactly like requestRoll, but:
+  //   • Does NOT broadcast ROLL_REQUEST (prevents echo loops)
+  //   • Expects finishAnimation() to be called when done — never resolveRoll()
+  // This means the overlay shows dice physics but never produces a result,
+  // never writes to the log, and never broadcasts ROLL_RESULT.
+  playAnimation: (req: RollRequest) => {
+    if (get().isRolling) return;
+    set({ isRolling: true, pendingRequest: req });
+  },
+
+  // ── finishAnimation ───────────────────────────────────────────────────────
+  // Clears animation state without computing a result or broadcasting anything.
+  // Paired with playAnimation.
+  finishAnimation: () => set({ isRolling: false, pendingRequest: null }),
 }));

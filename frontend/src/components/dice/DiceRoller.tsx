@@ -119,6 +119,13 @@ interface DiceRollerProps {
   transparent?: boolean;
   /** Fill the parent element 100% width/height — used by the OBS overlay. */
   fullBleed?: boolean;
+  /**
+   * Visual-only mode for the OBS dice overlay.
+   * When true, the after_roll callback calls finishAnimation() instead of
+   * resolveRoll() — so the overlay never computes a result, never writes to
+   * the log, and never broadcasts ROLL_RESULT. The overlay just shows physics.
+   */
+  animationOnly?: boolean;
   onReady?: () => void;
 }
 
@@ -129,13 +136,16 @@ export function DiceRoller({
   height = 320,
   transparent = false,
   fullBleed = false,
+  animationOnly = false,
   onReady,
 }: DiceRollerProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef      = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const boxRef       = useRef<any>(null);
-  const readyRef     = useRef(false);
-  const rollQueueRef = useRef(false);
+  const boxRef            = useRef<any>(null);
+  const readyRef          = useRef(false);
+  const rollQueueRef      = useRef(false);
+  const animationOnlyRef  = useRef(animationOnly);
+  animationOnlyRef.current = animationOnly;
 
   const [scriptsLoaded, setScriptsLoaded] = useState(false);
   const [scriptError,   setScriptError]   = useState(false);
@@ -160,7 +170,7 @@ export function DiceRoller({
   // current version, avoiding stale-closure issues with useCallback deps.
 
   const fireRollRef = useRef(() => {
-    const { pendingRequest: req, resolveRoll, resetRolling } = useDiceStore.getState();
+    const { pendingRequest: req, resolveRoll, finishAnimation, resetRolling } = useDiceStore.getState();
     if (!req) return;
 
     const box = boxRef.current;
@@ -178,7 +188,12 @@ export function DiceRoller({
       box.start_throw(
         null,
         (notation: { result: number[]; resultTotal: number }) => {
-          useDiceStore.getState().resolveRoll(notation.result);
+          if (animationOnlyRef.current) {
+            // Visual-only mode: discard the physics result, just clear state.
+            useDiceStore.getState().finishAnimation();
+          } else {
+            useDiceStore.getState().resolveRoll(notation.result);
+          }
         },
         dieColors,
       );

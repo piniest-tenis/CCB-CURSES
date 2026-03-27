@@ -7,9 +7,12 @@
  *
  * Flow:
  *   1. Reads ?campaign= → subscribes to BroadcastChannel "dh-dice-<id>"
- *   2. ROLL_REQUEST received → requestRoll() locally (BroadcastChannel never
- *      echoes back to the sending tab, so no loop)
- *   3. When rolling completes: hold 3 s → 1 s CSS fade-out → opacity 0
+ *   2. ROLL_REQUEST received → playAnimation() locally.
+ *      playAnimation sets isRolling/pendingRequest without broadcasting, so
+ *      there is no echo loop. DiceRoller runs the physics but calls
+ *      finishAnimation() (not resolveRoll()) when done — no result is
+ *      computed, no ROLL_RESULT is broadcast, the dice log is untouched.
+ *   3. When animation completes: hold 3 s → 1 s CSS fade-out → opacity 0
  *
  * The DiceRoller canvas fills 100vw × 100vh with no border, no rounded corners.
  */
@@ -32,13 +35,17 @@ export default function DiceOverlayClient() {
   const timerRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevRolling  = useRef(false);
 
-  // Subscribe to BroadcastChannel; trigger local animation on ROLL_REQUEST
+  // Subscribe to BroadcastChannel; trigger visual-only animation on ROLL_REQUEST.
+  // We use playAnimation() (not requestRoll()) so:
+  //   - No broadcast echo loop
+  //   - DiceRoller calls finishAnimation() instead of resolveRoll() when done
+  //   - No result is computed, no ROLL_RESULT is emitted, log is untouched
   useEffect(() => {
     if (typeof window === "undefined" || !("BroadcastChannel" in window)) return;
     const ch = new BroadcastChannel(channelName);
     ch.onmessage = (evt) => {
       if (evt.data?.type === "ROLL_REQUEST" && evt.data.request) {
-        useDiceStore.getState().requestRoll(evt.data.request as RollRequest);
+        useDiceStore.getState().playAnimation(evt.data.request as RollRequest);
       }
     };
     return () => ch.close();
@@ -65,7 +72,7 @@ export default function DiceOverlayClient() {
   // Cleanup timers on unmount
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
-  const opacity  = fade === "idle" ? 0 : 1;
+  const opacity    = fade === "idle" ? 0 : 1;
   const transition = fade === "fading" ? "opacity 1s ease-out" : "none";
 
   return (
@@ -79,7 +86,7 @@ export default function DiceOverlayClient() {
         transition,
       }}
     >
-      <DiceRoller fullBleed transparent />
+      <DiceRoller fullBleed transparent animationOnly />
     </div>
   );
 }

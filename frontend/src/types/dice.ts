@@ -139,6 +139,18 @@ export interface DiceStoreActions {
   requestRoll: (req: RollRequest) => void;
   /** Called by DiceRoller when animation completes with raw die values */
   resolveRoll: (rawValues: number[]) => void;
+  /**
+   * Drive a visual-only animation — sets isRolling/pendingRequest but does NOT
+   * broadcast and does NOT compute a result. Used exclusively by the OBS dice
+   * overlay so it mirrors the player's animation without producing its own roll.
+   */
+  playAnimation: (req: RollRequest) => void;
+  /**
+   * Clear animation state after a visual-only roll finishes.
+   * Paired with playAnimation — clears isRolling/pendingRequest without
+   * computing a result or broadcasting anything.
+   */
+  finishAnimation: () => void;
   /** Clear the full log */
   clearLog: () => void;
   /** Reset rolling state (e.g. on error) */
