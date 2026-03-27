@@ -117,6 +117,8 @@ interface DiceRollerProps {
   width?: number;
   height?: number;
   transparent?: boolean;
+  /** Fill the parent element 100% width/height — used by the OBS overlay. */
+  fullBleed?: boolean;
   onReady?: () => void;
 }
 
@@ -126,6 +128,7 @@ export function DiceRoller({
   width,
   height = 320,
   transparent = false,
+  fullBleed = false,
   onReady,
 }: DiceRollerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -257,13 +260,18 @@ export function DiceRoller({
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
+  const containerStyle: React.CSSProperties = fullBleed
+    ? { width: "100%", height: "100%", background: "transparent" }
+    : { width: width ? `${width}px` : "100%", height: `${height}px` };
+
   return (
     <div
       ref={containerRef}
-      style={{ width: width ? `${width}px` : "100%", height: `${height}px` }}
+      style={containerStyle}
       className={[
-        "relative overflow-hidden rounded-xl",
-        transparent ? "bg-transparent" : "bg-[#101010]",
+        "relative",
+        fullBleed ? "" : "overflow-hidden rounded-xl",
+        (transparent || fullBleed) ? "bg-transparent" : "bg-[#101010]",
       ].join(" ")}
       aria-hidden="true"
       data-testid="dice-roller-canvas"

@@ -11,6 +11,7 @@ import React, { useEffect } from "react";
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useAuthStore } from "@/store/authStore";
+import { usePathname } from "next/navigation";
 import { ApiError } from "@/lib/api";
 import { LoadingInterstitial } from "@/components/LoadingInterstitial";
 
@@ -56,17 +57,22 @@ const queryClient = new QueryClient({
 function AuthInitializer({ children }: { children: React.ReactNode }) {
   const initialize = useAuthStore((s) => s.initialize);
   const isReady    = useAuthStore((s) => s.isReady);
+  const pathname   = usePathname();
+
+  // OBS overlay pages are standalone — no auth required, no interstitial.
+  const isObs = pathname?.startsWith("/obs") ?? false;
 
   useEffect(() => {
+    if (isObs) return;
     initialize();
-  }, [initialize]);
+  }, [initialize, isObs]);
 
   return (
     <>
       {children}
-      {/* Full-screen lore interstitial while auth is initialising.
-          Fades out automatically once isReady becomes true. */}
-      <LoadingInterstitial isVisible={!isReady} />
+      {!isObs && (
+        <LoadingInterstitial isVisible={!isReady} />
+      )}
     </>
   );
 }

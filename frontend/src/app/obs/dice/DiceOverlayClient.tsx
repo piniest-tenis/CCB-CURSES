@@ -3,17 +3,15 @@
 /**
  * src/app/obs/dice/DiceOverlayClient.tsx
  *
- * OBS-compatible transparent overlay — shows only the 3D dice animation.
- * No result panel. No placeholder text.
+ * OBS transparent overlay — full-bleed 3D dice canvas, nothing else.
  *
  * Flow:
- *   1. Reads ?campaign= from the URL → subscribes to BroadcastChannel "dh-dice-<id>"
- *   2. On ROLL_REQUEST message → calls useDiceStore.requestRoll() locally, which
- *      triggers the local DiceRoller canvas to animate.
- *   3. After rolling completes (isRolling flips false) → 3-second hold then
- *      smooth 1-second fade-out.
+ *   1. Reads ?campaign= → subscribes to BroadcastChannel "dh-dice-<id>"
+ *   2. ROLL_REQUEST received → requestRoll() locally (BroadcastChannel never
+ *      echoes back to the sending tab, so no loop)
+ *   3. When rolling completes: hold 3 s → 1 s CSS fade-out → opacity 0
  *
- * Add as OBS Browser Source at 800×400 with transparent background.
+ * The DiceRoller canvas fills 100vw × 100vh with no border, no rounded corners.
  */
 
 import React, { useEffect, useRef, useState } from "react";
@@ -22,75 +20,66 @@ import { DiceRoller } from "@/components/dice/DiceRoller";
 import { useDiceStore } from "@/store/diceStore";
 import type { RollRequest } from "@/types/dice";
 
-type FadeState = "hidden" | "visible" | "fading";
+type FadeState = "idle" | "rolling" | "holding" | "fading";
 
 export default function DiceOverlayClient() {
-  const searchParams   = useSearchParams();
-  const campaignId     = searchParams?.get("campaign") ?? null;
-  const channelName    = campaignId ? `dh-dice-${campaignId}` : "dh-dice";
+  const searchParams = useSearchParams();
+  const campaignId   = searchParams?.get("campaign") ?? null;
+  const channelName  = campaignId ? `dh-dice-${campaignId}` : "dh-dice";
 
-  const { isRolling }  = useDiceStore();
-  const [fade, setFade] = useState<FadeState>("hidden");
-  const fadeTimer      = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const wasRolling     = useRef(false);
+  const isRolling    = useDiceStore((s) => s.isRolling);
+  const [fade, setFade] = useState<FadeState>("idle");
+  const timerRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevRolling  = useRef(false);
 
-  // Subscribe to BroadcastChannel and trigger local roll when ROLL_REQUEST arrives
+  // Subscribe to BroadcastChannel; trigger local animation on ROLL_REQUEST
   useEffect(() => {
     if (typeof window === "undefined" || !("BroadcastChannel" in window)) return;
-
     const ch = new BroadcastChannel(channelName);
     ch.onmessage = (evt) => {
       if (evt.data?.type === "ROLL_REQUEST" && evt.data.request) {
-        const req = evt.data.request as RollRequest;
-        // Trigger local animation — clears staged and starts isRolling
-        useDiceStore.getState().requestRoll(req);
+        useDiceStore.getState().requestRoll(evt.data.request as RollRequest);
       }
     };
     return () => ch.close();
   }, [channelName]);
 
-  // Show canvas when rolling starts; start 3s fade-out timer when it finishes
+  // Opacity lifecycle: idle(0) → rolling(1) → holding(1) → fading(0)
   useEffect(() => {
-    if (isRolling && !wasRolling.current) {
-      // Roll just started — make visible, cancel any pending fade
-      wasRolling.current = true;
-      if (fadeTimer.current) clearTimeout(fadeTimer.current);
-      setFade("visible");
+    if (isRolling && !prevRolling.current) {
+      prevRolling.current = true;
+      if (timerRef.current) clearTimeout(timerRef.current);
+      setFade("rolling");
     }
-
-    if (!isRolling && wasRolling.current) {
-      // Roll just finished — hold 3s then fade over 1s
-      wasRolling.current = false;
-      fadeTimer.current  = setTimeout(() => {
+    if (!isRolling && prevRolling.current) {
+      prevRolling.current = false;
+      setFade("holding");
+      timerRef.current = setTimeout(() => {
         setFade("fading");
-        // After CSS transition (1s) mark fully hidden
-        fadeTimer.current = setTimeout(() => setFade("hidden"), 1000);
+        timerRef.current = setTimeout(() => setFade("idle"), 1000);
       }, 3000);
     }
-
-    return () => {
-      if (fadeTimer.current) clearTimeout(fadeTimer.current);
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRolling]);
 
+  // Cleanup timers on unmount
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  const opacity  = fade === "idle" ? 0 : 1;
+  const transition = fade === "fading" ? "opacity 1s ease-out" : "none";
+
   return (
     <div
-      className="w-screen h-screen overflow-hidden"
-      style={{ background: "transparent" }}
+      style={{
+        position:   "fixed",
+        inset:      0,
+        background: "transparent",
+        overflow:   "hidden",
+        opacity,
+        transition,
+      }}
     >
-      {/* Canvas wrapper — always mounted so the DiceRoller can initialize,
-          but opacity-controlled to hide/show it */}
-      <div
-        style={{
-          opacity:    fade === "visible" ? 1 : 0,
-          transition: fade === "fading" ? "opacity 1s ease-out" : "none",
-          width:  "100%",
-          height: "100%",
-        }}
-      >
-        <DiceRoller width={800} height={400} transparent />
-      </div>
+      <DiceRoller fullBleed transparent />
     </div>
   );
 }
