@@ -41,6 +41,7 @@ import { CharacterSheet } from "@/components/character/CharacterSheet";
 import { AdversaryCatalog } from "@/components/adversary/AdversaryCatalog";
 import { EncounterConsole } from "@/components/encounter/EncounterConsole";
 import { DiceLog } from "@/components/dice/DiceLog";
+import { DiceRollerPanel } from "@/components/dice/DiceRollerPanel";
 import { useCharacters } from "@/hooks/useCharacter";
 import { SheetContextMenu, type ContextMenuPosition } from "@/components/campaign/SheetContextMenu";
 import { useLongPress } from "@/hooks/useLongPress";
@@ -469,103 +470,6 @@ function FearTracker({ campaignId, currentFear }: FearTrackerProps) {
   );
 }
 
-// ─── GmDicePanel ──────────────────────────────────────────────────────────────
-// GM-only quick dice roller. Rolls are broadcast via WS with characterName "GM".
-
-const GM_DICE: { label: string; faces: number }[] = [
-  { label: "d4",  faces: 4  },
-  { label: "d6",  faces: 6  },
-  { label: "d8",  faces: 8  },
-  { label: "d10", faces: 10 },
-  { label: "d12", faces: 12 },
-  { label: "d20", faces: 20 },
-];
-
-function gmNanoid(): string {
-  return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-}
-
-interface GmDicePanelProps {
-  wsCharacterId: string;
-  onRoll: (result: RollResult) => void;
-}
-
-function GmDicePanel({ wsCharacterId, onRoll }: GmDicePanelProps) {
-  const [bonus, setBonus] = useState(0);
-  const bonusId = useId();
-
-  const roll = useCallback(
-    (faces: number) => {
-      const value = Math.floor(Math.random() * faces) + 1;
-      const total = value + bonus;
-      const result: RollResult = {
-        id: gmNanoid(),
-        timestamp: new Date().toISOString(),
-        request: {
-          label: `GM d${faces}`,
-          type: "generic",
-          dice: [{ size: `d${faces}` as import("@/types/dice").DieSize, role: "generic" }],
-          modifier: bonus || undefined,
-          characterName: "GM",
-        },
-        dice: [{ size: `d${faces}` as import("@/types/dice").DieSize, role: "generic", value }],
-        total,
-      };
-      onRoll(result);
-    },
-    [bonus, onRoll]
-  );
-
-  return (
-    <div
-      className="
-        rounded-xl border border-[#577399]/25 bg-[#577399]/5
-        px-4 py-2.5 mb-4
-      "
-      aria-label="GM dice roller"
-    >
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold uppercase tracking-widest text-[#577399]/70 shrink-0 select-none">
-          GM Roll
-        </span>
-
-        {GM_DICE.map(({ label, faces }) => (
-          <button
-            key={label}
-            type="button"
-            onClick={() => roll(faces)}
-            className="
-              rounded-lg px-3 py-1 text-xs font-semibold
-              border border-[#577399]/40 text-[#577399]
-              hover:bg-[#577399]/20 hover:border-[#577399]
-              transition-colors
-              focus:outline-none focus:ring-2 focus:ring-[#577399]
-            "
-          >
-            {label}
-          </button>
-        ))}
-
-        {/* Bonus input */}
-        <label htmlFor={bonusId} className="flex items-center gap-1 ml-auto text-xs text-[#b9baa3]/50">
-          <span className="select-none">+bonus</span>
-          <input
-            id={bonusId}
-            type="number"
-            value={bonus}
-            onChange={(e) => setBonus(Number(e.target.value))}
-            className="
-              w-14 rounded border border-slate-700/60 bg-slate-800
-              px-1.5 py-0.5 text-xs text-[#f7f7ff] text-center
-              focus:outline-none focus:ring-1 focus:ring-[#577399]
-            "
-          />
-        </label>
-      </div>
-    </div>
-  );
-}
-
 // ─── Main client component ────────────────────────────────────────────────────
 
 export default function CampaignDetailClient() {
@@ -582,6 +486,8 @@ export default function CampaignDetailClient() {
   const removeCharacterMutation = useRemoveCharacterFromCampaign(campaignId);
   const { selectedCharacterId, activeTab, setActiveCampaign, setSelectedCharacter, setActiveTab } = useCampaignStore();
   const [showInviteModal, setShowInviteModal] = useState(false);
+  /** GM-only: open the 3D dice roller panel. */
+  const [gmDiceOpen, setGmDiceOpen] = useState(false);
   /** GM-only: which character (by characterId) has force-crit armed. null = none. */
   const [forceCritCharId, setForceCritCharId] = useState<string | null>(null);
 
@@ -686,14 +592,6 @@ export default function CampaignDetailClient() {
     [isGm, forceCritCharId, sendForceCrit]
   );
 
-  // GM: roll a die from the quick panel and broadcast it via WS
-  const handleGmRoll = useCallback(
-    (result: RollResult) => {
-      sendDiceRoll(result);
-    },
-    [sendDiceRoll]
-  );
-
   // ── Render guards ───────────────────────────────────────────────────────────
   if (!isReady || authLoading || !isAuthenticated) {
     return (
@@ -765,6 +663,20 @@ export default function CampaignDetailClient() {
                 "
               >
                 Invite
+              </button>
+              <button
+                type="button"
+                onClick={() => { useDiceStore.getState().stageRoll({ label: "GM Roll", type: "generic", dice: [], characterName: "GM" }); setGmDiceOpen(true); }}
+                aria-haspopup="dialog"
+                className="
+                  rounded-lg px-4 py-2 text-sm font-semibold
+                  border border-[#577399]/50 bg-[#577399]/10 text-[#577399]
+                  hover:bg-[#577399]/20 hover:border-[#577399]
+                  transition-colors
+                  focus:outline-none focus:ring-2 focus:ring-[#577399]
+                "
+              >
+                Roll Dice
               </button>
               <a
                 href={`/obs/dice?campaign=${campaignId}`}
@@ -932,18 +844,12 @@ export default function CampaignDetailClient() {
 
           {!isLoading && !isError && campaign && (
             <>
-              {/* GM-only tools: Fear tracker + quick dice roller */}
+              {/* GM-only tools: Fear tracker */}
               {isGm && (
-                <>
-                  <FearTracker
-                    campaignId={campaignId}
-                    currentFear={campaign.currentFear ?? 0}
-                  />
-                  <GmDicePanel
-                    wsCharacterId={wsCharacterId}
-                    onRoll={handleGmRoll}
-                  />
-                </>
+                <FearTracker
+                  campaignId={campaignId}
+                  currentFear={campaign.currentFear ?? 0}
+                />
               )}
 
               {/* GM Tab Bar — only shown to GM */}
@@ -1053,7 +959,16 @@ export default function CampaignDetailClient() {
       )}
 
       {/* Dice log overlay (fixed lower-left) — visible to GM and players */}
-      <DiceLog />
+      {/* GM rolls stamp characterName="GM" on custom rolls from the tray   */}
+      <DiceLog characterName={isGm ? "GM" : undefined} />
+
+      {/* GM 3D dice roller panel — opened from the "Roll Dice" header button */}
+      {isGm && (
+        <DiceRollerPanel
+          open={gmDiceOpen}
+          onClose={() => setGmDiceOpen(false)}
+        />
+      )}
     </div>
   );
 }

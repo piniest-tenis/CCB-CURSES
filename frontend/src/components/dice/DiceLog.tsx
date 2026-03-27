@@ -177,7 +177,7 @@ const DIE_IMAGE: Partial<Record<DieSize, string>> = {
   d12: "/images/dice/d12-clean.png",
 };
 
-function CustomRollTray({ onRoll }: { onRoll: () => void }) {
+function CustomRollTray({ onRoll, characterName }: { onRoll: () => void; characterName?: string }) {
   const { stageRoll, isRolling } = useDiceStore();
   const [counts, setCounts] = useState<Record<DieSize, number>>({
     d4: 0, d6: 0, d8: 0, d10: 0, d12: 0, d20: 0,
@@ -203,10 +203,11 @@ function CustomRollTray({ onRoll }: { onRoll: () => void }) {
       }
     }
     stageRoll({
-      label:    "Custom Roll",
+      label:    characterName ? `${characterName} Roll` : "Custom Roll",
       type:     "generic",
       dice,
       modifier: modifier || undefined,
+      ...(characterName ? { characterName } : {}),
     });
     onRoll();
   };
@@ -302,7 +303,7 @@ function CustomRollTray({ onRoll }: { onRoll: () => void }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function DiceLog() {
+export function DiceLog({ characterName }: { characterName?: string } = {}) {
   const { log, clearLog } = useDiceStore();
   const [isExpanded,    setIsExpanded]    = useState(false);
   const [selectedId,    setSelectedId]    = useState<string | null>(null);
@@ -383,7 +384,7 @@ export function DiceLog() {
 
           {/* Custom roll tray */}
           {showCustom && (
-            <CustomRollTray onRoll={() => setShowCustom(false)} />
+            <CustomRollTray onRoll={() => setShowCustom(false)} characterName={characterName} />
           )}
 
           {/* Roll list */}
