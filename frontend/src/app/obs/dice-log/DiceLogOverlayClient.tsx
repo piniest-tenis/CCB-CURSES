@@ -4,7 +4,9 @@
  * src/app/obs/dice-log/DiceLogOverlayClient.tsx
  *
  * OBS-compatible dice log overlay.
- * Receives roll events from the main app via BroadcastChannel("dh-dice-<campaignId>").
+ * Receives roll events via:
+ *   1. WebSocket (obs observer connection) — works in OBS, incognito, any context.
+ *   2. BroadcastChannel("dh-dice-<campaignId>") — same-browser fallback only.
  * Shows the last 10 rolls, newest at top. Displays character name prominently.
  *
  * Designed for transparent OBS Browser Source at 380×500px.
@@ -13,6 +15,10 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { RollResult, ActionOutcome } from "@/types/dice";
+
+const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL ?? "";
+const MAX_RECONNECT_ATTEMPTS = 3;
+const BASE_BACKOFF_MS = 1_000;
 
 // ─── Outcome helpers ──────────────────────────────────────────────────────────
 
@@ -120,15 +126,75 @@ export default function DiceLogOverlayClient() {
 
   const [log, setLog] = useState<LogEntry[]>([]);
 
+  function appendResult(result: RollResult) {
+    const characterName = (result.request.characterName as string | undefined) ?? undefined;
+    setLog((prev) => [{ result, characterName }, ...prev].slice(0, MAX_LOG));
+  }
+
+  // ── WebSocket connection (obs observer — unauthenticated) ─────────────────────
+  useEffect(() => {
+    if (typeof window === "undefined" || !campaignId || !WS_BASE_URL) return;
+
+    let ws: WebSocket | null = null;
+    let reconnectCount = 0;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let unmounted = false;
+
+    function connect() {
+      if (unmounted) return;
+
+      const url = new URL(WS_BASE_URL);
+      url.searchParams.set("campaignId", campaignId!);
+      url.searchParams.set("role", "obs");
+
+      ws = new WebSocket(url.toString());
+
+      ws.onmessage = (evt: MessageEvent) => {
+        try {
+          const data = JSON.parse(evt.data as string) as Record<string, unknown>;
+          if (data.type === "dice_roll" && data.result) {
+            appendResult(data.result as RollResult);
+          }
+        } catch {
+          // non-JSON frame — ignore
+        }
+      };
+
+      ws.onclose = () => {
+        if (unmounted) return;
+        if (reconnectCount < MAX_RECONNECT_ATTEMPTS) {
+          const delay = BASE_BACKOFF_MS * Math.pow(2, reconnectCount);
+          reconnectCount += 1;
+          reconnectTimer = setTimeout(connect, delay);
+        }
+      };
+
+      ws.onerror = () => {
+        // handled by onclose
+      };
+    }
+
+    connect();
+
+    return () => {
+      unmounted = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (ws) {
+        ws.onclose = null;
+        ws.close();
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaignId]);
+
+  // ── BroadcastChannel fallback (same-browser-instance only) ───────────────────
   useEffect(() => {
     if (typeof window === "undefined" || !("BroadcastChannel" in window)) return;
 
     const ch = new BroadcastChannel(channelName);
     ch.onmessage = (evt) => {
       if (evt.data?.type === "ROLL_RESULT" && evt.data.result) {
-        const result        = evt.data.result as RollResult;
-        const characterName = (result.request.characterName as string | undefined) ?? undefined;
-        setLog((prev) => [{ result, characterName }, ...prev].slice(0, MAX_LOG));
+        appendResult(evt.data.result as RollResult);
       }
     };
     return () => ch.close();

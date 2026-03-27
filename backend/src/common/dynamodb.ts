@@ -459,4 +459,10 @@ export const keys = {
     PK: `CHARACTER#${characterId}`,
     SK: `CONNECTION#${connectionId}`,
   }),
+
+  /** Full key for a campaign→connection fan-out index record. */
+  campaignConnection: (campaignId: string, connectionId: string) => ({
+    PK: `CAMPAIGN#${campaignId}`,
+    SK: `CONNECTION#${connectionId}`,
+  }),
 };

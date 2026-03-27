@@ -1,8 +1,18 @@
 // backend/src/websocket/connect.ts
 // WebSocket $connect handler.
-// Validates the JWT from query params, then stores two DynamoDB items:
+//
+// Two connection modes:
+//   1. Authenticated player/GM — requires ?token=&campaignId=&characterId=
+//      Validates JWT, stores full connection record + character→connection index.
+//
+//   2. OBS observer — requires ?campaignId=&role=obs (no token or characterId)
+//      Unauthenticated read-only connection. Only receives dice_roll events.
+//      Stored with userId="OBS" and characterId="OBS" — excluded from pings.
+//
+// DynamoDB items written:
 //   CONNECTION#{connectionId} / METADATA  — full connection record (24h TTL)
-//   CHARACTER#{characterId}  / CONNECTION#{connectionId} — reverse index (24h TTL)
+//   CAMPAIGN#{campaignId}    / CONNECTION#{connectionId} — campaign fan-out index (24h TTL)
+//   CHARACTER#{characterId}  / CONNECTION#{connectionId} — reverse index (players only, 24h TTL)
 
 import type {
   APIGatewayProxyWebsocketEventV2,
@@ -23,7 +33,16 @@ interface ConnectionRecord {
   userId: string;
   campaignId: string;
   characterId: string;
+  role: "player" | "obs";
   connectedAt: string;
+  ttl: number;
+}
+
+interface CampaignConnectionRecord {
+  PK: string;
+  SK: string;
+  connectionId: string;
+  campaignId: string;
   ttl: number;
 }
 
@@ -42,18 +61,12 @@ interface JwtClaims {
   [key: string]: unknown;
 }
 
-/**
- * Decode a JWT without verifying the signature.
- * The WebSocket API is internal — tokens were already validated by the HTTP API
- * JWT authorizer before the caller obtained a connection URL.
- */
 function decodeJwtPayload(token: string): JwtClaims {
   const parts = token.split(".");
   if (parts.length !== 3) {
     throw new Error("Invalid JWT format");
   }
   const payload = parts[1]!;
-  // base64url → base64 → Buffer → JSON
   const padded = payload.replace(/-/g, "+").replace(/_/g, "/");
   const decoded = Buffer.from(padded, "base64").toString("utf-8");
   return JSON.parse(decoded) as JwtClaims;
@@ -61,12 +74,6 @@ function decodeJwtPayload(token: string): JwtClaims {
 
 // ─── Query String Parser ──────────────────────────────────────────────────────
 
-/**
- * Parse a URL query string into a key-value map.
- * Used because APIGatewayProxyWebsocketEventV2 does not expose a
- * queryStringParameters field (unlike HTTP API events). The raw query
- * string is available on the event but must be parsed manually.
- */
 function parseQueryString(
   raw: string | null | undefined
 ): Record<string, string> {
@@ -101,8 +108,6 @@ export const handler = async (
   try {
     const connectionId = event.requestContext.connectionId;
 
-    // WebSocket $connect events carry query params in rawQueryString
-    // (the @types/aws-lambda definition omits queryStringParameters for WS events)
     const rawEvent = event as APIGatewayProxyWebsocketEventV2 & {
       rawQueryString?: string;
       queryStringParameters?: Record<string, string>;
@@ -112,20 +117,58 @@ export const handler = async (
       rawEvent.queryStringParameters ??
       parseQueryString(rawEvent.rawQueryString);
 
-    const token = qsp["token"];
-    const campaignId = qsp["campaignId"];
+    const token       = qsp["token"];
+    const campaignId  = qsp["campaignId"];
     const characterId = qsp["characterId"];
+    const role        = qsp["role"];
 
-    if (!token || !campaignId || !characterId) {
-      console.warn("WS $connect rejected: missing required query params", {
+    if (!campaignId) {
+      console.warn("WS $connect rejected: missing campaignId");
+      return { statusCode: 401 };
+    }
+
+    const now = new Date().toISOString();
+    const ttl = expiryEpoch();
+
+    // ── OBS observer path (no token required) ─────────────────────────────────
+    if (role === "obs") {
+      const connectionRecord: ConnectionRecord = {
+        ...keys.connection(connectionId),
+        connectionId,
+        userId:      "OBS",
+        campaignId,
+        characterId: "OBS",
+        role:        "obs",
+        connectedAt: now,
+        ttl,
+      };
+
+      const campaignConnRecord: CampaignConnectionRecord = {
+        PK: `CAMPAIGN#${campaignId}`,
+        SK: `CONNECTION#${connectionId}`,
+        connectionId,
+        campaignId,
+        ttl,
+      };
+
+      await Promise.all([
+        putItem(CONNECTIONS_TABLE, connectionRecord as unknown as Record<string, unknown>),
+        putItem(CONNECTIONS_TABLE, campaignConnRecord as unknown as Record<string, unknown>),
+      ]);
+
+      console.info("WS $connect OBS observer", { connectionId, campaignId });
+      return { statusCode: 200 };
+    }
+
+    // ── Authenticated player/GM path ──────────────────────────────────────────
+    if (!token || !characterId) {
+      console.warn("WS $connect rejected: missing token or characterId for player connection", {
         hasToken: !!token,
-        hasCampaign: !!campaignId,
         hasCharacter: !!characterId,
       });
       return { statusCode: 401 };
     }
 
-    // Decode JWT to extract userId
     let claims: JwtClaims;
     try {
       claims = decodeJwtPayload(token);
@@ -140,21 +183,25 @@ export const handler = async (
       return { statusCode: 401 };
     }
 
-    const now = new Date().toISOString();
-    const ttl = expiryEpoch();
-
-    // 1. CONNECTION#{connectionId} / METADATA
     const connectionRecord: ConnectionRecord = {
       ...keys.connection(connectionId),
       connectionId,
       userId,
       campaignId,
       characterId,
+      role: "player",
       connectedAt: now,
       ttl,
     };
 
-    // 2. CHARACTER#{characterId} / CONNECTION#{connectionId}
+    const campaignConnRecord: CampaignConnectionRecord = {
+      PK: `CAMPAIGN#${campaignId}`,
+      SK: `CONNECTION#${connectionId}`,
+      connectionId,
+      campaignId,
+      ttl,
+    };
+
     const charConnRecord: CharacterConnectionRecord = {
       ...keys.characterConnection(characterId, connectionId),
       connectionId,
@@ -162,19 +209,17 @@ export const handler = async (
       ttl,
     };
 
-    await putItem(
-      CONNECTIONS_TABLE,
-      connectionRecord as unknown as Record<string, unknown>
-    );
-    await putItem(
-      CONNECTIONS_TABLE,
-      charConnRecord as unknown as Record<string, unknown>
-    );
+    await Promise.all([
+      putItem(CONNECTIONS_TABLE, connectionRecord as unknown as Record<string, unknown>),
+      putItem(CONNECTIONS_TABLE, campaignConnRecord as unknown as Record<string, unknown>),
+      putItem(CONNECTIONS_TABLE, charConnRecord as unknown as Record<string, unknown>),
+    ]);
 
-    console.info("WS $connect success", { connectionId, userId, campaignId, characterId });
+    console.info("WS $connect player success", { connectionId, userId, campaignId, characterId });
     return { statusCode: 200 };
   } catch (err: unknown) {
     console.error("WS $connect error", err);
     return { statusCode: 500 };
   }
 };
+

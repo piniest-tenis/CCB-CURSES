@@ -239,6 +239,18 @@ export class CampaignStack extends cdk.Stack {
     this.connectionsTable.grantReadWriteData(wsPingHandler);
     this.campaignsTable.grantReadData(wsPingHandler);
 
+    // ── Dice Roll Lambda ──────────────────────────────────────────────────────
+    const wsDiceRollHandler = new lambda.Function(this, "WsDiceRollHandler", {
+      ...commonLambdaProps,
+      functionName: `daggerheart-ws-dice-roll-${stage}`,
+      description: "WebSocket dice_roll action — fans out roll results to all campaign connections",
+      handler: "index.handler",
+      code: lambda.Code.fromAsset("../backend/dist/ws-dice-roll-handler"),
+      logGroup: makeLambdaLogGroup("ws-dice-roll"),
+    } as lambda.FunctionProps);
+
+    this.connectionsTable.grantReadWriteData(wsDiceRollHandler);
+
     // ── WebSocket API ─────────────────────────────────────────────────────────
     const wsApi = new apigwv2.WebSocketApi(this, "WsApi", {
       apiName: `daggerheart-ws-${stage}`,
@@ -262,6 +274,14 @@ export class CampaignStack extends cdk.Stack {
       integration: new apigwv2Integrations.WebSocketLambdaIntegration(
         "WsPingIntegration",
         wsPingHandler
+      ),
+    });
+
+    // Add the dice_roll route
+    wsApi.addRoute("dice_roll", {
+      integration: new apigwv2Integrations.WebSocketLambdaIntegration(
+        "WsDiceRollIntegration",
+        wsDiceRollHandler
       ),
     });
 
@@ -317,6 +337,7 @@ export class CampaignStack extends cdk.Stack {
 
     // Grant the WS API permission to invoke Lambda functions
     wsApi.grantManageConnections(wsPingHandler);
+    wsApi.grantManageConnections(wsDiceRollHandler);
 
     // Grant ping handler permission to post to connections (execute-api:ManageConnections)
     wsPingHandler.addToRolePolicy(
@@ -330,8 +351,26 @@ export class CampaignStack extends cdk.Stack {
       })
     );
 
+    // Grant dice_roll handler permission to post to connections
+    wsDiceRollHandler.addToRolePolicy(
+      new iam.PolicyStatement({
+        sid: "WsDiceRollManageConnections",
+        effect: iam.Effect.ALLOW,
+        actions: ["execute-api:ManageConnections"],
+        resources: [
+          `arn:aws:execute-api:${this.region}:${this.account}:${wsApi.apiId}/${stage}/POST/@connections/*`,
+        ],
+      })
+    );
+
     // Set WS_API_ENDPOINT env var on ping handler after WS API is created
     wsPingHandler.addEnvironment(
+      "WS_API_ENDPOINT",
+      `https://${wsApi.apiId}.execute-api.${this.region}.amazonaws.com/${stage}`
+    );
+
+    // Set WS_API_ENDPOINT env var on dice_roll handler after WS API is created
+    wsDiceRollHandler.addEnvironment(
       "WS_API_ENDPOINT",
       `https://${wsApi.apiId}.execute-api.${this.region}.amazonaws.com/${stage}`
     );
@@ -381,6 +420,11 @@ export class CampaignStack extends cdk.Stack {
     new cdk.CfnOutput(this, "WsPingHandlerArn", {
       exportName: `DaggerheartWsPingHandlerArn-${stage}`,
       value: wsPingHandler.functionArn,
+    });
+
+    new cdk.CfnOutput(this, "WsDiceRollHandlerArn", {
+      exportName: `DaggerheartWsDiceRollHandlerArn-${stage}`,
+      value: wsDiceRollHandler.functionArn,
     });
   }
 }

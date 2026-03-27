@@ -6,13 +6,13 @@
  * OBS transparent overlay — full-bleed 3D dice canvas, nothing else.
  *
  * Flow:
- *   1. Reads ?campaign=<id> → subscribes to BroadcastChannel "dh-dice-<id>" (scoped only)
- *   2. ROLL_RESULT received → playAnimation(req, rawValues).
- *      The raw die values from the player's completed roll are passed as seeds
- *      so the overlay's dice land on exactly the same faces via start_throw_seeded.
- *      playAnimation does not broadcast, so there is no echo loop.
- *      DiceRoller calls finishAnimation() when physics settle — no result
- *      computed, no ROLL_RESULT emitted, log untouched.
+ *   1. Reads ?campaign=<id>.
+ *   2a. Connects to WebSocket as obs observer (?campaignId=<id>&role=obs).
+ *       On dice_roll message → playAnimation(req, rawValues).
+ *   2b. Also subscribes to BroadcastChannel "dh-dice-<id>" as same-browser fallback.
+ *       playAnimation does not broadcast, so there is no echo loop.
+ *       DiceRoller calls finishAnimation() when physics settle — no result
+ *       computed, no ROLL_RESULT emitted, log untouched.
  *   3. When animation completes: hold 3 s → 1 s CSS fade-out → opacity 0
  *
  * The DiceRoller canvas fills 100vw × 100vh with no border, no rounded corners.
@@ -23,6 +23,10 @@ import { useSearchParams } from "next/navigation";
 import { DiceRoller } from "@/components/dice/DiceRoller";
 import { useDiceStore } from "@/store/diceStore";
 import type { RollResult } from "@/types/dice";
+
+const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL ?? "";
+const MAX_RECONNECT_ATTEMPTS = 3;
+const BASE_BACKOFF_MS = 1_000;
 
 type FadeState = "idle" | "rolling" | "holding" | "fading";
 
@@ -36,24 +40,80 @@ export default function DiceOverlayClient() {
   const timerRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevRolling  = useRef(false);
 
-  // Subscribe to ROLL_RESULT so we replay with the player's exact die values.
+  // ── Shared handler for incoming roll results (WS or BroadcastChannel) ────────
+  function handleRollResult(result: RollResult) {
+    const rawValues = result.dice.map((d) => d.value);
+    useDiceStore.getState().playAnimation(result.request, rawValues);
+  }
+
+  // ── WebSocket connection (obs observer — unauthenticated) ─────────────────────
+  useEffect(() => {
+    if (typeof window === "undefined" || !campaignId || !WS_BASE_URL) return;
+
+    let ws: WebSocket | null = null;
+    let reconnectCount = 0;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let unmounted = false;
+
+    function connect() {
+      if (unmounted) return;
+
+      const url = new URL(WS_BASE_URL);
+      url.searchParams.set("campaignId", campaignId!);
+      url.searchParams.set("role", "obs");
+
+      ws = new WebSocket(url.toString());
+
+      ws.onmessage = (evt: MessageEvent) => {
+        try {
+          const data = JSON.parse(evt.data as string) as Record<string, unknown>;
+          if (data.type === "dice_roll" && data.result) {
+            handleRollResult(data.result as RollResult);
+          }
+        } catch {
+          // non-JSON frame — ignore
+        }
+      };
+
+      ws.onclose = () => {
+        if (unmounted) return;
+        if (reconnectCount < MAX_RECONNECT_ATTEMPTS) {
+          const delay = BASE_BACKOFF_MS * Math.pow(2, reconnectCount);
+          reconnectCount += 1;
+          reconnectTimer = setTimeout(connect, delay);
+        }
+      };
+
+      ws.onerror = () => {
+        // handled by onclose
+      };
+    }
+
+    connect();
+
+    return () => {
+      unmounted = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (ws) {
+        ws.onclose = null;
+        ws.close();
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaignId]);
+
+  // ── BroadcastChannel fallback (same-browser-instance only) ───────────────────
   useEffect(() => {
     if (typeof window === "undefined" || !("BroadcastChannel" in window)) return;
 
-    function handleMessage(evt: MessageEvent) {
-      if (evt.data?.type === "ROLL_RESULT" && evt.data.result) {
-        const result    = evt.data.result as RollResult;
-        const rawValues = result.dice.map((d) => d.value);
-        useDiceStore.getState().playAnimation(result.request, rawValues);
-      }
-    }
-
     const ch = new BroadcastChannel(channelName);
-    ch.onmessage = handleMessage;
-
-    return () => {
-      ch.close();
+    ch.onmessage = (evt: MessageEvent) => {
+      if (evt.data?.type === "ROLL_RESULT" && evt.data.result) {
+        handleRollResult(evt.data.result as RollResult);
+      }
     };
+
+    return () => ch.close();
   }, [channelName]);
 
   // Opacity lifecycle: idle(0) → rolling(1) → holding(1) → fading(0)

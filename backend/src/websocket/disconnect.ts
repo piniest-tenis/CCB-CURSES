@@ -1,8 +1,9 @@
 // backend/src/websocket/disconnect.ts
 // WebSocket $disconnect handler.
-// Deletes both DynamoDB items that were created on $connect:
+// Deletes all DynamoDB items that were created on $connect:
 //   CONNECTION#{connectionId} / METADATA
-//   CHARACTER#{characterId}  / CONNECTION#{connectionId}
+//   CAMPAIGN#{campaignId}    / CONNECTION#{connectionId}  (all connections)
+//   CHARACTER#{characterId}  / CONNECTION#{connectionId}  (player connections only)
 
 import type {
   APIGatewayProxyWebsocketEventV2,
@@ -24,6 +25,7 @@ interface ConnectionRecord {
   userId: string;
   campaignId: string;
   characterId: string;
+  role?: "player" | "obs";
   connectedAt: string;
   ttl: number;
 }
@@ -36,20 +38,32 @@ export const handler = async (
   try {
     const connectionId = event.requestContext.connectionId;
 
-    // Fetch connection metadata to find the characterId
+    // Fetch connection metadata to find campaignId and characterId
     const connRecord = await getItem<ConnectionRecord>(
       CONNECTIONS_TABLE,
       keys.connection(connectionId)
     );
 
     if (connRecord) {
-      const { characterId } = connRecord;
+      const { campaignId, characterId, role } = connRecord;
 
-      // Delete the character→connection reverse index item
-      await deleteItem(
-        CONNECTIONS_TABLE,
-        keys.characterConnection(characterId, connectionId)
-      );
+      const cleanupOps: Promise<void>[] = [];
+
+      // Always delete the campaign→connection fan-out index record
+      if (campaignId) {
+        cleanupOps.push(
+          deleteItem(CONNECTIONS_TABLE, keys.campaignConnection(campaignId, connectionId))
+        );
+      }
+
+      // Delete the character→connection reverse index for player connections
+      if (role !== "obs" && characterId && characterId !== "OBS") {
+        cleanupOps.push(
+          deleteItem(CONNECTIONS_TABLE, keys.characterConnection(characterId, connectionId))
+        );
+      }
+
+      await Promise.allSettled(cleanupOps);
     }
     // If connection metadata is missing (TTL-expired or race), we still
     // delete the metadata record below (no-op if already gone).
