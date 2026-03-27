@@ -441,9 +441,11 @@ const DICE = (function() {
     };
 
     that.dice_box.prototype.emulate_throw = function() {
+        var maxIter = 10000; // safety cap — prevents infinite loop if dice escape physics
         while (!this.check_if_throw_finished()) {
             ++this.iteration;
             this.world.step(vars.frame_rate);
+            if (this.iteration > maxIter) break;
         }
         return get_dice_values(this.dices);
     };
@@ -495,6 +497,10 @@ const DICE = (function() {
             if (dice.body) this.world.remove(dice.body);
         }
         if (this.pane) this.scene.remove(this.pane);
+        // Reset broadphase to flush stale contact-pair cache from previous rolls.
+        // Without this, NaiveBroadphase accumulates phantom pairs after emulate_throw
+        // runs hundreds of steps, causing wall collisions to be missed on later rolls.
+        this.world.broadphase = new CANNON.NaiveBroadphase();
         try { this.renderer.render(this.scene, this.camera); } catch(e) { /* renderer may be disposed */ }
         var box = this;
         setTimeout(function() {

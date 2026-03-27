@@ -16,7 +16,6 @@
  *   3. When animation completes: hold 3 s → 1 s CSS fade-out → opacity 0
  *
  * The DiceRoller canvas fills 100vw × 100vh with no border, no rounded corners.
- * boostFactor={0.4} → 0.4 × 0.25 (global) = 0.1× the original library speed.
  */
 
 import React, { useEffect, useRef, useState } from "react";

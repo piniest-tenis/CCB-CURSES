@@ -74,7 +74,7 @@ const DIE_NOTATION: Record<DieSize, string> = {
 // Skips a script if a <script src="..."> for it is already in the DOM.
 
 // Bump this version string whenever dice-libs files change, to bust browser cache.
-const DICE_LIBS_VERSION = "v17";
+const DICE_LIBS_VERSION = "v18";
 const SCRIPT_SRCS = [
   `/dice-libs/three.min.js?v=${DICE_LIBS_VERSION}`,
   `/dice-libs/cannon.min.js?v=${DICE_LIBS_VERSION}`,
@@ -197,6 +197,10 @@ export function DiceRoller({
     const seededValues: number[] | null = state.seededValues ?? null;
 
     box.setDice(notationStr);
+
+    // Safety: if a previous throw left box.rolling stuck (e.g. emulate_throw
+    // hit the iteration cap and after_roll never fired), reset it now.
+    if (box.rolling) box.rolling = false;
 
     try {
       if (animationOnlyRef.current && seededValues && seededValues.length > 0) {
