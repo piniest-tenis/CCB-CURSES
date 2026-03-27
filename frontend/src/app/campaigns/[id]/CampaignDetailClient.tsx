@@ -349,14 +349,24 @@ export default function CampaignDetailClient() {
         },
         [myCharId, triggerPing]
       ),
-      // GM screen: received dice roll from a player → add to local log display
+      // GM screen: received dice roll from a player → re-broadcast on the
+      // scoped BroadcastChannel so the OBS overlay (dh-dice-<campaignId>)
+      // receives it. The character page broadcasts to "dh-dice" (fallback)
+      // because it has no campaignId in its store; re-broadcasting here
+      // ensures the campaign-scoped overlay picks it up.
       onDiceRoll: useCallback(
-        (_result: RollResult) => {
-          // The result is already broadcast via BroadcastChannel from diceStore.
-          // For the GM view we just ensure the DiceLog is visible.
-          // (Future enhancement: show whose roll it was.)
+        (result: RollResult) => {
+          if (typeof window !== "undefined" && "BroadcastChannel" in window && campaignId) {
+            try {
+              const ch = new BroadcastChannel(`dh-dice-${campaignId}`);
+              ch.postMessage({ type: "ROLL_RESULT", result });
+              ch.close();
+            } catch {
+              // ignore
+            }
+          }
         },
-        []
+        [campaignId]
       ),
     }
   );
