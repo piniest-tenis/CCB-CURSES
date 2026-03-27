@@ -6,7 +6,7 @@
  * OBS transparent overlay — full-bleed 3D dice canvas, nothing else.
  *
  * Flow:
- *   1. Reads ?campaign= → subscribes to BroadcastChannel "dh-dice-<id>"
+ *   1. Reads ?campaign=<id> → subscribes to BroadcastChannel "dh-dice-<id>" (scoped only)
  *   2. ROLL_RESULT received → playAnimation(req, rawValues).
  *      The raw die values from the player's completed roll are passed as seeds
  *      so the overlay's dice land on exactly the same faces via start_throw_seeded.
@@ -29,11 +29,7 @@ type FadeState = "idle" | "rolling" | "holding" | "fading";
 export default function DiceOverlayClient() {
   const searchParams = useSearchParams();
   const campaignId   = searchParams?.get("campaign") ?? null;
-  // Primary channel: scoped to this campaign if ?campaign= is provided.
-  // Fallback channel: "dh-dice" catches rolls made outside a campaign context
-  // (e.g. character sheet opened directly, where setCampaignId is never called).
   const channelName  = campaignId ? `dh-dice-${campaignId}` : "dh-dice";
-  const fallbackName = campaignId ? "dh-dice" : null;
 
   const isRolling    = useDiceStore((s) => s.isRolling);
   const [fade, setFade] = useState<FadeState>("idle");
@@ -55,16 +51,10 @@ export default function DiceOverlayClient() {
     const ch = new BroadcastChannel(channelName);
     ch.onmessage = handleMessage;
 
-    // Also listen on the fallback channel so rolls made outside a campaign
-    // context (campaignId null in store → broadcast to "dh-dice") are received.
-    const fallback = fallbackName ? new BroadcastChannel(fallbackName) : null;
-    if (fallback) fallback.onmessage = handleMessage;
-
     return () => {
       ch.close();
-      fallback?.close();
     };
-  }, [channelName, fallbackName]);
+  }, [channelName]);
 
   // Opacity lifecycle: idle(0) → rolling(1) → holding(1) → fading(0)
   useEffect(() => {
