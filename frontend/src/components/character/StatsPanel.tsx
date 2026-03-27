@@ -42,9 +42,10 @@ interface StatInputProps {
   value:         number;
   onChange:      (v: number) => void;
   onRollQueued?: () => void;
+  characterName?: string;
 }
 
-function StatInput({ name, label, value, onChange, onRollQueued }: StatInputProps) {
+function StatInput({ name, label, value, onChange, onRollQueued, characterName }: StatInputProps) {
   // SRD page 3: valid starting traits include -1; floor of -5 allows penalty modifiers.
   const decrement = () => onChange(Math.max(-5, value - 1));
   const increment = () => onChange(Math.min(8, value + 1));
@@ -147,6 +148,7 @@ function StatInput({ name, label, value, onChange, onRollQueued }: StatInputProp
                 { size: "d12", role: "fear", label: "Fear" },
               ],
               modifier: value,
+              ...(characterName ? { characterName } : {}),
             } satisfies RollRequest}
             onRollQueued={onRollQueued}
           />
@@ -192,6 +194,7 @@ export function StatsPanel({ onRollQueued }: StatsPanelProps) {
             value={stats[name]}
             onChange={(v) => updateStat(name, v)}
             onRollQueued={onRollQueued}
+            characterName={activeCharacter.name}
           />
         ))}
       </div>

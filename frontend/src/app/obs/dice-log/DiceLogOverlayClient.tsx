@@ -4,13 +4,14 @@
  * src/app/obs/dice-log/DiceLogOverlayClient.tsx
  *
  * OBS-compatible dice log overlay.
- * Receives roll events from the main app via BroadcastChannel("dh-dice-log").
- * Shows the last 10 rolls, newest at top.
+ * Receives roll events from the main app via BroadcastChannel("dh-dice-<campaignId>").
+ * Shows the last 10 rolls, newest at top. Displays character name prominently.
  *
  * Designed for transparent OBS Browser Source at 380×500px.
  */
 
 import React, { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import type { RollResult, ActionOutcome } from "@/types/dice";
 
 // ─── Outcome helpers ──────────────────────────────────────────────────────────
@@ -25,21 +26,33 @@ const OUTCOME_COLOR: Record<ActionOutcome, string> = {
 
 // ─── Log entry ────────────────────────────────────────────────────────────────
 
-function LogRow({ result }: { result: RollResult }) {
+interface LogEntry {
+  result: RollResult;
+  characterName?: string;
+}
+
+function LogRow({ entry }: { entry: LogEntry }) {
+  const { result, characterName } = entry;
   const { request, total, outcome, hopeValue, fearValue, dice } = result;
   const timeStr = new Date(result.timestamp).toLocaleTimeString([], {
     hour:   "2-digit",
     minute: "2-digit",
   });
-  const diceLabel = dice.map((d) => d.size).join("+");
-  const mod       = request.modifier ?? 0;
+  const mod = request.modifier ?? 0;
 
   return (
     <div
       className="rounded-xl border border-[#577399]/25 px-3 py-2.5 space-y-1.5"
       style={{ background: "rgba(13,22,16,0.90)" }}
     >
-      {/* Top row: label + time */}
+      {/* Character name — prominent if present */}
+      {characterName && (
+        <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "#DAA520" }}>
+          {characterName}
+        </p>
+      )}
+
+      {/* Top row: roll label + time */}
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-bold text-[#f7f7ff] truncate">{request.label}</p>
         <span className="text-[9px] text-[#b9baa3] shrink-0">{timeStr}</span>
@@ -101,20 +114,25 @@ function LogRow({ result }: { result: RollResult }) {
 const MAX_LOG = 10;
 
 export default function DiceLogOverlayClient() {
-  const [log, setLog] = useState<RollResult[]>([]);
+  const searchParams = useSearchParams();
+  const campaignId   = searchParams?.get("campaign") ?? null;
+  const channelName  = campaignId ? `dh-dice-${campaignId}` : "dh-dice";
+
+  const [log, setLog] = useState<LogEntry[]>([]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !("BroadcastChannel" in window)) return;
 
-    const ch = new BroadcastChannel("dh-dice-log");
+    const ch = new BroadcastChannel(channelName);
     ch.onmessage = (evt) => {
       if (evt.data?.type === "ROLL_RESULT" && evt.data.result) {
-        const result = evt.data.result as RollResult;
-        setLog((prev) => [result, ...prev].slice(0, MAX_LOG));
+        const result        = evt.data.result as RollResult;
+        const characterName = (result.request.characterName as string | undefined) ?? undefined;
+        setLog((prev) => [{ result, characterName }, ...prev].slice(0, MAX_LOG));
       }
     };
     return () => ch.close();
-  }, []);
+  }, [channelName]);
 
   return (
     <div
@@ -136,8 +154,8 @@ export default function DiceLogOverlayClient() {
 
       {/* Log entries */}
       <div className="flex flex-col gap-2 overflow-hidden">
-        {log.map((result) => (
-          <LogRow key={result.id} result={result} />
+        {log.map((entry) => (
+          <LogRow key={entry.result.id} entry={entry} />
         ))}
       </div>
     </div>

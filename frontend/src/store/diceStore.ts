@@ -20,6 +20,15 @@ import type {
   ActionOutcome,
 } from "@/types/dice";
 
+// ─── Extended store shape (internal additions) ────────────────────────────────
+
+interface DiceStoreExtended extends DiceStore {
+  /** Active campaign id used to scope the BroadcastChannel name. */
+  campaignId: string | null;
+  /** Set the campaign id (call from CampaignDetailClient on mount). */
+  setCampaignId: (id: string | null) => void;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function nanoid(): string {
@@ -54,13 +63,17 @@ function classifyOutcome(
 
 // ─── Store ────────────────────────────────────────────────────────────────────
 
-export const useDiceStore = create<DiceStore>((set, get) => ({
+export const useDiceStore = create<DiceStoreExtended>((set, get) => ({
   // ── State ──────────────────────────────────────────────────────────────────
   isRolling:      false,
   pendingRequest: null,
   stagedRequest:  null,
   lastResult:     null,
   log:            [],
+  campaignId:     null,
+
+  // ── setCampaignId ──────────────────────────────────────────────────────────
+  setCampaignId: (id: string | null) => set({ campaignId: id }),
 
   // ── stageRoll ──────────────────────────────────────────────────────────────
   // Sets the staged request so the pre-roll modal can display it (Phase 1).
@@ -78,6 +91,20 @@ export const useDiceStore = create<DiceStore>((set, get) => ({
   requestRoll: (req: RollRequest) => {
     if (get().isRolling) return; // guard — only one roll at a time
     set({ isRolling: true, pendingRequest: req, stagedRequest: null });
+
+    // Broadcast ROLL_REQUEST so the OBS dice overlay can trigger its own animation
+    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+      try {
+        const channelName = get().campaignId
+          ? `dh-dice-${get().campaignId}`
+          : "dh-dice";
+        const ch = new BroadcastChannel(channelName);
+        ch.postMessage({ type: "ROLL_REQUEST", request: req });
+        ch.close();
+      } catch {
+        // BroadcastChannel not available in this context — ignore
+      }
+    }
   },
 
   // ── resolveRoll ────────────────────────────────────────────────────────────
@@ -137,7 +164,10 @@ export const useDiceStore = create<DiceStore>((set, get) => ({
     // Broadcast to OBS BroadcastChannel so dice-log overlay page receives it
     if (typeof window !== "undefined" && "BroadcastChannel" in window) {
       try {
-        const ch = new BroadcastChannel("dh-dice-log");
+        const channelName = get().campaignId
+          ? `dh-dice-${get().campaignId}`
+          : "dh-dice";
+        const ch = new BroadcastChannel(channelName);
         ch.postMessage({ type: "ROLL_RESULT", result });
         ch.close();
       } catch {

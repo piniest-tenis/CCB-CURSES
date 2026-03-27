@@ -1009,6 +1009,7 @@ function WeaponCard({ slot, onRollQueued }: WeaponCardProps) {
         })),
         modifier: parsedDie.flat,
         ...(loadoutBonuses.length > 0 ? { bonuses: loadoutBonuses } : {}),
+        characterName: activeCharacter.name,
       }
     : null;
 
@@ -1026,6 +1027,7 @@ function WeaponCard({ slot, onRollQueued }: WeaponCardProps) {
         ],
         modifier: traitValue,
         ...(attackBonuses.length > 0 ? { bonuses: attackBonuses } : {}),
+        characterName: activeCharacter.name,
       }
     : null;
 

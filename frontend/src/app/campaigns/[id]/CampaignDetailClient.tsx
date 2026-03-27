@@ -318,6 +318,13 @@ export default function CampaignDetailClient() {
     return () => setActiveCampaign(null);
   }, [campaignId, setActiveCampaign]);
 
+  // Scope the dice BroadcastChannel to this campaign
+  const { log: diceLog, setCampaignId: setDiceCampaignId } = useDiceStore();
+  useEffect(() => {
+    if (campaignId) setDiceCampaignId(campaignId);
+    return () => setDiceCampaignId(null);
+  }, [campaignId, setDiceCampaignId]);
+
   // ── Derived state ───────────────────────────────────────────────────────────
   const isGm        = campaign?.callerRole === "gm";
   const callerChar  = campaign?.members.find((m) => m.userId === user?.userId);
@@ -328,7 +335,6 @@ export default function CampaignDetailClient() {
 
   // ── WebSocket: ping sending (GM) & receiving (player) ───────────────────────
   const { triggerPing } = usePingEffect();
-  const { log: diceLog } = useDiceStore();
 
   const { sendPing, sendDiceRoll, isConnected } = useGameWebSocket(
     campaignId,
@@ -446,7 +452,7 @@ export default function CampaignDetailClient() {
                 Invite
               </button>
               <a
-                href="/obs/dice"
+                href={`/obs/dice?campaign=${campaignId}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Open OBS dice roller overlay in new tab"
@@ -461,7 +467,7 @@ export default function CampaignDetailClient() {
                 OBS Dice
               </a>
               <a
-                href="/obs/dice-log"
+                href={`/obs/dice-log?campaign=${campaignId}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Open OBS dice log overlay in new tab"

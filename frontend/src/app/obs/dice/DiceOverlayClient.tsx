@@ -3,139 +3,93 @@
 /**
  * src/app/obs/dice/DiceOverlayClient.tsx
  *
- * OBS-compatible transparent overlay that shows the 3D dice animation
- * and the last roll result. Receives roll events from the main app via
- * BroadcastChannel("dh-dice-log").
+ * OBS-compatible transparent overlay — shows only the 3D dice animation.
+ * No result panel. No placeholder text.
  *
- * Layout: 800×400 canvas with result panel on the right side.
+ * Flow:
+ *   1. Reads ?campaign= from the URL → subscribes to BroadcastChannel "dh-dice-<id>"
+ *   2. On ROLL_REQUEST message → calls useDiceStore.requestRoll() locally, which
+ *      triggers the local DiceRoller canvas to animate.
+ *   3. After rolling completes (isRolling flips false) → 3-second hold then
+ *      smooth 1-second fade-out.
+ *
+ * Add as OBS Browser Source at 800×400 with transparent background.
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { DiceRoller } from "@/components/dice/DiceRoller";
 import { useDiceStore } from "@/store/diceStore";
-import type { RollResult, ActionOutcome } from "@/types/dice";
+import type { RollRequest } from "@/types/dice";
 
-// ─── Outcome display ──────────────────────────────────────────────────────────
-
-const OUTCOME_LABEL: Record<ActionOutcome, string> = {
-  "critical": "CRITICAL!",
-};
-
-const OUTCOME_COLOR: Record<ActionOutcome, string> = {
-  "critical": "#FFD700",
-};
-
-// ─── Result display ───────────────────────────────────────────────────────────
-
-function OverlayResult({ result }: { result: RollResult }) {
-  const { request, total, outcome, hopeValue, fearValue } = result;
-  const outcomeColor = outcome ? OUTCOME_COLOR[outcome] : "#f7f7ff";
-
-  return (
-    <div
-      className="flex flex-col items-center justify-center gap-2 px-4 py-4 rounded-xl h-full"
-      style={{ background: "rgba(10,16,13,0.85)" }}
-    >
-      <p className="text-xs font-semibold uppercase tracking-widest text-[#b9baa3] text-center">
-        {request.label}
-      </p>
-
-      {/* Hope / Fear pips */}
-      {(hopeValue !== undefined || fearValue !== undefined) && (
-        <div className="flex gap-3">
-          {hopeValue !== undefined && (
-            <div className="flex flex-col items-center gap-1">
-              <span
-                className="h-12 w-12 rounded-full flex items-center justify-center text-xl font-bold border-2"
-                style={{ background: "#DAA520", borderColor: "#DAA520", color: "#36454F" }}
-              >
-                {hopeValue}
-              </span>
-              <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "#DAA520" }}>
-                Hope
-              </span>
-            </div>
-          )}
-          {fearValue !== undefined && (
-            <div className="flex flex-col items-center gap-1">
-              <span
-                className="h-12 w-12 rounded-full flex items-center justify-center text-xl font-bold border-2"
-                style={{ background: "#36454F", borderColor: "#36454F", color: "#DAA520" }}
-              >
-                {fearValue}
-              </span>
-              <span className="text-[9px] font-bold uppercase tracking-wider text-[#b9baa3]">
-                Fear
-              </span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Outcome label */}
-      {outcome && (
-        <p
-          className="text-xl font-bold font-serif text-center leading-tight"
-          style={{ color: outcomeColor }}
-        >
-          {OUTCOME_LABEL[outcome]}
-        </p>
-      )}
-
-      {/* Total */}
-      <p className="text-4xl font-bold font-serif text-[#f7f7ff] leading-none">
-        {total}
-      </p>
-    </div>
-  );
-}
-
-// ─── Main client ──────────────────────────────────────────────────────────────
+type FadeState = "hidden" | "visible" | "fading";
 
 export default function DiceOverlayClient() {
-  const { lastResult } = useDiceStore();
-  const [broadcastResult, setBroadcastResult] = useState<RollResult | null>(null);
+  const searchParams   = useSearchParams();
+  const campaignId     = searchParams?.get("campaign") ?? null;
+  const channelName    = campaignId ? `dh-dice-${campaignId}` : "dh-dice";
 
-  // Listen for rolls broadcast from the main app window
+  const { isRolling }  = useDiceStore();
+  const [fade, setFade] = useState<FadeState>("hidden");
+  const fadeTimer      = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wasRolling     = useRef(false);
+
+  // Subscribe to BroadcastChannel and trigger local roll when ROLL_REQUEST arrives
   useEffect(() => {
     if (typeof window === "undefined" || !("BroadcastChannel" in window)) return;
 
-    const ch = new BroadcastChannel("dh-dice-log");
+    const ch = new BroadcastChannel(channelName);
     ch.onmessage = (evt) => {
-      if (evt.data?.type === "ROLL_RESULT" && evt.data.result) {
-        setBroadcastResult(evt.data.result as RollResult);
+      if (evt.data?.type === "ROLL_REQUEST" && evt.data.request) {
+        const req = evt.data.request as RollRequest;
+        // Trigger local animation — clears staged and starts isRolling
+        useDiceStore.getState().requestRoll(req);
       }
     };
     return () => ch.close();
-  }, []);
+  }, [channelName]);
 
-  // Prefer live store result (same-page rolls), fall back to broadcast
-  const displayResult = lastResult ?? broadcastResult;
+  // Show canvas when rolling starts; start 3s fade-out timer when it finishes
+  useEffect(() => {
+    if (isRolling && !wasRolling.current) {
+      // Roll just started — make visible, cancel any pending fade
+      wasRolling.current = true;
+      if (fadeTimer.current) clearTimeout(fadeTimer.current);
+      setFade("visible");
+    }
+
+    if (!isRolling && wasRolling.current) {
+      // Roll just finished — hold 3s then fade over 1s
+      wasRolling.current = false;
+      fadeTimer.current  = setTimeout(() => {
+        setFade("fading");
+        // After CSS transition (1s) mark fully hidden
+        fadeTimer.current = setTimeout(() => setFade("hidden"), 1000);
+      }, 3000);
+    }
+
+    return () => {
+      if (fadeTimer.current) clearTimeout(fadeTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRolling]);
 
   return (
     <div
-      className="w-screen h-screen overflow-hidden flex"
+      className="w-screen h-screen overflow-hidden"
       style={{ background: "transparent" }}
     >
-      {/* Dice canvas — takes most of the width */}
-      <div className="flex-1">
-        <DiceRoller height={400} transparent width={600} />
-      </div>
-
-      {/* Result panel — right 200px */}
-      <div className="w-[200px] shrink-0 flex items-center justify-center">
-        {displayResult ? (
-          <OverlayResult result={displayResult} />
-        ) : (
-          <div
-            className="flex items-center justify-center w-full h-full rounded-xl"
-            style={{ background: "rgba(10,16,13,0.6)" }}
-          >
-            <p className="text-xs text-[#b9baa3]/50 text-center px-4">
-              Waiting for a roll…
-            </p>
-          </div>
-        )}
+      {/* Canvas wrapper — always mounted so the DiceRoller can initialize,
+          but opacity-controlled to hide/show it */}
+      <div
+        style={{
+          opacity:    fade === "visible" ? 1 : 0,
+          transition: fade === "fading" ? "opacity 1s ease-out" : "none",
+          width:  "100%",
+          height: "100%",
+        }}
+      >
+        <DiceRoller width={800} height={400} transparent />
       </div>
     </div>
   );

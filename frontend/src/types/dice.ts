@@ -70,6 +70,8 @@ export interface RollRequest {
    * When toggled on, its value is added to the modifier.
    */
   bonuses?: RollBonus[];
+  /** Character name — carried through to OBS log overlay for display. */
+  characterName?: string;
 }
 
 // ─── Roll result ───────────────────────────────────────────────────────────────

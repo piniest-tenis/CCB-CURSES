@@ -518,9 +518,10 @@ interface DomainCardDetailSidebarProps {
   card: DomainCard | null;
   onClose: () => void;
   onRollQueued?: () => void;
+  characterName?: string;
 }
 
-function DomainCardDetailSidebar({ card, onClose, onRollQueued }: DomainCardDetailSidebarProps) {
+function DomainCardDetailSidebar({ card, onClose, onRollQueued, characterName }: DomainCardDetailSidebarProps) {
   const open = card !== null;
   const panelRef = React.useRef<HTMLDivElement>(null);
   const headingId = React.useId();
@@ -659,7 +660,7 @@ function DomainCardDetailSidebar({ card, onClose, onRollQueued }: DomainCardDeta
                   {rolls.map((req) => (
                     <DiceRollButton
                       key={req.label}
-                      rollRequest={req}
+                      rollRequest={characterName ? { ...req, characterName } : req}
                       variant="badge"
                       label={req.label.replace(`${card.name} — `, "").replace(`${card.name}: `, "")}
                       onRollQueued={onRollQueued}
@@ -1163,7 +1164,7 @@ export function DomainLoadout({ onRollQueued }: { onRollQueued?: () => void } = 
 
   return (
     <>
-    <DomainCardDetailSidebar card={drillCard} onClose={() => setDrillCard(null)} onRollQueued={onRollQueued} />
+    <DomainCardDetailSidebar card={drillCard} onClose={() => setDrillCard(null)} onRollQueued={onRollQueued} characterName={activeCharacter?.name} />
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-parchment-400">
