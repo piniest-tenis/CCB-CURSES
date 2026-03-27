@@ -10,6 +10,8 @@
 import React from "react";
 import type { CoreStatName } from "@shared/types";
 import { useCharacterStore } from "@/store/characterStore";
+import { DiceRollButton } from "@/components/dice/DiceRollButton";
+import type { RollRequest } from "@/types/dice";
 
 // ─── Stat definitions ─────────────────────────────────────────────────────────
 
@@ -35,13 +37,14 @@ const STAT_CARD_IMAGES: Record<CoreStatName, string> = {
 // ─── StatInput ────────────────────────────────────────────────────────────────
 
 interface StatInputProps {
-  name:     CoreStatName;
-  label:    string;
-  value:    number;
-  onChange: (v: number) => void;
+  name:          CoreStatName;
+  label:         string;
+  value:         number;
+  onChange:      (v: number) => void;
+  onRollQueued?: () => void;
 }
 
-function StatInput({ name, label, value, onChange }: StatInputProps) {
+function StatInput({ name, label, value, onChange, onRollQueued }: StatInputProps) {
   // SRD page 3: valid starting traits include -1; floor of -5 allows penalty modifiers.
   const decrement = () => onChange(Math.max(-5, value - 1));
   const increment = () => onChange(Math.min(8, value + 1));
@@ -132,6 +135,22 @@ function StatInput({ name, label, value, onChange }: StatInputProps) {
             {label}
           </span>
         </div>
+
+        {/* Roll button — action roll with this trait as modifier */}
+        <div className="flex justify-center pt-1">
+          <DiceRollButton
+            rollRequest={{
+              label:    `${label} Action Roll`,
+              type:     "action",
+              dice:     [
+                { size: "d12", role: "hope", label: "Hope" },
+                { size: "d12", role: "fear", label: "Fear" },
+              ],
+              modifier: value,
+            } satisfies RollRequest}
+            onRollQueued={onRollQueued}
+          />
+        </div>
       </div>
 
       {/* Accessible full label for screen readers */}
@@ -142,7 +161,11 @@ function StatInput({ name, label, value, onChange }: StatInputProps) {
 
 // ─── StatsPanel ───────────────────────────────────────────────────────────────
 
-export function StatsPanel() {
+interface StatsPanelProps {
+  onRollQueued?: () => void;
+}
+
+export function StatsPanel({ onRollQueued }: StatsPanelProps) {
   const { activeCharacter, updateStat } = useCharacterStore();
 
   if (!activeCharacter) return null;
@@ -168,6 +191,7 @@ export function StatsPanel() {
             label={label}
             value={stats[name]}
             onChange={(v) => updateStat(name, v)}
+            onRollQueued={onRollQueued}
           />
         ))}
       </div>

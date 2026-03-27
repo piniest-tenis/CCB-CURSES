@@ -17,6 +17,8 @@
 import React, { useState } from "react";
 import type { GoldAmount } from "@shared/types";
 import { useCharacterStore } from "@/store/characterStore";
+import { DiceRollButton } from "@/components/dice/DiceRollButton";
+import type { RollRequest, DieSize } from "@/types/dice";
 
 // ─── SRD Equipment Catalog ───────────────────────────────────────────────────
 // Full equipment list from the Daggerheart SRD.
@@ -87,6 +89,67 @@ const SRD_EQUIPMENT: SrdEquipmentItem[] = [
 ];
 
 const EQUIPMENT_CATEGORIES = Array.from(new Set(SRD_EQUIPMENT.map((i) => i.category)));
+
+// ─── Weapon Damage Parser ─────────────────────────────────────────────────────
+// Parses weapon damage info from an SRD equipment description string.
+// Returns null if the item is not a weapon (no die pattern found).
+//
+// Supported patterns: "d6 physical", "2d10 physical", "d8 magic"
+
+interface WeaponDamage {
+  dieCount: number;
+  dieSize:  DieSize;
+  flatMod:  number;
+}
+
+function parseWeaponDamage(description: string): WeaponDamage | null {
+  // Match optional leading count, then dX
+  const match = description.match(/^(\d+)?d(\d+)/i);
+  if (!match) return null;
+  const dieCount = match[1] ? parseInt(match[1], 10) : 1;
+  const size = parseInt(match[2], 10);
+  const validSizes = [4, 6, 8, 10, 12, 20];
+  if (!validSizes.includes(size)) return null;
+  return { dieCount, dieSize: `d${size}` as DieSize, flatMod: 0 };
+}
+
+/** Look up the SRD description for an inventory item by name. */
+function srdDescriptionFor(itemName: string): string | null {
+  return SRD_EQUIPMENT.find((e) => e.name === itemName)?.description ?? null;
+}
+
+/**
+ * Build a damage RollRequest for a weapon.
+ * SRD: damage dice = proficiency × weapon die; flat modifier is NOT multiplied.
+ * For multi-die weapons (e.g. 2d10), base count already encodes proficiency
+ * scaling differently — we multiply base count by proficiency for normal weapons,
+ * but for named multi-die entries (2d10, 2d8) keep base count × prof.
+ */
+function buildWeaponRollRequest(
+  itemName: string,
+  proficiency: number,
+): RollRequest | null {
+  const desc = srdDescriptionFor(itemName);
+  if (!desc) return null;
+  const parsed = parseWeaponDamage(desc);
+  if (!parsed) return null;
+
+  const { dieCount, dieSize, flatMod } = parsed;
+  // Total dice = base die count × proficiency
+  const totalDice = dieCount * proficiency;
+
+  return {
+    label:       `${itemName} Damage`,
+    type:        "damage",
+    proficiency,
+    modifier:    flatMod || undefined,
+    dice: Array.from({ length: totalDice }, () => ({
+      size:  dieSize,
+      role:  "damage" as const,
+      label: itemName,
+    })),
+  };
+}
 
 // ─── GoldSlotTracker ─────────────────────────────────────────────────────────
 // Visual slot tracker for a single gold denomination.
@@ -418,7 +481,7 @@ function AddEquipmentSidebar({ open, onClose, onAdd, current }: AddEquipmentSide
 
 // ─── EquipmentPanel ───────────────────────────────────────────────────────────
 
-export function EquipmentPanel() {
+export function EquipmentPanel({ onRollQueued }: { onRollQueued?: () => void }) {
   const { activeCharacter, updateField } = useCharacterStore();
   const [addOpen, setAddOpen] = useState(false);
 
@@ -426,6 +489,7 @@ export function EquipmentPanel() {
 
   const gold: GoldAmount = activeCharacter.gold ?? { handfuls: 1, bags: 0, chests: 0 };
   const inventory: string[] = activeCharacter.inventory ?? [];
+  const proficiency: number = activeCharacter.proficiency ?? 1;
 
   const handleGoldChange = (next: GoldAmount) => {
     updateField("gold", next);
@@ -453,7 +517,7 @@ export function EquipmentPanel() {
         </h2>
 
         {/* Gold tracker */}
-        <div>
+        <div data-field-key="equipment.gold">
           <h3 className="mb-3 text-xs font-medium uppercase tracking-wider text-[#b9baa3]">
             Gold
           </h3>
@@ -464,7 +528,7 @@ export function EquipmentPanel() {
         <div className="border-t border-[#577399]/15" />
 
         {/* Inventory */}
-        <div>
+        <div data-field-key="equipment.inventory">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs font-medium uppercase tracking-wider text-[#b9baa3]">
               Inventory
@@ -474,6 +538,7 @@ export function EquipmentPanel() {
               onClick={() => setAddOpen(true)}
               aria-haspopup="dialog"
               aria-label="Add equipment item"
+              data-field-key="equipment.add"
               className="
                 rounded-lg border border-[#577399]/40 bg-[#577399]/15 px-3 py-1.5
                 text-xs font-semibold text-[#f7f7ff]
@@ -492,22 +557,32 @@ export function EquipmentPanel() {
             </p>
           ) : (
             <ul className="space-y-1.5" role="list" aria-label="Inventory items">
-              {inventory.map((item) => (
-                <li
-                  key={item}
-                  className="flex items-center justify-between rounded-lg border border-[#577399]/20 bg-slate-900/50 px-3 py-2 gap-2"
-                >
-                  <span className="text-sm text-[#f7f7ff] flex-1 min-w-0 truncate">{item}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveItem(item)}
-                    aria-label={`Remove ${item} from inventory`}
-                    className="h-8 w-8 flex items-center justify-center rounded text-[#577399]/50 hover:text-[#fe5f55] hover:bg-[#fe5f55]/10 transition-colors text-xs focus:outline-none focus:ring-2 focus:ring-[#577399] flex-shrink-0"
+              {inventory.map((item) => {
+                const rollReq = buildWeaponRollRequest(item, proficiency);
+                return (
+                  <li
+                    key={item}
+                    className="flex items-center justify-between rounded-lg border border-[#577399]/20 bg-slate-900/50 px-3 py-2 gap-2"
                   >
-                    ✕
-                  </button>
-                </li>
-              ))}
+                    <span className="text-sm text-[#f7f7ff] flex-1 min-w-0 truncate">{item}</span>
+                    {rollReq && (
+                      <DiceRollButton
+                        rollRequest={rollReq}
+                        variant="icon"
+                        onRollQueued={onRollQueued}
+                      />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveItem(item)}
+                      aria-label={`Remove ${item} from inventory`}
+                      className="h-8 w-8 flex items-center justify-center rounded text-[#577399]/50 hover:text-[#fe5f55] hover:bg-[#fe5f55]/10 transition-colors text-xs focus:outline-none focus:ring-2 focus:ring-[#577399] flex-shrink-0"
+                    >
+                      ✕
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

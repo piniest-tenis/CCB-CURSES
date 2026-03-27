@@ -25,6 +25,122 @@ import { useDomainCard, useClass, useDomain } from "@/hooks/useGameData";
 import { useActionButton, InlineActionError } from "./ActionButton";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { CollapsibleSRDDescription } from "@/components/character/CollapsibleSRDDescription";
+import { DiceRollButton } from "@/components/dice/DiceRollButton";
+import type { RollRequest, DieSize } from "@/types/dice";
+
+// ─── Card text roll parser ────────────────────────────────────────────────────
+// Parses common roll patterns from Daggerheart domain card description text.
+// Returns a RollRequest if a rollable action is found, otherwise null.
+//
+// Supported patterns:
+//   "make a(n) X Roll"                 → action roll, trait = X
+//   "make a(n) X Roll (N)"             → action roll + difficulty N
+//   "make a Spellcast Roll"             → action roll, trait = Spellcast
+//   "deal NdX+M damage"                → damage roll
+//   "roll NdX"                         → generic roll
+//   "roll your damage dice"            → signal — caller must use character weapon
+
+const TRAIT_MAP: Record<string, string> = {
+  agility:   "Agility",
+  strength:  "Strength",
+  finesse:   "Finesse",
+  instinct:  "Instinct",
+  presence:  "Presence",
+  knowledge: "Knowledge",
+  spellcast: "Spellcast",
+};
+
+function parseCardRollRequest(
+  cardName: string,
+  text: string,
+): RollRequest | null {
+  // ── Pattern 1: "make a(n)? X Roll (N)?" ──────────────────────────────────
+  const actionMatch = text.match(
+    /make an?\s+(\w+)\s+Roll(?:\s*\((\d+)\))?/i
+  );
+  if (actionMatch) {
+    const traitKey = actionMatch[1].toLowerCase();
+    const traitLabel = TRAIT_MAP[traitKey] ?? actionMatch[1];
+    const difficulty = actionMatch[2] ? parseInt(actionMatch[2], 10) : undefined;
+    return {
+      label:      `${cardName} — ${traitLabel} Roll`,
+      type:       "action",
+      difficulty,
+      dice: [
+        { size: "d12", role: "hope",  label: "Hope"  },
+        { size: "d12", role: "fear",  label: "Fear"  },
+      ],
+    };
+  }
+
+  // ── Pattern 2: "deal NdX+M damage" or "deal NdX damage" ──────────────────
+  const damageMatch = text.match(/deal\s+(\d+)?d(\d+)(?:\+(\d+))?\s+\w*\s*damage/i);
+  if (damageMatch) {
+    const count   = damageMatch[1] ? parseInt(damageMatch[1], 10) : 1;
+    const sizeNum = parseInt(damageMatch[2], 10);
+    const flatMod = damageMatch[3] ? parseInt(damageMatch[3], 10) : 0;
+    const validSizes = [4, 6, 8, 10, 12, 20];
+    if (validSizes.includes(sizeNum)) {
+      const dieSize = `d${sizeNum}` as DieSize;
+      return {
+        label:    `${cardName} — Damage`,
+        type:     "damage",
+        modifier: flatMod || undefined,
+        dice: Array.from({ length: count }, () => ({
+          size:  dieSize,
+          role:  "damage" as const,
+          label: cardName,
+        })),
+      };
+    }
+  }
+
+  // ── Pattern 3: "roll a? NdX" ──────────────────────────────────────────────
+  const genericMatch = text.match(/roll\s+a?\s*(\d+)?d(\d+)/i);
+  if (genericMatch) {
+    const count   = genericMatch[1] ? parseInt(genericMatch[1], 10) : 1;
+    const sizeNum = parseInt(genericMatch[2], 10);
+    const validSizes = [4, 6, 8, 10, 12, 20];
+    if (validSizes.includes(sizeNum)) {
+      const dieSize = `d${sizeNum}` as DieSize;
+      return {
+        label: `${cardName} — Roll`,
+        type:  "generic",
+        dice: Array.from({ length: count }, () => ({
+          size:  dieSize,
+          role:  "generic" as const,
+          label: cardName,
+        })),
+      };
+    }
+  }
+
+  return null;
+}
+
+/** Collect all distinct roll requests from a card (description + grimoire entries). */
+function cardRollRequests(card: DomainCard): RollRequest[] {
+  const reqs: RollRequest[] = [];
+  const seen = new Set<string>();
+
+  const tryAdd = (req: RollRequest | null) => {
+    if (!req) return;
+    const key = req.label;
+    if (seen.has(key)) return;
+    seen.add(key);
+    reqs.push(req);
+  };
+
+  if (card.isGrimoire && card.grimoire.length > 0) {
+    for (const ability of card.grimoire) {
+      tryAdd(parseCardRollRequest(`${card.name}: ${ability.name}`, ability.description));
+    }
+  } else {
+    tryAdd(parseCardRollRequest(card.name, card.description));
+  }
+
+  return reqs;
+}
 
 // ─── Helper: parseCardId ──────────────────────────────────────────────────────
 
@@ -401,9 +517,10 @@ function AuraToggle({ cardId, cardName, characterId, isActive, anotherAuraActive
 interface DomainCardDetailSidebarProps {
   card: DomainCard | null;
   onClose: () => void;
+  onRollQueued?: () => void;
 }
 
-function DomainCardDetailSidebar({ card, onClose }: DomainCardDetailSidebarProps) {
+function DomainCardDetailSidebar({ card, onClose, onRollQueued }: DomainCardDetailSidebarProps) {
   const open = card !== null;
   const panelRef = React.useRef<HTMLDivElement>(null);
   const headingId = React.useId();
@@ -532,6 +649,25 @@ function DomainCardDetailSidebar({ card, onClose }: DomainCardDetailSidebarProps
                 </MarkdownContent>
               </div>
             )}
+
+            {/* Roll buttons — parsed from card text */}
+            {(() => {
+              const rolls = cardRollRequests(card);
+              if (rolls.length === 0) return null;
+              return (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {rolls.map((req) => (
+                    <DiceRollButton
+                      key={req.label}
+                      rollRequest={req}
+                      variant="badge"
+                      label={req.label.replace(`${card.name} — `, "").replace(`${card.name}: `, "")}
+                      onRollQueued={onRollQueued}
+                    />
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>
@@ -970,7 +1106,7 @@ function DisplacePickerItem({
 
 // ─── DomainLoadout (main export) ──────────────────────────────────────────────
 
-export function DomainLoadout() {
+export function DomainLoadout({ onRollQueued }: { onRollQueued?: () => void } = {}) {
   const { activeCharacter, removeFromLoadout, reorderLoadout } =
     useCharacterStore();
   const [showPicker, setShowPicker] = useState(false);
@@ -1027,7 +1163,7 @@ export function DomainLoadout() {
 
   return (
     <>
-    <DomainCardDetailSidebar card={drillCard} onClose={() => setDrillCard(null)} />
+    <DomainCardDetailSidebar card={drillCard} onClose={() => setDrillCard(null)} onRollQueued={onRollQueued} />
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-parchment-400">
@@ -1039,6 +1175,7 @@ export function DomainLoadout() {
           onClick={handleTogglePicker}
           aria-expanded={showPicker}
           aria-controls="domain-card-picker"
+          data-field-key="loadout.change"
           className="
             rounded px-2 py-0.5 text-xs font-semibold
             bg-burgundy-800/60 text-parchment-300 border border-burgundy-700
@@ -1064,8 +1201,8 @@ export function DomainLoadout() {
       ) : (
         <div role="list" className="space-y-2">
           {domainLoadout.map((cardId, index) => (
+            <div key={`${cardId}-${index}`} data-field-key={`loadout.card.${index}`}>
             <LoadoutCardSlot
-              key={`${cardId}-${index}`}
               cardId={cardId}
               index={index}
               total={domainLoadout.length}
@@ -1082,6 +1219,7 @@ export function DomainLoadout() {
               onDragEnter={() => handleDragEnter(index)}
               onDragEnd={handleDragEnd}
             />
+            </div>
           ))}
         </div>
       )}

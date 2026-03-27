@@ -554,7 +554,7 @@ export function applyAction(
       };
     }
 
-    // ── HP: mark 1 ───────────────────────────────────────────────────────────
+    // ── HP: mark N ───────────────────────────────────────────────────────────
     case "mark-hp": {
       const { marked, max } = character.trackers.hp;
       if (marked >= max) {
@@ -567,7 +567,7 @@ export function applyAction(
         ...character,
         trackers: {
           ...character.trackers,
-          hp: { max, marked: marked + 1 },
+          hp: { max, marked: Math.min(max, marked + n) },
         },
       };
     }

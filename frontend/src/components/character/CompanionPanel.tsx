@@ -18,6 +18,33 @@ import React, { useState } from "react";
 import type { CompanionState, Experience } from "@shared/types";
 import { useCharacterStore } from "@/store/characterStore";
 import { useActionButton, InlineActionError } from "./ActionButton";
+import { DiceRollButton } from "@/components/dice/DiceRollButton";
+import type { RollRequest, DieSize } from "@/types/dice";
+
+// ─── Companion damage roll builder ────────────────────────────────────────────
+
+function buildCompanionRollRequest(
+  damagedie: string,
+  proficiency: number,
+  companionName: string,
+): RollRequest | null {
+  const match = damagedie.trim().match(/^d(\d+)$/i);
+  if (!match) return null;
+  const size = parseInt(match[1], 10);
+  const validSizes = [4, 6, 8, 10, 12, 20];
+  if (!validSizes.includes(size)) return null;
+  const dieSize = `d${size}` as DieSize;
+  return {
+    label:       `${companionName || "Companion"} Attack`,
+    type:        "damage",
+    proficiency,
+    dice: Array.from({ length: proficiency }, () => ({
+      size:  dieSize,
+      role:  "damage" as const,
+      label: "Companion",
+    })),
+  };
+}
 
 // ─── CompanionSlotTracker ─────────────────────────────────────────────────────
 
@@ -98,13 +125,14 @@ function CompanionSlotTracker({
 
 // ─── CompanionPanel ───────────────────────────────────────────────────────────
 
-export function CompanionPanel() {
+export function CompanionPanel({ onRollQueued }: { onRollQueued?: () => void }) {
   const { activeCharacter, updateField } = useCharacterStore();
   const [isExpanded, setIsExpanded] = useState(true);
 
   if (!activeCharacter?.companionState) return null;
 
   const { companionState, characterId } = activeCharacter;
+  const proficiency: number = activeCharacter.proficiency ?? 1;
   const panelId = "companion-panel-content";
 
   const updateCompanion = (key: keyof CompanionState, value: unknown) => {
@@ -260,18 +288,28 @@ export function CompanionPanel() {
               <label className="text-xs uppercase tracking-widest text-parchment-600 block mb-0.5">
                 Damage Die
               </label>
-              <input
-                type="text"
-                value={companionState.damagedie}
-                onChange={(e) => updateCompanion("damagedie", e.target.value)}
-                placeholder="e.g. d6"
-                aria-label="Companion damage die"
-                className="
-                  w-full rounded bg-slate-850 px-2 py-1.5 text-xs text-parchment-300
-                  border border-burgundy-800 focus:outline-none focus:ring-2 focus:ring-gold-500
-                  placeholder-parchment-700 transition-colors
-                "
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={companionState.damagedie}
+                  onChange={(e) => updateCompanion("damagedie", e.target.value)}
+                  placeholder="e.g. d6"
+                  aria-label="Companion damage die"
+                  className="
+                    flex-1 rounded bg-slate-850 px-2 py-1.5 text-xs text-parchment-300
+                    border border-burgundy-800 focus:outline-none focus:ring-2 focus:ring-gold-500
+                    placeholder-parchment-700 transition-colors
+                  "
+                />
+                {(() => {
+                  const req = buildCompanionRollRequest(
+                    companionState.damagedie,
+                    proficiency,
+                    companionState.name,
+                  );
+                  return req ? <DiceRollButton rollRequest={req} variant="icon" onRollQueued={onRollQueued} /> : null;
+                })()}
+              </div>
             </div>
 
             <div>

@@ -162,6 +162,9 @@ const PatchMemberSchema = z.object({
 
 const AddCharacterSchema = z.object({
   characterId: z.string().uuid("characterId must be a valid UUID"),
+  // Optional: the character owner's userId. When supplied by an admin on behalf
+  // of a player, this is used as the DynamoDB PK for the character lookup.
+  ownerUserId: z.string().optional(),
 });
 
 // ─── Helper: compute nextSessionAt from SessionSchedule ──────────────────────
@@ -1176,21 +1179,30 @@ async function addCharacter(
   const campaignId = requirePathParam(event, "campaignId");
   const body = parseBody(event, AddCharacterSchema);
 
-  const { characterId } = body;
+  const { characterId, ownerUserId } = body;
 
   // Caller must be a campaign member
   await assertCampaignMember(campaignId, userId);
   await getCampaignOrThrow(campaignId);
 
-  // Load the character — must belong to the caller
+  // Determine whose user partition to look in.
+  // - Normal player flow: ownerUserId is absent → look in the caller's own partition.
+  // - Admin flow: ownerUserId is provided → look in that player's partition.
+  //   The caller still must be a campaign member (checked above), but is not
+  //   required to be the character's owner (e.g. a GM adding a player's character).
+  const charOwnerUserId = ownerUserId ?? userId;
+
+  // Load the character from the correct owner partition
   const charRecord = await getItem<CharacterRecord>(
     CHARACTERS_TABLE,
-    { PK: `USER#${userId}`, SK: `CHARACTER#${characterId}` }
+    { PK: `USER#${charOwnerUserId}`, SK: `CHARACTER#${characterId}` }
   );
   if (!charRecord) {
     throw AppError.notFound("Character", characterId);
   }
-  if (charRecord.userId !== userId) {
+
+  // Ownership sanity check — the record's userId must match what we looked up
+  if (charRecord.userId !== charOwnerUserId) {
     throw AppError.forbidden("You do not own this character");
   }
 
@@ -1201,7 +1213,7 @@ async function addCharacter(
     );
   }
 
-  // Check the caller doesn't already have a character in this campaign
+  // Check the character owner doesn't already have a character in this campaign
   const existingChars = await queryItems<CampaignCharacterRecord>(
     CAMPAIGNS_TABLE,
     "PK = :pk AND begins_with(SK, :prefix)",
@@ -1210,29 +1222,65 @@ async function addCharacter(
       ":prefix": "CHARACTER#",
     }
   );
-  if (existingChars.some((c) => c.userId === userId)) {
-    throw AppError.conflict("You already have a character in this campaign");
+  if (existingChars.some((c) => c.userId === charOwnerUserId)) {
+    throw AppError.conflict("This player already has a character in this campaign");
   }
 
   const now = new Date().toISOString();
 
-  // Write campaign-character record
+  // Write campaign-character record (userId = the character's owner, not the caller)
   const charAssignment: CampaignCharacterRecord = {
     PK: `CAMPAIGN#${campaignId}`,
     SK: `CHARACTER#${characterId}`,
     campaignId,
     characterId,
-    userId,
+    userId: charOwnerUserId,
     addedAt: now,
   };
   await putItem(CAMPAIGNS_TABLE, charAssignment as unknown as Record<string, unknown>);
+
+  // If the character owner is not already a campaign member, add them as a PLAYER.
+  // This happens in the admin flow where a GM assigns a player's character directly
+  // without the player having used an invite link.
+  const existingMember = await getItem<CampaignMemberRecord>(
+    CAMPAIGNS_TABLE,
+    keys.campaignMember(campaignId, "PLAYER", charOwnerUserId)
+  );
+  const existingGmMember = existingMember
+    ? existingMember
+    : await getItem<CampaignMemberRecord>(
+        CAMPAIGNS_TABLE,
+        keys.campaignMember(campaignId, "GM", charOwnerUserId)
+      );
+
+  if (!existingGmMember) {
+    // Player has no membership record — create one so they appear in the GM view
+    const memberRecord: CampaignMemberRecord = {
+      ...keys.campaignMember(campaignId, "PLAYER", charOwnerUserId),
+      campaignId,
+      userId: charOwnerUserId,
+      role: "player" as CampaignMemberRole,
+      joinedAt: now,
+      userId_gsi: charOwnerUserId,
+      campaignId_gsi: campaignId,
+    };
+    const indexRecord: UserCampaignIndexRecord = {
+      ...keys.userCampaignIndex(charOwnerUserId, campaignId),
+      userId: charOwnerUserId,
+      campaignId,
+      role: "player" as CampaignMemberRole,
+      joinedAt: now,
+    };
+    await putItem(CAMPAIGNS_TABLE, memberRecord as unknown as Record<string, unknown>);
+    await putItem(CAMPAIGNS_TABLE, indexRecord as unknown as Record<string, unknown>);
+  }
 
   // Update the character record's campaignId using a condition expression
   // to guard against a race condition
   try {
     await updateItem(
       CHARACTERS_TABLE,
-      { PK: `USER#${userId}`, SK: `CHARACTER#${characterId}` },
+      { PK: `USER#${charOwnerUserId}`, SK: `CHARACTER#${characterId}` },
       "SET campaignId = :cid, updatedAt = :now",
       { ":cid": campaignId, ":now": now, ":null": null },
       undefined,

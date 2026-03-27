@@ -140,5 +140,7 @@ export interface UpdateMemberRoleInput {
 
 export interface AddCharacterInput {
   characterId: string;
+  /** The character owner's userId. Required when an admin adds a player's character. */
+  ownerUserId?: string;
 }
 

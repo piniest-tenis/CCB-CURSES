@@ -30,10 +30,13 @@ import { useCampaignDetail, useRemoveMember, useAddCharacterToCampaign } from "@
 import { useCampaignStore } from "@/store/campaignStore";
 import { useGameWebSocket } from "@/hooks/useGameWebSocket";
 import { usePingEffect } from "@/hooks/usePingEffect";
+import { useDiceStore } from "@/store/diceStore";
 import type { PingEvent } from "@/types/campaign";
+import type { RollResult } from "@/types/dice";
 import { MemberCard } from "@/components/campaign/MemberCard";
 import { InviteManagementModal } from "@/components/campaign/InviteManagementModal";
 import { CharacterSheet } from "@/components/character/CharacterSheet";
+import { DiceLog } from "@/components/dice/DiceLog";
 import { useCharacters } from "@/hooks/useCharacter";
 import { SheetContextMenu, type ContextMenuPosition } from "@/components/campaign/SheetContextMenu";
 import { useLongPress } from "@/hooks/useLongPress";
@@ -325,8 +328,9 @@ export default function CampaignDetailClient() {
 
   // ── WebSocket: ping sending (GM) & receiving (player) ───────────────────────
   const { triggerPing } = usePingEffect();
+  const { log: diceLog } = useDiceStore();
 
-  const { sendPing, isConnected } = useGameWebSocket(
+  const { sendPing, sendDiceRoll, isConnected } = useGameWebSocket(
     campaignId,
     wsCharacterId,
     {
@@ -339,8 +343,26 @@ export default function CampaignDetailClient() {
         },
         [myCharId, triggerPing]
       ),
+      // GM screen: received dice roll from a player → add to local log display
+      onDiceRoll: useCallback(
+        (_result: RollResult) => {
+          // The result is already broadcast via BroadcastChannel from diceStore.
+          // For the GM view we just ensure the DiceLog is visible.
+          // (Future enhancement: show whose roll it was.)
+        },
+        []
+      ),
     }
   );
+
+  // Broadcast completed rolls to the campaign WebSocket
+  const lastRollId = diceLog[0]?.id;
+  const prevBroadcastIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!lastRollId || lastRollId === prevBroadcastIdRef.current) return;
+    prevBroadcastIdRef.current = lastRollId;
+    sendDiceRoll(diceLog[0]);
+  }, [lastRollId, diceLog, sendDiceRoll]);
 
   // GM: send ping to the selected character
   const handlePingField = useCallback(
@@ -562,6 +584,9 @@ export default function CampaignDetailClient() {
           onClose={() => setShowInviteModal(false)}
         />
       )}
+
+      {/* Dice log overlay (fixed lower-left) — visible to GM and players */}
+      <DiceLog />
     </div>
   );
 }

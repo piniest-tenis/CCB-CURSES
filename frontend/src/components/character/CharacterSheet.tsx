@@ -44,6 +44,9 @@ import { CHARACTER_NAME_FIELD, CHARACTER_NOTES_FIELD } from "./editSidebarConfig
 import { EquipmentPanel }           from "./EquipmentPanel";
 import { FavorsPanel }              from "./FavorsPanel";
 import { PortraitDisplay }          from "./PortraitUpload";
+import { DiceRollerPanel }          from "@/components/dice/DiceRollerPanel";
+import { DiceLog }                  from "@/components/dice/DiceLog";
+import { useDiceStore }             from "@/store/diceStore";
 import type { Character, ClassData, CoreStatName, CustomCondition } from "@shared/types";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -388,6 +391,7 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
             <button
               type="button"
               onClick={() => router.push(`/character/${characterId}/build`)}
+              data-field-key="sheet.edit"
               className="
                 group relative shrink-0 p-1.5 rounded-md
                 text-[#b9baa3]/40 hover:text-[#577399] hover:bg-[#577399]/10
@@ -414,6 +418,7 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
               type="button"
               onClick={handleShare}
               disabled={shareState === "loading"}
+              data-field-key="sheet.share"
               className="
                 group relative shrink-0 p-1.5 rounded-md
                 text-[#b9baa3]/40 hover:text-[#577399] hover:bg-[#577399]/10
@@ -469,7 +474,7 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
 
         {/* Evasion + Armor Score — derived stats in the header */}
         <div className="flex-shrink-0 flex gap-2">
-          <div className="flex flex-col items-center gap-1">
+          <div className="flex flex-col items-center gap-1" data-field-key="sheet.evasion">
             <span className="text-xs uppercase tracking-widest text-parchment-500 font-medium hidden sm:block">
               Evasion
             </span>
@@ -480,7 +485,7 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
               {activeCharacter.derivedStats.evasion}
             </output>
           </div>
-          <div className="flex flex-col items-center gap-1">
+          <div className="flex flex-col items-center gap-1" data-field-key="sheet.armor">
             <span className="text-xs uppercase tracking-widest text-parchment-500 font-medium hidden sm:block">
               Armor
             </span>
@@ -494,7 +499,7 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
         </div>
 
         {/* Conditions — compact column, same width as Level */}
-        <div className="flex-shrink-0 flex flex-col items-center gap-1">
+        <div className="flex-shrink-0 flex flex-col items-center gap-1" data-field-key="sheet.conditions">
           <span className="text-xs uppercase tracking-widest text-parchment-500 font-medium hidden sm:block">
             Conditions
           </span>
@@ -537,7 +542,7 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
         </div>
 
         {/* Level — flex-shrink-0 so it never wraps into the name */}
-        <div className="flex-shrink-0 flex flex-col items-center gap-1" role="group" aria-label="Character Level">
+        <div className="flex-shrink-0 flex flex-col items-center gap-1" role="group" aria-label="Character Level" data-field-key="sheet.level">
           <span className="text-xs uppercase tracking-widest text-parchment-500 font-medium hidden sm:block">
             Level
           </span>
@@ -653,9 +658,10 @@ function FeatureActionButton({
 interface FeaturesPanelProps {
   classData:   ClassData | null | undefined;
   characterId: string;
+  onRollQueued?: () => void;
 }
 
-function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
+function FeaturesPanel({ classData, characterId, onRollQueued }: FeaturesPanelProps) {
   const { activeCharacter } = useCharacterStore();
 
   // Fetch multiclass class data when the character has multiclassed
@@ -727,7 +733,7 @@ function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
 
       {/* Class Features */}
       {(classData.classFeatures?.length ?? 0) > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-2" data-field-key="features.class">
           {classData.classFeatures.length > 1 && (
             <h3 className="text-xs font-semibold uppercase tracking-wider text-[#577399]">
               Class Features
@@ -776,7 +782,7 @@ function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
 
       {/* Hope Feature — always has a hopeCost; always gets an action button */}
       {classData.hopeFeature && (
-        <div className="rounded-lg border border-[#577399]/30 bg-[#577399]/8 p-4 space-y-3">
+        <div className="rounded-lg border border-[#577399]/30 bg-[#577399]/8 p-4 space-y-3" data-field-key="features.hope">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-serif text-sm font-semibold text-[#f7f7ff]">
@@ -804,7 +810,7 @@ function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
 
       {/* Subclass features */}
       {activeSubclass && (
-        <div className="space-y-2">
+        <div className="space-y-2" data-field-key="features.subclass">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-[#577399]">
             {activeSubclass.name} — Subclass Features
           </h3>
@@ -991,8 +997,8 @@ function FeaturesPanel({ classData, characterId }: FeaturesPanelProps) {
       )}
 
       {/* Domain loadout */}
-      <div>
-        <DomainLoadout />
+      <div data-field-key="loadout.domains">
+        <DomainLoadout onRollQueued={onRollQueued} />
       </div>
     </section>
   );
@@ -1166,6 +1172,15 @@ function CharacterSheetContent({
   setLevelUpOpen,
 }: CharacterSheetContentProps) {
   const { activeCharacter } = useCharacterStore();
+  const { stagedRequest } = useDiceStore();
+  const [diceModalOpen, setDiceModalOpen] = useState(false);
+
+  // Auto-open the dice modal whenever something stages a roll
+  useEffect(() => {
+    if (stagedRequest) {
+      setDiceModalOpen(true);
+    }
+  }, [stagedRequest]);
 
   if (!activeCharacter) return null;
 
@@ -1173,6 +1188,8 @@ function CharacterSheetContent({
   const spellcastTrait = classData?.subclasses.find(
     (sc) => sc.subclassId === activeCharacter.subclassId
   )?.spellcastTrait ?? null;
+
+  const handleRollQueued = () => setDiceModalOpen(true);
 
   return (
     <div className="mx-auto max-w-4xl space-y-4 pb-20">
@@ -1183,6 +1200,7 @@ function CharacterSheetContent({
           type="button"
           onClick={() => setDowntimeOpen(true)}
           aria-haspopup="dialog"
+          data-field-key="sheet.downtime"
           className="
             rounded-lg border border-[#577399]/40 bg-[#577399]/15 px-4 py-1.5
             text-sm font-semibold text-[#f7f7ff]
@@ -1215,22 +1233,22 @@ function CharacterSheetContent({
       )}
 
       {/* Core stats */}
-      <StatsPanel />
+      <StatsPanel onRollQueued={handleRollQueued} />
 
       <SheetDivider spellcastTrait={spellcastTrait} />
 
       {/* Trackers, weapons, hope, experiences */}
-      <TrackersPanel />
+      <TrackersPanel onRollQueued={handleRollQueued} />
 
       <SheetDivider spellcastTrait={spellcastTrait} />
 
       {/* Features, loadout */}
-      <FeaturesPanel classData={classData} characterId={characterId} />
+      <FeaturesPanel classData={classData} characterId={characterId} onRollQueued={handleRollQueued} />
 
       <SheetDivider spellcastTrait={spellcastTrait} />
 
       {/* Equipment and gold */}
-      <EquipmentPanel />
+      <EquipmentPanel onRollQueued={handleRollQueued} />
 
       <SheetDivider spellcastTrait={spellcastTrait} />
 
@@ -1240,7 +1258,7 @@ function CharacterSheetContent({
       <SheetDivider spellcastTrait={spellcastTrait} />
 
       {/* Companion (shown only if companionState is not null) */}
-      <CompanionPanel />
+      <CompanionPanel onRollQueued={handleRollQueued} />
 
       {/* Downtime projects */}
       <DowntimeProjectsPanel />
@@ -1281,6 +1299,15 @@ function CharacterSheetContent({
         open={downtimeOpen}
         onClose={() => setDowntimeOpen(false)}
       />
+
+      {/* Dice roller side-panel */}
+      <DiceRollerPanel
+        open={diceModalOpen}
+        onClose={() => setDiceModalOpen(false)}
+      />
+
+      {/* Dice log overlay (fixed lower-left) */}
+      <DiceLog />
     </div>
   );
 }

@@ -25,7 +25,8 @@
 
 import React, { useState } from "react";
 import { useCharacterStore } from "@/store/characterStore";
-import { useAncestry, useCommunity } from "@/hooks/useGameData";
+import { useAncestry, useCommunity, useClass, useDomainCard } from "@/hooks/useGameData";
+import { useLoadoutDamageBonuses } from "@/hooks/useLoadoutDamageBonuses";
 import { useActionButton, InlineActionError } from "./ActionButton";
 import { EditableField } from "./EditSidebar";
 import {
@@ -33,6 +34,9 @@ import {
 } from "./editSidebarConfig";
 import { ALL_ARMOR, ALL_TIER1_WEAPONS } from "@/lib/srdEquipment";
 import type { SRDArmor, SRDWeapon } from "@/lib/srdEquipment";
+import { DiceRollButton } from "@/components/dice/DiceRollButton";
+import type { RollRequest, DieSize, RollBonus } from "@/types/dice";
+import type { CoreStatName } from "@shared/types";
 
 // ─── Props helper: characterId is provided by TrackersPanel from the store ────
 
@@ -208,13 +212,19 @@ const TIER_COLOR: Record<DamageTier, string> = {
 };
 
 interface DamageCalculatorSidebarProps {
-  open:        boolean;
-  onClose:     () => void;
-  major:       number;
-  severe:      number;
-  armorMarked: number;
-  armorMax:    number;
-  characterId: string;
+  open:                 boolean;
+  onClose:              () => void;
+  major:                number;
+  severe:               number;
+  armorMarked:          number;
+  armorMax:             number;
+  characterId:          string;
+  /** CardId of the first active aura (e.g. "Valiance/aura-of-bravery"), or null */
+  activeAuraCardId:     string | null;
+  /** The character's spellcast trait key, or null if unknown */
+  spellcastTrait:       CoreStatName | null;
+  /** Resolved value of the spellcast trait stat */
+  spellcastTraitValue:  number;
 }
 
 function DamageCalculatorSidebar({
@@ -225,11 +235,45 @@ function DamageCalculatorSidebar({
   armorMarked,
   armorMax,
   characterId,
+  activeAuraCardId,
+  spellcastTrait,
+  spellcastTraitValue,
 }: DamageCalculatorSidebarProps) {
   const [damage, setDamage]         = React.useState<string>("");
   const [useArmor, setUseArmor]     = React.useState(false);
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [isPending, setIsPending]   = React.useState(false);
+
+  // ── Aura maintenance roll ──────────────────────────────────────────────────
+  // Parse the domain and card id from the composite cardId string.
+  const auraRef = React.useMemo(() => {
+    if (!activeAuraCardId) return { domain: undefined, id: undefined };
+    const parts = activeAuraCardId.includes("/") ? activeAuraCardId.split("/") : null;
+    return { domain: parts?.[0], id: parts?.[1] ?? activeAuraCardId };
+  }, [activeAuraCardId]);
+
+  const { data: auraCard } = useDomainCard(auraRef.domain, auraRef.id);
+
+  // Parse "Maintenance Difficulty (N)" from card description
+  const maintenanceDifficulty = React.useMemo(() => {
+    if (!auraCard) return null;
+    const m = auraCard.description.match(/Maintenance\s+Difficulty\s*\((\d+)\)/i);
+    return m ? parseInt(m[1], 10) : null;
+  }, [auraCard]);
+
+  const maintenanceRollRequest: RollRequest | null =
+    maintenanceDifficulty !== null && spellcastTrait !== null
+      ? {
+          label:      `${auraCard?.name ?? "Aura"} Maintenance`,
+          type:       "action",
+          dice: [
+            { size: "d12" as const, role: "hope" as const, label: "Hope" },
+            { size: "d12" as const, role: "fear" as const, label: "Fear" },
+          ],
+          modifier:   spellcastTraitValue,
+          difficulty: maintenanceDifficulty,
+        }
+      : null;
   const headingId  = React.useId();
   const panelRef   = React.useRef<HTMLDivElement>(null);
   const inputRef   = React.useRef<HTMLInputElement>(null);
@@ -487,6 +531,26 @@ function DamageCalculatorSidebar({
             </p>
           )}
 
+          {/* Maintenance Roll — shown when an aura is active */}
+          {maintenanceRollRequest && (
+            <div className="rounded-xl border border-[#577399]/20 bg-[#b9baa3]/[0.04] px-4 py-3 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] sidebar-text">
+                Active Aura — {auraCard?.name}
+              </p>
+              <p className="text-sm sidebar-text-secondary">
+                Difficulty {maintenanceDifficulty} ·{" "}
+                {spellcastTrait
+                  ? `${spellcastTrait.charAt(0).toUpperCase() + spellcastTrait.slice(1)} +${spellcastTraitValue}`
+                  : "Spellcast"}
+              </p>
+              <DiceRollButton
+                rollRequest={maintenanceRollRequest}
+                variant="badge"
+                label="Maintenance Roll"
+              />
+            </div>
+          )}
+
           {actionError && (
             <p role="alert" className="rounded-lg border border-[#fe5f55]/40 bg-[#fe5f55]/10 px-3 py-2 text-sm text-[#fe5f55]">
               {actionError}
@@ -537,14 +601,26 @@ function DamageCalculatorSidebar({
 // A calculator button opens DamageCalculatorSidebar.
 
 interface DamageThresholdBarProps {
-  major:       number;
-  severe:      number;
-  armorMarked: number;
-  armorMax:    number;
-  characterId: string;
+  major:                number;
+  severe:               number;
+  armorMarked:          number;
+  armorMax:             number;
+  characterId:          string;
+  activeAuraCardId:     string | null;
+  spellcastTrait:       CoreStatName | null;
+  spellcastTraitValue:  number;
 }
 
-function DamageThresholdBar({ major, severe, armorMarked, armorMax, characterId }: DamageThresholdBarProps) {
+function DamageThresholdBar({
+  major,
+  severe,
+  armorMarked,
+  armorMax,
+  characterId,
+  activeAuraCardId,
+  spellcastTrait,
+  spellcastTraitValue,
+}: DamageThresholdBarProps) {
   const [calcOpen, setCalcOpen] = React.useState(false);
 
   return (
@@ -624,6 +700,9 @@ function DamageThresholdBar({ major, severe, armorMarked, armorMax, characterId 
         armorMarked={armorMarked}
         armorMax={armorMax}
         characterId={characterId}
+        activeAuraCardId={activeAuraCardId}
+        spellcastTrait={spellcastTrait}
+        spellcastTraitValue={spellcastTraitValue}
       />
     </>
   );
@@ -845,14 +924,51 @@ function WeaponSidebar({ open, onClose, slot }: WeaponSidebarProps) {
   );
 }
 
+// ─── parseDamageDie ──────────────────────────────────────────────────────────
+// Splits a damageDie string like "d8", "d10+3", "2d6" into a valid DieSize and
+// an optional flat bonus.  Returns null if the string is unrecognisable.
+function parseDamageDie(raw: string): { size: DieSize; flat: number } | null {
+  const m = raw.match(/^(?:\d+)?(d(?:4|6|8|10|12|20))(([+-]\d+))?$/i);
+  if (!m) return null;
+  return {
+    size: m[1].toLowerCase() as DieSize,
+    flat: m[3] ? parseInt(m[3], 10) : 0,
+  };
+}
+
+// ─── parseWeaponAttackBonuses ────────────────────────────────────────────────
+// Parses known weapon feature strings for attack roll bonuses.
+// Returns an array of RollBonus objects (may be empty).
+//
+// Recognised patterns (SRD):
+//   "Reliable: +1 to attack rolls"  → { label: "Reliable", value: 1 }
+//   Any "FeatureName: [+/-]N to attack rolls" pattern
+function parseWeaponAttackBonuses(feature: string | null): RollBonus[] {
+  if (!feature) return [];
+  const bonuses: RollBonus[] = [];
+  // Match patterns like "Label: +N to attack rolls" or "Label: -N to attack rolls"
+  const attackBonusPattern = /([A-Za-z][A-Za-z\s]*):\s*([+-]?\d+)\s+to\s+attack\s+rolls?/gi;
+  let match: RegExpExecArray | null;
+  while ((match = attackBonusPattern.exec(feature)) !== null) {
+    const label = match[1].trim();
+    const value = parseInt(match[2], 10);
+    if (!isNaN(value)) {
+      bonuses.push({ label, value });
+    }
+  }
+  return bonuses;
+}
+
+
 // ─── WeaponCard ───────────────────────────────────────────────────────────────
 // Looks up the SRD record by weaponId and renders it. Opens WeaponSidebar.
 
 interface WeaponCardProps {
   slot: "primary" | "secondary";
+  onRollQueued?: () => void;
 }
 
-function WeaponCard({ slot }: WeaponCardProps) {
+function WeaponCard({ slot, onRollQueued }: WeaponCardProps) {
   const { activeCharacter } = useCharacterStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -870,14 +986,75 @@ function WeaponCard({ slot }: WeaponCardProps) {
     ? `Edit ${slot} weapon: ${srdWeapon.name}${kickerParts ? `. ${kickerParts}` : ""}`
     : `Add ${slot} weapon — tap to select from inventory`;
 
+  // Build roll requests if a weapon is equipped
+  const proficiency = activeCharacter.proficiency ?? 1;
+
+  // Loadout-derived damage bonuses (from domain cards with resource costs)
+  const loadoutBonuses = useLoadoutDamageBonuses(
+    activeCharacter.domainLoadout,
+    proficiency,
+  );
+
+  // Parse the damage die safely (e.g. "d10+3" → size:"d10", flat:3)
+  const parsedDie = srdWeapon ? parseDamageDie(srdWeapon.damageDie) : null;
+
+  const damageRollRequest: RollRequest | null = (srdWeapon && parsedDie)
+    ? {
+        label:    `${srdWeapon.name} Damage`,
+        type:     "damage",
+        dice:     Array.from({ length: proficiency }, () => ({
+          size:  parsedDie.size,
+          role:  "damage" as const,
+          label: srdWeapon.name,
+        })),
+        modifier: parsedDie.flat,
+        ...(loadoutBonuses.length > 0 ? { bonuses: loadoutBonuses } : {}),
+      }
+    : null;
+
+  // Attack roll: 2×d12 (hope + fear) with the weapon's trait stat as modifier
+  const traitKey = srdWeapon ? (srdWeapon.trait.toLowerCase() as CoreStatName) : null;
+  const traitValue = traitKey ? (activeCharacter.stats[traitKey] ?? 0) : 0;
+  const attackBonuses = srdWeapon ? parseWeaponAttackBonuses(srdWeapon.feature) : [];
+  const attackRollRequest: RollRequest | null = srdWeapon
+    ? {
+        label: `${srdWeapon.name} Attack`,
+        type:  "action",
+        dice: [
+          { size: "d12" as const, role: "hope"  as const, label: "Hope" },
+          { size: "d12" as const, role: "fear"  as const, label: "Fear" },
+        ],
+        modifier: traitValue,
+        ...(attackBonuses.length > 0 ? { bonuses: attackBonuses } : {}),
+      }
+    : null;
+
   return (
     <>
       <div className="rounded-lg border border-[#577399]/20 bg-slate-850 shadow-card overflow-hidden">
-        {/* Slot label */}
-        <div className="px-3 pt-2 pb-1 border-b border-[#577399]/20">
+        {/* Slot label + roll buttons */}
+        <div className="px-3 pt-2 pb-1 border-b border-[#577399]/20 flex items-center justify-between gap-2">
           <span className="text-xs font-semibold uppercase tracking-wider text-[#577399]">
             {slot === "primary" ? "Primary Weapon" : "Secondary Weapon"}
           </span>
+          <div className="flex items-center gap-1">
+            {attackRollRequest && (
+              <DiceRollButton
+                rollRequest={attackRollRequest}
+                onRollQueued={onRollQueued}
+                variant="badge"
+                label="Attack"
+              />
+            )}
+            {damageRollRequest && (
+              <DiceRollButton
+                rollRequest={damageRollRequest}
+                onRollQueued={onRollQueued}
+                variant="badge"
+                label="Damage"
+              />
+            )}
+          </div>
         </div>
 
         {/* Single clickable body */}
@@ -1570,7 +1747,7 @@ function HeritageSection() {
         aria-label="Ancestry and Community Features"
       >
         {features.map((feature) => (
-          <div key={feature.key} role="listitem" className="h-full">
+          <div key={feature.key} role="listitem" className="h-full" data-field-key={`trackers.heritage.${feature.key}`}>
             <HeritageFeature
               featureName={feature.featureName}
               featureText={feature.featureText}
@@ -1586,9 +1763,32 @@ function HeritageSection() {
 
 // ─── TrackersPanel ────────────────────────────────────────────────────────────
 
-export function TrackersPanel() {
+interface TrackersPanelProps {
+  onRollQueued?: () => void;
+}
+
+export function TrackersPanel({ onRollQueued }: TrackersPanelProps) {
   const { activeCharacter, updateTracker, updateField } = useCharacterStore();
   const characterId = useCharacterId();
+
+  // Spellcast trait — needed for aura maintenance rolls.
+  // useClass must be called unconditionally (Rules of Hooks).
+  const { data: classData } = useClass(activeCharacter?.classId ?? undefined);
+  const spellcastTrait: CoreStatName | null = React.useMemo(() => {
+    if (!activeCharacter || !classData) return null;
+    return (
+      classData.subclasses.find(
+        (s) => s.subclassId === activeCharacter.subclassId
+      )?.spellcastTrait ?? null
+    );
+  }, [classData, activeCharacter]);
+  const spellcastTraitValue =
+    spellcastTrait && activeCharacter
+      ? (activeCharacter.stats[spellcastTrait] ?? 0)
+      : 0;
+
+  // First active aura card id (composite "Domain/cardId" format)
+  const activeAuraCardId = activeCharacter?.activeAuras?.[0] ?? null;
 
   if (!activeCharacter) return null;
 
@@ -1605,7 +1805,7 @@ export function TrackersPanel() {
       </h2>
 
       {/* Damage Thresholds — inline bar */}
-      <div>
+      <div data-field-key="trackers.damage">
         <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-parchment-500">
           Damage Thresholds
         </h3>
@@ -1615,6 +1815,9 @@ export function TrackersPanel() {
           armorMarked={trackers.armor.marked}
           armorMax={derivedStats.armor}
           characterId={characterId}
+          activeAuraCardId={activeAuraCardId}
+          spellcastTrait={spellcastTrait}
+          spellcastTraitValue={spellcastTraitValue}
         />
         <p className="mt-1.5 text-sm text-parchment-500 italic">
           Derived from armor base threshold + level (SRD p. 3, 22).
@@ -1671,7 +1874,7 @@ export function TrackersPanel() {
           </div>
 
           {/* Proficiency — read-only */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3" data-field-key="trackers.proficiency">
             <div
               className="h-10 w-10 rounded-lg border border-[#577399]/40 bg-slate-900 flex items-center justify-center shadow-inner"
               aria-label={`Proficiency: ${activeCharacter.proficiency ?? 1}`}
@@ -1689,14 +1892,16 @@ export function TrackersPanel() {
 
         {/* ── Right: Weapons + Armor ── */}
         <div className="flex flex-col gap-3">
-          <WeaponCard slot="primary" />
-          <WeaponCard slot="secondary" />
-          <ArmorCard />
+          <div data-field-key="trackers.weapons.primary"><WeaponCard slot="primary" onRollQueued={onRollQueued} /></div>
+          <div data-field-key="trackers.weapons.secondary"><WeaponCard slot="secondary" onRollQueued={onRollQueued} /></div>
+          <div data-field-key="trackers.weapons.armor"><ArmorCard /></div>
         </div>
       </div>
 
        {/* Heritage Features (ancestry + community) */}
-       <HeritageSection />
+       <div data-field-key="trackers.heritage">
+         <HeritageSection />
+       </div>
 
       {/* Experiences */}
       <ExperiencesList />

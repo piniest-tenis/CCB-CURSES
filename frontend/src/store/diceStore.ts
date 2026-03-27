@@ -1,0 +1,154 @@
+/**
+ * src/store/diceStore.ts
+ *
+ * Zustand store for the 3D dice roller.
+ * Manages the roll lifecycle: request → animation → resolve → log.
+ *
+ * SRD rules applied in resolveRoll:
+ *   - Critical: both d12 dice (hope + fear) show the same value (SRD p.14)
+ *   - Hope / Fear: shown as die values only — no success/failure judgement
+ *     (the system does not know the GM's difficulty target)
+ *   - Damage / generic rolls: no outcome classification
+ */
+
+import { create } from "zustand";
+import type {
+  DiceStore,
+  RollRequest,
+  RollResult,
+  DieResult,
+  ActionOutcome,
+} from "@/types/dice";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function nanoid(): string {
+  return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+}
+
+function classifyOutcome(
+  dice: DieResult[],
+  total: number,
+  difficulty: number | undefined,
+  type: RollRequest["type"]
+): { outcome?: ActionOutcome; hopeValue?: number; fearValue?: number } {
+  if (type !== "action" && type !== "reaction") return {};
+
+  const hopeDie = dice.find((d) => d.role === "hope");
+  const fearDie = dice.find((d) => d.role === "fear");
+
+  if (!hopeDie || !fearDie) return {};
+
+  const hope = hopeDie.value;
+  const fear = fearDie.value;
+
+  // SRD p.14: Critical — both dice show the same value
+  if (hope === fear) {
+    return { outcome: "critical", hopeValue: hope, fearValue: fear };
+  }
+
+  // Return hope/fear values only — success/failure requires knowing the
+  // GM's difficulty target which the client does not track.
+  return { hopeValue: hope, fearValue: fear };
+}
+
+// ─── Store ────────────────────────────────────────────────────────────────────
+
+export const useDiceStore = create<DiceStore>((set, get) => ({
+  // ── State ──────────────────────────────────────────────────────────────────
+  isRolling:      false,
+  pendingRequest: null,
+  stagedRequest:  null,
+  lastResult:     null,
+  log:            [],
+
+  // ── stageRoll ──────────────────────────────────────────────────────────────
+  // Sets the staged request so the pre-roll modal can display it (Phase 1).
+  // Does NOT start the animation — that happens when the user clicks "Roll!".
+  stageRoll: (req: RollRequest) => {
+    set({ stagedRequest: req });
+  },
+
+  // ── clearStagedRoll ────────────────────────────────────────────────────────
+  clearStagedRoll: () => {
+    set({ stagedRequest: null });
+  },
+
+  // ── requestRoll ────────────────────────────────────────────────────────────
+  requestRoll: (req: RollRequest) => {
+    if (get().isRolling) return; // guard — only one roll at a time
+    set({ isRolling: true, pendingRequest: req, stagedRequest: null });
+  },
+
+  // ── resolveRoll ────────────────────────────────────────────────────────────
+  // Called by DiceRoller once dice.js fires the "result" callback with raw values.
+  // rawValues is an array parallel to req.dice (one int per die).
+  resolveRoll: (rawValues: number[]) => {
+    const { pendingRequest } = get();
+    if (!pendingRequest) {
+      set({ isRolling: false });
+      return;
+    }
+
+    const req = pendingRequest;
+
+    // Build per-die results
+    const diceResults: DieResult[] = req.dice.map((spec, i) => ({
+      size:  spec.size,
+      role:  spec.role,
+      value: rawValues[i] ?? 1,
+      label: spec.label,
+    }));
+
+    // Sum all dice + flat modifier.
+    // "disadvantage" dice are SUBTRACTED from the total (SRD p.20).
+    const diceSum = diceResults.reduce((acc, d) => {
+      return d.role === "disadvantage" ? acc - d.value : acc + d.value;
+    }, 0);
+    const total    = diceSum + (req.modifier ?? 0);
+
+    // SRD outcome classification
+    const { outcome, hopeValue, fearValue } = classifyOutcome(
+      diceResults,
+      total,
+      req.difficulty,
+      req.type
+    );
+
+    const result: RollResult = {
+      id:        nanoid(),
+      timestamp: new Date().toISOString(),
+      request:   req,
+      dice:      diceResults,
+      total,
+      outcome,
+      hopeValue,
+      fearValue,
+    };
+
+    // Keep log capped at 50 most-recent entries
+    set((state) => ({
+      isRolling:      false,
+      pendingRequest: null,
+      lastResult:     result,
+      log:            [result, ...state.log].slice(0, 50),
+    }));
+
+    // Broadcast to OBS BroadcastChannel so dice-log overlay page receives it
+    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+      try {
+        const ch = new BroadcastChannel("dh-dice-log");
+        ch.postMessage({ type: "ROLL_RESULT", result });
+        ch.close();
+      } catch {
+        // BroadcastChannel not available in this context — ignore
+      }
+    }
+  },
+
+  // ── clearLog ──────────────────────────────────────────────────────────────
+  clearLog: () => set({ log: [], lastResult: null }),
+
+  // ── resetRolling ──────────────────────────────────────────────────────────
+  resetRolling: () => set({ isRolling: false, pendingRequest: null }),
+}));
