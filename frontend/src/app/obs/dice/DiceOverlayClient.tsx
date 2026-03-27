@@ -14,6 +14,8 @@
  *       DiceRoller calls finishAnimation() when physics settle — no result
  *       computed, no ROLL_RESULT emitted, log untouched.
  *   3. When animation completes: hold 3 s → 1 s CSS fade-out → opacity 0
+ *   4. On a critical roll (both d12s match): goldenrod inset glow pulses
+ *      over the canvas during rolling + holding, then fades out with the rest.
  *
  * The DiceRoller canvas fills 100vw × 100vh with no border, no rounded corners.
  */
@@ -28,6 +30,9 @@ const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL ?? "";
 const MAX_RECONNECT_ATTEMPTS = 3;
 const BASE_BACKOFF_MS = 1_000;
 
+// Goldenrod crit glow colour
+const CRIT_COLOR = "218, 165, 32"; // RGB components of #DAA520
+
 type FadeState = "idle" | "rolling" | "holding" | "fading";
 
 export default function DiceOverlayClient() {
@@ -36,12 +41,14 @@ export default function DiceOverlayClient() {
   const channelName  = campaignId ? `dh-dice-${campaignId}` : "dh-dice";
 
   const isRolling    = useDiceStore((s) => s.isRolling);
-  const [fade, setFade] = useState<FadeState>("idle");
+  const [fade, setFade]   = useState<FadeState>("idle");
+  const [isCrit, setIsCrit] = useState(false);
   const timerRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevRolling  = useRef(false);
 
   // ── Shared handler for incoming roll results (WS or BroadcastChannel) ────────
   function handleRollResult(result: RollResult) {
+    setIsCrit(result.outcome === "critical");
     const rawValues = result.dice.map((d) => d.value);
     useDiceStore.getState().playAnimation(result.request, rawValues);
   }
@@ -128,7 +135,10 @@ export default function DiceOverlayClient() {
       setFade("holding");
       timerRef.current = setTimeout(() => {
         setFade("fading");
-        timerRef.current = setTimeout(() => setFade("idle"), 1000);
+        timerRef.current = setTimeout(() => {
+          setFade("idle");
+          setIsCrit(false); // reset crit state after full fade
+        }, 1000);
       }, 3000);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -140,18 +150,46 @@ export default function DiceOverlayClient() {
   const opacity    = fade === "idle" ? 0 : 1;
   const transition = fade === "fading" ? "opacity 1s ease-out" : "none";
 
+  // Crit glow is visible during rolling + holding; fades with the outer wrapper
+  const critGlowOpacity = (isCrit && fade !== "idle") ? 1 : 0;
+  const critGlowTransition = fade === "fading" ? "opacity 1s ease-out" : "opacity 0.3s ease-in";
+
   return (
-    <div
-      style={{
-        position:   "fixed",
-        inset:      0,
-        background: "transparent",
-        overflow:   "hidden",
-        opacity,
-        transition,
-      }}
-    >
-      <DiceRoller fullBleed transparent animationOnly />
-    </div>
+    <>
+      {/* Keyframe for the inset pulse — injected once, no Tailwind needed */}
+      <style>{`
+        @keyframes crit-pulse {
+          0%   { box-shadow: inset 0 0 60px 20px rgba(${CRIT_COLOR}, 0.55); }
+          50%  { box-shadow: inset 0 0 120px 50px rgba(${CRIT_COLOR}, 0.85); }
+          100% { box-shadow: inset 0 0 60px 20px rgba(${CRIT_COLOR}, 0.55); }
+        }
+      `}</style>
+
+      <div
+        style={{
+          position:   "fixed",
+          inset:      0,
+          background: "transparent",
+          overflow:   "hidden",
+          opacity,
+          transition,
+        }}
+      >
+        <DiceRoller fullBleed transparent animationOnly />
+
+        {/* Goldenrod inset glow — only visible on crit */}
+        <div
+          aria-hidden="true"
+          style={{
+            position:   "absolute",
+            inset:      0,
+            pointerEvents: "none",
+            opacity:    critGlowOpacity,
+            transition: critGlowTransition,
+            animation:  (isCrit && fade !== "idle") ? "crit-pulse 1.4s ease-in-out infinite" : "none",
+          }}
+        />
+      </div>
+    </>
   );
 }
