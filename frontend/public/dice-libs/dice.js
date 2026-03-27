@@ -157,6 +157,12 @@ const DICE = (function() {
         this.h = this.ch;
         this.aspect = Math.min(this.cw / this.w, this.ch / this.h);
         vars.scale = Math.sqrt(this.w * this.w + this.h * this.h) / 8;
+        // Cap scale so the largest die (d4 at scale×1.2 radius) never exceeds
+        // 20% of the smaller half-dimension.  This prevents dice from
+        // overwhelming small canvases and keeps spawns inside physics walls.
+        var minHalf = Math.min(this.w, this.h);
+        var maxScale = (minHalf * 0.20) / 1.2;   // largest multiplier is 1.2 (d4)
+        if (vars.scale > maxScale) vars.scale = maxScale;
 
         this.renderer.setSize(this.cw * 2, this.ch * 2);
 
@@ -307,25 +313,41 @@ const DICE = (function() {
 
     that.dice_box.prototype.generate_vectors = function(notation, vector, boost) {
         var vectors = [];
+
+        // Walls are at ±0.93 of each half-dimension.  The largest die bounding
+        // radius is vars.scale * 1.2 (d4).  We account for that so no part of
+        // the die geometry spawns outside or touching a wall.
+        var dieRadius = vars.scale * 1.2;
+        var wallX = this.w * 0.93;
+        var wallY = this.h * 0.93;
+        // Maximum spawn |pos| so that the die bounding sphere stays inside walls.
+        var safeMaxX = Math.max(wallX - dieRadius, this.w * 0.1);
+        var safeMaxY = Math.max(wallY - dieRadius, this.h * 0.1);
+
+        // Cap boost so per-step displacement stays under half the wall-to-spawn
+        // gap.  At frame_rate 1/60 the displacement per step is boost/60, so:
+        //   boost/60 < gap/2  →  boost < gap * 30
+        // where gap = min(wallX - safeMaxX, wallY - safeMaxY).
+        var gap = Math.min(wallX - safeMaxX, wallY - safeMaxY);
+        var maxBoost = Math.max(gap * 30, 50);   // floor of 50 keeps tiny canvases usable
+        if (boost > maxBoost) boost = maxBoost;
+
         for (var i in notation.set) {
             var vec = make_random_vector(vector);
-            // Spawn at 70% of the half-dimension so dice always start well
-            // inside the physics walls (which are at 93%).
+            // Spawn at 70% of the safe-max so dice start well inside walls.
             var pos = {
-                x: this.w * (vec.x > 0 ? -1 : 1) * 0.7,
-                y: this.h * (vec.y > 0 ? -1 : 1) * 0.7,
+                x: safeMaxX * (vec.x > 0 ? -1 : 1) * 0.7,
+                y: safeMaxY * (vec.y > 0 ? -1 : 1) * 0.7,
                 z: rnd() * 200 + 200
             };
             var projector = Math.abs(vec.x / vec.y);
             if (projector > 1.0) pos.y /= projector; else pos.x *= projector;
 
-            // Clamp spawn to ±85% of half-dimensions as a hard safety net.
-            var maxX = this.w * 0.85;
-            var maxY = this.h * 0.85;
-            if (pos.x >  maxX) pos.x =  maxX;
-            if (pos.x < -maxX) pos.x = -maxX;
-            if (pos.y >  maxY) pos.y =  maxY;
-            if (pos.y < -maxY) pos.y = -maxY;
+            // Hard-clamp spawn to the safe maximum (die centre inside wall minus die radius).
+            if (pos.x >  safeMaxX) pos.x =  safeMaxX;
+            if (pos.x < -safeMaxX) pos.x = -safeMaxX;
+            if (pos.y >  safeMaxY) pos.y =  safeMaxY;
+            if (pos.y < -safeMaxY) pos.y = -safeMaxY;
 
             var velvec = make_random_vector(vector);
             // Ensure the horizontal velocity component points toward the centre
