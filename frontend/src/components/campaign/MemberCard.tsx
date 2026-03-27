@@ -117,10 +117,10 @@ export function MemberCard({
           )}
         </div>
 
-        {/* GM actions — only visible to GMs for non-primary-GM members */}
-        {isGm && !isPrimaryGm && (onRemove || onUnassignCharacter) && (
+        {/* GM actions */}
+        {isGm && (onUnassignCharacter || (!isPrimaryGm && onRemove)) && (
           <div className="flex flex-col items-end gap-1 shrink-0">
-            {/* Unassign character — only shown when the member has a character */}
+            {/* Unassign character — shown for any member with a character (including primary GM) */}
             {onUnassignCharacter && member.characterId && (
               <button
                 type="button"
