@@ -27,15 +27,19 @@ import React, { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { useCampaignDetail, useRemoveMember, useAddCharacterToCampaign } from "@/hooks/useCampaigns";
-import { useCampaignStore } from "@/store/campaignStore";
+import { useCampaignStore, type CampaignTab } from "@/store/campaignStore";
 import { useGameWebSocket } from "@/hooks/useGameWebSocket";
 import { usePingEffect } from "@/hooks/usePingEffect";
 import { useDiceStore } from "@/store/diceStore";
+import { useEncounterStore } from "@/store/encounterStore";
 import type { PingEvent } from "@/types/campaign";
+import type { Adversary } from "@/types/adversary";
 import type { RollResult } from "@/types/dice";
 import { MemberCard } from "@/components/campaign/MemberCard";
 import { InviteManagementModal } from "@/components/campaign/InviteManagementModal";
 import { CharacterSheet } from "@/components/character/CharacterSheet";
+import { AdversaryCatalog } from "@/components/adversary/AdversaryCatalog";
+import { EncounterConsole } from "@/components/encounter/EncounterConsole";
 import { DiceLog } from "@/components/dice/DiceLog";
 import { useCharacters } from "@/hooks/useCharacter";
 import { SheetContextMenu, type ContextMenuPosition } from "@/components/campaign/SheetContextMenu";
@@ -289,6 +293,77 @@ function AssignCharacterPanel({ campaignId }: AssignCharacterPanelProps) {
   );
 }
 
+// ─── GM Tab Bar ───────────────────────────────────────────────────────────────
+// Allows the GM to switch between Characters, Adversaries, and Encounter tabs.
+// Players only see the Characters view (no tab bar shown).
+
+const GM_TABS: { id: CampaignTab; label: string; icon: string }[] = [
+  { id: "characters", label: "Characters", icon: "👤" },
+  { id: "adversaries", label: "Adversaries", icon: "👹" },
+  { id: "encounter", label: "Encounter", icon: "⚔️" },
+];
+
+interface GmTabBarProps {
+  activeTab: CampaignTab;
+  onTabChange: (tab: CampaignTab) => void;
+  /** Number of adversaries in the active encounter (shown as badge). */
+  encounterCount: number;
+}
+
+function GmTabBar({ activeTab, onTabChange, encounterCount }: GmTabBarProps) {
+  return (
+    <div
+      role="tablist"
+      aria-label="Campaign view"
+      className="
+        flex overflow-x-auto scrollbar-hide gap-0.5
+        -mx-4 px-4 sm:mx-0 sm:px-0 sm:gap-1
+        mb-4 border-b border-slate-800/60 pb-2
+      "
+    >
+      {GM_TABS.map((tab) => {
+        const isActive = activeTab === tab.id;
+        return (
+          <button
+            key={tab.id}
+            role="tab"
+            aria-selected={isActive}
+            aria-controls={`tabpanel-${tab.id}`}
+            id={`tab-${tab.id}`}
+            onClick={() => onTabChange(tab.id)}
+            className={`
+              flex items-center gap-1.5 rounded-lg px-3 py-2
+              text-xs font-semibold whitespace-nowrap
+              transition-all duration-150
+              focus:outline-none focus:ring-2 focus:ring-[#577399]
+              ${
+                isActive
+                  ? "bg-[#577399]/15 text-[#577399] border border-[#577399]/40"
+                  : "text-[#b9baa3]/50 hover:text-[#b9baa3] hover:bg-slate-800/40 border border-transparent"
+              }
+            `}
+          >
+            <span aria-hidden="true">{tab.icon}</span>
+            {tab.label}
+            {tab.id === "encounter" && encounterCount > 0 && (
+              <span
+                className="
+                  ml-1 inline-flex items-center justify-center
+                  h-4 min-w-[1rem] rounded-full px-1
+                  text-[10px] font-bold tabular-nums
+                  bg-[#fe5f55]/20 text-[#fe5f55]
+                "
+              >
+                {encounterCount}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Main client component ────────────────────────────────────────────────────
 
 export default function CampaignDetailClient() {
@@ -303,12 +378,17 @@ export default function CampaignDetailClient() {
   const { data: campaign, isLoading, isError, error } = useCampaignDetail(campaignId);
   const removeMemberMutation = useRemoveMember(campaignId);
 
-  const { selectedCharacterId, setActiveCampaign, setSelectedCharacter } = useCampaignStore();
+  const { selectedCharacterId, activeTab, setActiveCampaign, setSelectedCharacter, setActiveTab } = useCampaignStore();
   const [showInviteModal, setShowInviteModal] = useState(false);
   /** GM-only: which character (by characterId) has force-crit armed. null = none. */
   const [forceCritCharId, setForceCritCharId] = useState<string | null>(null);
 
   const titleId = useId();
+
+  // Encounter count for tab badge
+  const encounterAdversaries = useEncounterStore(
+    (s) => s.encounter?.adversaries.filter((a) => !a.isDefeated).length ?? 0
+  );
 
   // Auth guard
   useEffect(() => {
@@ -624,42 +704,101 @@ export default function CampaignDetailClient() {
             </div>
           )}
 
-          {!isLoading && !isError && !selectedCharacterId && (
+          {!isLoading && !isError && campaign && (
             <>
-              {/* Player with no character yet → show assignment UI */}
-              {!isGm && !myCharId && campaign ? (
-                <AssignCharacterPanel campaignId={campaignId} />
-              ) : (
+              {/* GM Tab Bar — only shown to GM */}
+              {isGm && (
+                <GmTabBar
+                  activeTab={activeTab}
+                  onTabChange={setActiveTab}
+                  encounterCount={encounterAdversaries}
+                />
+              )}
+
+              {/* Tab Panels */}
+
+              {/* Characters tab (default for players, first tab for GM) */}
+              {(activeTab === "characters" || !isGm) && (
                 <div
-                  className="
-                    flex flex-col items-center justify-center
-                    min-h-[400px] rounded-2xl
-                    border border-dashed border-slate-700/50
-                    text-center space-y-3
-                  "
-                  style={{ background: "rgba(87,115,153,0.03)" }}
+                  id="tabpanel-characters"
+                  role={isGm ? "tabpanel" : undefined}
+                  aria-labelledby={isGm ? "tab-characters" : undefined}
                 >
-                  <div aria-hidden="true" className="text-4xl opacity-20">⚔️</div>
-                  <p className="font-serif text-lg text-[#f7f7ff]/60">
-                    Select a character from the roster
-                  </p>
-                  <p className="text-sm text-[#b9baa3]/40 max-w-xs">
-                    Click a member card on the left to view their character sheet.
-                  </p>
+                  {!selectedCharacterId && (
+                    <>
+                      {/* Player with no character yet → show assignment UI */}
+                      {!isGm && !myCharId ? (
+                        <AssignCharacterPanel campaignId={campaignId} />
+                      ) : (
+                        <div
+                          className="
+                            flex flex-col items-center justify-center
+                            min-h-[400px] rounded-2xl
+                            border border-dashed border-slate-700/50
+                            text-center space-y-3
+                          "
+                          style={{ background: "rgba(87,115,153,0.03)" }}
+                        >
+                          <div aria-hidden="true" className="text-4xl opacity-20">⚔️</div>
+                          <p className="font-serif text-lg text-[#f7f7ff]/60">
+                            Select a character from the roster
+                          </p>
+                          <p className="text-sm text-[#b9baa3]/40 max-w-xs">
+                            Click a member card on the left to view their character sheet.
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {selectedCharacterId && (
+                    <SheetPingWrapper
+                      characterId={selectedCharacterId}
+                      characterName={
+                        campaign?.characters.find((c) => c.characterId === selectedCharacterId)?.name ?? "Character"
+                      }
+                      isGm={isGm}
+                      onPingField={handlePingField}
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* Adversaries tab (GM only) */}
+              {isGm && activeTab === "adversaries" && (
+                <div
+                  id="tabpanel-adversaries"
+                  role="tabpanel"
+                  aria-labelledby="tab-adversaries"
+                >
+                  <AdversaryCatalog
+                    campaignId={campaignId}
+                    onAddToEncounter={(adversary: Adversary) => {
+                      // Add to encounter — create one if none exists
+                      const store = useEncounterStore.getState();
+                      if (!store.encounter) {
+                        store.createEncounter(campaignId);
+                      }
+                      store.addAdversary(adversary);
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Encounter tab (GM only) */}
+              {isGm && activeTab === "encounter" && (
+                <div
+                  id="tabpanel-encounter"
+                  role="tabpanel"
+                  aria-labelledby="tab-encounter"
+                >
+                  <EncounterConsole
+                    campaignId={campaignId}
+                    onOpenCatalog={() => setActiveTab("adversaries")}
+                  />
                 </div>
               )}
             </>
-          )}
-
-          {!isLoading && !isError && selectedCharacterId && (
-            <SheetPingWrapper
-              characterId={selectedCharacterId}
-              characterName={
-                campaign?.characters.find((c) => c.characterId === selectedCharacterId)?.name ?? "Character"
-              }
-              isGm={isGm}
-              onPingField={handlePingField}
-            />
           )}
         </main>
       </div>

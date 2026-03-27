@@ -11,14 +11,20 @@ import { create } from "zustand";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+/** Tabs available in the Campaign Detail main content area. */
+export type CampaignTab = "characters" | "adversaries" | "encounter";
+
 interface CampaignState {
   activeCampaignId:    string | null;
   selectedCharacterId: string | null;
+  /** Currently active tab in the Campaign Detail main panel (GM only). */
+  activeTab:           CampaignTab;
 }
 
 interface CampaignActions {
   setActiveCampaign:    (id: string | null) => void;
   setSelectedCharacter: (id: string | null) => void;
+  setActiveTab:         (tab: CampaignTab) => void;
   clearCampaignSession: () => void;
 }
 
@@ -30,12 +36,15 @@ export const useCampaignStore = create<CampaignStore>((set) => ({
   // ── State ────────────────────────────────────────────────────────────────
   activeCampaignId:    null,
   selectedCharacterId: null,
+  activeTab:           "characters",
 
   // ── Actions ──────────────────────────────────────────────────────────────
   setActiveCampaign: (id) => set({ activeCampaignId: id }),
 
   setSelectedCharacter: (id) => set({ selectedCharacterId: id }),
 
+  setActiveTab: (tab) => set({ activeTab: tab }),
+
   clearCampaignSession: () =>
-    set({ activeCampaignId: null, selectedCharacterId: null }),
+    set({ activeCampaignId: null, selectedCharacterId: null, activeTab: "characters" }),
 }));
