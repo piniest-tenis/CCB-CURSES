@@ -29,7 +29,11 @@ type FadeState = "idle" | "rolling" | "holding" | "fading";
 export default function DiceOverlayClient() {
   const searchParams = useSearchParams();
   const campaignId   = searchParams?.get("campaign") ?? null;
+  // Primary channel: scoped to this campaign if ?campaign= is provided.
+  // Fallback channel: "dh-dice" catches rolls made outside a campaign context
+  // (e.g. character sheet opened directly, where setCampaignId is never called).
   const channelName  = campaignId ? `dh-dice-${campaignId}` : "dh-dice";
+  const fallbackName = campaignId ? "dh-dice" : null;
 
   const isRolling    = useDiceStore((s) => s.isRolling);
   const [fade, setFade] = useState<FadeState>("idle");
@@ -39,16 +43,28 @@ export default function DiceOverlayClient() {
   // Subscribe to ROLL_RESULT so we replay with the player's exact die values.
   useEffect(() => {
     if (typeof window === "undefined" || !("BroadcastChannel" in window)) return;
-    const ch = new BroadcastChannel(channelName);
-    ch.onmessage = (evt) => {
+
+    function handleMessage(evt: MessageEvent) {
       if (evt.data?.type === "ROLL_RESULT" && evt.data.result) {
-        const result     = evt.data.result as RollResult;
-        const rawValues  = result.dice.map((d) => d.value);
+        const result    = evt.data.result as RollResult;
+        const rawValues = result.dice.map((d) => d.value);
         useDiceStore.getState().playAnimation(result.request, rawValues);
       }
+    }
+
+    const ch = new BroadcastChannel(channelName);
+    ch.onmessage = handleMessage;
+
+    // Also listen on the fallback channel so rolls made outside a campaign
+    // context (campaignId null in store → broadcast to "dh-dice") are received.
+    const fallback = fallbackName ? new BroadcastChannel(fallbackName) : null;
+    if (fallback) fallback.onmessage = handleMessage;
+
+    return () => {
+      ch.close();
+      fallback?.close();
     };
-    return () => ch.close();
-  }, [channelName]);
+  }, [channelName, fallbackName]);
 
   // Opacity lifecycle: idle(0) → rolling(1) → holding(1) → fading(0)
   useEffect(() => {
