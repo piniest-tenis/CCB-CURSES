@@ -148,6 +148,8 @@ const PatchCampaignSchema = z.object({
   name: z.string().min(1).max(80).optional(),
   description: z.string().max(500).nullable().optional(),
   schedule: SessionScheduleSchema.nullable().optional(),
+  /** GM Fear counter (SRD). Clamped 0–12. */
+  fear: z.number().int().min(0).max(12).optional(),
 });
 
 const CreateInviteSchema = z.object({
@@ -772,6 +774,10 @@ async function patchCampaign(
   if (body.schedule !== undefined) {
     updates.push("schedule = :schedule");
     vals[":schedule"] = body.schedule;
+  }
+  if (body.fear !== undefined) {
+    updates.push("currentFear = :fear");
+    vals[":fear"] = body.fear;
   }
 
   if (updates.length === 1) {

@@ -22,8 +22,12 @@ interface MemberCardProps {
   isGm: boolean;
   /** Whether the current user is removing this member (shows spinner). */
   isRemoving?: boolean;
+  /** Whether the GM is currently unassigning this member's character. */
+  isUnassigning?: boolean;
   onSelect: () => void;
   onRemove?: () => void;
+  /** GM only: remove the character assignment without removing the player. */
+  onUnassignCharacter?: () => void;
 }
 
 export function MemberCard({
@@ -33,8 +37,10 @@ export function MemberCard({
   isSelected,
   isGm,
   isRemoving = false,
+  isUnassigning = false,
   onSelect,
   onRemove,
+  onUnassignCharacter,
 }: MemberCardProps) {
   const isPrimaryGm = member.userId === primaryGmId;
 
@@ -111,33 +117,67 @@ export function MemberCard({
           )}
         </div>
 
-        {/* GM remove button — only visible to GMs for non-primary-GM members */}
-        {isGm && !isPrimaryGm && onRemove && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation(); // don't fire onSelect
-              onRemove();
-            }}
-            disabled={isRemoving}
-            aria-label={`Remove ${member.displayName} from campaign`}
-            className="
-              shrink-0 rounded px-2 py-1 text-xs
-              text-[#fe5f55]/60 hover:text-[#fe5f55] hover:bg-[#fe5f55]/10
-              disabled:opacity-40 disabled:cursor-wait
-              transition-colors
-              focus:outline-none focus:ring-2 focus:ring-[#fe5f55]/60
-            "
-          >
-            {isRemoving ? (
-              <span
-                aria-hidden="true"
-                className="inline-block h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"
-              />
-            ) : (
-              "Remove"
+        {/* GM actions — only visible to GMs for non-primary-GM members */}
+        {isGm && !isPrimaryGm && (onRemove || onUnassignCharacter) && (
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            {/* Unassign character — only shown when the member has a character */}
+            {onUnassignCharacter && member.characterId && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUnassignCharacter();
+                }}
+                disabled={isUnassigning}
+                aria-label={`Unassign ${characterName ?? "character"} from ${member.displayName}`}
+                title="Remove this character from the campaign without removing the player"
+                className="
+                  rounded px-2 py-1 text-xs
+                  text-[#DAA520]/60 hover:text-[#DAA520] hover:bg-[#DAA520]/10
+                  disabled:opacity-40 disabled:cursor-wait
+                  transition-colors
+                  focus:outline-none focus:ring-2 focus:ring-[#DAA520]/60
+                "
+              >
+                {isUnassigning ? (
+                  <span
+                    aria-hidden="true"
+                    className="inline-block h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"
+                  />
+                ) : (
+                  "Unassign"
+                )}
+              </button>
             )}
-          </button>
+            {/* Remove player from campaign entirely */}
+            {onRemove && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemove();
+                }}
+                disabled={isRemoving}
+                aria-label={`Remove ${member.displayName} from campaign`}
+                className="
+                  rounded px-2 py-1 text-xs
+                  text-[#fe5f55]/60 hover:text-[#fe5f55] hover:bg-[#fe5f55]/10
+                  disabled:opacity-40 disabled:cursor-wait
+                  transition-colors
+                  focus:outline-none focus:ring-2 focus:ring-[#fe5f55]/60
+                "
+              >
+                {isRemoving ? (
+                  <span
+                    aria-hidden="true"
+                    className="inline-block h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"
+                  />
+                ) : (
+                  "Remove"
+                )}
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>

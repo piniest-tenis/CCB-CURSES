@@ -26,7 +26,7 @@
 import React, { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
-import { useCampaignDetail, useRemoveMember, useAddCharacterToCampaign } from "@/hooks/useCampaigns";
+import { useCampaignDetail, useRemoveMember, useAddCharacterToCampaign, useRemoveCharacterFromCampaign, useUpdateCampaign } from "@/hooks/useCampaigns";
 import { useCampaignStore, type CampaignTab } from "@/store/campaignStore";
 import { useGameWebSocket } from "@/hooks/useGameWebSocket";
 import { usePingEffect } from "@/hooks/usePingEffect";
@@ -364,6 +364,208 @@ function GmTabBar({ activeTab, onTabChange, encounterCount }: GmTabBarProps) {
   );
 }
 
+// ─── FearTracker ─────────────────────────────────────────────────────────────
+// GM-only SRD Fear counter. Range 0–12, persisted via PATCH /campaigns/{id}.
+
+const FEAR_MAX = 12;
+
+interface FearTrackerProps {
+  campaignId: string;
+  currentFear: number;
+}
+
+function FearTracker({ campaignId, currentFear }: FearTrackerProps) {
+  const updateMutation = useUpdateCampaign(campaignId);
+  const [localFear, setLocalFear] = useState(currentFear);
+
+  // Keep local state in sync if the server value changes (e.g. another GM window)
+  useEffect(() => {
+    setLocalFear(currentFear);
+  }, [currentFear]);
+
+  const setFear = useCallback(
+    (next: number) => {
+      const clamped = Math.max(0, Math.min(FEAR_MAX, next));
+      setLocalFear(clamped);
+      updateMutation.mutate({ fear: clamped });
+    },
+    [updateMutation]
+  );
+
+  return (
+    <div
+      className="
+        flex items-center gap-3 rounded-xl
+        border border-[#fe5f55]/25 bg-[#fe5f55]/5
+        px-4 py-2.5 mb-4
+      "
+      aria-label={`Fear tracker: ${localFear} of ${FEAR_MAX}`}
+    >
+      {/* Label */}
+      <span className="text-xs font-semibold uppercase tracking-widest text-[#fe5f55]/70 shrink-0 select-none">
+        Fear
+      </span>
+
+      {/* Pip track */}
+      <div className="flex gap-1 flex-1" role="presentation">
+        {Array.from({ length: FEAR_MAX }).map((_, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => setFear(i < localFear ? i : i + 1)}
+            aria-label={`Set fear to ${i + 1}`}
+            className={[
+              "h-3.5 flex-1 rounded-sm transition-colors",
+              "focus:outline-none focus:ring-1 focus:ring-[#fe5f55]",
+              i < localFear
+                ? "bg-[#fe5f55]"
+                : "bg-slate-700/60 hover:bg-[#fe5f55]/30",
+            ].join(" ")}
+          />
+        ))}
+      </div>
+
+      {/* Numeric readout + stepper */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        <button
+          type="button"
+          onClick={() => setFear(localFear - 1)}
+          disabled={localFear === 0 || updateMutation.isPending}
+          aria-label="Decrease fear"
+          className="
+            h-6 w-6 rounded flex items-center justify-center
+            text-[#fe5f55] text-sm font-bold
+            border border-[#fe5f55]/30
+            hover:bg-[#fe5f55]/15 disabled:opacity-30
+            transition-colors focus:outline-none focus:ring-1 focus:ring-[#fe5f55]
+          "
+        >
+          −
+        </button>
+        <span
+          className="w-8 text-center text-sm font-bold tabular-nums text-[#fe5f55]"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {localFear}/{FEAR_MAX}
+        </span>
+        <button
+          type="button"
+          onClick={() => setFear(localFear + 1)}
+          disabled={localFear === FEAR_MAX || updateMutation.isPending}
+          aria-label="Increase fear"
+          className="
+            h-6 w-6 rounded flex items-center justify-center
+            text-[#fe5f55] text-sm font-bold
+            border border-[#fe5f55]/30
+            hover:bg-[#fe5f55]/15 disabled:opacity-30
+            transition-colors focus:outline-none focus:ring-1 focus:ring-[#fe5f55]
+          "
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── GmDicePanel ──────────────────────────────────────────────────────────────
+// GM-only quick dice roller. Rolls are broadcast via WS with characterName "GM".
+
+const GM_DICE: { label: string; faces: number }[] = [
+  { label: "d4",  faces: 4  },
+  { label: "d6",  faces: 6  },
+  { label: "d8",  faces: 8  },
+  { label: "d10", faces: 10 },
+  { label: "d12", faces: 12 },
+  { label: "d20", faces: 20 },
+];
+
+function gmNanoid(): string {
+  return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+}
+
+interface GmDicePanelProps {
+  wsCharacterId: string;
+  onRoll: (result: RollResult) => void;
+}
+
+function GmDicePanel({ wsCharacterId, onRoll }: GmDicePanelProps) {
+  const [bonus, setBonus] = useState(0);
+  const bonusId = useId();
+
+  const roll = useCallback(
+    (faces: number) => {
+      const value = Math.floor(Math.random() * faces) + 1;
+      const total = value + bonus;
+      const result: RollResult = {
+        id: gmNanoid(),
+        timestamp: new Date().toISOString(),
+        request: {
+          label: `GM d${faces}`,
+          type: "generic",
+          dice: [{ size: `d${faces}` as import("@/types/dice").DieSize, role: "generic" }],
+          modifier: bonus || undefined,
+          characterName: "GM",
+        },
+        dice: [{ size: `d${faces}` as import("@/types/dice").DieSize, role: "generic", value }],
+        total,
+      };
+      onRoll(result);
+    },
+    [bonus, onRoll]
+  );
+
+  return (
+    <div
+      className="
+        rounded-xl border border-[#577399]/25 bg-[#577399]/5
+        px-4 py-2.5 mb-4
+      "
+      aria-label="GM dice roller"
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold uppercase tracking-widest text-[#577399]/70 shrink-0 select-none">
+          GM Roll
+        </span>
+
+        {GM_DICE.map(({ label, faces }) => (
+          <button
+            key={label}
+            type="button"
+            onClick={() => roll(faces)}
+            className="
+              rounded-lg px-3 py-1 text-xs font-semibold
+              border border-[#577399]/40 text-[#577399]
+              hover:bg-[#577399]/20 hover:border-[#577399]
+              transition-colors
+              focus:outline-none focus:ring-2 focus:ring-[#577399]
+            "
+          >
+            {label}
+          </button>
+        ))}
+
+        {/* Bonus input */}
+        <label htmlFor={bonusId} className="flex items-center gap-1 ml-auto text-xs text-[#b9baa3]/50">
+          <span className="select-none">+bonus</span>
+          <input
+            id={bonusId}
+            type="number"
+            value={bonus}
+            onChange={(e) => setBonus(Number(e.target.value))}
+            className="
+              w-14 rounded border border-slate-700/60 bg-slate-800
+              px-1.5 py-0.5 text-xs text-[#f7f7ff] text-center
+              focus:outline-none focus:ring-1 focus:ring-[#577399]
+            "
+          />
+        </label>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main client component ────────────────────────────────────────────────────
 
 export default function CampaignDetailClient() {
@@ -377,7 +579,7 @@ export default function CampaignDetailClient() {
   const { isAuthenticated, isReady, isLoading: authLoading, user } = useAuthStore();
   const { data: campaign, isLoading, isError, error } = useCampaignDetail(campaignId);
   const removeMemberMutation = useRemoveMember(campaignId);
-
+  const removeCharacterMutation = useRemoveCharacterFromCampaign(campaignId);
   const { selectedCharacterId, activeTab, setActiveCampaign, setSelectedCharacter, setActiveTab } = useCampaignStore();
   const [showInviteModal, setShowInviteModal] = useState(false);
   /** GM-only: which character (by characterId) has force-crit armed. null = none. */
@@ -482,6 +684,14 @@ export default function CampaignDetailClient() {
       setForceCritCharId(nextActive ? charId : null);
     },
     [isGm, forceCritCharId, sendForceCrit]
+  );
+
+  // GM: roll a die from the quick panel and broadcast it via WS
+  const handleGmRoll = useCallback(
+    (result: RollResult) => {
+      sendDiceRoll(result);
+    },
+    [sendDiceRoll]
   );
 
   // ── Render guards ───────────────────────────────────────────────────────────
@@ -648,12 +858,28 @@ export default function CampaignDetailClient() {
                       removeMemberMutation.isPending &&
                       removeMemberMutation.variables === member.userId
                     }
+                    isUnassigning={
+                      removeCharacterMutation.isPending &&
+                      removeCharacterMutation.variables === charId
+                    }
                     onSelect={() => {
                       if (charId) setSelectedCharacter(charId);
                     }}
                     onRemove={
                       isGm && member.userId !== campaign.primaryGmId
                         ? () => removeMemberMutation.mutate(member.userId)
+                        : undefined
+                    }
+                    onUnassignCharacter={
+                      isGm && member.role === "player" && charId
+                        ? () => {
+                            removeCharacterMutation.mutate(charId, {
+                              onSuccess: () => {
+                                // Clear selection if we just unassigned the viewed character
+                                if (selectedCharacterId === charId) setSelectedCharacter(null);
+                              },
+                            });
+                          }
                         : undefined
                     }
                   />
@@ -706,6 +932,20 @@ export default function CampaignDetailClient() {
 
           {!isLoading && !isError && campaign && (
             <>
+              {/* GM-only tools: Fear tracker + quick dice roller */}
+              {isGm && (
+                <>
+                  <FearTracker
+                    campaignId={campaignId}
+                    currentFear={campaign.currentFear ?? 0}
+                  />
+                  <GmDicePanel
+                    wsCharacterId={wsCharacterId}
+                    onRoll={handleGmRoll}
+                  />
+                </>
+              )}
+
               {/* GM Tab Bar — only shown to GM */}
               {isGm && (
                 <GmTabBar

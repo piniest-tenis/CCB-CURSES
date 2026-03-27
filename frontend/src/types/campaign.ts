@@ -49,6 +49,12 @@ export interface Campaign {
   primaryGmId: string;
   /** Recurring session schedule, or null if none has been configured. */
   schedule: SessionSchedule | null;
+  /**
+   * SRD Fear resource tracked by the GM. Range 0–12.
+   * Starts at 1 per PC at the beginning of a session; max 12; min 0.
+   * Defaults to 0 if never set.
+   */
+  currentFear?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -126,6 +132,8 @@ export interface UpdateCampaignInput {
   name?: string;
   description?: string | null;
   schedule?: SessionSchedule | null;
+  /** GM Fear counter update. Clamped 0–12 server-side. */
+  fear?: number;
 }
 
 export interface CreateInviteInput {
