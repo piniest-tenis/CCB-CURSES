@@ -11,6 +11,7 @@ import { useAuthStore } from "@/store/authStore";
 import { CharacterSheet } from "@/components/character/CharacterSheet";
 import { LoadingInterstitial } from "@/components/LoadingInterstitial";
 import { useCharacter } from "@/hooks/useCharacter";
+import { useDiceStore } from "@/store/diceStore";
 import React, { useEffect } from "react";
 import Link from "next/link";
 
@@ -33,9 +34,19 @@ export default function CharacterPage() {
   }, [isReady, isAuthenticated, router]);
 
   // Character data loading state — used to drive the interstitial overlay.
-  const { isLoading: charLoading } = useCharacter(
+  const { isLoading: charLoading, data: character } = useCharacter(
     isAuthenticated ? characterId : undefined
   );
+
+  // Scope dice broadcasts to this character's campaign so the campaign-specific
+  // OBS overlay (obs/dice?campaign=<id>) receives rolls from this sheet.
+  const setCampaignId = useDiceStore((s) => s.setCampaignId);
+  useEffect(() => {
+    if (character?.campaignId) {
+      setCampaignId(character.campaignId);
+    }
+    return () => { setCampaignId(null); };
+  }, [character?.campaignId, setCampaignId]);
 
   // Show the interstitial while auth is still resolving OR character is loading.
   const showInterstitial = !isReady || isLoading || charLoading;
