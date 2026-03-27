@@ -489,7 +489,25 @@ const DICE = (function() {
         }
     };
 
-    that.dice_box.prototype.clear = function() {
+    // fall_through_floor — called after physics settle to animate dice exiting
+    // downward through the floor plane before the canvas fades out.
+    // Sets a strong -Z velocity on each die body (gravity is on Z axis) so
+    // they visually sink off the bottom of the canvas in ~600ms.
+    // linearDamping is cleared so drag doesn't slow the fall.
+    that.dice_box.prototype.fall_through_floor = function() {
+        for (var i = 0; i < this.dices.length; i++) {
+            var body = this.dices[i].body;
+            if (!body) continue;
+            // Kill angular momentum — straight fall only
+            body.angularVelocity.set(0, 0, 0);
+            body.angularDamping = 0.0;
+            // Kill horizontal drift, strong downward Z velocity
+            body.velocity.set(body.velocity.x * 0.1, body.velocity.y * 0.1, -800);
+            body.linearDamping = 0.0;
+        }
+    };
+
+     that.dice_box.prototype.clear = function() {
         this.running = false;
         var dice;
         while ((dice = this.dices.pop())) {

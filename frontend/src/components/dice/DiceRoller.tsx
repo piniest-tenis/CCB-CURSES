@@ -74,7 +74,7 @@ const DIE_NOTATION: Record<DieSize, string> = {
 // Skips a script if a <script src="..."> for it is already in the DOM.
 
 // Bump this version string whenever dice-libs files change, to bust browser cache.
-const DICE_LIBS_VERSION = "v18";
+const DICE_LIBS_VERSION = "v19";
 const SCRIPT_SRCS = [
   `/dice-libs/three.min.js?v=${DICE_LIBS_VERSION}`,
   `/dice-libs/cannon.min.js?v=${DICE_LIBS_VERSION}`,
@@ -160,6 +160,9 @@ export function DiceRoller({
 
   const [scriptsLoaded, setScriptsLoaded] = useState(false);
   const [scriptError,   setScriptError]   = useState(false);
+  // Exit animation state: true → fade canvas out after dice fall through floor
+  const [exiting,       setExiting]       = useState(false);
+  const exitTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // For fullBleed mode: track the real viewport pixel size so dice_box.reinit()
   // sees non-zero clientWidth/clientHeight when it reads the container.
@@ -192,6 +195,10 @@ export function DiceRoller({
       return;
     }
 
+    // Reset exit animation for the new throw
+    if (exitTimerRef.current) { clearTimeout(exitTimerRef.current); exitTimerRef.current = null; }
+    setExiting(false);
+
     const notationStr = req.dice.map((d: { size: keyof typeof DIE_NOTATION }) => DIE_NOTATION[d.size]).join("+");
     const dieColors   = req.dice.map((d: { role: string }) => d.role);
     const seededValues: number[] | null = state.seededValues ?? null;
@@ -202,25 +209,49 @@ export function DiceRoller({
     // hit the iteration cap and after_roll never fired), reset it now.
     if (box.rolling) box.rolling = false;
 
+    // Shared exit animation — called from both resolve paths below.
+    // Checks prefers-reduced-motion: if reduced, skip the fall and do a fast
+    // 150ms fade instead of the full fall (600ms) + fade (300ms) sequence.
+    function triggerExitAnimation() {
+      const prefersReduced =
+        typeof window !== "undefined" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (!prefersReduced && box.fall_through_floor) {
+        box.fall_through_floor();
+        // After dice have fallen through the floor (~600ms), fade canvas out
+        exitTimerRef.current = setTimeout(() => setExiting(true), 600);
+      } else {
+        // Reduced motion: skip the fall, quick fade only
+        exitTimerRef.current = setTimeout(() => setExiting(true), 0);
+      }
+    }
+
     try {
       if (animationOnlyRef.current && seededValues && seededValues.length > 0) {
         // Seeded replay: dice land on the exact same faces as the player's roll.
         box.start_throw_seeded(
           seededValues,
-          () => { useDiceStore.getState().finishAnimation(); },
+          () => {
+            triggerExitAnimation();
+            useDiceStore.getState().finishAnimation();
+          },
           dieColors,
         );
       } else if (animationOnlyRef.current) {
         // No seeded values yet (shouldn't happen in normal flow) — free throw.
         box.start_throw(
           null,
-          () => { useDiceStore.getState().finishAnimation(); },
+          () => {
+            triggerExitAnimation();
+            useDiceStore.getState().finishAnimation();
+          },
           dieColors,
         );
       } else {
         box.start_throw(
           null,
           (notation: { result: number[] }) => {
+            triggerExitAnimation();
             useDiceStore.getState().resolveRoll(notation.result);
           },
           dieColors,
@@ -317,6 +348,7 @@ export function DiceRoller({
 
   useEffect(() => {
     return () => {
+      if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
       try { boxRef.current?.clear?.(); } catch { /* ignore */ }
       // Dispose the WebGL renderer to release GPU resources
       try { boxRef.current?.renderer?.dispose?.(); } catch { /* ignore */ }
@@ -337,8 +369,17 @@ export function DiceRoller({
         width:      viewport ? `${viewport.w}px` : "100vw",
         height:     viewport ? `${viewport.h}px` : "100vh",
         background: "transparent",
+        // Canvas-level opacity fade: 300ms ease-in after dice fall through floor.
+        // The wrapper div (DiceOverlayClient) has its own 1s fade for the full panel.
+        opacity:    exiting ? 0 : 1,
+        transition: exiting ? "opacity 300ms ease-in" : "none",
       }
-    : { width: width ? `${width}px` : "100%", height: `${height}px` };
+    : {
+        width:      width ? `${width}px` : "100%",
+        height:     `${height}px`,
+        opacity:    exiting ? 0 : 1,
+        transition: exiting ? "opacity 300ms ease-in" : "none",
+      };
 
   return (
     <div
