@@ -140,6 +140,19 @@ export function DiceRoller({
   const [scriptsLoaded, setScriptsLoaded] = useState(false);
   const [scriptError,   setScriptError]   = useState(false);
 
+  // For fullBleed mode: track the real viewport pixel size so dice_box.reinit()
+  // sees non-zero clientWidth/clientHeight when it reads the container.
+  const [viewport, setViewport] = useState<{ w: number; h: number } | null>(null);
+
+  // Capture viewport size on client (window is not available during SSR).
+  useEffect(() => {
+    if (!fullBleed) return;
+    setViewport({ w: window.innerWidth, h: window.innerHeight });
+    const onResize = () => setViewport({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [fullBleed]);
+
   const pendingRequest = useDiceStore((s) => s.pendingRequest);
 
   // ── fireRoll — always accesses latest store state via getState() ────────────
@@ -180,11 +193,15 @@ export function DiceRoller({
   useEffect(() => {
     if (!scriptsLoaded) return;
     if (readyRef.current) return;
-    if (!containerRef.current) return;
+    const container = containerRef.current;
+    if (!container) return;
     if (typeof window === "undefined" || !window.DICE) return;
+    // For fullBleed mode, wait until viewport state has resolved to real px values
+    // so that dice_box.reinit() reads non-zero clientWidth/clientHeight.
+    if (fullBleed && !viewport) return;
 
     try {
-      const box = new window.DICE.dice_box(containerRef.current, {
+      const box = new window.DICE.dice_box(container, {
         transparentBackground: transparent,
         colorOverrides: COLOR_OVERRIDES,
       });
@@ -201,7 +218,7 @@ export function DiceRoller({
       useDiceStore.getState().resetRolling();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scriptsLoaded, transparent, height, width]);
+  }, [scriptsLoaded, transparent, height, width, fullBleed, viewport]);
 
   // ── Load scripts sequentially; poll as fallback for already-loaded scripts ───
 
@@ -241,6 +258,16 @@ export function DiceRoller({
     fireRollRef.current();
   }, [pendingRequest]);
 
+  // ── Reinit box when viewport resizes (fullBleed mode only) ───────────────────
+
+  useEffect(() => {
+    if (!fullBleed || !viewport || !boxRef.current || !readyRef.current) return;
+    const container = containerRef.current;
+    if (!container) return;
+    try { boxRef.current.reinit(container); } catch { /* ignore */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewport]);
+
   // ── Cleanup on unmount ───────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -261,7 +288,11 @@ export function DiceRoller({
   // ── Render ───────────────────────────────────────────────────────────────────
 
   const containerStyle: React.CSSProperties = fullBleed
-    ? { width: "100%", height: "100%", background: "transparent" }
+    ? {
+        width:      viewport ? `${viewport.w}px` : "100vw",
+        height:     viewport ? `${viewport.h}px` : "100vh",
+        background: "transparent",
+      }
     : { width: width ? `${width}px` : "100%", height: `${height}px` };
 
   return (
