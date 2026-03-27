@@ -210,9 +210,12 @@ export function DiceRoller({
     if (box.rolling) box.rolling = false;
 
     // Shared exit animation — called from both resolve paths below.
+    // Only runs in animationOnly mode (OBS overlay). On the character sheet
+    // the dice panel is dismissed by the parent, so no exit animation is needed.
     // Checks prefers-reduced-motion: if reduced, skip the fall and do a fast
     // 150ms fade instead of the full fall (600ms) + fade (300ms) sequence.
     function triggerExitAnimation() {
+      if (!animationOnlyRef.current) return;
       const prefersReduced =
         typeof window !== "undefined" &&
         window.matchMedia("(prefers-reduced-motion: reduce)").matches;
