@@ -210,7 +210,7 @@ const DICE = (function() {
 
         var vector = { x: (rnd() * 2 - 1) * box.w, y: -(rnd() * 2 - 1) * box.h };
         var dist = Math.sqrt(vector.x * vector.x + vector.y * vector.y);
-        var boost = (rnd() + 3) * dist;
+        var boost = (rnd() + 3) * dist * 0.25;
         throw_dices(box, vector, boost, dist, before_roll, after_roll);
     };
 
@@ -295,7 +295,7 @@ const DICE = (function() {
             var projector = Math.abs(vec.x / vec.y);
             if (projector > 1.0) pos.y /= projector; else pos.x *= projector;
             var velvec = make_random_vector(vector);
-            var velocity = { x: velvec.x * boost, y: velvec.y * boost, z: -10 };
+            var velocity = { x: velvec.x * boost, y: velvec.y * boost, z: -2.5 };
             var inertia = CONSTS.dice_inertia[notation.set[i]];
             var angle = {
                 x: -(rnd() * vec.y * 5 + inertia * vec.y),

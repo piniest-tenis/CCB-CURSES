@@ -74,7 +74,7 @@ const DIE_NOTATION: Record<DieSize, string> = {
 // Skips a script if a <script src="..."> for it is already in the DOM.
 
 // Bump this version string whenever dice-libs files change, to bust browser cache.
-const DICE_LIBS_VERSION = "v13";
+const DICE_LIBS_VERSION = "v14";
 const SCRIPT_SRCS = [
   `/dice-libs/three.min.js?v=${DICE_LIBS_VERSION}`,
   `/dice-libs/cannon.min.js?v=${DICE_LIBS_VERSION}`,
