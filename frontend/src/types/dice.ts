@@ -143,8 +143,9 @@ export interface DiceStoreActions {
    * Drive a visual-only animation — sets isRolling/pendingRequest but does NOT
    * broadcast and does NOT compute a result. Used exclusively by the OBS dice
    * overlay so it mirrors the player's animation without producing its own roll.
+   * Pass rawValues to seed the dice faces to exact values from the player's result.
    */
-  playAnimation: (req: RollRequest) => void;
+  playAnimation: (req: RollRequest, rawValues?: number[]) => void;
   /**
    * Clear animation state after a visual-only roll finishes.
    * Paired with playAnimation — clears isRolling/pendingRequest without

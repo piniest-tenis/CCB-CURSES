@@ -74,7 +74,7 @@ const DIE_NOTATION: Record<DieSize, string> = {
 // Skips a script if a <script src="..."> for it is already in the DOM.
 
 // Bump this version string whenever dice-libs files change, to bust browser cache.
-const DICE_LIBS_VERSION = "v14";
+const DICE_LIBS_VERSION = "v15";
 const SCRIPT_SRCS = [
   `/dice-libs/three.min.js?v=${DICE_LIBS_VERSION}`,
   `/dice-libs/cannon.min.js?v=${DICE_LIBS_VERSION}`,
@@ -122,10 +122,18 @@ interface DiceRollerProps {
   /**
    * Visual-only mode for the OBS dice overlay.
    * When true, the after_roll callback calls finishAnimation() instead of
-   * resolveRoll() — so the overlay never computes a result, never writes to
-   * the log, and never broadcasts ROLL_RESULT. The overlay just shows physics.
+   * resolveRoll(). If seededValues are present in the store, uses
+   * start_throw_seeded so the overlay shows the exact same face values as
+   * the player's roll. Never computes a result, never writes to the log,
+   * never broadcasts ROLL_RESULT.
    */
   animationOnly?: boolean;
+  /**
+   * Multiplier applied to the horizontal throw boost for this dice_box instance.
+   * 1.0 = default speed (already ×0.25 of the original library value).
+   * Used to make the OBS overlay even slower (e.g. 0.4 = 1/10 of original).
+   */
+  boostFactor?: number;
   onReady?: () => void;
 }
 
@@ -137,6 +145,7 @@ export function DiceRoller({
   transparent = false,
   fullBleed = false,
   animationOnly = false,
+  boostFactor = 1.0,
   onReady,
 }: DiceRollerProps) {
   const containerRef      = useRef<HTMLDivElement>(null);
@@ -146,6 +155,8 @@ export function DiceRoller({
   const rollQueueRef      = useRef(false);
   const animationOnlyRef  = useRef(animationOnly);
   animationOnlyRef.current = animationOnly;
+  const boostFactorRef    = useRef(boostFactor);
+  boostFactorRef.current  = boostFactor;
 
   const [scriptsLoaded, setScriptsLoaded] = useState(false);
   const [scriptError,   setScriptError]   = useState(false);
@@ -170,7 +181,9 @@ export function DiceRoller({
   // current version, avoiding stale-closure issues with useCallback deps.
 
   const fireRollRef = useRef(() => {
-    const { pendingRequest: req, resolveRoll, finishAnimation, resetRolling } = useDiceStore.getState();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const state = useDiceStore.getState() as any;
+    const req: typeof state.pendingRequest = state.pendingRequest;
     if (!req) return;
 
     const box = boxRef.current;
@@ -179,27 +192,39 @@ export function DiceRoller({
       return;
     }
 
-    const notationStr = req.dice.map((d) => DIE_NOTATION[d.size]).join("+");
-    const dieColors   = req.dice.map((d) => d.role);
+    const notationStr = req.dice.map((d: { size: keyof typeof DIE_NOTATION }) => DIE_NOTATION[d.size]).join("+");
+    const dieColors   = req.dice.map((d: { role: string }) => d.role);
+    const seededValues: number[] | null = state.seededValues ?? null;
 
     box.setDice(notationStr);
 
     try {
-      box.start_throw(
-        null,
-        (notation: { result: number[]; resultTotal: number }) => {
-          if (animationOnlyRef.current) {
-            // Visual-only mode: discard the physics result, just clear state.
-            useDiceStore.getState().finishAnimation();
-          } else {
+      if (animationOnlyRef.current && seededValues && seededValues.length > 0) {
+        // Seeded replay: dice land on the exact same faces as the player's roll.
+        box.start_throw_seeded(
+          seededValues,
+          () => { useDiceStore.getState().finishAnimation(); },
+          dieColors,
+        );
+      } else if (animationOnlyRef.current) {
+        // No seeded values yet (shouldn't happen in normal flow) — free throw.
+        box.start_throw(
+          null,
+          () => { useDiceStore.getState().finishAnimation(); },
+          dieColors,
+        );
+      } else {
+        box.start_throw(
+          null,
+          (notation: { result: number[] }) => {
             useDiceStore.getState().resolveRoll(notation.result);
-          }
-        },
-        dieColors,
-      );
+          },
+          dieColors,
+        );
+      }
     } catch (err) {
       console.error("[DiceRoller] start_throw failed:", err);
-      resetRolling();
+      useDiceStore.getState().resetRolling();
     }
   });
 
@@ -219,6 +244,7 @@ export function DiceRoller({
       const box = new window.DICE.dice_box(container, {
         transparentBackground: transparent,
         colorOverrides: COLOR_OVERRIDES,
+        boostFactor: boostFactorRef.current,
       });
       boxRef.current   = box;
       readyRef.current = true;

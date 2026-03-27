@@ -27,6 +27,12 @@ interface DiceStoreExtended extends DiceStore {
   campaignId: string | null;
   /** Set the campaign id (call from CampaignDetailClient on mount). */
   setCampaignId: (id: string | null) => void;
+  /**
+   * Raw die values to replay on the OBS overlay.
+   * Set by playAnimationSeeded; read by DiceRoller (animationOnly mode) to
+   * pass as before_roll so the overlay lands on the exact same faces.
+   */
+  seededValues: number[] | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -71,6 +77,7 @@ export const useDiceStore = create<DiceStoreExtended>((set, get) => ({
   lastResult:     null,
   log:            [],
   campaignId:     null,
+  seededValues:   null,
 
   // ── setCampaignId ──────────────────────────────────────────────────────────
   setCampaignId: (id: string | null) => set({ campaignId: id }),
@@ -185,20 +192,18 @@ export const useDiceStore = create<DiceStoreExtended>((set, get) => ({
   // ── resetRolling ──────────────────────────────────────────────────────────
   resetRolling: () => set({ isRolling: false, pendingRequest: null }),
 
-  // ── playAnimation ─────────────────────────────────────────────────────────
+  // ── playAnimationSeeded ───────────────────────────────────────────────────
   // Visual-only animation driver for the OBS dice overlay.
-  // Sets isRolling + pendingRequest exactly like requestRoll, but:
-  //   • Does NOT broadcast ROLL_REQUEST (prevents echo loops)
-  //   • Expects finishAnimation() to be called when done — never resolveRoll()
-  // This means the overlay shows dice physics but never produces a result,
-  // never writes to the log, and never broadcasts ROLL_RESULT.
-  playAnimation: (req: RollRequest) => {
+  // Carries the exact raw die values from the player's completed roll so that
+  // DiceRoller can pass them to start_throw_seeded — the overlay's dice land
+  // on the same faces as the player's dice.
+  // Does NOT broadcast. Expects finishAnimation() when the physics settle.
+  playAnimation: (req: RollRequest, rawValues?: number[]) => {
     if (get().isRolling) return;
-    set({ isRolling: true, pendingRequest: req });
+    set({ isRolling: true, pendingRequest: req, seededValues: rawValues ?? null });
   },
 
   // ── finishAnimation ───────────────────────────────────────────────────────
   // Clears animation state without computing a result or broadcasting anything.
-  // Paired with playAnimation.
-  finishAnimation: () => set({ isRolling: false, pendingRequest: null }),
+  finishAnimation: () => set({ isRolling: false, pendingRequest: null, seededValues: null }),
 }));

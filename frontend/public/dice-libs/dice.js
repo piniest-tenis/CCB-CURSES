@@ -79,6 +79,8 @@ const DICE = (function() {
         this.diceToRoll = '';
         this.container = container;
         this.colorOverrides = {};
+        /** Multiplier applied to the horizontal throw boost (default 1.0). */
+        this.boostFactor = (options.boostFactor !== undefined) ? options.boostFactor : 1.0;
         for (var k in DEFAULT_COLOR_OVERRIDES) this.colorOverrides[k] = DEFAULT_COLOR_OVERRIDES[k];
         if (options.colorOverrides) {
             for (var k in options.colorOverrides) this.colorOverrides[k] = options.colorOverrides[k];
@@ -210,8 +212,28 @@ const DICE = (function() {
 
         var vector = { x: (rnd() * 2 - 1) * box.w, y: -(rnd() * 2 - 1) * box.h };
         var dist = Math.sqrt(vector.x * vector.x + vector.y * vector.y);
-        var boost = (rnd() + 3) * dist * 0.25;
+        var boost = (rnd() + 3) * dist * 0.25 * box.boostFactor;
         throw_dices(box, vector, boost, dist, before_roll, after_roll);
+    };
+
+    /**
+     * Like start_throw but the dice land on predetermined face values.
+     * @param values      Array of integers parallel to the dice set (the exact
+     *                    values each die must show when it settles).
+     * @param after_roll  Callback called with the final notation object.
+     * @param dieColors   Optional role string array parallel to the dice set.
+     */
+    that.dice_box.prototype.start_throw_seeded = function(values, after_roll, dieColors) {
+        var box = this;
+        if (box.rolling) return;
+        box._dieColors = dieColors || [];
+        var vector = { x: (rnd() * 2 - 1) * box.w, y: -(rnd() * 2 - 1) * box.h };
+        var dist = Math.sqrt(vector.x * vector.x + vector.y * vector.y);
+        var boost = (rnd() + 3) * dist * 0.25 * box.boostFactor;
+        var seededValues = values.slice(); // copy
+        throw_dices(box, vector, boost, dist,
+            function(notation) { return seededValues; },
+            after_roll);
     };
 
     that.dice_box.prototype.bind_swipe = function(container, before_roll, after_roll) {
