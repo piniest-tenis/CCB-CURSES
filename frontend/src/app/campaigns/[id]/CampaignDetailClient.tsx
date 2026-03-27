@@ -871,7 +871,7 @@ export default function CampaignDetailClient() {
                         : undefined
                     }
                     onUnassignCharacter={
-                      isGm && member.role === "player" && charId
+                      isGm && charId
                         ? () => {
                             removeCharacterMutation.mutate(charId, {
                               onSuccess: () => {
