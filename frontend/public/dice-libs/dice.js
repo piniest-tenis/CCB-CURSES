@@ -309,14 +309,32 @@ const DICE = (function() {
         var vectors = [];
         for (var i in notation.set) {
             var vec = make_random_vector(vector);
+            // Spawn at 70% of the half-dimension so dice always start well
+            // inside the physics walls (which are at 93%).
             var pos = {
-                x: this.w * (vec.x > 0 ? -1 : 1) * 0.9,
-                y: this.h * (vec.y > 0 ? -1 : 1) * 0.9,
+                x: this.w * (vec.x > 0 ? -1 : 1) * 0.7,
+                y: this.h * (vec.y > 0 ? -1 : 1) * 0.7,
                 z: rnd() * 200 + 200
             };
             var projector = Math.abs(vec.x / vec.y);
             if (projector > 1.0) pos.y /= projector; else pos.x *= projector;
+
+            // Clamp spawn to ±85% of half-dimensions as a hard safety net.
+            var maxX = this.w * 0.85;
+            var maxY = this.h * 0.85;
+            if (pos.x >  maxX) pos.x =  maxX;
+            if (pos.x < -maxX) pos.x = -maxX;
+            if (pos.y >  maxY) pos.y =  maxY;
+            if (pos.y < -maxY) pos.y = -maxY;
+
             var velvec = make_random_vector(vector);
+            // Ensure the horizontal velocity component points toward the centre
+            // so a die spawning near an edge is always thrown inward.
+            if (pos.x > 0 && velvec.x > 0) velvec.x = -velvec.x;
+            if (pos.x < 0 && velvec.x < 0) velvec.x = -velvec.x;
+            if (pos.y > 0 && velvec.y > 0) velvec.y = -velvec.y;
+            if (pos.y < 0 && velvec.y < 0) velvec.y = -velvec.y;
+
             var velocity = { x: velvec.x * boost, y: velvec.y * boost, z: -2.5 };
             var inertia = CONSTS.dice_inertia[notation.set[i]];
             var angle = {
