@@ -86,7 +86,7 @@ export default function DiceOverlayClient() {
         transition,
       }}
     >
-      <DiceRoller fullBleed transparent animationOnly boostFactor={0.4} />
+      <DiceRoller fullBleed transparent animationOnly />
     </div>
   );
 }
