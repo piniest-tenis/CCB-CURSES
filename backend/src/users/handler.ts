@@ -95,6 +95,9 @@ function toUserProfile(record: UserDynamoRecord): UserProfile {
       defaultDiceStyle:
         record.preferences?.defaultDiceStyle ??
         DEFAULT_PREFERENCES.defaultDiceStyle,
+      ...(record.preferences?.diceColors !== undefined
+        ? { diceColors: record.preferences.diceColors }
+        : {}),
     },
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
