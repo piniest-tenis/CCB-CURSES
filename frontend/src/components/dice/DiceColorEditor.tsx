@@ -29,6 +29,8 @@ interface DiceColorEditorProps {
   onChange: (prefs: DiceColorPrefs) => void;
   /** If true, only shows the "General" category (for GM dice). */
   gmMode?: boolean;
+  /** Label for the "reset all" button; defaults to "Reset all to system defaults". */
+  resetAllLabel?: string;
 }
 
 type Category = "hope" | "fear" | "general";
@@ -194,7 +196,7 @@ function CategoryEditor({
 
 // ─── Main Editor ──────────────────────────────────────────────────────────────
 
-export function DiceColorEditor({ value, defaults, onChange, gmMode }: DiceColorEditorProps) {
+export function DiceColorEditor({ value, defaults, onChange, gmMode, resetAllLabel }: DiceColorEditorProps) {
   // Working copy — merge saved values over defaults
   const resolve = useCallback(
     (cat: Category): DieColorPair => value?.[cat] ?? defaults[cat],
@@ -281,6 +283,21 @@ export function DiceColorEditor({ value, defaults, onChange, gmMode }: DiceColor
     return pair.diceColor !== def.diceColor || pair.labelColor !== def.labelColor;
   };
 
+  const isAnyCustomized = (): boolean => {
+    const cats: Category[] = gmMode ? ["general"] : ["hope", "fear", "general"];
+    return cats.some(isCustomized);
+  };
+
+  const resetAll = () => {
+    setHopePair(SYSTEM_DEFAULTS.hope);
+    setFearPair(SYSTEM_DEFAULTS.fear);
+    setGeneralPair(gmMode
+      ? { diceColor: GM_SYSTEM_DEFAULTS.diceColor, labelColor: GM_SYSTEM_DEFAULTS.labelColor }
+      : SYSTEM_DEFAULTS.general,
+    );
+    onChange({});
+  };
+
   const categories: Category[] = gmMode ? ["general"] : ["hope", "fear", "general"];
 
   return (
@@ -306,6 +323,17 @@ export function DiceColorEditor({ value, defaults, onChange, gmMode }: DiceColor
         <p className="pt-2 text-xs text-red-400" role="alert">
           Hope and Fear dice face colors must be visually distinct (Delta-E &ge; {MIN_HOPE_FEAR_DELTA_E}).
         </p>
+      )}
+      {isAnyCustomized() && (
+        <div className="pt-3">
+          <button
+            type="button"
+            onClick={resetAll}
+            className="text-xs text-[#b9baa3]/50 hover:text-red-400 transition-colors"
+          >
+            {resetAllLabel ?? "Reset all to system defaults"}
+          </button>
+        </div>
       )}
     </div>
   );
