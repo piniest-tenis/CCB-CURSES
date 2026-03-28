@@ -14,7 +14,9 @@
 
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import type { RollResult, ActionOutcome } from "@/types/dice";
+import type { DieRole, RollResult, ActionOutcome } from "@/types/dice";
+
+type ColorOverrides = Record<DieRole, { dice_color: string; label_color: string }>;
 
 const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL ?? "";
 const MAX_RECONNECT_ATTEMPTS = 3;
@@ -35,16 +37,31 @@ const OUTCOME_COLOR: Record<ActionOutcome, string> = {
 interface LogEntry {
   result: RollResult;
   characterName?: string;
+  colorOverrides?: ColorOverrides;
 }
 
 function LogRow({ entry }: { entry: LogEntry }) {
-  const { result, characterName } = entry;
+  const { result, characterName, colorOverrides } = entry;
   const { request, total, outcome, hopeValue, fearValue, dice } = result;
   const timeStr = new Date(result.timestamp).toLocaleTimeString([], {
     hour:   "2-digit",
     minute: "2-digit",
   });
   const mod = request.modifier ?? 0;
+
+  // Resolve badge colors: use per-roll overrides when present, else system defaults
+  function dieBadgeStyle(role: DieRole): React.CSSProperties {
+    if (colorOverrides?.[role]) {
+      const { dice_color, label_color } = colorOverrides[role];
+      return { background: dice_color, borderColor: dice_color, color: label_color };
+    }
+    if (role === "hope") return { background: "#DAA520", borderColor: "#DAA520", color: "#36454F" };
+    if (role === "fear") return { background: "#36454F", borderColor: "#36454F", color: "#DAA520" };
+    return { background: "#202020", borderColor: "#555", color: "#aaa" };
+  }
+
+  // Character name badge color: use hope color as the accent
+  const nameColor = colorOverrides?.hope?.dice_color ?? "#DAA520";
 
   return (
     <div
@@ -53,7 +70,7 @@ function LogRow({ entry }: { entry: LogEntry }) {
     >
       {/* Character name — prominent if present */}
       {characterName && (
-        <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "#DAA520" }}>
+        <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: nameColor }}>
           {characterName}
         </p>
       )}
@@ -67,19 +84,11 @@ function LogRow({ entry }: { entry: LogEntry }) {
       {/* Die breakdown */}
       <div className="flex flex-wrap items-center gap-1.5">
         {dice.map((d, i) => {
-          const isHope = d.role === "hope";
-          const isFear = d.role === "fear";
           return (
             <span
               key={i}
               className="h-7 w-7 rounded flex items-center justify-center text-xs font-bold border"
-              style={
-                isHope
-                  ? { background: "#DAA520", borderColor: "#DAA520", color: "#36454F" }
-                  : isFear
-                  ? { background: "#36454F", borderColor: "#36454F", color: "#DAA520" }
-                  : { background: "#202020", borderColor: "#555", color: "#aaa" }
-              }
+              style={dieBadgeStyle(d.role)}
             >
               {d.value}
             </span>
@@ -96,9 +105,9 @@ function LogRow({ entry }: { entry: LogEntry }) {
       {/* Hope vs Fear inline */}
       {hopeValue !== undefined && fearValue !== undefined && (
         <p className="text-[10px]">
-          <span style={{ color: "#DAA520" }}>Hope {hopeValue}</span>
+          <span style={{ color: colorOverrides?.hope?.dice_color ?? "#DAA520" }}>Hope {hopeValue}</span>
           <span className="text-[#b9baa3]"> · </span>
-          <span style={{ color: "#9BB5CC" }}>Fear {fearValue}</span>
+          <span style={{ color: colorOverrides?.fear?.dice_color ?? "#9BB5CC" }}>Fear {fearValue}</span>
         </p>
       )}
 
@@ -126,9 +135,9 @@ export default function DiceLogOverlayClient() {
 
   const [log, setLog] = useState<LogEntry[]>([]);
 
-  function appendResult(result: RollResult) {
+  function appendResult(result: RollResult, colors?: ColorOverrides) {
     const characterName = (result.request.characterName as string | undefined) ?? undefined;
-    setLog((prev) => [{ result, characterName }, ...prev].slice(0, MAX_LOG));
+    setLog((prev) => [{ result, characterName, colorOverrides: colors }, ...prev].slice(0, MAX_LOG));
   }
 
   // ── WebSocket connection (obs observer — unauthenticated) ─────────────────────
@@ -153,7 +162,8 @@ export default function DiceLogOverlayClient() {
         try {
           const data = JSON.parse(evt.data as string) as Record<string, unknown>;
           if (data.type === "dice_roll" && data.result) {
-            appendResult(data.result as RollResult);
+            const colors = data.colorOverrides as ColorOverrides | undefined;
+            appendResult(data.result as RollResult, colors);
           }
         } catch {
           // non-JSON frame — ignore

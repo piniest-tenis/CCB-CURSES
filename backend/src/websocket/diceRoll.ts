@@ -60,6 +60,7 @@ interface DiceRollBody {
   action: "dice_roll";
   campaignId: string;
   result: unknown;
+  colorOverrides?: unknown;
 }
 
 function parseDiceRollBody(raw: string | null | undefined): DiceRollBody | null {
@@ -76,6 +77,7 @@ function parseDiceRollBody(raw: string | null | undefined): DiceRollBody | null 
         action: "dice_roll",
         campaignId: parsed["campaignId"] as string,
         result: parsed["result"],
+        colorOverrides: parsed["colorOverrides"],
       };
     }
     return null;
@@ -99,7 +101,7 @@ export const handler = async (
       return { statusCode: 400 };
     }
 
-    const { campaignId, result } = body;
+    const { campaignId, result, colorOverrides } = body;
 
     // Verify sender is actually connected to this campaign
     const senderConn = await getItem<ConnectionRecord>(
@@ -125,7 +127,11 @@ export const handler = async (
     );
 
     // Build the outbound payload
-    const outboundPayload = JSON.stringify({ type: "dice_roll", result });
+    const outboundPayload = JSON.stringify(
+      colorOverrides !== undefined
+        ? { type: "dice_roll", result, colorOverrides }
+        : { type: "dice_roll", result }
+    );
 
     // Resolve API Gateway management endpoint
     const wsEndpoint =

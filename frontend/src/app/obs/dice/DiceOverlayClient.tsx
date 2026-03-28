@@ -24,7 +24,9 @@ import React, { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { DiceRoller } from "@/components/dice/DiceRoller";
 import { useDiceStore } from "@/store/diceStore";
-import type { RollResult } from "@/types/dice";
+import type { DieRole, RollResult } from "@/types/dice";
+
+type ColorOverrides = Record<DieRole, { dice_color: string; label_color: string }>;
 
 const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL ?? "";
 const MAX_RECONNECT_ATTEMPTS = 3;
@@ -43,12 +45,14 @@ export default function DiceOverlayClient() {
   const isRolling    = useDiceStore((s) => s.isRolling);
   const [fade, setFade]   = useState<FadeState>("idle");
   const [isCrit, setIsCrit] = useState(false);
+  const [colorOverrides, setColorOverrides] = useState<ColorOverrides | undefined>(undefined);
   const timerRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevRolling  = useRef(false);
 
   // ── Shared handler for incoming roll results (WS or BroadcastChannel) ────────
-  function handleRollResult(result: RollResult) {
+  function handleRollResult(result: RollResult, colors?: ColorOverrides) {
     setIsCrit(result.outcome === "critical");
+    if (colors) setColorOverrides(colors);
     const rawValues = result.dice.map((d) => d.value);
     useDiceStore.getState().playAnimation(result.request, rawValues);
   }
@@ -75,7 +79,8 @@ export default function DiceOverlayClient() {
         try {
           const data = JSON.parse(evt.data as string) as Record<string, unknown>;
           if (data.type === "dice_roll" && data.result) {
-            handleRollResult(data.result as RollResult);
+            const colors = data.colorOverrides as ColorOverrides | undefined;
+            handleRollResult(data.result as RollResult, colors);
           }
         } catch {
           // non-JSON frame — ignore
@@ -172,7 +177,7 @@ export default function DiceOverlayClient() {
           transition,
         }}
       >
-        <DiceRoller fullBleed transparent animationOnly />
+        <DiceRoller fullBleed transparent animationOnly colorOverrides={colorOverrides} />
 
         {/* Goldenrod inset glow — only visible on crit */}
         <div

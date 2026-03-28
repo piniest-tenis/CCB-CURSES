@@ -28,10 +28,11 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { useCampaignDetail, useRemoveMember, useAddCharacterToCampaign, useRemoveCharacterFromCampaign, useUpdateCampaign } from "@/hooks/useCampaigns";
 import { useCampaignStore, type CampaignTab } from "@/store/campaignStore";
-import { useGameWebSocket } from "@/hooks/useGameWebSocket";
+import { useGameWebSocket, type DiceColorOverrides } from "@/hooks/useGameWebSocket";
 import { usePingEffect } from "@/hooks/usePingEffect";
 import { useDiceStore } from "@/store/diceStore";
 import { useEncounterStore } from "@/store/encounterStore";
+import { useCharacterStore } from "@/store/characterStore";
 import type { PingEvent } from "@/types/campaign";
 import type { Adversary } from "@/types/adversary";
 import type { RollResult } from "@/types/dice";
@@ -534,6 +535,16 @@ export default function CampaignDetailClient() {
     return buildColorOverrides(resolved, gmColor);
   }, [isGm, user?.preferences?.diceColors]);
 
+  // ── Player dice color overrides (for WS broadcast) ─────────────────────────
+  const activeCharacter = useCharacterStore((s) => s.activeCharacter);
+  const playerDiceColorOverrides = React.useMemo((): DiceColorOverrides | undefined => {
+    if (isGm) return undefined;
+    const charDiceColors = activeCharacter?.diceColors;
+    const userDiceColors = user?.preferences?.diceColors;
+    const resolved = resolveDiceColors(charDiceColors, userDiceColors);
+    return buildColorOverrides(resolved);
+  }, [isGm, activeCharacter?.diceColors, user?.preferences?.diceColors]);
+
   // ── WebSocket: ping sending (GM) & receiving (player) ───────────────────────
   const { triggerPing } = usePingEffect();
 
@@ -573,8 +584,9 @@ export default function CampaignDetailClient() {
   useEffect(() => {
     if (!lastRollId || lastRollId === prevBroadcastIdRef.current) return;
     prevBroadcastIdRef.current = lastRollId;
-    sendDiceRoll(diceLog[0]);
-  }, [lastRollId, diceLog, sendDiceRoll]);
+    const colors = isGm ? gmDiceColorOverrides : playerDiceColorOverrides;
+    sendDiceRoll(diceLog[0], colors);
+  }, [lastRollId, diceLog, sendDiceRoll, isGm, gmDiceColorOverrides, playerDiceColorOverrides]);
 
   // GM: send ping to the selected character
   const handlePingField = useCallback(

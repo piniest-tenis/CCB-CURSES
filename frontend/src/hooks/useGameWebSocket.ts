@@ -15,7 +15,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
 import type { PingEvent } from "@/types/campaign";
-import type { RollResult } from "@/types/dice";
+import type { DieRole, RollResult } from "@/types/dice";
+
+/** Per-role colour pair, matching the dice_box constructor shape. */
+export type DiceColorOverrides = Record<DieRole, { dice_color: string; label_color: string }>;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -37,7 +40,7 @@ export interface ForceCritEvent {
 export interface UseGameWebSocketOptions {
   onPing?: (event: PingEvent) => void;
   /** Called when a dice roll result is broadcast from another client */
-  onDiceRoll?: (result: RollResult) => void;
+  onDiceRoll?: (result: RollResult, colorOverrides?: DiceColorOverrides) => void;
   /** Called when the GM arms or disarms a force-crit for a character */
   onForceCrit?: (event: ForceCritEvent) => void;
 }
@@ -50,7 +53,7 @@ export interface UseGameWebSocketReturn {
    */
   sendPing: (targetCharacterId: string, fieldKey: string) => void;
   /** Broadcast a dice roll result to all campaign participants */
-  sendDiceRoll: (result: RollResult) => void;
+  sendDiceRoll: (result: RollResult, colorOverrides?: DiceColorOverrides) => void;
   /**
    * GM only: arm or disarm a forced critical for a character's next roll.
    * @param targetCharacterId - The character whose next roll will be forced.
@@ -126,7 +129,8 @@ export function useGameWebSocket(
         (data as Record<string, unknown>).type === "dice_roll"
       ) {
         const payload = (data as Record<string, unknown>).result as RollResult;
-        if (payload) onDiceRollRef.current?.(payload);
+        const colors  = (data as Record<string, unknown>).colorOverrides as DiceColorOverrides | undefined;
+        if (payload) onDiceRollRef.current?.(payload, colors);
       }
 
       if (
@@ -210,16 +214,17 @@ export function useGameWebSocket(
   // ── sendDiceRoll ──────────────────────────────────────────────────────────────
   // Broadcasts a resolved roll result to all campaign participants via WebSocket.
   const sendDiceRoll = useCallback(
-    (result: RollResult) => {
+    (result: RollResult, colorOverrides?: DiceColorOverrides) => {
       const ws = wsRef.current;
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
-      const message = {
+      const message: Record<string, unknown> = {
         action:     "dice_roll",
         campaignId,
         characterId,
         result,
       };
+      if (colorOverrides) message.colorOverrides = colorOverrides;
 
       try {
         ws.send(JSON.stringify(message));
