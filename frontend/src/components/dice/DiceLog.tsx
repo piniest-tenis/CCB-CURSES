@@ -199,7 +199,7 @@ function CustomRollTray({ onRoll, characterName }: { onRoll: () => void; charact
     for (const size of ALL_SIZES) {
       const n = counts[size];
       for (let i = 0; i < n; i++) {
-        dice.push({ size, role: "generic", label: size });
+        dice.push({ size, role: characterName === "GM" ? "gm" : "generic", label: size });
       }
     }
     stageRoll({

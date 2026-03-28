@@ -18,7 +18,7 @@ export type DieSize = "d4" | "d6" | "d8" | "d10" | "d12" | "d20";
  * - "damage"      → Dark body, light numbers
  * - "generic"     → Dark body, light numbers
  */
-export type DieRole = "hope" | "fear" | "advantage" | "disadvantage" | "damage" | "generic";
+export type DieRole = "hope" | "fear" | "advantage" | "disadvantage" | "damage" | "generic" | "gm";
 
 // ─── Roll request ──────────────────────────────────────────────────────────────
 

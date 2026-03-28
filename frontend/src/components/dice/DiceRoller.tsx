@@ -56,6 +56,7 @@ const COLOR_OVERRIDES: Record<DieRole, { dice_color: string; label_color: string
   disadvantage: { dice_color: "#202020", label_color: "#aaaaaa" },
   damage:       { dice_color: "#202020", label_color: "#aaaaaa" },
   generic:      { dice_color: "#202020", label_color: "#aaaaaa" },
+  gm:           { dice_color: "#150d6f", label_color: "#ee766b" },
 };
 
 // ─── Die notation mapping ─────────────────────────────────────────────────────

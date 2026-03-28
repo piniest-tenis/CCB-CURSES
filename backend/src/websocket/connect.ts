@@ -169,6 +169,9 @@ export const handler = async (
       return { statusCode: 401 };
     }
 
+    // GM connections use synthetic characterId "gm" — allow through
+    // (no character lookup needed; the GM broadcasts dice to all campaign connections)
+
     let claims: JwtClaims;
     try {
       claims = decodeJwtPayload(token);

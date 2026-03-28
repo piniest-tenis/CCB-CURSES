@@ -522,7 +522,7 @@ export default function CampaignDetailClient() {
   const myCharId    = callerChar?.characterId ?? null;
 
   // Character the current player is viewing (for WebSocket)
-  const wsCharacterId = selectedCharacterId ?? myCharId ?? "";
+  const wsCharacterId = selectedCharacterId ?? myCharId ?? (isGm ? "gm" : "");
 
   // ── WebSocket: ping sending (GM) & receiving (player) ───────────────────────
   const { triggerPing } = usePingEffect();
