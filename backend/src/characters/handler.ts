@@ -327,6 +327,12 @@ const PutCharacterSchema = z.object({
   // ── Level-up history ────────────────────────────────────────────────────
   levelUpHistory: z.record(z.string(), z.array(AdvancementChoiceSchema)).optional().default({}),
   markedTraits: z.array(z.string()).optional().default([]),
+  // ── Dice color preferences ──────────────────────────────────────────────
+  diceColors: z.object({
+    hope: z.object({ diceColor: z.string().regex(/^#[0-9a-fA-F]{6}$/), labelColor: z.string().regex(/^#[0-9a-fA-F]{6}$/) }).optional(),
+    fear: z.object({ diceColor: z.string().regex(/^#[0-9a-fA-F]{6}$/), labelColor: z.string().regex(/^#[0-9a-fA-F]{6}$/) }).optional(),
+    general: z.object({ diceColor: z.string().regex(/^#[0-9a-fA-F]{6}$/), labelColor: z.string().regex(/^#[0-9a-fA-F]{6}$/) }).optional(),
+  }).optional(),
 });
 
 const PatchCharacterSchema = PutCharacterSchema.partial();

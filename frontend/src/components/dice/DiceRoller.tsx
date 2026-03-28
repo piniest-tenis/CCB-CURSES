@@ -36,6 +36,7 @@ import React, {
 } from "react";
 import { useDiceStore } from "@/store/diceStore";
 import type { DieRole, DieSize } from "@/types/dice";
+import { buildColorOverrides, resolveDiceColors, resolveGmDiceColor } from "@/lib/diceColorResolver";
 
 // ─── Globals injected by the vendored scripts ─────────────────────────────────
 // dice.js assigns window.DICE = DICE at its bottom.
@@ -49,15 +50,9 @@ declare global {
 
 // ─── Color overrides ──────────────────────────────────────────────────────────
 
-const COLOR_OVERRIDES: Record<DieRole, { dice_color: string; label_color: string }> = {
-  hope:         { dice_color: "#DAA520", label_color: "#36454F" },
-  fear:         { dice_color: "#36454F", label_color: "#DAA520" },
-  advantage:    { dice_color: "#202020", label_color: "#aaaaaa" },
-  disadvantage: { dice_color: "#202020", label_color: "#aaaaaa" },
-  damage:       { dice_color: "#202020", label_color: "#aaaaaa" },
-  generic:      { dice_color: "#202020", label_color: "#aaaaaa" },
-  gm:           { dice_color: "#150d6f", label_color: "#ee766b" },
-};
+/** System-default color map; used when no custom colorOverrides prop is provided. */
+const DEFAULT_COLOR_OVERRIDES: Record<DieRole, { dice_color: string; label_color: string }> =
+  buildColorOverrides(resolveDiceColors(), resolveGmDiceColor());
 
 // ─── Die notation mapping ─────────────────────────────────────────────────────
 
@@ -135,6 +130,11 @@ interface DiceRollerProps {
    * Used to make the OBS overlay even slower (e.g. 0.4 = 1/10 of original).
    */
   boostFactor?: number;
+  /**
+   * Custom per-DieRole color overrides. When provided, replaces the system
+   * defaults so dice display the user's chosen colors.
+   */
+  colorOverrides?: Record<DieRole, { dice_color: string; label_color: string }>;
   onReady?: () => void;
 }
 
@@ -147,6 +147,7 @@ export function DiceRoller({
   fullBleed = false,
   animationOnly = false,
   boostFactor = 1.0,
+  colorOverrides,
   onReady,
 }: DiceRollerProps) {
   const containerRef      = useRef<HTMLDivElement>(null);
@@ -282,7 +283,7 @@ export function DiceRoller({
     try {
       const box = new window.DICE.dice_box(container, {
         transparentBackground: transparent,
-        colorOverrides: COLOR_OVERRIDES,
+        colorOverrides: colorOverrides ?? DEFAULT_COLOR_OVERRIDES,
         boostFactor: boostFactorRef.current,
       });
       boxRef.current   = box;

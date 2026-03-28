@@ -42,6 +42,17 @@ interface UserDynamoRecord {
 
 // ─── Zod Schemas ──────────────────────────────────────────────────────────────
 
+const DieColorPairSchema = z.object({
+  diceColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  labelColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+});
+
+const DiceColorPrefsSchema = z.object({
+  hope: DieColorPairSchema.optional(),
+  fear: DieColorPairSchema.optional(),
+  general: DieColorPairSchema.optional(),
+});
+
 const UpdateUserSchema = z.object({
   displayName: z
     .string()
@@ -52,6 +63,7 @@ const UpdateUserSchema = z.object({
     .object({
       theme: z.enum(["dark", "light", "system"]).optional(),
       defaultDiceStyle: z.string().min(1).optional(),
+      diceColors: DiceColorPrefsSchema.optional(),
     })
     .optional(),
 });
@@ -220,6 +232,10 @@ async function updateMe(
       );
       expressionAttributeValues[":diceStyle"] = prefPatch.defaultDiceStyle;
     }
+    if (prefPatch.diceColors !== undefined) {
+      setExpressions.push("preferences.diceColors = :diceColors");
+      expressionAttributeValues[":diceColors"] = prefPatch.diceColors;
+    }
   }
 
   const updateResult = await updateItem({
@@ -246,6 +262,9 @@ async function updateMe(
           : {}),
         ...(prefPatch?.defaultDiceStyle !== undefined
           ? { defaultDiceStyle: prefPatch.defaultDiceStyle }
+          : {}),
+        ...(prefPatch?.diceColors !== undefined
+          ? { diceColors: prefPatch.diceColors }
           : {}),
       },
       updatedAt: now,

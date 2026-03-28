@@ -21,7 +21,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useDiceStore } from "@/store/diceStore";
 import { DiceRoller } from "./DiceRoller";
-import type { RollResult, ActionOutcome, DieSize, DieSpec, RollRequest, RollBonus } from "@/types/dice";
+import type { RollResult, ActionOutcome, DieSize, DieSpec, RollRequest, RollBonus, DieRole } from "@/types/dice";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -574,11 +574,13 @@ function canvasGlowClass(result: RollResult | null): string {
 interface DiceRollerPanelProps {
   open: boolean;
   onClose: () => void;
+  /** Custom color overrides for dice.js — resolved from character/user prefs. */
+  colorOverrides?: Record<DieRole, { dice_color: string; label_color: string }>;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function DiceRollerPanel({ open, onClose }: DiceRollerPanelProps) {
+export function DiceRollerPanel({ open, onClose, colorOverrides }: DiceRollerPanelProps) {
   const { isRolling, lastResult, stagedRequest, requestRoll, clearStagedRoll } = useDiceStore();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const panelRef       = useRef<HTMLDivElement>(null);
@@ -749,7 +751,7 @@ export function DiceRollerPanel({ open, onClose }: DiceRollerPanelProps) {
               glowClass,
             ].join(" ")}
           >
-            <DiceRoller height={300} transparent={false} />
+            <DiceRoller height={300} transparent={false} colorOverrides={colorOverrides} />
           </div>
 
           {/* Rolling indicator */}

@@ -47,7 +47,10 @@ import { PortraitDisplay }          from "./PortraitUpload";
 import { DiceRollerPanel }          from "@/components/dice/DiceRollerPanel";
 import { DiceLog }                  from "@/components/dice/DiceLog";
 import { useDiceStore }             from "@/store/diceStore";
-import type { Character, ClassData, CoreStatName, CustomCondition } from "@shared/types";
+import type { Character, ClassData, CoreStatName, CustomCondition, DiceColorPrefs } from "@shared/types";
+import { DiceColorEditor } from "@/components/dice/DiceColorEditor";
+import { SYSTEM_DEFAULTS, resolveDiceColors, resolveGmDiceColor, buildColorOverrides } from "@/lib/diceColorResolver";
+import { useAuthStore } from "@/store/authStore";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -300,12 +303,14 @@ type ShareState = "idle" | "loading" | "copied" | "error";
 
 function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
   const router = useRouter();
-  const { activeCharacter, toggleCondition } = useCharacterStore();
+  const { activeCharacter, toggleCondition, updateField } = useCharacterStore();
   const { data: classesData }     = useClasses();
   const { data: communitiesData } = useCommunities();
   const { data: ancestriesData }  = useAncestries();
   const [conditionsOpen, setConditionsOpen] = React.useState(false);
   const [shareState, setShareState] = React.useState<ShareState>("idle");
+  const [diceColorsOpen, setDiceColorsOpen] = React.useState(false);
+  const userPrefs = useAuthStore((s) => s.user?.preferences);
 
   const handleShare = React.useCallback(async () => {
     if (shareState === "loading") return;
@@ -581,6 +586,67 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
           </p>
         </div>
       )}
+
+      {/* ── Dice Colors ──────────────────────────────────────────── */}
+      <div className="pt-2 border-t border-[#577399]/20">
+        <button
+          type="button"
+          onClick={() => setDiceColorsOpen((o) => !o)}
+          className="flex items-center gap-1.5 group w-full text-left"
+          aria-expanded={diceColorsOpen}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            className={[
+              "w-3.5 h-3.5 text-[#577399] transition-transform duration-150",
+              diceColorsOpen ? "rotate-90" : "",
+            ].join(" ")}
+          >
+            <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+          </svg>
+          <span className="text-xs uppercase tracking-widest text-[#b9baa3] font-medium group-hover:text-[#f7f7ff] transition-colors">
+            Dice Colors
+          </span>
+          {/* Quick preview swatches */}
+          {!diceColorsOpen && (
+            <span className="flex gap-1 ml-auto" aria-hidden="true">
+              {(() => {
+                const resolved = resolveDiceColors(activeCharacter.diceColors, userPrefs?.diceColors);
+                return (
+                  <>
+                    <span className="w-3.5 h-3.5 rounded-full border border-slate-600" style={{ backgroundColor: resolved.hope.diceColor }} title="Hope" />
+                    <span className="w-3.5 h-3.5 rounded-full border border-slate-600" style={{ backgroundColor: resolved.fear.diceColor }} title="Fear" />
+                    <span className="w-3.5 h-3.5 rounded-full border border-slate-600" style={{ backgroundColor: resolved.general.diceColor }} title="General" />
+                  </>
+                );
+              })()}
+            </span>
+          )}
+        </button>
+        {diceColorsOpen && (
+          <div className="mt-2">
+            <DiceColorEditor
+              value={activeCharacter.diceColors}
+              defaults={(() => {
+                // Defaults come from user preferences, falling back to system defaults
+                const up = userPrefs?.diceColors;
+                return {
+                  hope:    up?.hope    ?? SYSTEM_DEFAULTS.hope,
+                  fear:    up?.fear    ?? SYSTEM_DEFAULTS.fear,
+                  general: up?.general ?? SYSTEM_DEFAULTS.general,
+                };
+              })()}
+              onChange={(prefs: DiceColorPrefs) => {
+                // Store the full prefs object (or undefined if all defaults)
+                const hasAny = prefs.hope || prefs.fear || prefs.general;
+                updateField("diceColors", hasAny ? prefs : undefined);
+              }}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Conditions slide-in panel */}
       <ConditionsSidebar
@@ -1174,6 +1240,14 @@ function CharacterSheetContent({
   const { activeCharacter } = useCharacterStore();
   const { stagedRequest } = useDiceStore();
   const [diceModalOpen, setDiceModalOpen] = useState(false);
+  const userPrefs = useAuthStore((s) => s.user?.preferences);
+
+  // Compute dice color overrides from character → user → system cascade
+  const diceColorOverrides = React.useMemo(() => {
+    const resolved = resolveDiceColors(activeCharacter?.diceColors, userPrefs?.diceColors);
+    const gmColor = resolveGmDiceColor(userPrefs?.diceColors);
+    return buildColorOverrides(resolved, gmColor);
+  }, [activeCharacter?.diceColors, userPrefs?.diceColors]);
 
   // Auto-open the dice modal whenever something stages a roll
   useEffect(() => {
@@ -1304,6 +1378,7 @@ function CharacterSheetContent({
       <DiceRollerPanel
         open={diceModalOpen}
         onClose={() => setDiceModalOpen(false)}
+        colorOverrides={diceColorOverrides}
       />
 
       {/* Dice log overlay (fixed lower-left) */}

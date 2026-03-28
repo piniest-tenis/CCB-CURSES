@@ -46,6 +46,7 @@ import { useCharacters } from "@/hooks/useCharacter";
 import { SheetContextMenu, type ContextMenuPosition } from "@/components/campaign/SheetContextMenu";
 import { useLongPress } from "@/hooks/useLongPress";
 import type { ForceCritEvent } from "@/hooks/useGameWebSocket";
+import { resolveDiceColors, resolveGmDiceColor, buildColorOverrides } from "@/lib/diceColorResolver";
 
 // ─── Loading skeleton ─────────────────────────────────────────────────────────
 
@@ -524,6 +525,15 @@ export default function CampaignDetailClient() {
   // Character the current player is viewing (for WebSocket)
   const wsCharacterId = selectedCharacterId ?? myCharId ?? (isGm ? "gm" : "");
 
+  // ── GM dice color overrides ─────────────────────────────────────────────────
+  const gmDiceColorOverrides = React.useMemo(() => {
+    if (!isGm) return undefined;
+    const userDiceColors = user?.preferences?.diceColors;
+    const resolved = resolveDiceColors(undefined, userDiceColors);
+    const gmColor = resolveGmDiceColor(userDiceColors);
+    return buildColorOverrides(resolved, gmColor);
+  }, [isGm, user?.preferences?.diceColors]);
+
   // ── WebSocket: ping sending (GM) & receiving (player) ───────────────────────
   const { triggerPing } = usePingEffect();
 
@@ -967,6 +977,7 @@ export default function CampaignDetailClient() {
         <DiceRollerPanel
           open={gmDiceOpen}
           onClose={() => setGmDiceOpen(false)}
+          colorOverrides={gmDiceColorOverrides}
         />
       )}
     </div>

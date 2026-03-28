@@ -236,6 +236,11 @@ export interface Character extends CharacterSummary {
    * Stored as stat names, e.g. ["agility", "strength"].
    */
   markedTraits: string[];
+  /**
+   * Character-scoped dice color overrides. Takes precedence over
+   * UserPreferences.diceColors and the system defaults.
+   */
+  diceColors?: DiceColorPrefs;
 }
 
 // ─── Class & Subclass ─────────────────────────────────────────────────────────
@@ -391,11 +396,33 @@ export interface FactionData {
   reputationScore: number; // -3 to +3
 }
 
+// ─── Dice Color Preferences ───────────────────────────────────────────────────
+
+/** Face + label (number) color pair for a single die category. */
+export interface DieColorPair {
+  /** Hex color for the die body/face (e.g. "#DAA520"). */
+  diceColor: string;
+  /** Hex color for the number/label on the die (e.g. "#36454F"). */
+  labelColor: string;
+}
+
+/**
+ * Per-category dice color preferences. Each key is optional — when absent the
+ * system falls back to user-level defaults, then to hardcoded system defaults.
+ */
+export interface DiceColorPrefs {
+  hope?: DieColorPair;
+  fear?: DieColorPair;
+  general?: DieColorPair;
+}
+
 // ─── User ─────────────────────────────────────────────────────────────────────
 
 export interface UserPreferences {
   theme: "dark" | "light" | "system";
   defaultDiceStyle: string;
+  /** User-level default dice colors applied to all owned characters without character-scoped overrides. */
+  diceColors?: DiceColorPrefs;
 }
 
 export interface UserProfile {

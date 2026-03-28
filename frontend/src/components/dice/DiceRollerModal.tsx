@@ -20,7 +20,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useDiceStore } from "@/store/diceStore";
 import { DiceRoller } from "./DiceRoller";
-import type { RollResult, ActionOutcome, DieSize, DieSpec, RollRequest } from "@/types/dice";
+import type { RollResult, ActionOutcome, DieSize, DieSpec, RollRequest, DieRole } from "@/types/dice";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -402,11 +402,13 @@ function canvasGlowClass(result: RollResult | null): string {
 interface DiceRollerModalProps {
   open: boolean;
   onClose: () => void;
+  /** Custom color overrides for dice.js — resolved from character/user prefs. */
+  colorOverrides?: Record<DieRole, { dice_color: string; label_color: string }>;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function DiceRollerModal({ open, onClose }: DiceRollerModalProps) {
+export function DiceRollerModal({ open, onClose, colorOverrides }: DiceRollerModalProps) {
   const { isRolling, lastResult, stagedRequest, requestRoll, clearStagedRoll } = useDiceStore();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const dialogRef      = useRef<HTMLDivElement>(null);
@@ -577,7 +579,7 @@ export function DiceRollerModal({ open, onClose }: DiceRollerModalProps) {
           <div
             className={["transition-all duration-500", glowClass].join(" ")}
           >
-            <DiceRoller height={300} transparent={false} />
+            <DiceRoller height={300} transparent={false} colorOverrides={colorOverrides} />
           </div>
         )}
 
