@@ -297,11 +297,13 @@ interface SheetHeaderProps {
   characterId: string;
   classData: ClassData | null | undefined;
   onLevelUp: () => void;
+  isDirty?: boolean;
+  isSaving?: boolean;
 }
 
 type ShareState = "idle" | "loading" | "copied" | "error";
 
-function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
+function SheetHeader({ characterId, classData, onLevelUp, isDirty = false }: SheetHeaderProps) {
   const router = useRouter();
   const { activeCharacter, toggleCondition, updateField } = useCharacterStore();
   const { data: classesData }     = useClasses();
@@ -594,13 +596,14 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
           onClick={() => setDiceColorsOpen((o) => !o)}
           className="flex items-center gap-1.5 group w-full text-left"
           aria-expanded={diceColorsOpen}
+          aria-controls="sheet-dice-colors-panel"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
             fill="currentColor"
             className={[
-              "w-3.5 h-3.5 text-[#577399] transition-transform duration-150",
+              "w-3.5 h-3.5 shrink-0 text-[#577399] transition-transform duration-150",
               diceColorsOpen ? "rotate-90" : "",
             ].join(" ")}
           >
@@ -609,24 +612,59 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
           <span className="text-xs uppercase tracking-widest text-[#b9baa3] font-medium group-hover:text-[#f7f7ff] transition-colors">
             Dice Colors
           </span>
-          {/* Quick preview swatches */}
+          {/* Pending-save dot — visible while the global auto-save is in flight */}
+          {isDirty && !diceColorsOpen && (
+            <span
+              aria-hidden="true"
+              className="ml-1 h-1.5 w-1.5 rounded-full bg-[#577399] opacity-60"
+              title="Changes pending save"
+            />
+          )}
+          {/* Quick preview swatches — die-face style */}
           {!diceColorsOpen && (
             <span className="flex gap-1 ml-auto" aria-hidden="true">
               {(() => {
                 const resolved = resolveDiceColors(activeCharacter.diceColors, userPrefs?.diceColors);
                 return (
                   <>
-                    <span className="w-3.5 h-3.5 rounded-full border border-slate-600" style={{ backgroundColor: resolved.hope.diceColor }} title="Hope" />
-                    <span className="w-3.5 h-3.5 rounded-full border border-slate-600" style={{ backgroundColor: resolved.fear.diceColor }} title="Fear" />
-                    <span className="w-3.5 h-3.5 rounded-full border border-slate-600" style={{ backgroundColor: resolved.general.diceColor }} title="General" />
+                    <span
+                      className="w-4 h-4 rounded-sm border border-white/10"
+                      style={{
+                        backgroundColor: resolved.hope.diceColor,
+                        boxShadow: "inset 0 1px 2px rgba(255,255,255,0.12), 0 1px 2px rgba(0,0,0,0.4)",
+                      }}
+                      title="Hope die"
+                    />
+                    <span
+                      className="w-4 h-4 rounded-sm border border-white/10"
+                      style={{
+                        backgroundColor: resolved.fear.diceColor,
+                        boxShadow: "inset 0 1px 2px rgba(255,255,255,0.12), 0 1px 2px rgba(0,0,0,0.4)",
+                      }}
+                      title="Fear die"
+                    />
+                    <span
+                      className="w-4 h-4 rounded-sm border border-white/10"
+                      style={{
+                        backgroundColor: resolved.general.diceColor,
+                        boxShadow: "inset 0 1px 2px rgba(255,255,255,0.12), 0 1px 2px rgba(0,0,0,0.4)",
+                      }}
+                      title="General dice"
+                    />
                   </>
                 );
               })()}
             </span>
           )}
         </button>
-        {diceColorsOpen && (
+        {/* Kept mounted (hidden attr) so the editor retains working state across toggles */}
+        <div id="sheet-dice-colors-panel" hidden={!diceColorsOpen}>
           <div className="mt-2">
+            <p className="text-xs text-[#b9baa3]/40 mb-2">
+              Overrides your{" "}
+              <span className="text-[#577399]/70">default dice colors</span>
+              {" "}for this character only. Changes save automatically.
+            </p>
             <DiceColorEditor
               value={activeCharacter.diceColors}
               defaults={(() => {
@@ -645,7 +683,7 @@ function SheetHeader({ characterId, classData, onLevelUp }: SheetHeaderProps) {
               }}
             />
           </div>
-        )}
+        </div>
       </div>
 
       {/* Conditions slide-in panel */}
@@ -1291,7 +1329,7 @@ function CharacterSheetContent({
         className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-5 shadow-card"
         data-field-key="header"
       >
-        <SheetHeader characterId={characterId} classData={classData} onLevelUp={() => setLevelUpOpen(true)} />
+        <SheetHeader characterId={characterId} classData={classData} onLevelUp={() => setLevelUpOpen(true)} isDirty={isDirty} isSaving={isSaving} />
       </section>
 
       {/* Level-up wizard (modal overlay) */}
