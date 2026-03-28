@@ -349,6 +349,16 @@ export function DiceRoller({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewport]);
 
+  // ── Sync colorOverrides into live dice_box instance when prop changes ─────────
+  // dice_box reads box.colorOverrides[role] on every throw, so mutating the
+  // property in-place is sufficient — no reinitialisation needed.
+
+  useEffect(() => {
+    if (!boxRef.current || !readyRef.current) return;
+    const effective = colorOverrides ?? DEFAULT_COLOR_OVERRIDES;
+    boxRef.current.colorOverrides = { ...effective };
+  }, [colorOverrides]);
+
   // ── Cleanup on unmount ───────────────────────────────────────────────────────
 
   useEffect(() => {
