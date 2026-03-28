@@ -526,8 +526,15 @@ export default function CampaignDetailClient() {
   // Character the current player is viewing (for WebSocket)
   const wsCharacterId = selectedCharacterId ?? myCharId ?? (isGm ? "gm" : "");
 
-  // ── GM dice color overrides ─────────────────────────────────────────────────
-  const gmDiceColorOverrides = React.useMemo(() => {
+  // ── Dice color overrides ────────────────────────────────────────────────────
+  // activeCharacter is set by CharacterSheet whenever a sheet is displayed.
+  // - GM with no selected character → GM's own prefs (gm-role color applies)
+  // - GM viewing a player's sheet   → that character's diceColors → system defaults
+  //   (we don't have the player's user-level prefs, so skip that layer)
+  // - Player                        → own character's diceColors → own user prefs
+  const activeCharacter = useCharacterStore((s) => s.activeCharacter);
+
+  const gmOwnColorOverrides = React.useMemo((): DiceColorOverrides | undefined => {
     if (!isGm) return undefined;
     const userDiceColors = user?.preferences?.diceColors;
     const resolved = resolveDiceColors(undefined, userDiceColors);
@@ -535,15 +542,25 @@ export default function CampaignDetailClient() {
     return buildColorOverrides(resolved, gmColor);
   }, [isGm, user?.preferences?.diceColors]);
 
-  // ── Player dice color overrides (for WS broadcast) ─────────────────────────
-  const activeCharacter = useCharacterStore((s) => s.activeCharacter);
-  const playerDiceColorOverrides = React.useMemo((): DiceColorOverrides | undefined => {
-    if (isGm) return undefined;
-    const charDiceColors = activeCharacter?.diceColors;
-    const userDiceColors = user?.preferences?.diceColors;
-    const resolved = resolveDiceColors(charDiceColors, userDiceColors);
-    return buildColorOverrides(resolved);
-  }, [isGm, activeCharacter?.diceColors, user?.preferences?.diceColors]);
+  // Colors to use for the dice panel and WS broadcast:
+  // If the GM has a player's character loaded, defer to that character's colors.
+  const effectiveDiceColorOverrides = React.useMemo((): DiceColorOverrides | undefined => {
+    if (!isGm) {
+      // Player: character prefs → user prefs → system defaults
+      const charDiceColors = activeCharacter?.diceColors;
+      const userDiceColors = user?.preferences?.diceColors;
+      const resolved = resolveDiceColors(charDiceColors, userDiceColors);
+      return buildColorOverrides(resolved);
+    }
+    // GM with a player's character sheet open: use that character's colors only,
+    // falling back to system defaults (NOT the GM's own prefs).
+    if (selectedCharacterId && activeCharacter?.characterId === selectedCharacterId) {
+      const resolved = resolveDiceColors(activeCharacter.diceColors, undefined);
+      return buildColorOverrides(resolved);
+    }
+    // GM with no character selected: own prefs
+    return gmOwnColorOverrides;
+  }, [isGm, selectedCharacterId, activeCharacter, user?.preferences?.diceColors, gmOwnColorOverrides]);
 
   // ── WebSocket: ping sending (GM) & receiving (player) ───────────────────────
   const { triggerPing } = usePingEffect();
@@ -584,9 +601,8 @@ export default function CampaignDetailClient() {
   useEffect(() => {
     if (!lastRollId || lastRollId === prevBroadcastIdRef.current) return;
     prevBroadcastIdRef.current = lastRollId;
-    const colors = isGm ? gmDiceColorOverrides : playerDiceColorOverrides;
-    sendDiceRoll(diceLog[0], colors);
-  }, [lastRollId, diceLog, sendDiceRoll, isGm, gmDiceColorOverrides, playerDiceColorOverrides]);
+    sendDiceRoll(diceLog[0], effectiveDiceColorOverrides);
+  }, [lastRollId, diceLog, sendDiceRoll, effectiveDiceColorOverrides]);
 
   // GM: send ping to the selected character
   const handlePingField = useCallback(
@@ -989,7 +1005,7 @@ export default function CampaignDetailClient() {
         <DiceRollerPanel
           open={gmDiceOpen}
           onClose={() => setGmDiceOpen(false)}
-          colorOverrides={gmDiceColorOverrides}
+          colorOverrides={effectiveDiceColorOverrides}
         />
       )}
     </div>
