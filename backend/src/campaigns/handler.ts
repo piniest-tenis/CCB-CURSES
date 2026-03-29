@@ -450,6 +450,7 @@ async function buildCampaignDetail(
     schedule: campaignMeta.schedule ?? null,
     createdAt: campaignMeta.createdAt,
     updatedAt: campaignMeta.updatedAt,
+    currentFear: campaignMeta.currentFear ?? 0,
     members,
     characters: characterDetails,
     callerRole,
