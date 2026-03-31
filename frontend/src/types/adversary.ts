@@ -1,9 +1,11 @@
 /**
  * src/types/adversary.ts
  *
- * Type definitions for the Adversary Catalog and Encounter Console.
+ * Type definitions for the Adversary Catalog, Encounter Console, and
+ * Environment Catalog.
  * Adversaries are GM-managed creatures/NPCs from Daggerheart's bestiary.
  * Encounters are live combat sessions where the GM tracks adversary state.
+ * Environments are hazardous locations that suggest adversary compositions.
  */
 
 // ─── Adversary Catalog ────────────────────────────────────────────────────────
@@ -179,4 +181,48 @@ export interface AdversaryRollResult {
   isCritical: boolean;
   /** Timestamp */
   timestamp: string;
+}
+
+// ─── Environment Catalog ──────────────────────────────────────────────────────
+
+/** Tone descriptors used in Obsidian environment files. */
+export type EnvironmentTone = string;
+
+/** An environment feature / hazard passive or active effect. */
+export interface EnvironmentFeature {
+  name: string;
+  description: string;
+  /** Whether this feature is a passive (always active) or an activated ability. */
+  isPassive: boolean;
+}
+
+/**
+ * A playable environment — a hazardous location that imposes ongoing effects
+ * on the encounter and suggests a pool of potential adversaries.
+ */
+export interface Environment {
+  environmentId: string;
+  /** Display name, e.g. "Burning Creep" */
+  name: string;
+  /** Daggerheart tier 1–4 */
+  tier: AdversaryTier;
+  /** Environment category — hazard, dungeon, wilderness, etc. */
+  type: string;
+  /** Short atmospheric description */
+  description: string;
+  /** Tone keywords, e.g. ["violent", "mournful"] */
+  tone: string[];
+  /** Base difficulty number for checks made within this environment */
+  difficulty: number;
+  /** Features / effects active while in this environment */
+  features: EnvironmentFeature[];
+  /**
+   * Adversary IDs (or names used as loose keys) that commonly appear here.
+   * When loading an environment these are surfaced as quick-add suggestions.
+   */
+  potentialAdversaryNames: string[];
+  /** Source — homebrew or SRD */
+  source: "srd" | "homebrew";
+  createdAt: string;
+  updatedAt: string;
 }

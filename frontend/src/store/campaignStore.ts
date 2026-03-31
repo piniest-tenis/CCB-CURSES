@@ -12,7 +12,7 @@ import { create } from "zustand";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 /** Tabs available in the Campaign Detail main content area. */
-export type CampaignTab = "characters" | "adversaries" | "encounter";
+export type CampaignTab = "characters" | "adversaries" | "encounter" | "environments";
 
 interface CampaignState {
   activeCampaignId:    string | null;
