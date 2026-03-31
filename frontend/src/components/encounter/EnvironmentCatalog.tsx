@@ -3,9 +3,9 @@
 /**
  * src/components/encounter/EnvironmentCatalog.tsx
  *
- * Environment catalog tab inside the Encounter panel.
- * Shows all available environments; loading one surfaces the suggested
- * adversaries from its `potentialAdversaryNames` list as quick-add chips.
+ * Standalone environment catalog — browse and load environments into the
+ * active encounter. "Load into Encounter" writes to the encounter store so
+ * the environment is accessible from the Encounter tab.
  */
 
 import React, { useState, useCallback, useMemo } from "react";
@@ -13,6 +13,7 @@ import type { Environment, EnvironmentFeature } from "@/types/adversary";
 import type { Adversary } from "@/types/adversary";
 import { useEnvironments } from "@/hooks/useEnvironments";
 import { useAdversaries } from "@/hooks/useAdversaries";
+import { useEncounterStore } from "@/store/encounterStore";
 import { TierBadge } from "@/components/adversary/TierBadge";
 
 interface EnvironmentCatalogProps {
@@ -56,16 +57,19 @@ function FeatureRow({ feature }: { feature: EnvironmentFeature }) {
 interface EnvironmentCardProps {
   environment: Environment;
   suggestedAdversaries: Adversary[];
-  isActive: boolean;
+  /** Whether this environment is currently loaded into the encounter. */
+  isLoaded: boolean;
   onLoad: (env: Environment) => void;
+  onUnload: () => void;
   onAddAdversary?: (adversary: Adversary) => void;
 }
 
 function EnvironmentCard({
   environment,
   suggestedAdversaries,
-  isActive,
+  isLoaded,
   onLoad,
+  onUnload,
   onAddAdversary,
 }: EnvironmentCardProps) {
   const [expanded, setExpanded] = useState(false);
@@ -92,7 +96,7 @@ function EnvironmentCard({
         flex flex-col rounded-xl
         border bg-slate-900/80
         shadow-card transition-all duration-200 overflow-hidden
-        ${isActive
+        ${isLoaded
           ? "border-[#577399] ring-1 ring-[#577399]/40"
           : "border-slate-700/50 hover:border-[#577399]/50"}
       `}
@@ -110,10 +114,7 @@ function EnvironmentCard({
               {environment.type}
             </span>
             {environment.tone.map((t) => (
-              <span
-                key={t}
-                className="text-[10px] italic text-[#b9baa3]/40"
-              >
+              <span key={t} className="text-[10px] italic text-[#b9baa3]/40">
                 {t}
               </span>
             ))}
@@ -124,9 +125,9 @@ function EnvironmentCard({
           <span className="text-[10px] text-[#b9baa3]/40">
             DC {environment.difficulty}
           </span>
-          {isActive && (
+          {isLoaded && (
             <span className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-[#577399]/20 text-[#577399]">
-              Active
+              In Encounter
             </span>
           )}
         </div>
@@ -224,7 +225,7 @@ function EnvironmentCard({
         </div>
       )}
 
-      {/* Unmatched suggested adversary names (no match in catalog) */}
+      {/* Unmatched suggested adversary names */}
       {(() => {
         const matchedNames = new Set(suggestedAdversaries.map((a) => a.name));
         const unmatched = environment.potentialAdversaryNames.filter(
@@ -250,20 +251,35 @@ function EnvironmentCard({
 
       {/* Footer actions */}
       <div className="mt-auto px-4 py-3 flex items-center justify-between border-t border-slate-800/40 mt-3">
-        <button
-          type="button"
-          onClick={() => onLoad(environment)}
-          className={`
-            rounded-lg border px-3 py-1.5 text-xs font-semibold
-            transition-all duration-150
-            focus:outline-none focus:ring-2 focus:ring-[#577399]
-            ${isActive
-              ? "border-[#577399]/60 bg-[#577399]/20 text-[#577399] cursor-default"
-              : "border-[#577399]/40 bg-[#577399]/10 text-[#577399] hover:bg-[#577399]/20 hover:border-[#577399] hover:text-[#f7f7ff]"}
-          `}
-        >
-          {isActive ? "Loaded" : "Load Environment"}
-        </button>
+        {isLoaded ? (
+          <button
+            type="button"
+            onClick={onUnload}
+            className="
+              rounded-lg border border-[#fe5f55]/30 bg-transparent
+              px-3 py-1.5 text-xs font-semibold text-[#fe5f55]/70
+              hover:bg-[#fe5f55]/10 hover:text-[#fe5f55] hover:border-[#fe5f55]/50
+              transition-all duration-150
+              focus:outline-none focus:ring-2 focus:ring-[#fe5f55]
+            "
+          >
+            Remove from Encounter
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onLoad(environment)}
+            className="
+              rounded-lg border border-[#577399]/40 bg-[#577399]/10
+              px-3 py-1.5 text-xs font-semibold text-[#577399]
+              hover:bg-[#577399]/20 hover:border-[#577399] hover:text-[#f7f7ff]
+              transition-all duration-150
+              focus:outline-none focus:ring-2 focus:ring-[#577399]
+            "
+          >
+            Load into Encounter
+          </button>
+        )}
         <span className="text-[10px] text-[#b9baa3]/30">
           {environment.potentialAdversaryNames.length} suggested adversar
           {environment.potentialAdversaryNames.length !== 1 ? "ies" : "y"}
@@ -281,17 +297,34 @@ export function EnvironmentCatalog({
 }: EnvironmentCatalogProps) {
   const { environments, isLoading } = useEnvironments();
   const { adversaries } = useAdversaries(campaignId);
-  const [activeEnvironmentId, setActiveEnvironmentId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+
+  // Read active environment from the encounter store (single source of truth)
+  const activeEnvironmentId = useEncounterStore(
+    (s) => s.encounter?.activeEnvironmentId ?? null
+  );
+  const setEnvironment = useEncounterStore((s) => s.setEnvironment);
+  const clearEnvironment = useEncounterStore((s) => s.clearEnvironment);
+  const encounter = useEncounterStore((s) => s.encounter);
+  const createEncounter = useEncounterStore((s) => s.createEncounter);
+
+  const handleLoad = useCallback(
+    (env: Environment) => {
+      // Create an encounter if one doesn't exist yet
+      if (!encounter) {
+        createEncounter(campaignId);
+      }
+      setEnvironment(env.environmentId);
+    },
+    [encounter, createEncounter, campaignId, setEnvironment]
+  );
 
   /** Resolve suggested adversary objects for a given environment. */
   const resolveSuggestions = useCallback(
     (env: Environment): Adversary[] => {
       return env.potentialAdversaryNames
         .map((name) =>
-          adversaries.find(
-            (a) => a.name.toLowerCase() === name.toLowerCase()
-          )
+          adversaries.find((a) => a.name.toLowerCase() === name.toLowerCase())
         )
         .filter((a): a is Adversary => a !== undefined);
     },
@@ -340,14 +373,14 @@ export function EnvironmentCatalog({
         </h2>
         {activeEnvironment && (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-[#b9baa3]/50">Active:</span>
+            <span className="text-xs text-[#b9baa3]/50">In encounter:</span>
             <span className="text-xs font-semibold text-[#577399]">
               {activeEnvironment.name}
             </span>
             <button
               type="button"
-              onClick={() => setActiveEnvironmentId(null)}
-              aria-label="Clear active environment"
+              onClick={clearEnvironment}
+              aria-label="Remove environment from encounter"
               className="
                 rounded p-0.5 text-[#b9baa3]/30
                 hover:text-[#fe5f55] transition-colors text-xs
@@ -358,35 +391,6 @@ export function EnvironmentCatalog({
           </div>
         )}
       </div>
-
-      {/* Active environment banner */}
-      {activeEnvironment && (
-        <div
-          className="
-            mb-4 rounded-xl border border-[#577399]/30 bg-[#577399]/5
-            px-4 py-3 space-y-1
-          "
-        >
-          <p className="text-xs font-semibold text-[#577399] uppercase tracking-wider">
-            Environment Active — {activeEnvironment.name}
-          </p>
-          <p className="text-xs text-[#b9baa3]/60 leading-relaxed">
-            {activeEnvironment.description}
-          </p>
-          <div className="pt-1 flex flex-wrap gap-2">
-            {activeEnvironment.features
-              .filter((f) => f.isPassive)
-              .map((f) => (
-                <span
-                  key={f.name}
-                  className="text-[10px] font-medium text-[#577399]/70 italic"
-                >
-                  {f.name.replace(" - Passive", "")} (passive)
-                </span>
-              ))}
-          </div>
-        </div>
-      )}
 
       {/* Search */}
       <div className="mb-4">
@@ -431,8 +435,9 @@ export function EnvironmentCatalog({
               key={env.environmentId}
               environment={env}
               suggestedAdversaries={resolveSuggestions(env)}
-              isActive={env.environmentId === activeEnvironmentId}
-              onLoad={(e) => setActiveEnvironmentId(e.environmentId)}
+              isLoaded={env.environmentId === activeEnvironmentId}
+              onLoad={handleLoad}
+              onUnload={clearEnvironment}
               onAddAdversary={onAddAdversaryToEncounter}
             />
           ))}

@@ -154,6 +154,11 @@ export interface Encounter {
   adversaries: EncounterAdversary[];
   /** Round counter (GM increments manually) */
   round: number;
+  /**
+   * The environment currently loaded into this encounter, or null.
+   * References an Environment by environmentId.
+   */
+  activeEnvironmentId: string | null;
   createdAt: string;
   updatedAt: string;
 }

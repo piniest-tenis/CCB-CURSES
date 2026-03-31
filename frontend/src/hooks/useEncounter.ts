@@ -51,5 +51,7 @@ export function useEncounter() {
     rollDamage:       store.rollDamage,
     clearRollLog:     store.clearRollLog,
     clearEncounter:   store.clearEncounter,
+    setEnvironment:   store.setEnvironment,
+    clearEnvironment: store.clearEnvironment,
   };
 }

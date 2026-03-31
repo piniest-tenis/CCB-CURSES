@@ -352,7 +352,6 @@ const GM_TABS: { id: CampaignTab; label: string; icon: string }[] = [
   { id: "characters", label: "Characters", icon: "👤" },
   { id: "adversaries", label: "Adversaries", icon: "👹" },
   { id: "encounter", label: "Encounter", icon: "⚔️" },
-  { id: "environments", label: "Scene", icon: "🌲" },
 ];
 
 interface GmTabBarProps {
@@ -1380,7 +1379,7 @@ export default function CampaignDetailClient() {
       </div>
 
       {/* ── Mobile: floating Party drawer trigger ───────────────────────────── */}
-      {isGm && (
+      {isGm && activeTab === "characters" && (
         <button
           type="button"
           onClick={() => setDrawerOpen(true)}

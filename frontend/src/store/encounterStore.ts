@@ -61,6 +61,10 @@ interface EncounterActions {
   rollAttack: (instance: EncounterAdversary) => AdversaryRollResult;
   /** Roll damage dice (parsed from attackDamage notation). Returns the result. */
   rollDamage: (instance: EncounterAdversary) => AdversaryRollResult;
+  /** Set the active environment for this encounter. */
+  setEnvironment: (environmentId: string) => void;
+  /** Remove the active environment from this encounter. */
+  clearEnvironment: () => void;
   /** Clear the encounter roll log. */
   clearRollLog: () => void;
   /** Reset encounter to null. */
@@ -87,6 +91,7 @@ export const useEncounterStore = create<EncounterStore>((set, get) => ({
         status: "preparing",
         adversaries: [],
         round: 1,
+        activeEnvironmentId: null,
         createdAt: now,
         updatedAt: now,
       },
@@ -272,6 +277,34 @@ export const useEncounterStore = create<EncounterStore>((set, get) => ({
     }));
 
     return result;
+  },
+
+  // ── setEnvironment ───────────────────────────────────────────────────────
+  setEnvironment: (environmentId) => {
+    set((state) => {
+      if (!state.encounter) return state;
+      return {
+        encounter: {
+          ...state.encounter,
+          activeEnvironmentId: environmentId,
+          updatedAt: new Date().toISOString(),
+        },
+      };
+    });
+  },
+
+  // ── clearEnvironment ─────────────────────────────────────────────────────
+  clearEnvironment: () => {
+    set((state) => {
+      if (!state.encounter) return state;
+      return {
+        encounter: {
+          ...state.encounter,
+          activeEnvironmentId: null,
+          updatedAt: new Date().toISOString(),
+        },
+      };
+    });
   },
 
   // ── clearRollLog ─────────────────────────────────────────────────────────
