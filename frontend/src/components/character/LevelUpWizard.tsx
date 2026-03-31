@@ -1141,11 +1141,11 @@ function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardI
   }, [allCards, multiclassCards, targetLevel, mcCardCap, ownedSet]);
 
   const handleToggle = (card: DomainCard) => {
-    const cardId = card.cardId;
-    if (selectedCardIds.includes(cardId)) {
-      onSelect(selectedCardIds.filter((id) => id !== cardId));
+    const prefixedId = `${card.domain}/${card.cardId}`;
+    if (selectedCardIds.includes(prefixedId)) {
+      onSelect(selectedCardIds.filter((id) => id !== prefixedId));
     } else if (selectedCardIds.length < maxSelections) {
-      onSelect([...selectedCardIds, cardId]);
+      onSelect([...selectedCardIds, prefixedId]);
     }
   };
 
@@ -1170,7 +1170,7 @@ function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardI
 
   // ── Detail view (drill-down) ──
   if (detailCard) {
-    const isSelected = selectedCardIds.includes(detailCard.cardId);
+    const isSelected = selectedCardIds.includes(`${detailCard.domain}/${detailCard.cardId}`);
     const canSelect = selectedCardIds.length < maxSelections;
     return (
       <div className="space-y-3">
@@ -1240,7 +1240,7 @@ function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardI
       ) : (
         <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
           {availableCards.map(({ card, isMulticlass }) => {
-            const isSelected = selectedCardIds.includes(card.cardId);
+            const isSelected = selectedCardIds.includes(`${card.domain}/${card.cardId}`);
             const atMax = selectedCardIds.length >= maxSelections && !isSelected;
             return (
               <LevelUpCardRow
@@ -1367,10 +1367,16 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
   }, [step, advancementsComplete, domainCardSatisfied]);
 
   const handleSubmit = () => {
+    // Strip "Domain/" prefix before sending to backend — backend stores bare cardId in domainVault
+    const toBareId = (prefixedOrBare: string) => {
+      const slash = prefixedOrBare.indexOf("/");
+      return slash !== -1 ? prefixedOrBare.slice(slash + 1) : prefixedOrBare;
+    };
+
     // Build advancements with extra domain card detail filled in
     const finalAdvancements = advancements.map((adv) => {
       if (adv.type === "additional-domain-card" && selectedDomainCardIds.length > 1) {
-        return { ...adv, detail: selectedDomainCardIds[1] };
+        return { ...adv, detail: toBareId(selectedDomainCardIds[1]) };
       }
       return adv;
     });
@@ -1378,7 +1384,7 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
     const input: LevelUpInput = {
       targetLevel,
       advancements: finalAdvancements,
-      newDomainCardId: selectedDomainCardIds[0] ?? null,
+      newDomainCardId: selectedDomainCardIds[0] ? toBareId(selectedDomainCardIds[0]) : null,
     };
 
     levelUpMutation.mutate(input, {
@@ -1816,7 +1822,7 @@ function DomainCardPickerWrapper({
     for (const cards of [d0?.cards, d1?.cards, dmc?.cards]) {
       if (cards) {
         for (const card of cards) {
-          map[card.cardId] = card.name;
+          map[`${card.domain}/${card.cardId}`] = card.name;
         }
       }
     }

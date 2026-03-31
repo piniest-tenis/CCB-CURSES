@@ -170,7 +170,9 @@ export function useDomain(
 ): UseQueryResult<DomainCardsData> {
   const qs = level !== undefined ? `?level=${level}` : "";
   return useQuery({
-    queryKey: gameDataKeys.domains.detail(domainName ?? ""),
+    queryKey: level !== undefined
+      ? [...gameDataKeys.domains.detail(domainName ?? ""), level]
+      : gameDataKeys.domains.detail(domainName ?? ""),
     queryFn:  () =>
       apiClient.get<DomainCardsData>(
         `/domains/${encodeURIComponent(domainName ?? "")}${qs}`
