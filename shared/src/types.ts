@@ -726,6 +726,35 @@ export interface PingEvent {
   timestamp: string;
 }
 
+/**
+ * Sent by the GM to trigger a dice roll prompt on a specific player's character sheet.
+ * The player's sheet receives this and calls stageRoll() with the provided RollRequestPayload.
+ */
+export interface RollRequestEvent {
+  type: "roll_request";
+  campaignId: string;
+  targetCharacterId: string;
+  senderUserId: string;
+  timestamp: string;
+  /** The roll to stage on the target character's sheet. */
+  rollRequest: RollRequestPayload;
+}
+
+/**
+ * A serialisable roll request suitable for transmission over WebSocket.
+ * Mirrors the frontend RollRequest type but avoids importing frontend-only modules.
+ */
+export interface RollRequestPayload {
+  label: string;
+  type: "action" | "damage" | "reaction" | "generic";
+  dice: Array<{ size: "d4" | "d6" | "d8" | "d10" | "d12" | "d20"; role: string; label?: string }>;
+  modifier?: number;
+  difficulty?: number;
+  /** Optional flavor text shown as a subtitle in the roll modal. */
+  flavorText?: string;
+  characterName?: string;
+}
+
 // ─── Session Schedule ─────────────────────────────────────────────────────────
 
 export type DayOfWeek =

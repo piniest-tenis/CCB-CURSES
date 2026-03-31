@@ -28,22 +28,38 @@ const SEED_ENVIRONMENTS: Environment[] = [
     difficulty: 10,
     features: [
       {
-        name: "Thick Smoke - Passive",
+        name: "Thick Smoke",
         description:
-          "While in Burning Creep, players must make Instinct rolls to travel more than Close Range. The thick black smoke obscures everything beyond a distance, making navigation impossible.",
+          "While in Burning Creep, players must make an Instinct roll (DC 10) to travel more than Close Range.",
+        flavorText:
+          "The thick black smoke obscures everything beyond a distance, making navigation impossible.",
         isPassive: true,
+        rollSpec: {
+          label: "Instinct — Navigate Thick Smoke",
+          type: "action",
+          dice: [
+            { size: "d12", role: "hope",  label: "Hope" },
+            { size: "d12", role: "fear",  label: "Fear" },
+          ],
+          difficulty: 10,
+        },
       },
       {
-        name: "Toxic Smoke - Passive",
+        name: "Toxic Smoke",
         description:
-          "While in Burning Creep, players take d6 magical damage before they make any action roll. This cannot be reduced by Armor. The toxic fumes burn and scar tissues and the acidic accretions etch even hard carapaces.",
+          "While in Burning Creep, players take d6 magical damage before they make any action roll. This cannot be reduced by Armor.",
+        flavorText:
+          "The toxic fumes burn and scar tissues and the acidic accretions etch even hard carapaces. Staying too long is a dangerous proposition for all but the most hardy creatures.",
         isPassive: true,
       },
       {
         name: "Etherotaxic Defender",
         description:
-          "Once per scene, you can summon an enraged Creep-Bound Etherotaxic entity. Spend 2 Fear to have an Etherotaxic creature added to the encounter appropriate to the party's tier. Disturbing the piles of the matted and burning Creep can cause trapped Etherotaxia to spring free in an angered and panicked state.",
+          "Once per scene, spend 2 Fear to summon an enraged Creep-Bound Etherotaxic creature appropriate to the party's tier.",
+        flavorText:
+          "Disturbing the piles of matted, burning Creep can cause trapped Etherotaxia to spring free in an angered and panicked state.",
         isPassive: false,
+        fearCost: 2,
       },
     ],
     potentialAdversaryNames: [
@@ -67,22 +83,47 @@ const SEED_ENVIRONMENTS: Environment[] = [
     difficulty: 12,
     features: [
       {
-        name: "Distortion Field - Passive",
+        name: "Distortion Field",
         description:
-          "While in a Creep Infestation, players must make a Presence Roll (13) or move further into the Creep. Rescued children reported that they were walking out of the woods for hours, despite wandering the whole time ever deeper into Forestdown.",
+          "While in a Creep Infestation, players must make a Presence roll (DC 13) or move further into the Creep.",
+        flavorText:
+          "Rescued children reported that they were walking out of the woods for hours, despite wandering the whole time ever deeper into Forestdown.",
         isPassive: true,
+        rollSpec: {
+          label: "Presence — Resist Distortion Field",
+          type: "action",
+          dice: [
+            { size: "d12", role: "hope",  label: "Hope" },
+            { size: "d12", role: "fear",  label: "Fear" },
+          ],
+          difficulty: 13,
+        },
       },
       {
-        name: "Ethereal Presence - Passive",
+        name: "Ethereal Presence",
         description:
-          "While in a Creep Infestation, players are unnaturally calm. For every two actions taken in the Creep, they clear 1 Stress. The deeper the wanderers were found, the more at peace they seemed with their surroundings despite the horrible changes inflicted upon them.",
+          "While in a Creep Infestation, players are unnaturally calm. For every two actions taken in the Creep, they clear 1 Stress.",
+        flavorText:
+          "The deeper the wanderers were found, the more at peace they seemed with their surroundings despite the horrible changes inflicted upon them.",
         isPassive: true,
       },
       {
         name: "Transformative Stab",
         description:
-          "Spend a Fear. A target that has cleared 2 Stress while in a Creep Infestation must make a Presence Roll (15) or take 2d6 magical damage and gain a permanent alteration to their body.",
+          "Spend a Fear. A target that has cleared 2 Stress while in a Creep Infestation must make a Presence roll (DC 15) or take 2d6 magical damage and gain a permanent alteration to their body.",
+        flavorText:
+          "Only after we'd burned out most of the incursion did we find Commander Orillee. Or, what we assumed was her. It wore her uniform, but the carcass resembled no living thing any of the Hospitallers present had ever seen.",
         isPassive: false,
+        fearCost: 1,
+        rollSpec: {
+          label: "Presence — Resist Transformative Stab",
+          type: "action",
+          dice: [
+            { size: "d12", role: "hope",  label: "Hope" },
+            { size: "d12", role: "fear",  label: "Fear" },
+          ],
+          difficulty: 15,
+        },
       },
     ],
     potentialAdversaryNames: [

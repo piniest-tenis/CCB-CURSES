@@ -197,8 +197,27 @@ export type EnvironmentTone = string;
 export interface EnvironmentFeature {
   name: string;
   description: string;
+  /** Flavor / lore text shown under the mechanical description when expanded. */
+  flavorText?: string;
   /** Whether this feature is a passive (always active) or an activated ability. */
   isPassive: boolean;
+  /**
+   * Fear cost to activate this feature (parsed from "Spend N Fear" in description).
+   * Only present on active features that cost Fear.
+   */
+  fearCost?: number;
+  /**
+   * If this feature requires a roll from a player, the roll spec to send.
+   * null/absent = no roll required (GM narrates the effect instead).
+   */
+  rollSpec?: {
+    label: string;
+    type: "action" | "reaction" | "generic";
+    /** Dice pool, e.g. [{ size: "d12", role: "hope" }, { size: "d12", role: "fear" }] for action rolls */
+    dice: Array<{ size: "d4" | "d6" | "d8" | "d10" | "d12" | "d20"; role: string; label?: string }>;
+    modifier?: number;
+    difficulty?: number;
+  };
 }
 
 /**

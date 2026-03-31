@@ -12,7 +12,9 @@ import { CharacterSheet } from "@/components/character/CharacterSheet";
 import { LoadingInterstitial } from "@/components/LoadingInterstitial";
 import { useCharacter } from "@/hooks/useCharacter";
 import { useDiceStore } from "@/store/diceStore";
+import type { DieRole, DieSpec } from "@/types/dice";
 import { useGameWebSocket, type ForceCritEvent } from "@/hooks/useGameWebSocket";
+import type { RollRequestEvent, RollRequestPayload } from "@/types/campaign";
 import React, { useEffect, useRef } from "react";
 import Link from "next/link";
 
@@ -55,7 +57,10 @@ export default function CharacterPage() {
   // Only connects when campaignId and characterId are available (player must be
   // assigned to a campaign). sendDiceRoll fans out via the dice_roll WS handler.
   // onForceCrit: received when the GM arms/disarms a force-crit for this character.
+  // onRollRequest: received when the GM sends a roll prompt to this character sheet.
   const setForceCrit = useDiceStore((s) => s.setForceCrit);
+  const stageRoll    = useDiceStore((s) => s.stageRoll);
+
   const { sendDiceRoll } = useGameWebSocket(
     campaignId,
     characterId,
@@ -68,6 +73,26 @@ export default function CharacterPage() {
           }
         },
         [characterId, setForceCrit]
+      ),
+      onRollRequest: React.useCallback(
+        (evt: RollRequestEvent) => {
+          if (evt.targetCharacterId !== characterId) return;
+          const req = evt.rollRequest;
+          stageRoll({
+            label:     req.label,
+            type:      req.type,
+            dice:      req.dice.map((d: RollRequestPayload["dice"][number]) => ({
+              size:  d.size,
+              role:  d.role as DieRole,
+              label: d.label,
+            } satisfies DieSpec)),
+            modifier:   req.modifier,
+            difficulty: req.difficulty,
+            // characterName injected from live character data so it shows correctly in the OBS log
+            characterName: character?.name ?? req.characterName,
+          });
+        },
+        [characterId, stageRoll, character?.name]
       ),
     }
   );

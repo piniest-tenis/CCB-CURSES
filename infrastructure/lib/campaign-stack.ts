@@ -263,6 +263,19 @@ export class CampaignStack extends cdk.Stack {
 
     this.connectionsTable.grantReadWriteData(wsForceCritHandler);
 
+    // ── Roll Request Lambda ───────────────────────────────────────────────────
+    const wsRollRequestHandler = new lambda.Function(this, "WsRollRequestHandler", {
+      ...commonLambdaProps,
+      functionName: `daggerheart-ws-roll-request-${stage}`,
+      description: "WebSocket roll_request action — GM sends a roll prompt to a player's character sheet",
+      handler: "index.handler",
+      code: lambda.Code.fromAsset("../backend/dist/ws-roll-request-handler"),
+      logGroup: makeLambdaLogGroup("ws-roll-request"),
+    } as lambda.FunctionProps);
+
+    this.connectionsTable.grantReadWriteData(wsRollRequestHandler);
+    this.campaignsTable.grantReadData(wsRollRequestHandler);
+
     // ── WebSocket API ─────────────────────────────────────────────────────────
     const wsApi = new apigwv2.WebSocketApi(this, "WsApi", {
       apiName: `daggerheart-ws-${stage}`,
@@ -302,6 +315,14 @@ export class CampaignStack extends cdk.Stack {
       integration: new apigwv2Integrations.WebSocketLambdaIntegration(
         "WsForceCritIntegration",
         wsForceCritHandler
+      ),
+    });
+
+    // Add the roll_request route
+    wsApi.addRoute("roll_request", {
+      integration: new apigwv2Integrations.WebSocketLambdaIntegration(
+        "WsRollRequestIntegration",
+        wsRollRequestHandler
       ),
     });
 
@@ -359,6 +380,7 @@ export class CampaignStack extends cdk.Stack {
     wsApi.grantManageConnections(wsPingHandler);
     wsApi.grantManageConnections(wsDiceRollHandler);
     wsApi.grantManageConnections(wsForceCritHandler);
+    wsApi.grantManageConnections(wsRollRequestHandler);
 
     // Grant ping handler permission to post to connections (execute-api:ManageConnections)
     wsPingHandler.addToRolePolicy(
@@ -412,6 +434,24 @@ export class CampaignStack extends cdk.Stack {
     wsForceCritHandler.addEnvironment(
       "WS_API_ENDPOINT",
       `https://${wsApi.apiId}.execute-api.${this.region}.amazonaws.com/${stage}`
+    );
+
+    // Set WS_API_ENDPOINT env var on roll_request handler after WS API is created
+    wsRollRequestHandler.addEnvironment(
+      "WS_API_ENDPOINT",
+      `https://${wsApi.apiId}.execute-api.${this.region}.amazonaws.com/${stage}`
+    );
+
+    // Grant roll_request handler permission to post to connections
+    wsRollRequestHandler.addToRolePolicy(
+      new iam.PolicyStatement({
+        sid: "WsRollRequestManageConnections",
+        effect: iam.Effect.ALLOW,
+        actions: ["execute-api:ManageConnections"],
+        resources: [
+          `arn:aws:execute-api:${this.region}:${this.account}:${wsApi.apiId}/${stage}/POST/@connections/*`,
+        ],
+      })
     );
 
     // -------------------------------------------------------------------------

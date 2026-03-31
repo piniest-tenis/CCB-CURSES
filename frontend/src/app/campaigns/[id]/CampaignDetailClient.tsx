@@ -33,7 +33,7 @@ import { usePingEffect } from "@/hooks/usePingEffect";
 import { useDiceStore } from "@/store/diceStore";
 import { useEncounterStore } from "@/store/encounterStore";
 import { useCharacterStore } from "@/store/characterStore";
-import type { PingEvent } from "@/types/campaign";
+import type { PingEvent, RollRequestPayload } from "@/types/campaign";
 import type { Adversary } from "@/types/adversary";
 import type { RollResult } from "@/types/dice";
 import { MemberCard } from "@/components/campaign/MemberCard";
@@ -718,6 +718,7 @@ export default function CampaignDetailClient() {
   const { data: campaign, isLoading, isError, error } = useCampaignDetail(campaignId);
   const removeMemberMutation = useRemoveMember(campaignId);
   const removeCharacterMutation = useRemoveCharacterFromCampaign(campaignId);
+  const updateCampaignMutation = useUpdateCampaign(campaignId);
   const { selectedCharacterId, activeTab, setActiveCampaign, setSelectedCharacter, setActiveTab } = useCampaignStore();
   const [showInviteModal, setShowInviteModal] = useState(false);
   /** GM-only: open the 3D dice roller panel. */
@@ -813,7 +814,7 @@ export default function CampaignDetailClient() {
   // ── WebSocket: ping sending (GM) & receiving (player) ───────────────────────
   const { triggerPing } = usePingEffect();
 
-  const { sendPing, sendDiceRoll, sendForceCrit, isConnected } = useGameWebSocket(
+  const { sendPing, sendDiceRoll, sendForceCrit, sendRollRequest, isConnected } = useGameWebSocket(
     campaignId,
     wsCharacterId,
     {
@@ -846,6 +847,17 @@ export default function CampaignDetailClient() {
     prevBroadcastIdRef.current = lastRollId;
     sendDiceRoll(diceLog[0], effectiveDiceColorOverrides);
   }, [lastRollId, diceLog, sendDiceRoll, effectiveDiceColorOverrides]);
+
+  // GM: deduct Fear when an environment feature is activated
+  const handleDeductFear = useCallback(
+    (amount: number) => {
+      if (!campaign) return;
+      const current = campaign.currentFear ?? 0;
+      const clamped = Math.max(0, Math.min(FEAR_MAX, current - amount));
+      updateCampaignMutation.mutate({ fear: clamped });
+    },
+    [campaign, updateCampaignMutation]
+  );
 
   // GM: send ping to the selected character
   const handlePingField = useCallback(
@@ -1349,6 +1361,9 @@ export default function CampaignDetailClient() {
                   <EncounterConsole
                     campaignId={campaignId}
                     onOpenCatalog={() => setActiveTab("adversaries")}
+                    partyCharacters={campaign?.characters ?? []}
+                    onSendRollRequest={sendRollRequest}
+                    onDeductFear={handleDeductFear}
                   />
                 </div>
               )}
