@@ -19,6 +19,9 @@ interface EncounterHeaderProps {
   onEndEncounter: () => void;
 }
 
+/** Delay (ms) before the End Encounter confirm button auto-reverts. */
+const END_CONFIRM_TIMEOUT = 5000;
+
 export function EncounterHeader({
   encounter,
   activeCount,
@@ -30,6 +33,13 @@ export function EncounterHeader({
   const [roundFlip, setRoundFlip] = useState(false);
   const prevRound = useRef(encounter.round);
 
+  // Inline end-encounter confirmation state
+  const [endConfirming, setEndConfirming] = useState(false);
+  const [endProgress, setEndProgress] = useState(100); // 100 → 0 over timeout
+  const endTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const endRafRef = useRef<number | null>(null);
+  const endStartRef = useRef<number>(0);
+
   // Animate round counter on change
   useEffect(() => {
     if (encounter.round !== prevRound.current) {
@@ -39,6 +49,60 @@ export function EncounterHeader({
       return () => clearTimeout(timer);
     }
   }, [encounter.round]);
+
+  // Start / stop the 5-second auto-revert for End Encounter confirmation
+  useEffect(() => {
+    if (!endConfirming) {
+      // Clean up animation
+      if (endTimerRef.current) clearTimeout(endTimerRef.current);
+      if (endRafRef.current) cancelAnimationFrame(endRafRef.current);
+      setEndProgress(100);
+      return;
+    }
+
+    endStartRef.current = performance.now();
+
+    const tick = (now: number) => {
+      const elapsed = now - endStartRef.current;
+      const pct = Math.max(0, 100 - (elapsed / END_CONFIRM_TIMEOUT) * 100);
+      setEndProgress(pct);
+      if (elapsed < END_CONFIRM_TIMEOUT) {
+        endRafRef.current = requestAnimationFrame(tick);
+      }
+    };
+    endRafRef.current = requestAnimationFrame(tick);
+
+    endTimerRef.current = setTimeout(() => {
+      setEndConfirming(false);
+    }, END_CONFIRM_TIMEOUT);
+
+    return () => {
+      if (endTimerRef.current) clearTimeout(endTimerRef.current);
+      if (endRafRef.current) cancelAnimationFrame(endRafRef.current);
+    };
+  }, [endConfirming]);
+
+  const handleEndClick = () => {
+    if (!endConfirming) {
+      setEndConfirming(true);
+    } else {
+      setEndConfirming(false);
+      onEndEncounter();
+    }
+  };
+
+  // Human-readable status labels
+  const statusLabel =
+    encounter.status === "active"
+      ? "In Combat"
+      : encounter.status === "preparing"
+        ? "Setting Up"
+        : encounter.status;
+
+  const statusSubline =
+    encounter.status === "preparing"
+      ? "Add adversaries below, then tap Start when ready."
+      : null;
 
   const statusStyles =
     encounter.status === "active"
@@ -73,15 +137,23 @@ export function EncounterHeader({
               `}
             >
               {encounter.status === "active" && (
-                <span className="h-1.5 w-1.5 rounded-full bg-[#fe5f55] animate-pulse" />
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#fe5f55] opacity-75" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#fe5f55]" />
+                </span>
               )}
-              {encounter.status}
+              {statusLabel}
             </span>
             <span className="text-xs text-[#b9baa3]/50">
               {activeCount} active
               {defeatedCount > 0 && ` · ${defeatedCount} defeated`}
             </span>
           </div>
+          {statusSubline && (
+            <p className="text-[10px] text-[#b9baa3]/40 mt-0.5 leading-relaxed">
+              {statusSubline}
+            </p>
+          )}
         </div>
       </div>
 
@@ -116,7 +188,7 @@ export function EncounterHeader({
               focus:outline-none focus:ring-2 focus:ring-[#DAA520]
             "
           >
-            Start Encounter ▶
+            Start ▶
           </button>
         ) : encounter.status === "active" ? (
           <button
@@ -135,20 +207,54 @@ export function EncounterHeader({
         ) : null}
       </div>
 
-      {/* Right: End encounter */}
+      {/* Right: End encounter (inline confirmation) */}
       {encounter.status !== "completed" && (
-        <button
-          type="button"
-          onClick={onEndEncounter}
-          className="
-            rounded-lg border border-[#fe5f55]/30 bg-transparent
-            px-3 py-2 text-xs font-semibold text-[#fe5f55]/70
-            hover:bg-[#fe5f55]/10 hover:text-[#fe5f55] hover:border-[#fe5f55]/50
-            transition-colors
-          "
-        >
-          End Encounter
-        </button>
+        <div className="flex items-center gap-2">
+          {endConfirming && (
+            <button
+              type="button"
+              onClick={() => setEndConfirming(false)}
+              className="
+                rounded-lg border border-slate-700/40 bg-slate-800/40
+                px-3 py-2 text-xs font-semibold text-[#b9baa3]/60
+                hover:text-[#b9baa3] hover:border-slate-600
+                transition-colors
+                focus:outline-none focus:ring-2 focus:ring-slate-500
+              "
+            >
+              Cancel
+            </button>
+          )}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={handleEndClick}
+              aria-label={endConfirming ? "Confirm end encounter" : "End encounter"}
+              className={`
+                relative overflow-hidden
+                rounded-lg border
+                px-3 py-2 text-xs font-semibold
+                transition-colors
+                focus:outline-none focus:ring-2 focus:ring-[#fe5f55]
+                ${
+                  endConfirming
+                    ? "border-[#fe5f55]/60 bg-[#fe5f55]/10 text-[#fe5f55]"
+                    : "border-[#fe5f55]/30 bg-transparent text-[#fe5f55]/70 hover:bg-[#fe5f55]/10 hover:text-[#fe5f55] hover:border-[#fe5f55]/50"
+                }
+              `}
+            >
+              {endConfirming ? "⚠ End Encounter" : "End Encounter"}
+              {/* Depleting progress underline */}
+              {endConfirming && (
+                <span
+                  aria-hidden="true"
+                  className="absolute bottom-0 left-0 h-[2px] bg-[#fe5f55]/40 transition-none"
+                  style={{ width: `${endProgress}%` }}
+                />
+              )}
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

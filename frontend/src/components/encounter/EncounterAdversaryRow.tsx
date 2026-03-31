@@ -138,15 +138,21 @@ export function EncounterAdversaryRow({
                         onClick={() => handleToggleHp(i)}
                         aria-label={`HP slot ${i + 1}: ${isMarked ? "marked" : "empty"}`}
                         className={`
-                          h-4 flex-1 max-w-[1.25rem] rounded-sm border transition-all duration-100
-                          ${
-                            isMarked
-                              ? "bg-[#fe5f55] border-[#fe5f55]/60"
-                              : "bg-slate-800 border-slate-700/40 hover:border-[#fe5f55]/40"
-                          }
+                          flex-1 flex items-center justify-center h-11
                           focus:outline-none focus:ring-1 focus:ring-[#fe5f55]
                         `}
-                      />
+                      >
+                        <span
+                          className={`
+                            h-4 w-full max-w-[1.25rem] rounded-sm border transition-all duration-100
+                            ${
+                              isMarked
+                                ? "bg-[#fe5f55] border-[#fe5f55]/60"
+                                : "bg-slate-800 border-slate-700/40 hover:border-[#fe5f55]/40"
+                            }
+                          `}
+                        />
+                      </button>
                     );
                   })}
                   <span className="ml-1.5 text-[10px] font-bold text-[#b9baa3] tabular-nums shrink-0">
@@ -174,15 +180,21 @@ export function EncounterAdversaryRow({
                         onClick={() => handleToggleStress(i)}
                         aria-label={`Stress slot ${i + 1}: ${isMarked ? "marked" : "empty"}`}
                         className={`
-                          h-4 flex-1 max-w-[1.25rem] rounded-sm border transition-all duration-100
-                          ${
-                            isMarked
-                              ? "bg-[#577399] border-[#577399]/60"
-                              : "bg-slate-800 border-slate-700/40 hover:border-[#577399]/40"
-                          }
+                          flex-1 flex items-center justify-center h-11
                           focus:outline-none focus:ring-1 focus:ring-[#577399]
                         `}
-                      />
+                      >
+                        <span
+                          className={`
+                            h-4 w-full max-w-[1.25rem] rounded-sm border transition-all duration-100
+                            ${
+                              isMarked
+                                ? "bg-[#577399] border-[#577399]/60"
+                                : "bg-slate-800 border-slate-700/40 hover:border-[#577399]/40"
+                            }
+                          `}
+                        />
+                      </button>
                     );
                   })}
                   <span className="ml-1.5 text-[10px] font-bold text-[#b9baa3] tabular-nums shrink-0">
