@@ -685,6 +685,308 @@ const SEED_ADVERSARIES: Adversary[] = [
     createdAt: "2026-03-30T00:00:00Z",
     updatedAt: "2026-03-30T00:00:00Z",
   },
+
+  // ── Ergantine Lake adversaries ────────────────────────────────────────────
+
+  {
+    adversaryId: "hb-skelkandi",
+    name: "Skelkandi",
+    tier: 1,
+    type: "Solo",
+    description:
+      "A salamander-like creature of immense proportion, nearly forty yards long, its cavernous mouth wide enough to swallow a Teetle Cart whole. Decades of Creep exposure have left its skin mottled with patches of dark, fibrous growth. It bears intelligence — it attacked Gatehouse once, timing its assault for when the garrison was depleted.",
+    difficulty: 12,
+    hp: 9,
+    stress: 3,
+    damageThresholds: { major: 10, severe: 16 },
+    attackModifier: 2,
+    attackRange: "Close",
+    attackDamage: "1d10+3 physical",
+    features: [
+      {
+        name: "Submerged Approach - Passive",
+        description:
+          "The Skelkandi begins any encounter submerged. It cannot be targeted until it surfaces. It surfaces when it attacks or when a PC succeeds on an Instinct Roll (14).",
+      },
+      {
+        name: "Capsize",
+        description:
+          "On a successful Lunge attack against a target on a watercraft, the Skelkandi can capsize the vessel. All passengers must make an Agility Reaction Roll (12) or be thrown into the water, becoming Vulnerable until their next turn.",
+      },
+      {
+        name: "Drag Under",
+        description:
+          "Spend a Fear. The Skelkandi seizes a target within Melee range and pulls them beneath the surface. The target must make a Strength Roll (13) at the start of each turn or take 1d6+2 physical damage and remain submerged.",
+      },
+      {
+        name: "Creep-Scarred Hide - Passive",
+        description:
+          "The first time each scene the Skelkandi takes damage that would mark its Severe threshold, reduce the damage by 4.",
+      },
+    ],
+    imageUrl: null,
+    source: "homebrew",
+    campaignId: null,
+    createdAt: "2026-04-02T00:00:00Z",
+    updatedAt: "2026-04-02T00:00:00Z",
+  },
+
+  {
+    adversaryId: "hb-quaddadura",
+    name: "Quaddadura",
+    tier: 1,
+    type: "Bruiser",
+    description:
+      "A massive, furred, thick-skinned semi-aquatic creature ranging from ten to thirty feet long. Large spade-like teeth surround four prominent hook-shaped eye teeth. Prolonged Creep exposure has driven some into the shallows where they are far more aggressive than their uncorrupted kin.",
+    difficulty: 11,
+    hp: 7,
+    stress: 2,
+    damageThresholds: { major: 7, severe: 13 },
+    attackModifier: 0,
+    attackRange: "Melee",
+    attackDamage: "1d10+2 physical",
+    features: [
+      {
+        name: "Slow",
+        description:
+          "When you spotlight this adversary and they don't have a token on their stat block, they can't act yet. Place a token. When they have a token, clear it and they can act.",
+      },
+      {
+        name: "Thrash",
+        description:
+          "On a successful Bite attack, the Quaddadura shakes its target violently. The target is moved to Melee range if not already and is knocked prone.",
+      },
+      {
+        name: "Territorial Bellow",
+        description:
+          "When a PC moves within Close range for the first time, the Quaddadura lets out a deafening bellow. The PC must make a Presence Reaction Roll (11) or become Frightened, gaining Disadvantage on attacks against the Quaddadura until the end of their next turn.",
+      },
+    ],
+    imageUrl: null,
+    source: "homebrew",
+    campaignId: null,
+    createdAt: "2026-04-02T00:00:00Z",
+    updatedAt: "2026-04-02T00:00:00Z",
+  },
+
+  {
+    adversaryId: "hb-creep-touched-deaconfish",
+    name: "Creep-Touched Deaconfish",
+    tier: 1,
+    type: "Standard",
+    description:
+      "A semi-aquatic, lunged beast of burden corrupted by the Creep. Where healthy Deaconfish are docile and nimble, these specimens have grown erratic — their pseudopods twitch independently, their humped backs are split with dark growths, and they lash out at anything that enters the water near them.",
+    difficulty: 11,
+    hp: 4,
+    stress: 2,
+    damageThresholds: { major: 5, severe: 9 },
+    attackModifier: 1,
+    attackRange: "Close",
+    attackDamage: "1d6+2 physical",
+    features: [
+      {
+        name: "Flailing Pseudopods - Passive",
+        description:
+          "Any creature that enters Melee range of the Deaconfish for the first time on their turn takes 1d4 physical damage from its uncontrolled thrashing.",
+      },
+      {
+        name: "Panicked Dive",
+        description:
+          "When the Deaconfish takes damage that marks its Major threshold, it dives beneath the surface and moves up to Far range. It resurfaces at the start of its next spotlight.",
+      },
+      {
+        name: "Remnant Harness",
+        description:
+          "A PC who succeeds on an Instinct Roll (12) notices the old harness. A subsequent Finesse Roll (13) allows the PC to calm the creature, removing it from combat. A calmed Deaconfish can be used as a mount for the remainder of the scene.",
+      },
+    ],
+    imageUrl: null,
+    source: "homebrew",
+    campaignId: null,
+    createdAt: "2026-04-02T00:00:00Z",
+    updatedAt: "2026-04-02T00:00:00Z",
+  },
+
+  {
+    adversaryId: "hb-glowfry-school",
+    name: "Glowfry School",
+    tier: 1,
+    type: "Horde",
+    description:
+      "A dense, churning school of small luminous fish that swarm just beneath the surface of Ergantine Lake. The Creep has fused their schooling instinct into something more aggressive — they move as one, their collective glow shifting from pale blue to angry red when agitated.",
+    difficulty: 10,
+    hp: 6,
+    stress: 1,
+    damageThresholds: { major: 4, severe: 9 },
+    attackModifier: -1,
+    attackRange: "Melee",
+    attackDamage: "1d8+1 physical",
+    features: [
+      {
+        name: "Horde",
+        description:
+          "When the Glowfry School has marked half or more of their HP, their Swarming Bite deals 3 damage instead.",
+      },
+      {
+        name: "Blood Frenzy",
+        description:
+          "When a creature within Close range takes physical damage from any source, the Glowfry School moves to Melee range of that creature and makes a free Swarming Bite attack.",
+      },
+      {
+        name: "Luminous Warning - Passive",
+        description:
+          "The school's glow shifts color to indicate its state. PCs gain +1 to Instinct rolls to detect hidden creatures in the water while the Glowfry School is visible and calm.",
+      },
+    ],
+    imageUrl: null,
+    source: "homebrew",
+    campaignId: null,
+    createdAt: "2026-04-02T00:00:00Z",
+    updatedAt: "2026-04-02T00:00:00Z",
+  },
+
+  // ── Proving Ground adversary ──────────────────────────────────────────────
+
+  {
+    adversaryId: "hb-captured-etherotaxic-entity",
+    name: "Captured Etherotaxic Entity",
+    tier: 1,
+    type: "Solo",
+    description:
+      "A towering, semi-corporeal figure that shifts between forms. Unlike the smaller Etherotaxia bound to the Creep, this entity radiates unmistakable intelligence. Its movements are deliberate. It watches. It waits. When it reaches toward you, it is not attacking. It is trying to communicate.",
+    difficulty: 12,
+    hp: 8,
+    stress: 4,
+    damageThresholds: { major: 10, severe: 16 },
+    attackModifier: 2,
+    attackRange: "Close",
+    attackDamage: "1d8+2 magical",
+    features: [
+      {
+        name: "Semi-Corporeal",
+        description:
+          "This entity takes half damage from physical attacks.",
+      },
+      {
+        name: "Relentless (2)",
+        description:
+          "This adversary can be spotlighted up to 2 times per GM turn. Spend Fear as usual to spotlight them.",
+      },
+      {
+        name: "Resonance - Passive",
+        description:
+          "PCs within Close range hear fragments of thought — not words, but impressions. A PC who succeeds on a Presence or Instinct Roll (12) understands that the entity is frightened and wants to leave, not fight.",
+      },
+      {
+        name: "Plaintive Reach",
+        description:
+          "The entity extends a limb toward a PC. The PC must make a Presence Reaction Roll (11). On a failure, the entity recoils, marking a Stress. On a success, the PC receives a vivid flash of memory and gains Advantage on subsequent Presence rolls to communicate with the entity.",
+      },
+      {
+        name: "Cornered Fury",
+        description:
+          "When the entity has marked half or more of its HP, its attacks deal an additional 1d6 magical damage and it no longer attempts to communicate. A PC who previously succeeded on Resonance or Plaintive Reach can make a Presence Roll (13) to calm it and end Cornered Fury.",
+      },
+      {
+        name: "Release",
+        description:
+          "If the PCs open the chamber door while the entity is not in Cornered Fury, it departs peacefully. All PCs gain a Hope. The entity pauses at the threshold and projects a final impression — gratitude, and a warning.",
+      },
+    ],
+    imageUrl: null,
+    source: "homebrew",
+    campaignId: null,
+    createdAt: "2026-04-02T00:00:00Z",
+    updatedAt: "2026-04-02T00:00:00Z",
+  },
+
+  // ── Patrol / Creep Bloom adversaries ──────────────────────────────────────
+
+  {
+    adversaryId: "hb-bloom-tendrils",
+    name: "Bloom Tendrils",
+    tier: 1,
+    type: "Horde",
+    description:
+      "Thick, ropy tendrils of living Creep that erupt from the ground during a Bloom event. They are not creatures in any conventional sense — they are the forest itself, extending its reach with terrifying speed. Cutting them only slows the advance; the stumps regenerate unless burned.",
+    difficulty: 10,
+    hp: 5,
+    stress: 1,
+    damageThresholds: { major: 4, severe: 8 },
+    attackModifier: -1,
+    attackRange: "Melee",
+    attackDamage: "1d6+1 physical",
+    features: [
+      {
+        name: "Horde",
+        description:
+          "When the Bloom Tendrils have marked half or more of their HP, their Lash deals 2 damage instead.",
+      },
+      {
+        name: "Entangle",
+        description:
+          "When a PC moves within Melee range, the tendrils attempt to grapple them. The PC must make an Agility Reaction Roll (11) or become Restrained. A Restrained PC has Disadvantage on attack rolls until they break free with a Strength Roll (11).",
+      },
+      {
+        name: "Regenerate - Passive",
+        description:
+          "At the start of each GM turn, if the Bloom Tendrils have not taken fire damage since the last GM turn, clear 1 HP. Fire damage prevents this for one full round.",
+      },
+    ],
+    imageUrl: null,
+    source: "homebrew",
+    campaignId: null,
+    createdAt: "2026-04-02T00:00:00Z",
+    updatedAt: "2026-04-02T00:00:00Z",
+  },
+
+  {
+    adversaryId: "hb-bloom-heart",
+    name: "Bloom Heart",
+    tier: 1,
+    type: "Leader",
+    description:
+      "At the heart of the Bloom, something pulses. A mass of dense, knotted Creep roughly the size of a wagon, shot through with veins of pale bioluminescence. The tendrils radiate from it. It grows visibly, moment by moment, and with each pulse the Forestdown border lurches another foot outward.",
+    difficulty: 12,
+    hp: 6,
+    stress: 3,
+    damageThresholds: { major: 7, severe: 12 },
+    attackModifier: 0,
+    attackRange: "Close",
+    attackDamage: "1d8+2 magical",
+    features: [
+      {
+        name: "Rooted - Passive",
+        description:
+          "The Bloom Heart cannot move. It does not need to be spotlighted to use its Reaction features.",
+      },
+      {
+        name: "Bloom Expansion - Passive",
+        description:
+          "At the end of each GM turn, the area of Creep expands. Any PC now within the Creep must make an Agility Reaction Roll (11) or mark a Stress.",
+      },
+      {
+        name: "Call the Swarm",
+        description:
+          "Spend a Fear. A new Madanikuputukas (Swarm) emerges from the Bloom Heart and is immediately spotlighted.",
+      },
+      {
+        name: "Creep Surge",
+        description:
+          "When the Bloom Heart takes damage, it releases a wave of Creep energy. All creatures within Close range must make an Agility Reaction Roll (12) or take 1d4 magical damage.",
+      },
+      {
+        name: "Vulnerability - Passive",
+        description:
+          "The Bloom Heart takes double damage from fire. If destroyed, all Bloom Tendrils lose their Regenerate feature and the Bloom's expansion halts immediately.",
+      },
+    ],
+    imageUrl: null,
+    source: "homebrew",
+    campaignId: null,
+    createdAt: "2026-04-02T00:00:00Z",
+    updatedAt: "2026-04-02T00:00:00Z",
+  },
 ];
 
 // ─── Adversary Catalog Store ──────────────────────────────────────────────────
