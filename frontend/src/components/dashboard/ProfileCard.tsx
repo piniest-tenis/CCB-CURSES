@@ -13,6 +13,7 @@ import { DiceColorEditor } from "@/components/dice/DiceColorEditor";
 import { SYSTEM_DEFAULTS, resolveDiceColors } from "@/lib/diceColorResolver";
 import { apiClient } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
+import { PatreonPaidGate } from "@/components/PatreonGateOverlay";
 
 interface ProfileCardProps {
   user: UserProfile;
@@ -110,6 +111,7 @@ export function ProfileCard({ user, onSignOut }: ProfileCardProps) {
       </div>
 
       {/* ── Default Dice Colors ──────────────────────────────────── */}
+      <PatreonPaidGate>
       <div className="mt-4 pt-3 border-t border-[#577399]/20">
         <button
           type="button"
@@ -222,6 +224,7 @@ export function ProfileCard({ user, onSignOut }: ProfileCardProps) {
           </div>
         )}
       </div>
+      </PatreonPaidGate>
 
       {/* ── Sign Out ─────────────────────────────────────────────── */}
       {/* Stronger separator distinguishes this from the editor above */}

@@ -1,6 +1,7 @@
 // backend/src/users/handler.ts
 // Lambda handler for /users/* routes.
 // Manages user profiles — creates on first login, updates display name and preferences.
+// Also handles Patreon OAuth linking and membership status checks.
 
 import type {
   APIGatewayProxyEventV2WithJWTAuthorizer,
@@ -24,7 +25,15 @@ import {
   USERS_TABLE,
   keys,
 } from "../common/dynamodb";
-import type { UserProfile, UserPreferences } from "@shared/types";
+import type { UserProfile, UserPreferences, PatreonLink } from "@shared/types";
+import {
+  buildAuthorizeUrl,
+  exchangeCode,
+  fetchMembership,
+  buildPatreonLink,
+} from "./patreon";
+
+const FRONTEND_URL = (process.env["FRONTEND_URL"] ?? "https://curses-ccb.maninjumpsuit.com").replace(/\/$/, "");
 
 // ─── DynamoDB Record Shape ────────────────────────────────────────────────────
 
@@ -36,6 +45,8 @@ interface UserDynamoRecord {
   displayName: string;
   avatarKey: string | null;
   preferences: UserPreferences;
+  /** Patreon account linkage data, or undefined/null if not linked. */
+  patreon?: PatreonLink | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -99,6 +110,7 @@ function toUserProfile(record: UserDynamoRecord): UserProfile {
         ? { diceColors: record.preferences.diceColors }
         : {}),
     },
+    patreon: record.patreon ?? null,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   };
@@ -319,6 +331,138 @@ async function deleteMe(
 
 // ─── Route Dispatcher ─────────────────────────────────────────────────────────
 
+// ─── Patreon Route Handlers ───────────────────────────────────────────────────
+
+/**
+ * GET /users/me/patreon/authorize
+ * Returns the Patreon OAuth authorization URL for the current user.
+ * The frontend opens this URL in a new tab/popup.
+ */
+async function getPatreonAuthorizeUrl(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<APIGatewayProxyResultV2> {
+  const userId = extractUserId(event);
+  const authorizeUrl = buildAuthorizeUrl(userId);
+  return createSuccessResponse({ authorizeUrl });
+}
+
+/**
+ * GET /users/me/patreon/callback
+ * Patreon redirects here after the user authorizes. This endpoint:
+ * 1. Exchanges the authorization code for tokens
+ * 2. Fetches the user's Patreon identity and CursesAP membership
+ * 3. Stores the Patreon link on the user's DynamoDB record
+ * 4. Redirects back to the frontend with a success/error indicator
+ *
+ * NOTE: This route cannot require JWT auth because Patreon redirects the
+ * browser directly. The `state` parameter carries the userId.
+ */
+async function handlePatreonCallback(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<APIGatewayProxyResultV2> {
+  const code  = event.queryStringParameters?.["code"];
+  const state = event.queryStringParameters?.["state"]; // userId
+  const error = event.queryStringParameters?.["error"];
+
+  // Patreon sent an error (user denied, etc.)
+  if (error || !code || !state) {
+    const reason = error ?? "missing_code";
+    return {
+      statusCode: 302,
+      headers: { Location: `${FRONTEND_URL}/dashboard?patreon=error&reason=${reason}` },
+      body: "",
+    };
+  }
+
+  const userId = state;
+
+  try {
+    // Exchange code for tokens
+    const tokens = await exchangeCode(code);
+
+    // Fetch Patreon identity + CursesAP membership
+    const membershipResult = await fetchMembership(tokens.access_token);
+
+    // Build the PatreonLink to store
+    const patreonLink = buildPatreonLink(membershipResult);
+
+    // Update the user's DynamoDB record with the Patreon link
+    const now = new Date().toISOString();
+    await updateItem({
+      TableName: USERS_TABLE,
+      Key: keys.user(userId),
+      UpdateExpression: "SET patreon = :patreon, updatedAt = :now",
+      ExpressionAttributeValues: {
+        ":patreon": patreonLink,
+        ":now":     now,
+      },
+      ConditionExpression: "attribute_exists(PK)",
+    });
+
+    // Redirect back to the frontend with success indicator
+    const status = patreonLink.membershipStatus;
+    return {
+      statusCode: 302,
+      headers: { Location: `${FRONTEND_URL}/dashboard?patreon=linked&status=${status}` },
+      body: "",
+    };
+  } catch (err) {
+    console.error("Patreon callback error:", err);
+    return {
+      statusCode: 302,
+      headers: { Location: `${FRONTEND_URL}/dashboard?patreon=error&reason=exchange_failed` },
+      body: "",
+    };
+  }
+}
+
+/**
+ * GET /users/me/patreon/status
+ * Lightweight endpoint to re-check the user's Patreon status.
+ * Called by the frontend when the window regains focus after a Patreon link click.
+ * Returns just the patreon field from the user profile (or null).
+ */
+async function getPatreonStatus(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<APIGatewayProxyResultV2> {
+  const userId = extractUserId(event);
+
+  const record = await getItem<UserDynamoRecord>({
+    TableName: USERS_TABLE,
+    Key: keys.user(userId),
+  });
+
+  if (!record) throw AppError.notFound("User", userId);
+
+  return createSuccessResponse({
+    patreon: record.patreon ?? null,
+    createdAt: record.createdAt,
+  });
+}
+
+/**
+ * DELETE /users/me/patreon
+ * Unlink the user's Patreon account.
+ */
+async function unlinkPatreon(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<APIGatewayProxyResultV2> {
+  const userId = extractUserId(event);
+  const now = new Date().toISOString();
+
+  await updateItem({
+    TableName: USERS_TABLE,
+    Key: keys.user(userId),
+    UpdateExpression: "REMOVE patreon SET updatedAt = :now",
+    ExpressionAttributeValues: { ":now": now },
+    ConditionExpression: "attribute_exists(PK)",
+  });
+
+  return { statusCode: 204, body: "" };
+}
+
+// ─── Route Dispatcher ─────────────────────────────────────────────────────────
+
 export const handler = withErrorHandling(
   async (
     event: APIGatewayProxyEventV2WithJWTAuthorizer
@@ -334,6 +478,15 @@ export const handler = withErrorHandling(
         return patchMe(event);
       case "DELETE /users/me":
         return deleteMe(event);
+      // Patreon routes
+      case "GET /users/me/patreon/authorize":
+        return getPatreonAuthorizeUrl(event);
+      case "GET /users/me/patreon/callback":
+        return handlePatreonCallback(event);
+      case "GET /users/me/patreon/status":
+        return getPatreonStatus(event);
+      case "DELETE /users/me/patreon":
+        return unlinkPatreon(event);
       default:
         return createErrorResponse("NOT_FOUND", "Route not found", 404);
     }

@@ -90,6 +90,8 @@ export interface CharacterStore {
   isDirty: boolean;
   /** True while a PATCH request is in-flight. */
   isSaving: boolean;
+  /** True when the backend rejected a save due to missing Patreon membership. */
+  patreonGateBlocked: boolean;
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
   /** Load a character into the store and mark it clean. */
@@ -151,6 +153,7 @@ export const useCharacterStore = create<CharacterStore>()((set, get) => ({
   activeCharacter: null,
   isDirty:         false,
   isSaving:        false,
+  patreonGateBlocked: false,
 
   // ── setCharacter ────────────────────────────────────────────────────────────
   setCharacter: (char: Character) => {
@@ -333,7 +336,15 @@ export const useCharacterStore = create<CharacterStore>()((set, get) => ({
         activeCharacter
       );
       // Sync store with server's authoritative response
-      set({ activeCharacter: updated, isDirty: false });
+      set({ activeCharacter: updated, isDirty: false, patreonGateBlocked: false });
+    } catch (err) {
+      // If the backend rejected the save due to Patreon gate, flag it so
+      // the UI can show the CTA instead of a generic error.
+      if (err instanceof ApiError && err.code === "PATREON_REQUIRED") {
+        set({ patreonGateBlocked: true });
+        return; // Swallow — the CTA banner handles the UX
+      }
+      throw err; // Re-throw other errors
     } finally {
       set({ isSaving: false });
     }

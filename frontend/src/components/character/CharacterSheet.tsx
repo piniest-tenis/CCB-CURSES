@@ -51,6 +51,9 @@ import type { Character, ClassData, CoreStatName, CustomCondition, DiceColorPref
 import { DiceColorEditor } from "@/components/dice/DiceColorEditor";
 import { SYSTEM_DEFAULTS, resolveDiceColors, resolveGmDiceColor, buildColorOverrides } from "@/lib/diceColorResolver";
 import { useAuthStore } from "@/store/authStore";
+import { StatTooltip } from "./StatTooltip";
+import { useStatBreakdowns } from "@/hooks/useStatBreakdowns";
+import { PatreonPaidGate } from "@/components/PatreonGateOverlay";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -308,6 +311,7 @@ function SheetHeader({ characterId, classData, onLevelUp, isDirty = false }: She
   const { activeCharacter, toggleCondition, updateField } = useCharacterStore();
   const { data: classesData }     = useClasses();
   const { data: communitiesData } = useCommunities();
+  const statBreakdowns = useStatBreakdowns();
   const { data: ancestriesData }  = useAncestries();
   const [conditionsOpen, setConditionsOpen] = React.useState(false);
   const [shareState, setShareState] = React.useState<ShareState>("idle");
@@ -485,23 +489,35 @@ function SheetHeader({ characterId, classData, onLevelUp, isDirty = false }: She
             <span className="text-xs uppercase tracking-widest text-parchment-500 font-medium hidden sm:block">
               Evasion
             </span>
-            <output
-              aria-label={`Evasion ${activeCharacter.derivedStats.evasion}`}
-              className="w-12 rounded-lg border border-[#577399]/40 bg-slate-850 py-1.5 text-center text-2xl font-bold text-[#f7f7ff] font-serif leading-none"
+            <StatTooltip
+              lines={statBreakdowns.evasion}
+              srdRef="SRD p. 22"
+              ariaLabel="How Evasion is calculated"
             >
-              {activeCharacter.derivedStats.evasion}
-            </output>
+              <output
+                aria-label={`Evasion ${activeCharacter.derivedStats.evasion}`}
+                className="w-12 rounded-lg border border-[#577399]/40 bg-slate-850 py-1.5 text-center text-2xl font-bold text-[#f7f7ff] font-serif leading-none hover:border-[#577399] transition-colors"
+              >
+                {activeCharacter.derivedStats.evasion}
+              </output>
+            </StatTooltip>
           </div>
           <div className="flex flex-col items-center gap-1" data-field-key="sheet.armor">
             <span className="text-xs uppercase tracking-widest text-parchment-500 font-medium hidden sm:block">
               Armor
             </span>
-            <output
-              aria-label={`Armor Score ${activeCharacter.derivedStats.armor}`}
-              className="w-12 rounded-lg border border-[#577399]/40 bg-slate-850 py-1.5 text-center text-2xl font-bold text-[#f7f7ff] font-serif leading-none"
+            <StatTooltip
+              lines={statBreakdowns.armor}
+              srdRef="SRD p. 29"
+              ariaLabel="How Armor Score is calculated"
             >
-              {activeCharacter.derivedStats.armor}
-            </output>
+              <output
+                aria-label={`Armor Score ${activeCharacter.derivedStats.armor}`}
+                className="w-12 rounded-lg border border-[#577399]/40 bg-slate-850 py-1.5 text-center text-2xl font-bold text-[#f7f7ff] font-serif leading-none hover:border-[#577399] transition-colors"
+              >
+                {activeCharacter.derivedStats.armor}
+              </output>
+            </StatTooltip>
           </div>
         </div>
 
@@ -590,6 +606,7 @@ function SheetHeader({ characterId, classData, onLevelUp, isDirty = false }: She
       )}
 
       {/* ── Dice Colors ──────────────────────────────────────────── */}
+      <PatreonPaidGate>
       <div className="pt-2 border-t border-[#577399]/20">
         <button
           type="button"
@@ -685,6 +702,7 @@ function SheetHeader({ characterId, classData, onLevelUp, isDirty = false }: She
           </div>
         </div>
       </div>
+      </PatreonPaidGate>
 
       {/* Conditions slide-in panel */}
       <ConditionsSidebar

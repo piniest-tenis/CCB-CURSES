@@ -33,6 +33,7 @@ import { ProfileCard } from "@/components/dashboard/ProfileCard";
 import { CampaignRailWidget } from "@/components/dashboard/CampaignRailWidget";
 import { SessionPanel } from "@/components/dashboard/SessionPanel";
 import { LorePanel } from "@/components/dashboard/LorePanel";
+import { PatreonPaidGate } from "@/components/PatreonGateOverlay";
 
 // ─── Sort helper ──────────────────────────────────────────────────────────────
 
@@ -422,9 +423,13 @@ export default function DashboardPage() {
                 />
               )}
               {campaignList.length > 0 && (
-                <CampaignRailWidget campaigns={campaignList} />
+                <PatreonPaidGate>
+                  <CampaignRailWidget campaigns={campaignList} />
+                </PatreonPaidGate>
               )}
-              <SessionPanel campaign={topCampaign} />
+              <PatreonPaidGate>
+                <SessionPanel campaign={topCampaign} />
+              </PatreonPaidGate>
               <LorePanel />
             </div>
 
@@ -442,9 +447,13 @@ export default function DashboardPage() {
               />
             )}
             {campaignList.length > 0 && (
-              <CampaignRailWidget campaigns={campaignList} />
+              <PatreonPaidGate>
+                <CampaignRailWidget campaigns={campaignList} />
+              </PatreonPaidGate>
             )}
-            <SessionPanel campaign={topCampaign} />
+            <PatreonPaidGate>
+              <SessionPanel campaign={topCampaign} />
+            </PatreonPaidGate>
             <LorePanel />
           </aside>
 

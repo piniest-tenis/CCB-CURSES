@@ -64,7 +64,47 @@ import type {
   LevelUpChoices,
   AdvancementChoice,
   MechanicalBonus,
+  UserPreferences,
+  PatreonLink,
 } from "@shared/types";
+import { canSave } from "../users/patreon";
+
+// ─── Patreon Gate ─────────────────────────────────────────────────────────────
+
+/**
+ * DynamoDB user record shape (minimal — only fields needed for the gate check).
+ */
+interface UserRecordForGate {
+  PK: string;
+  SK: string;
+  userId: string;
+  patreon?: PatreonLink | null;
+  preferences: UserPreferences;
+  createdAt: string;
+}
+
+/**
+ * Verify that the user is authorised to persist character data.
+ * Throws 403 if the user is not grandfathered and has no valid Patreon link.
+ */
+async function requireSavePermission(userId: string): Promise<void> {
+  const user = await getItem<UserRecordForGate>({
+    TableName: USERS_TABLE,
+    Key: keys.user(userId),
+  });
+
+  // If no user record exists, they haven't even signed in properly yet.
+  if (!user) throw AppError.unauthorized("User profile not found");
+
+  if (!canSave(user.patreon ?? null, user.createdAt)) {
+    throw new AppError(
+      "PATREON_REQUIRED",
+      "Saving characters requires a linked Patreon account. " +
+      "Join our FREE Patreon at https://patreon.com/CursesAP to unlock saving.",
+      403
+    );
+  }
+}
 
 // ─── S3 Client (portrait uploads) ────────────────────────────────────────────
 
@@ -691,10 +731,11 @@ function toCharacterResponse(
     levelUpHistory: record.levelUpHistory ?? {},
     markedTraits: record.markedTraits ?? [],
     // ── Multiclass fields (SRD p.43) ──────────────────────────────────────
-    multiclassClassId: record.multiclassClassId ?? null,
-    multiclassClassName: enrichment?.multiclassClassName ?? record.multiclassClassName ?? null,
-    multiclassSubclassId: record.multiclassSubclassId ?? null,
-    multiclassDomainId: record.multiclassDomainId ?? null,
+    multiclassClassId:           record.multiclassClassId ?? null,
+    multiclassClassName:         enrichment?.multiclassClassName ?? record.multiclassClassName ?? null,
+    multiclassSubclassId:        record.multiclassSubclassId ?? null,
+    multiclassDomainId:          record.multiclassDomainId ?? null,
+    multiclassClassFeatureIndex: record.multiclassClassFeatureIndex ?? null,
     campaignId: record.campaignId ?? null,
   };
 }
@@ -794,10 +835,11 @@ async function listCharacters(
         portraitUrl: record.portraitUrl ?? buildPortraitUrl(record.portraitKey),
         updatedAt: record.updatedAt,
         // Multiclass summary fields
-        multiclassClassId: record.multiclassClassId ?? null,
-        multiclassClassName: record.multiclassClassName ?? null,
-        multiclassSubclassId: record.multiclassSubclassId ?? null,
-        multiclassDomainId: record.multiclassDomainId ?? null,
+        multiclassClassId:           record.multiclassClassId ?? null,
+        multiclassClassName:         record.multiclassClassName ?? null,
+        multiclassSubclassId:        record.multiclassSubclassId ?? null,
+        multiclassDomainId:          record.multiclassDomainId ?? null,
+        multiclassClassFeatureIndex: record.multiclassClassFeatureIndex ?? null,
         campaignId: record.campaignId ?? null,
       };
     })
@@ -813,6 +855,10 @@ async function createCharacter(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
   const userId = extractUserId(event);
+
+  // ── Patreon gate: block save for non-linked, non-grandfathered users ────
+  await requireSavePermission(userId);
+
   const input = parseBody(event, CreateCharacterSchema);
 
   // Look up class to derive starting stats and domains (optional)
@@ -938,10 +984,11 @@ async function createCharacter(
     levelUpHistory: {},
     markedTraits: [],
     // ── Multiclass (none at creation) ─────────────────────────────────────
-    multiclassClassId:    null,
-    multiclassClassName:  null,
-    multiclassSubclassId: null,
-    multiclassDomainId:   null,
+    multiclassClassId:           null,
+    multiclassClassName:         null,
+    multiclassSubclassId:        null,
+    multiclassDomainId:          null,
+    multiclassClassFeatureIndex: null,
     // ── Campaign (unassigned at creation) ─────────────────────────────────
     campaignId: null,
   };
@@ -1005,6 +1052,9 @@ async function updateCharacter(
   const userId = extractUserId(event);
   const characterId = requirePathParam(event, "characterId");
 
+  // ── Patreon gate: block save for non-linked, non-grandfathered users ────
+  await requireSavePermission(userId);
+
   const existing = await getItem<CharacterRecord>({
     TableName: CHARACTERS_TABLE,
     Key: keys.character(userId, characterId),
@@ -1057,6 +1107,9 @@ async function patchCharacter(
 ): Promise<APIGatewayProxyResultV2> {
   const userId = extractUserId(event);
   const characterId = requirePathParam(event, "characterId");
+
+  // ── Patreon gate: block save for non-linked, non-grandfathered users ────
+  await requireSavePermission(userId);
 
   const existing = await getItem<CharacterRecord>({
     TableName: CHARACTERS_TABLE,
@@ -1465,6 +1518,9 @@ async function executeAction(
   const userId = extractUserId(event);
   const characterId = requirePathParam(event, "characterId");
 
+  // ── Patreon gate: block save for non-linked, non-grandfathered users ────
+  await requireSavePermission(userId);
+
   const existing = await getItem<CharacterRecord>({
     TableName: CHARACTERS_TABLE,
     Key: keys.character(userId, characterId),
@@ -1530,6 +1586,9 @@ async function levelUpCharacter(
 ): Promise<APIGatewayProxyResultV2> {
   const userId      = extractUserId(event);
   const characterId = requirePathParam(event, "characterId");
+
+  // ── Patreon gate: block save for non-linked, non-grandfathered users ────
+  await requireSavePermission(userId);
 
   const existing = await getItem<CharacterRecord>({
     TableName: CHARACTERS_TABLE,

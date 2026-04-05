@@ -14,6 +14,7 @@ import { useAuthStore } from "@/store/authStore";
 import { usePathname } from "next/navigation";
 import { ApiError } from "@/lib/api";
 import { LoadingInterstitial } from "@/components/LoadingInterstitial";
+import { PatreonCTA } from "@/components/PatreonCTA";
 
 // ── Global auth-error handler ────────────────────────────────────────────────
 // 401 = unauthenticated (bad/missing token) → sign out and send to login.
@@ -21,7 +22,7 @@ import { LoadingInterstitial } from "@/components/LoadingInterstitial";
 //       the session is still valid. Just redirect to the dashboard so the user
 //       isn't stuck, but keep all stored credentials intact.
 
-function handle403(error: unknown): void {
+function handleAuthError(error: unknown): void {
   if (!(error instanceof ApiError)) return;
   if (!useAuthStore.getState().isReady) return;
 
@@ -33,6 +34,10 @@ function handle403(error: unknown): void {
   }
 
   if (error.status === 403) {
+    // Patreon-gate 403s are handled locally by the save hooks / store —
+    // do NOT redirect away from the page the user is on.
+    if (error.code === "PATREON_REQUIRED") return;
+
     // The user is authenticated but lacks permission for this resource.
     // Do NOT call signOut() — that would destroy the refresh token and force a
     // full re-login even though the session is perfectly valid.
@@ -44,8 +49,8 @@ function handle403(error: unknown): void {
 // Create a stable QueryClient instance outside the component so it isn't
 // recreated on every render.
 const queryClient = new QueryClient({
-  queryCache: new QueryCache({ onError: handle403 }),
-  mutationCache: new MutationCache({ onError: handle403 }),
+  queryCache: new QueryCache({ onError: handleAuthError }),
+  mutationCache: new MutationCache({ onError: handleAuthError }),
   defaultOptions: {
     queries: {
       retry: 1,
@@ -61,6 +66,8 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
 
   // OBS overlay pages are standalone — no auth required, no interstitial.
   const isObs = pathname?.startsWith("/obs") ?? false;
+  // Auth pages don't need the Patreon CTA banner
+  const isAuthPage = pathname?.startsWith("/auth") ?? false;
 
   useEffect(() => {
     if (isObs) return;
@@ -70,6 +77,7 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
   return (
     <>
       {children}
+      {!isObs && !isAuthPage && <PatreonCTA />}
       {!isObs && (
         <LoadingInterstitial isVisible={!isReady} />
       )}

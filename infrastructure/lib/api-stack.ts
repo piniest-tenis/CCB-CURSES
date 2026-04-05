@@ -103,6 +103,11 @@ export class ApiStack extends cdk.Stack {
         handler: "index.handler",
         code: lambda.Code.fromAsset("../backend/dist/characters-handler"),
         logGroup: makeLambdaLogGroup("characters"),
+        environment: {
+          ...commonLambdaProps.environment,
+          // Patreon gate: accounts created before this date are exempt from Patreon linking
+          PATREON_GATE_CUTOFF_DATE: process.env["PATREON_GATE_CUTOFF_DATE"] ?? "",
+        },
       } as lambda.FunctionProps
     );
 
@@ -193,10 +198,20 @@ export class ApiStack extends cdk.Stack {
       {
         ...commonLambdaProps,
         functionName: `daggerheart-users-${stage}`,
-        description: "User profile management",
+        description: "User profile management + Patreon OAuth linking",
         handler: "index.handler",
         code: lambda.Code.fromAsset("../backend/dist/users-handler"),
         logGroup: makeLambdaLogGroup("users"),
+        environment: {
+          ...commonLambdaProps.environment,
+          // Patreon OAuth configuration
+          PATREON_CLIENT_ID:        process.env["PATREON_CLIENT_ID"]     ?? "",
+          PATREON_CLIENT_SECRET:    process.env["PATREON_CLIENT_SECRET"] ?? "",
+          PATREON_REDIRECT_URI:     process.env["PATREON_REDIRECT_URI"]  ?? "",
+          PATREON_CAMPAIGN_ID:      process.env["PATREON_CAMPAIGN_ID"]   ?? "",
+          PATREON_GATE_CUTOFF_DATE: process.env["PATREON_GATE_CUTOFF_DATE"] ?? "",
+          FRONTEND_URL:             process.env["FRONTEND_URL"]          ?? "",
+        },
       } as lambda.FunctionProps
     );
 
@@ -602,6 +617,10 @@ export class ApiStack extends cdk.Stack {
       { method: apigwv2.HttpMethod.PUT, path: "/users/me" },
       { method: apigwv2.HttpMethod.PATCH, path: "/users/me" },
       { method: apigwv2.HttpMethod.DELETE, path: "/users/me" },
+      // Patreon linking — protected (JWT required)
+      { method: apigwv2.HttpMethod.GET, path: "/users/me/patreon/authorize" },
+      { method: apigwv2.HttpMethod.GET, path: "/users/me/patreon/status" },
+      { method: apigwv2.HttpMethod.DELETE, path: "/users/me/patreon" },
     ];
 
     for (const route of userRoutes) {
@@ -612,6 +631,17 @@ export class ApiStack extends cdk.Stack {
         authorizer: jwtAuthorizer,
       });
     }
+
+    // Patreon OAuth callback — PUBLIC (no JWT)
+    // Patreon redirects the browser here after the user authorises. The
+    // `state` parameter carries the userId so the handler knows which
+    // user record to update. No JWT is available on browser redirects.
+    this.httpApi.addRoutes({
+      path: "/users/me/patreon/callback",
+      methods: [apigwv2.HttpMethod.GET],
+      integration: usersIntegration,
+      // No JWT authorizer — Patreon redirect, state-param validated in handler
+    });
 
     // Auth Admin — Cognito user management (admin group only, enforced in handler)
     const authAdminRoutes: Array<{

@@ -12,7 +12,7 @@ import {
   type UseQueryResult,
   type UseMutationResult,
 } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api";
+import { apiClient, ApiError } from "@/lib/api";
 import { useCharacterStore } from "@/store/characterStore";
 import type { Character, CharacterSummary, LevelUpChoices } from "@shared/types";
 
@@ -158,6 +158,15 @@ export function useUpdateCharacter(
       // Invalidate the list so the updatedAt timestamp refreshes
       queryClient.invalidateQueries({ queryKey: characterKeys.lists() });
     },
+    onError: (err) => {
+      // If the backend rejected the save due to Patreon gate, flag it in the
+      // character store so the UI can show the CTA instead of a generic error.
+      // Do NOT re-throw — the global handleAuthError in providers.tsx already
+      // skips PATREON_REQUIRED 403s.
+      if (err instanceof ApiError && err.code === "PATREON_REQUIRED") {
+        useCharacterStore.setState({ patreonGateBlocked: true });
+      }
+    },
   });
 }
 
@@ -222,6 +231,12 @@ export interface LevelUpInput {
   exchangeCardId?: string | null;
   newSubclassId?: string | null;
   newClassId?: string | null;
+  /** SRD p.22 Tier Achievement: name for the new experience at +2. */
+  tierAchievementExperienceName?: string;
+  /** Level of the newly acquired domain card (for exchange level-cap validation). */
+  newDomainCardLevel?: number;
+  /** Level of the card being exchanged (for exchange level-cap validation). */
+  exchangeCardLevel?: number;
 }
 
 /**
