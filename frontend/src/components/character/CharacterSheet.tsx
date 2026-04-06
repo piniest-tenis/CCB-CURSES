@@ -498,12 +498,13 @@ function SheetHeader({
               srdRef="SRD p. 22"
               ariaLabel="How Evasion is calculated"
             >
-              <output
+              <span
+                role="status"
                 aria-label={`Evasion ${activeCharacter.derivedStats.evasion}`}
-                className="w-14 min-h-[2.75rem] rounded-lg border-2 border-steel-400/50 bg-slate-850 py-2 text-center text-3xl font-bold text-[#f7f7ff] leading-none hover:border-steel-400 hover:bg-steel-400/[0.08] transition-colors tabular-nums"
+                className="flex items-center justify-center w-14 min-h-[2.75rem] rounded-lg border-2 border-steel-400/50 bg-slate-850 py-2 text-center text-3xl font-bold text-[#f7f7ff] leading-none hover:border-steel-400 hover:bg-steel-400/[0.08] transition-colors tabular-nums"
               >
                 {activeCharacter.derivedStats.evasion}
-              </output>
+              </span>
             </StatTooltip>
           </div>
           <div
@@ -519,12 +520,13 @@ function SheetHeader({
               srdRef="SRD p. 29"
               ariaLabel="How Armor Score is calculated"
             >
-              <output
+              <span
+                role="status"
                 aria-label={`Armor Score ${activeCharacter.derivedStats.armor}`}
-                className="w-14 min-h-[2.75rem] rounded-lg border-2 border-steel-400/50 bg-slate-850 py-2 text-center text-3xl font-bold text-[#f7f7ff] leading-none hover:border-steel-400 hover:bg-steel-400/[0.08] transition-colors tabular-nums"
+                className="flex items-center justify-center w-14 min-h-[2.75rem] rounded-lg border-2 border-steel-400/50 bg-slate-850 py-2 text-center text-3xl font-bold text-[#f7f7ff] leading-none hover:border-steel-400 hover:bg-steel-400/[0.08] transition-colors tabular-nums"
               >
                 {activeCharacter.derivedStats.armor}
-              </output>
+              </span>
             </StatTooltip>
           </div>
         </div>
