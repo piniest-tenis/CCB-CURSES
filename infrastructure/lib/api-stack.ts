@@ -207,11 +207,15 @@ export class ApiStack extends cdk.Stack {
           // Patreon OAuth configuration
           PATREON_CLIENT_ID:            process.env["PATREON_CLIENT_ID"]            ?? "",
           PATREON_CLIENT_SECRET:        process.env["PATREON_CLIENT_SECRET"]        ?? "",
-          PATREON_REDIRECT_URI:         process.env["PATREON_REDIRECT_URI"]         ?? "",
+          PATREON_REDIRECT_URI:         (isProd
+                                          ? process.env["PATREON_REDIRECT_URI_PROD"]
+                                          : process.env["PATREON_REDIRECT_URI_DEV"])  ?? "",
           PATREON_CAMPAIGN_ID:          process.env["PATREON_CAMPAIGN_ID"]          ?? "",
           PATREON_CREATOR_ACCESS_TOKEN: process.env["PATREON_CREATOR_ACCESS_TOKEN"] ?? "",
           PATREON_GATE_CUTOFF_DATE: process.env["PATREON_GATE_CUTOFF_DATE"] ?? "",
-          FRONTEND_URL:             process.env["FRONTEND_URL"]          ?? "",
+          FRONTEND_URL:             (isProd
+                                      ? process.env["FRONTEND_URL_PROD"]
+                                      : process.env["FRONTEND_URL_DEV"])            ?? "",
         },
       } as lambda.FunctionProps
     );

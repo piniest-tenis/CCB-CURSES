@@ -13,7 +13,7 @@ import { DiceColorEditor } from "@/components/dice/DiceColorEditor";
 import { SYSTEM_DEFAULTS, resolveDiceColors } from "@/lib/diceColorResolver";
 import { apiClient } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
-import { usePatreonGate } from "@/hooks/usePatreonGate";
+import { usePatreonGate, usePatreonOAuth } from "@/hooks/usePatreonGate";
 
 interface ProfileCardProps {
   user: UserProfile;
@@ -27,6 +27,7 @@ export function ProfileCard({ user, onSignOut }: ProfileCardProps) {
   const [diceColorsOpen, setDiceColorsOpen] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const { canAccessCampaigns, hasPatreon } = usePatreonGate();
+  const { isLinking, startOAuth } = usePatreonOAuth();
   const diceColorsGated = !canAccessCampaigns;
 
   // ── Editable display name ─────────────────────────────────────────────
@@ -289,14 +290,13 @@ export function ProfileCard({ user, onSignOut }: ProfileCardProps) {
                   <span className="font-semibold text-gold-400">Paid membership</span>{" "}
                   required for custom dice colors.
                 </p>
-                <a
-                  href="https://patreon.com/CursesAP"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="shrink-0 rounded-md border border-gold-500/40 bg-gold-500/15 px-3 py-1 text-xs font-semibold text-gold-400 hover:bg-gold-500/25 hover:border-gold-500/60 transition-colors focus:outline-none focus:ring-2 focus:ring-gold-400 focus:ring-offset-1 focus:ring-offset-slate-900"
+                <button
+                  onClick={startOAuth}
+                  disabled={isLinking}
+                  className="shrink-0 rounded-md border border-gold-500/40 bg-gold-500/15 px-3 py-1 text-xs font-semibold text-gold-400 hover:bg-gold-500/25 hover:border-gold-500/60 transition-colors focus:outline-none focus:ring-2 focus:ring-gold-400 focus:ring-offset-1 focus:ring-offset-slate-900 disabled:opacity-50"
                 >
-                  View Tiers
-                </a>
+                  {isLinking ? "Linking\u2026" : "View Tiers"}
+                </button>
               </div>
               <div className="pointer-events-none select-none opacity-50" aria-hidden="true" inert>
                 <p className="text-xs text-parchment-600 mb-2">

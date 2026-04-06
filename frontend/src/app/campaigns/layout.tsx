@@ -116,14 +116,13 @@ export default function CampaignsLayout({
             to the CursesAP Patreon.
           </p>
 
-          <a
-            href="https://patreon.com/CursesAP"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-6 inline-block w-full rounded-lg border border-gold-500/40 bg-gold-500/15 px-5 py-2.5 text-sm font-bold text-gold-400 hover:bg-gold-500/25 hover:border-gold-500/60 transition-colors focus:outline-none focus:ring-2 focus:ring-gold-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+          <button
+            onClick={startOAuth}
+            disabled={isLinking}
+            className="mt-6 inline-block w-full rounded-lg border border-gold-500/40 bg-gold-500/15 px-5 py-2.5 text-sm font-bold text-gold-400 hover:bg-gold-500/25 hover:border-gold-500/60 transition-colors focus:outline-none focus:ring-2 focus:ring-gold-400 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50"
           >
-            View Tiers on Patreon
-          </a>
+            {isLinking ? "Linking\u2026" : "View Tiers on Patreon"}
+          </button>
 
           <Link
             href="/dashboard"

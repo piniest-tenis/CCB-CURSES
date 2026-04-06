@@ -881,14 +881,13 @@ function SheetHeader({
                   </span>{" "}
                   required for custom dice colors.
                 </p>
-                <a
-                  href="https://patreon.com/CursesAP"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="shrink-0 rounded-md border border-gold-500/40 bg-gold-500/15 px-3 py-1 text-xs font-semibold text-gold-400 hover:bg-gold-500/25 hover:border-gold-500/60 transition-colors focus:outline-none focus:ring-2 focus:ring-gold-400 focus:ring-offset-1 focus:ring-offset-slate-900"
+                <button
+                  onClick={startOAuth}
+                  disabled={isLinking}
+                  className="shrink-0 rounded-md border border-gold-500/40 bg-gold-500/15 px-3 py-1 text-xs font-semibold text-gold-400 hover:bg-gold-500/25 hover:border-gold-500/60 transition-colors focus:outline-none focus:ring-2 focus:ring-gold-400 focus:ring-offset-1 focus:ring-offset-slate-900 disabled:opacity-50"
                 >
-                  View Tiers
-                </a>
+                  {isLinking ? "Linking\u2026" : "View Tiers"}
+                </button>
               </div>
               <div
                 className="pointer-events-none select-none opacity-50"

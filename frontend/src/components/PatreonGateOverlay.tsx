@@ -141,6 +141,7 @@ interface PatreonPaidGateProps {
  */
 export function PatreonPaidGate({ children, className = "" }: PatreonPaidGateProps) {
   const { canAccessCampaigns, needsPaidTier, needsPatreon } = usePatreonGate();
+  const { isLinking, startOAuth } = usePatreonOAuth();
 
   // If the user can access campaigns, render normally
   if (canAccessCampaigns) {
@@ -170,14 +171,13 @@ export function PatreonPaidGate({ children, className = "" }: PatreonPaidGatePro
             <span className="font-semibold text-gold-400">Paid membership</span>{" "}
             required for this feature.
           </p>
-          <a
-            href="https://patreon.com/CursesAP"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="shrink-0 rounded-md border border-gold-500/40 bg-gold-500/15 px-3 py-1 text-xs font-semibold text-gold-400 hover:bg-gold-500/25 hover:border-gold-500/60 transition-colors focus:outline-none focus:ring-2 focus:ring-gold-400 focus:ring-offset-1 focus:ring-offset-slate-900"
+          <button
+            onClick={startOAuth}
+            disabled={isLinking}
+            className="shrink-0 rounded-md border border-gold-500/40 bg-gold-500/15 px-3 py-1 text-xs font-semibold text-gold-400 hover:bg-gold-500/25 hover:border-gold-500/60 transition-colors focus:outline-none focus:ring-2 focus:ring-gold-400 focus:ring-offset-1 focus:ring-offset-slate-900 disabled:opacity-50"
           >
-            View Tiers
-          </a>
+            {isLinking ? "Linking\u2026" : "View Tiers"}
+          </button>
         </div>
 
         {/* Children rendered with light dimming — visible preview, no grayscale */}

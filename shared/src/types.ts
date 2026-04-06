@@ -873,3 +873,41 @@ export interface SessionSchedule {
   /** Whether reminder emails are enabled for this campaign. */
   reminderEnabled: boolean;
 }
+
+// ─── Homebrew Types ─────────────────────────────────────────────────────────
+
+/**
+ * The four homebrew content types a user can create.
+ */
+export type HomebrewContentType = "class" | "ancestry" | "community" | "domainCard";
+
+/**
+ * Summary record returned by GET /homebrew/mine for listing homebrew items.
+ */
+export interface HomebrewSummary {
+  pk: string;
+  sk: string;
+  contentType: HomebrewContentType;
+  name: string;
+  updatedAt: string;
+}
+
+/**
+ * Input payload sent to POST /homebrew and PUT /homebrew/{type}/{id}.
+ * Represents raw markdown + metadata before server-side parsing.
+ */
+export interface HomebrewMarkdownInput {
+  contentType: HomebrewContentType;
+  name: string;
+  markdown: string;
+  /** Optional domain for domain cards. */
+  domain?: string;
+  /** Optional level for domain cards. */
+  level?: number;
+  /** Optional cursed flag for domain cards. */
+  isCursed?: boolean;
+  /** Optional linked-curse flag for domain cards. */
+  isLinkedCurse?: boolean;
+  /** Optional recall cost for domain cards. */
+  recallCost?: number;
+}
