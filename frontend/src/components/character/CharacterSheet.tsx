@@ -531,13 +531,14 @@ function SheetHeader({
           </div>
         </div>
 
-        {/* Conditions — compact column, same width as Level */}
+        {/* Conditions — matches defensive-stat visual language, gold/coral theme */}
         <div
-          className="flex-shrink-0 flex flex-col items-center gap-1"
+          className="flex-shrink-0 flex flex-col items-center gap-1.5"
           data-field-key="sheet.conditions"
         >
-          <span className="text-[11px] sm:text-xs uppercase tracking-widest text-parchment-500 font-medium">
-            Conditions
+          <span className="flex items-center gap-1 text-[11px] sm:text-xs uppercase tracking-widest text-gold-400 font-semibold">
+            <i className="fa-solid fa-bolt text-[10px] sm:text-[11px] opacity-80" aria-hidden="true"></i>
+            Cond.
           </span>
           <button
             type="button"
@@ -550,52 +551,40 @@ function SheetHeader({
             aria-haspopup="dialog"
             aria-expanded={conditionsOpen}
             className={[
-              "w-12 min-h-[2.75rem] rounded-lg border px-1 py-1.5",
-              "flex flex-col items-center justify-center gap-0.5",
-              "hover:border-steel-400 hover:bg-slate-800",
-              "focus:outline-none focus:ring-2 focus:ring-steel-400 focus:ring-offset-1 focus:ring-offset-slate-900",
+              "flex items-center justify-center w-14 min-h-[2.75rem] rounded-lg border-2 py-2",
+              "text-center text-2xl font-bold leading-none tabular-nums",
+              "focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-slate-900",
               "transition-colors cursor-pointer",
-              activeConditions.length > 0
-                ? "border-[#fe5f55]/40 bg-[#fe5f55]/8"
-                : "border-steel-400/40 bg-slate-850",
+              activeConditions.length === 0
+                ? "border-gold-400/40 bg-slate-850 text-[#b9baa3] hover:border-gold-400/70 hover:bg-gold-400/[0.06] focus:ring-gold-400"
+                : activeConditions.length >= 3
+                  ? "border-coral-400/60 bg-coral-400/[0.12] text-coral-400 hover:border-coral-400/80 hover:bg-coral-400/[0.16] focus:ring-coral-400 animate-coral-pulse"
+                  : "border-coral-400/50 bg-coral-400/[0.08] text-[#f7f7ff] hover:border-coral-400/70 hover:bg-coral-400/[0.12] focus:ring-coral-400",
             ].join(" ")}
           >
-            {activeConditions.length === 0 ? (
-              <span className="text-xl font-bold text-[#b9baa3] font-serif leading-none">
-                —
-              </span>
-            ) : (
-              <span
-                className={[
-                  "text-2xl font-bold font-serif leading-none",
-                  activeConditions.length >= 3
-                    ? "text-[#fe5f55]"
-                    : "text-[#f7f7ff]",
-                ].join(" ")}
-              >
-                {activeConditions.length}
-              </span>
-            )}
+            {activeConditions.length === 0 ? "—" : activeConditions.length}
           </button>
         </div>
 
-        {/* Level — flex-shrink-0 so it never wraps into the name */}
+        {/* Level — matches defensive-stat visual language, gold/amber theme */}
         <div
-          className="flex-shrink-0 flex flex-col items-center gap-1"
+          className="flex-shrink-0 flex flex-col items-center gap-1.5"
           role="group"
           aria-label="Character Level"
           data-field-key="sheet.level"
         >
-          <span className="text-[11px] sm:text-xs uppercase tracking-widest text-parchment-500 font-medium">
+          <span className="flex items-center gap-1 text-[11px] sm:text-xs uppercase tracking-widest text-gold-400 font-semibold">
+            <i className="fa-solid fa-circle-up text-[10px] sm:text-[11px] opacity-80" aria-hidden="true"></i>
             Level
           </span>
-          <output
+          <span
+            role="status"
             aria-live="polite"
             aria-label={`Level ${activeCharacter.level}`}
-            className="w-12 rounded-lg border border-amber-500/40 bg-amber-950/30 py-1.5 text-center text-2xl font-bold text-[#f7f7ff] font-serif leading-none"
+            className="flex items-center justify-center w-14 min-h-[2.75rem] rounded-lg border-2 border-amber-500/40 bg-slate-850 py-2 text-center text-2xl font-bold text-[#f7f7ff] leading-none tabular-nums"
           >
             {activeCharacter.level}
-          </output>
+          </span>
         </div>
       </div>
 
