@@ -686,71 +686,113 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                                 <i className="fa-solid fa-hat-wizard mr-1.5 text-[#577399]" aria-hidden="true" />
                                 Choose Your Subclass
                               </p>
-                              <div className="space-y-2">
+                              <div
+                                className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+                                role="radiogroup"
+                                aria-label="Choose your subclass"
+                              >
                                 {selectedClassData.subclasses.map((sc) => {
                                   const isSubSelected = subclassId === sc.subclassId;
                                   return (
                                     <button
                                       key={sc.subclassId}
                                       type="button"
+                                      role="radio"
+                                      aria-checked={isSubSelected}
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setSubclassId(isSubSelected ? "" : sc.subclassId);
                                       }}
                                       className={`
-                                        w-full text-left rounded-lg transition-all p-4
+                                        relative w-full text-left rounded-lg transition-all duration-150 ease-out
+                                        flex flex-col
+                                        focus-visible:ring-2 focus-visible:ring-[#577399] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a100d]
                                         ${isSubSelected
-                                          ? "bg-[#577399]/20 border-2 border-[#577399]"
-                                          : "border-2 border-slate-700/60 hover:border-slate-600 hover:bg-slate-850/30"
+                                          ? "border-2 border-[#577399] bg-[#577399]/[0.08] shadow-[0_0_12px_rgba(87,115,153,0.15)]"
+                                          : "border-2 border-slate-700/50 bg-slate-900/40 hover:border-slate-600 hover:bg-slate-800/40"
                                         }
                                       `}
                                     >
-                                      <div className="flex items-start justify-between gap-3">
-                                        <div className="flex-1">
-                                          <h4 className="font-semibold text-[#f7f7ff] mb-1">{sc.name}</h4>
-                                          <MarkdownContent className="text-base text-[#b9baa3]/70">
-                                            {sc.description}
-                                          </MarkdownContent>
-                                        </div>
-                                        {isSubSelected ? (
-                                          <span className="flex items-center gap-1 text-sm font-medium text-[#577399] shrink-0">
-                                            <i className="fa-solid fa-circle-check" aria-hidden="true" /> Chosen
-                                          </span>
-                                        ) : (
-                                          <span className="text-sm text-parchment-500 shrink-0">Choose</span>
-                                        )}
-                                      </div>
-
-                                      {/* Subclass features (shown when this subclass is selected) */}
+                                      {/* Floating check badge (selected only) */}
                                       {isSubSelected && (
-                                        <div className="mt-3 pt-3 border-t border-slate-700/30 space-y-3" onClick={(e) => e.stopPropagation()}>
-                                          {sc.foundationFeatures.length > 0 && (
+                                        <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[#577399] flex items-center justify-center shadow-md">
+                                          <i className="fa-solid fa-check text-white text-xs" aria-hidden="true" />
+                                        </span>
+                                      )}
+
+                                      {/* Content area */}
+                                      <div className="p-4 flex-1">
+                                        {/* Header row: name + spellcast trait pill */}
+                                        <div className="flex items-start justify-between gap-2 mb-2">
+                                          <h4 className={`text-base font-bold ${isSubSelected ? "text-[#f7f7ff]" : "text-[#f7f7ff]/70"}`}>
+                                            {sc.name}
+                                          </h4>
+                                          <span className={`
+                                            shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5
+                                            text-[11px] font-semibold uppercase tracking-wider
+                                            ${isSubSelected
+                                              ? "bg-[#577399]/20 text-[#577399]"
+                                              : "bg-slate-700/40 text-parchment-500"
+                                            }
+                                          `}>
+                                            <i className="fa-solid fa-hand-sparkles" aria-hidden="true" />
+                                            {sc.spellcastTrait.charAt(0).toUpperCase() + sc.spellcastTrait.slice(1)}
+                                          </span>
+                                        </div>
+
+                                        {/* Flavor description */}
+                                        <MarkdownContent className={`text-sm ${isSubSelected ? "text-[#b9baa3]/80" : "text-[#b9baa3]/60"}`}>
+                                          {sc.description}
+                                        </MarkdownContent>
+
+                                        {/* Divider */}
+                                        {sc.foundationFeatures.length > 0 && (
+                                          <>
+                                            <div className="border-t border-slate-700/30 my-3" />
+
+                                            {/* Foundation Features */}
                                             <div>
-                                              <p className="text-xs uppercase tracking-wider text-parchment-500 mb-2">
+                                              <p className={`text-[11px] font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5 ${isSubSelected ? "text-parchment-400" : "text-parchment-500"}`}>
+                                                <i className="fa-solid fa-scroll" aria-hidden="true" />
                                                 Foundation Features
                                               </p>
-                                              <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 p-3 space-y-2">
+                                              <div className="space-y-2">
                                                 {sc.foundationFeatures.map((f) => (
                                                   <div key={f.name}>
-                                                    <p className="text-sm font-semibold text-[#f7f7ff]">{f.name}</p>
-                                                    <MarkdownContent className="text-sm text-[#b9baa3]/70">
+                                                    <p className={`text-sm font-semibold ${isSubSelected ? "text-[#f7f7ff]" : "text-[#f7f7ff]/70"}`}>
+                                                      {f.name}
+                                                    </p>
+                                                    <MarkdownContent className={`text-sm ${isSubSelected ? "text-[#b9baa3]/70" : "text-[#b9baa3]/50"}`}>
                                                       {f.description}
                                                     </MarkdownContent>
                                                   </div>
                                                 ))}
                                               </div>
                                             </div>
-                                          )}
-                                          <div className="rounded-lg border border-[#577399]/50 bg-[#577399]/10 p-3">
-                                            <p className="text-xs uppercase tracking-wider text-[#577399] font-medium mb-1">
-                                              Spellcast Trait
-                                            </p>
-                                            <p className="text-sm font-semibold text-[#f7f7ff]">
-                                              {sc.spellcastTrait.charAt(0).toUpperCase() + sc.spellcastTrait.slice(1)}
-                                            </p>
-                                          </div>
-                                        </div>
-                                      )}
+                                          </>
+                                        )}
+                                      </div>
+
+                                      {/* Bottom selection strip */}
+                                      <div className={`
+                                        rounded-b-lg px-4 py-2.5 text-center text-sm font-medium
+                                        ${isSubSelected
+                                          ? "bg-[#577399]/15 text-[#577399]"
+                                          : "bg-slate-800/30 text-parchment-500"
+                                        }
+                                      `}>
+                                        {isSubSelected ? (
+                                          <span className="inline-flex items-center gap-1.5">
+                                            <i className="fa-solid fa-circle-check" aria-hidden="true" />
+                                            Chosen
+                                          </span>
+                                        ) : (
+                                          <span className="inline-flex items-center gap-1.5">
+                                            <i className="fa-regular fa-circle" aria-hidden="true" />
+                                            Select
+                                          </span>
+                                        )}
+                                      </div>
                                     </button>
                                   );
                                 })}
