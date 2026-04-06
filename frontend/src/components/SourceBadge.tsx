@@ -3,8 +3,8 @@
 import type { CharacterSource } from "@shared/types";
 
 // ─── SourceBadge ─────────────────────────────────────────────────────────────
-// Visual indicator for homebrew content.  SRD content gets NO badge (it's the
-// expected default).  Three size variants:
+// Visual indicator for Curses! community content.  SRD content gets NO badge
+// (it's the expected default).  Three size variants:
 //   xs — tiny dot only, for compact list rows
 //   sm — small pill badge, for cards and tiles
 //   md — larger pill badge, for detail-page headers
@@ -22,17 +22,18 @@ export function SourceBadge({
   size = "sm",
   className = "",
 }: SourceBadgeProps) {
-  // SRD content (or missing source) gets no badge
-  if (!source || source !== "homebrew") return null;
+  // SRD content (or missing source) gets no badge.
+  // Accept both legacy "homebrew" and future "curses" values.
+  if (!source || source === "srd") return null;
 
   if (size === "xs") {
     return (
       <span
         className={`inline-block h-1.5 w-1.5 rounded-full bg-coral-400 shrink-0 ${className}`}
         aria-hidden="true"
-        title="Homebrew"
+        title="Curses! Content"
       >
-        <span className="sr-only">Curses!</span>
+        <span className="sr-only">Curses! Content</span>
       </span>
     );
   }

@@ -25,7 +25,8 @@ import { useDomain, type DomainCardsData } from "@/hooks/useGameData";
 import type { DomainCard } from "@shared/types";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { SourceBadge } from "@/components/SourceBadge";
-import { SourceFilter, type SourceFilterValue } from "@/components/SourceFilter";
+import { SourceFilter, matchesSourceFilter, type SourceFilterValue } from "@/components/SourceFilter";
+import { useSourceFilterDefault } from "@/hooks/useSourceFilterDefault";
 import { SelectionTile } from "./SelectionTile";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -285,7 +286,9 @@ export function DomainCardSelectionPanel({
   const isLocked = lockedCardIds !== undefined;
 
   const [detailCard, setDetailCard] = useState<DomainCard | null>(null);
-  const [sourceFilter, setSourceFilter] = useState<SourceFilterValue>("all");
+  const sourceFilterDefault = useSourceFilterDefault();
+  const [sourceOverride, setSourceOverride] = useState<SourceFilterValue | null>(null);
+  const sourceFilter = sourceOverride ?? sourceFilterDefault;
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
 
   // Fetch both domains in parallel
@@ -362,7 +365,7 @@ export function DomainCardSelectionPanel({
       );
     }
 
-    const filteredCards = allCards.filter((c) => sourceFilter === "all" || c.source === sourceFilter);
+    const filteredCards = allCards.filter((c) => matchesSourceFilter(c.source, sourceFilter));
     const acquiredCards = filteredCards.filter((c) => c.level <= characterLevel);
     const futureCards   = filteredCards.filter((c) => c.level >  characterLevel);
 
@@ -384,7 +387,7 @@ export function DomainCardSelectionPanel({
               {lockedCardIds.length} acquired
             </span>
           </div>
-          <SourceFilter value={sourceFilter} onChange={setSourceFilter} />
+          <SourceFilter value={sourceFilter} onChange={setSourceOverride} defaultFilter={sourceFilterDefault} />
         </div>
 
         {/* Card list */}
@@ -434,7 +437,7 @@ export function DomainCardSelectionPanel({
   const selectionCount = selectedCardIds.length;
   const canSelectMore = selectionCount < 2;
 
-  const filteredCards = allCards.filter((c) => sourceFilter === "all" || c.source === sourceFilter);
+  const filteredCards = allCards.filter((c) => matchesSourceFilter(c.source, sourceFilter));
 
   return (
     <div className="flex flex-col h-full">
@@ -457,7 +460,7 @@ export function DomainCardSelectionPanel({
             )}
           </p>
         </div>
-        <SourceFilter value={sourceFilter} onChange={setSourceFilter} />
+        <SourceFilter value={sourceFilter} onChange={setSourceOverride} defaultFilter={sourceFilterDefault} />
       </div>
 
       {/* Card list — accordion tiles */}

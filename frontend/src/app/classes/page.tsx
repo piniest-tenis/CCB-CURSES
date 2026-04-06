@@ -13,7 +13,8 @@ import Link from "next/link";
 import { useClasses } from "@/hooks/useGameData";
 import type { ClassSummary } from "@shared/types";
 import { SourceBadge } from "@/components/SourceBadge";
-import { SourceFilter, type SourceFilterValue } from "@/components/SourceFilter";
+import { SourceFilter, matchesSourceFilter, type SourceFilterValue } from "@/components/SourceFilter";
+import { useSourceFilterDefault } from "@/hooks/useSourceFilterDefault";
 
 // ---------------------------------------------------------------------------
 // Domain badge colour map
@@ -108,7 +109,9 @@ export default function ClassesPage() {
   const { data, isLoading, isError } = useClasses();
   const [search, setSearch] = useState("");
   const [filterDomain, setFilterDomain] = useState<string>("");
-  const [sourceFilter, setSourceFilter] = useState<SourceFilterValue>("all");
+  const sourceFilterDefault = useSourceFilterDefault();
+  const [sourceOverride, setSourceOverride] = useState<SourceFilterValue | null>(null);
+  const sourceFilter = sourceOverride ?? sourceFilterDefault;
 
   const classes = data?.classes ?? [];
 
@@ -123,7 +126,7 @@ export default function ClassesPage() {
     const matchesDomain =
       filterDomain === "" || c.domains.includes(filterDomain);
     const matchesSource =
-      sourceFilter === "all" || c.source === sourceFilter;
+      matchesSourceFilter(c.source, sourceFilter);
     return matchesSearch && matchesDomain && matchesSource;
   });
 
@@ -183,11 +186,11 @@ export default function ClassesPage() {
               <option key={d} value={d}>{d}</option>
             ))}
           </select>
-          <SourceFilter value={sourceFilter} onChange={setSourceFilter} />
-          {(search || filterDomain || sourceFilter !== "all") && (
+          <SourceFilter value={sourceFilter} onChange={setSourceOverride} defaultFilter={sourceFilterDefault} />
+          {(search || filterDomain || sourceOverride !== null) && (
             <button
               type="button"
-              onClick={() => { setSearch(""); setFilterDomain(""); setSourceFilter("all"); }}
+              onClick={() => { setSearch(""); setFilterDomain(""); setSourceOverride(null); }}
               className="text-xs text-parchment-600 hover:text-parchment-400 transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500 rounded"
             >
               Clear filters

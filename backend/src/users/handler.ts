@@ -76,6 +76,7 @@ const UpdateUserSchema = z.object({
       theme: z.enum(["dark", "light", "system"]).optional(),
       defaultDiceStyle: z.string().min(1).optional(),
       diceColors: DiceColorPrefsSchema.optional(),
+      defaultSourceFilter: z.enum(["srd", "curses", "all"]).optional(),
     })
     .optional(),
 });
@@ -109,6 +110,9 @@ function toUserProfile(record: UserDynamoRecord): UserProfile {
         DEFAULT_PREFERENCES.defaultDiceStyle,
       ...(record.preferences?.diceColors !== undefined
         ? { diceColors: record.preferences.diceColors }
+        : {}),
+      ...(record.preferences?.defaultSourceFilter !== undefined
+        ? { defaultSourceFilter: record.preferences.defaultSourceFilter }
         : {}),
     },
     patreon: record.patreon ?? null,
@@ -275,6 +279,10 @@ async function updateMe(
       setExpressions.push("preferences.diceColors = :diceColors");
       expressionAttributeValues[":diceColors"] = prefPatch.diceColors;
     }
+    if (prefPatch.defaultSourceFilter !== undefined) {
+      setExpressions.push("preferences.defaultSourceFilter = :defaultSourceFilter");
+      expressionAttributeValues[":defaultSourceFilter"] = prefPatch.defaultSourceFilter;
+    }
   }
 
   const updateResult = await updateItem({
@@ -304,6 +312,9 @@ async function updateMe(
           : {}),
         ...(prefPatch?.diceColors !== undefined
           ? { diceColors: prefPatch.diceColors }
+          : {}),
+        ...(prefPatch?.defaultSourceFilter !== undefined
+          ? { defaultSourceFilter: prefPatch.defaultSourceFilter }
           : {}),
       },
       updatedAt: now,

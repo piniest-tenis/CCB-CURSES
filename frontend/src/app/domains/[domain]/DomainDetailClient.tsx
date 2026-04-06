@@ -15,7 +15,8 @@ import { useDomain } from "@/hooks/useGameData";
 import type { DomainCard } from "@shared/types";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { SourceBadge } from "@/components/SourceBadge";
-import { SourceFilter, type SourceFilterValue } from "@/components/SourceFilter";
+import { SourceFilter, matchesSourceFilter, type SourceFilterValue } from "@/components/SourceFilter";
+import { useSourceFilterDefault } from "@/hooks/useSourceFilterDefault";
 
 // ---------------------------------------------------------------------------
 // Domain colours
@@ -170,7 +171,9 @@ function DomainDetailContent() {
 
   const { data, isLoading, isError } = useDomain(domainName, levelFilter);
   const [search, setSearch] = useState("");
-  const [sourceFilter, setSourceFilter] = useState<SourceFilterValue>("all");
+  const sourceFilterDefault = useSourceFilterDefault();
+  const [sourceOverride, setSourceOverride] = useState<SourceFilterValue | null>(null);
+  const sourceFilter = sourceOverride ?? sourceFilterDefault;
 
   const cards = data?.cards ?? [];
 
@@ -190,7 +193,7 @@ function DomainDetailContent() {
         (search === "" ||
         c.name.toLowerCase().includes(search.toLowerCase()) ||
         c.description.toLowerCase().includes(search.toLowerCase())) &&
-        (sourceFilter === "all" || c.source === sourceFilter)
+        matchesSourceFilter(c.source, sourceFilter)
     );
     if (filtered.length > 0) acc[level] = filtered;
     return acc;
@@ -266,7 +269,7 @@ function DomainDetailContent() {
                   focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500
                 "
               />
-              <SourceFilter value={sourceFilter} onChange={setSourceFilter} />
+              <SourceFilter value={sourceFilter} onChange={setSourceOverride} defaultFilter={sourceFilterDefault} />
               <div role="group" aria-label="Filter by level" className="flex gap-2 flex-wrap">
                 <button
                   type="button"

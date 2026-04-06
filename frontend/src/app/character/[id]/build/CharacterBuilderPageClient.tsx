@@ -30,7 +30,8 @@ import type { Character, AncestryData, CommunityData, CoreStats, Experience } fr
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { CollapsibleSRDDescription } from "@/components/character/CollapsibleSRDDescription";
 import { SourceBadge } from "@/components/SourceBadge";
-import { SourceFilter, type SourceFilterValue } from "@/components/SourceFilter";
+import { SourceFilter, matchesSourceFilter, type SourceFilterValue } from "@/components/SourceFilter";
+import { useSourceFilterDefault } from "@/hooks/useSourceFilterDefault";
 import { TraitAssignmentPanel, type TraitBonuses } from "@/components/character/TraitAssignmentPanel";
 import { WeaponSelectionPanel } from "@/components/character/WeaponSelectionPanel";
 import { ArmorSelectionPanel } from "@/components/character/ArmorSelectionPanel";
@@ -220,8 +221,11 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
     sessionDraft?.heritageTab ?? "ancestry"
   );
   const [error, setError] = useState<string | null>(null);
-  const [classSourceFilter, setClassSourceFilter] = useState<SourceFilterValue>("all");
-  const [heritageSourceFilter, setHeritageSourceFilter] = useState<SourceFilterValue>("all");
+  const sourceFilterDefault = useSourceFilterDefault();
+  const [classSourceOverride, setClassSourceOverride] = useState<SourceFilterValue | null>(null);
+  const [heritageSourceOverride, setHeritageSourceOverride] = useState<SourceFilterValue | null>(null);
+  const classSourceFilter = classSourceOverride ?? sourceFilterDefault;
+  const heritageSourceFilter = heritageSourceOverride ?? sourceFilterDefault;
 
   // Accordion expand state for Steps 1, 2 & 3
   const [expandedClassId, setExpandedClassId] = useState<string | null>(null);
@@ -600,13 +604,13 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                     title="What are Classes?"
                     content="Classes are role-based archetypes that determine which class features and domain cards a PC gains access to throughout play."
                   />
-                  <SourceFilter value={classSourceFilter} onChange={setClassSourceFilter} />
+                  <SourceFilter value={classSourceFilter} onChange={setClassSourceOverride} defaultFilter={sourceFilterDefault} />
                 </div>
 
                 {/* Class list — accordion tiles */}
                 <div className="flex-1 overflow-y-auto border-t border-slate-700/30">
                   {[...(classesData?.classes ?? [])]
-                    .filter((c) => classSourceFilter === "all" || c.source === classSourceFilter)
+                    .filter((c) => matchesSourceFilter(c.source, classSourceFilter))
                     .sort((a, b) => a.name.localeCompare(b.name))
                     .map((c) => (
                       <SelectionTile
@@ -838,13 +842,13 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                     title="What are Ancestries?"
                     content="Ancestries are the species or lineage of your character. Each ancestry grants one or two unique traits that represent innate abilities."
                   />
-                  <SourceFilter value={heritageSourceFilter} onChange={setHeritageSourceFilter} />
+                  <SourceFilter value={heritageSourceFilter} onChange={setHeritageSourceOverride} defaultFilter={sourceFilterDefault} />
                 </div>
 
                 {/* Ancestry list — accordion tiles */}
                 <div className="flex-1 overflow-y-auto border-t border-slate-700/30">
                   {ancestriesData?.ancestries
-                    .filter((a) => heritageSourceFilter === "all" || a.source === heritageSourceFilter)
+                    .filter((a) => matchesSourceFilter(a.source, heritageSourceFilter))
                     .map((a) => (
                       <SelectionTile
                         key={a.ancestryId}
@@ -904,13 +908,13 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                     title="What are Communities?"
                     content="Communities represent the cultural group or society your character grew up in. Each community grants a unique trait that reflects that culture's values and practices."
                   />
-                  <SourceFilter value={heritageSourceFilter} onChange={setHeritageSourceFilter} />
+                  <SourceFilter value={heritageSourceFilter} onChange={setHeritageSourceOverride} defaultFilter={sourceFilterDefault} />
                 </div>
 
                 {/* Community list — accordion tiles */}
                 <div className="flex-1 overflow-y-auto border-t border-slate-700/30">
                   {communitiesData?.communities
-                    .filter((c) => heritageSourceFilter === "all" || c.source === heritageSourceFilter)
+                    .filter((c) => matchesSourceFilter(c.source, heritageSourceFilter))
                     .map((c) => (
                       <SelectionTile
                         key={c.communityId}

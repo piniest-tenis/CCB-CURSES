@@ -429,6 +429,8 @@ export interface UserPreferences {
   defaultDiceStyle: string;
   /** User-level default dice colors applied to all owned characters without character-scoped overrides. */
   diceColors?: DiceColorPrefs;
+  /** Default content source filter for browsing views. Defaults to "srd" if unset. */
+  defaultSourceFilter?: "srd" | "curses" | "all";
 }
 
 // ─── Patreon Integration ──────────────────────────────────────────────────────
