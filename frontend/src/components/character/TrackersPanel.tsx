@@ -898,6 +898,20 @@ function WeaponSidebar({ open, onClose, slot }: WeaponSidebarProps) {
   const otherWeaponId = activeCharacter.weapons[otherSlot].weaponId;
   const currentWeaponId = activeCharacter.weapons[slot].weaponId;
 
+  // Two-handed constraint checks
+  const primaryWeaponId = activeCharacter.weapons.primary.weaponId;
+  const secondaryWeaponId = activeCharacter.weapons.secondary.weaponId;
+  const primaryWeapon = primaryWeaponId
+    ? (ALL_TIER1_WEAPONS.find((w) => w.id === primaryWeaponId) ?? null)
+    : null;
+  const primaryIsTwoHanded = primaryWeapon?.burden === "Two-Handed";
+  const hasSecondaryEquipped = !!secondaryWeaponId;
+
+  // If this is the secondary sidebar and primary is two-handed, the slot is
+  // occupied — show an informational message instead of the weapon list.
+  const secondaryBlockedByTwoHanded =
+    slot === "secondary" && primaryIsTwoHanded;
+
   // Build inventory weapon list: SRD weapons whose names match something in inventory
   const inventory = activeCharacter.inventory ?? [];
   const inventoryWeaponOptions: SRDWeapon[] = ALL_TIER1_WEAPONS.filter((w) =>
@@ -968,12 +982,23 @@ function WeaponSidebar({ open, onClose, slot }: WeaponSidebarProps) {
               SRD guidance
             </p>
             <p className="text-sm leading-relaxed text-[#f7f7ff]">
-              Select a weapon from your inventory. Add weapons via the Equipment
-              panel to make them available here. (SRD p. 23)
+              {secondaryBlockedByTwoHanded
+                ? "This slot is occupied by your two-handed primary weapon. Unequip your primary weapon to free the secondary slot. (SRD p. 23)"
+                : "Select a weapon from your inventory. Add weapons via the Equipment panel to make them available here. (SRD p. 23)"}
             </p>
           </div>
 
-          {inventoryWeaponOptions.length === 0 ? (
+          {secondaryBlockedByTwoHanded ? (
+            <div className="text-center pt-4 space-y-2">
+              <p className="text-sm text-[#b9baa3]/80 italic">
+                Your primary weapon ({primaryWeapon?.name}) is two-handed and
+                occupies both weapon slots.
+              </p>
+              <p className="text-xs text-[#b9baa3]/60">
+                Unequip or change your primary weapon first.
+              </p>
+            </div>
+          ) : inventoryWeaponOptions.length === 0 ? (
             <p className="text-sm text-[#b9baa3]/60 italic text-center pt-4">
               No weapons found in inventory. Add weapons via the Equipment panel
               first.
@@ -987,18 +1012,27 @@ function WeaponSidebar({ open, onClose, slot }: WeaponSidebarProps) {
               {inventoryWeaponOptions.map((w) => {
                 const isSelected = w.id === currentWeaponId;
                 const isOtherSlot = w.id === otherWeaponId;
+                // Block two-handed weapons in the primary slot when a secondary
+                // weapon is already equipped — user must unequip secondary first.
+                const blockedTwoHanded =
+                  slot === "primary" &&
+                  w.burden === "Two-Handed" &&
+                  hasSecondaryEquipped;
+                const isDisabled = isOtherSlot || blockedTwoHanded;
                 return (
                   <li key={w.id}>
                     <button
                       type="button"
                       role="option"
                       aria-selected={isSelected}
-                      disabled={isOtherSlot}
+                      disabled={isDisabled}
                       onClick={() => handleSelect(w)}
                       title={
-                        isOtherSlot
-                          ? `Already equipped as ${otherSlot} weapon`
-                          : undefined
+                        blockedTwoHanded
+                          ? "Unequip your secondary weapon first to use a two-handed weapon"
+                          : isOtherSlot
+                            ? `Already equipped as ${otherSlot} weapon`
+                            : undefined
                       }
                       className={[
                         "w-full text-left rounded-xl border px-4 py-3 transition-all",
@@ -1026,6 +1060,11 @@ function WeaponSidebar({ open, onClose, slot }: WeaponSidebarProps) {
                                 ✦
                               </span>
                               {w.feature}
+                            </p>
+                          )}
+                          {blockedTwoHanded && (
+                            <p className="text-xs text-[#fe5f55]/80 mt-1 italic">
+                              Unequip secondary weapon first
                             </p>
                           )}
                         </div>
@@ -1129,19 +1168,31 @@ function WeaponCard({ slot, onRollQueued }: WeaponCardProps) {
     ? (ALL_TIER1_WEAPONS.find((w) => w.id === weaponId) ?? null)
     : null;
 
-  const kickerParts = srdWeapon
+  // Two-handed mirroring: if this is the secondary slot and the primary weapon
+  // is two-handed, display the primary weapon here instead of "No weapon".
+  const primaryWeaponId = activeCharacter.weapons.primary.weaponId;
+  const primaryWeapon = primaryWeaponId
+    ? (ALL_TIER1_WEAPONS.find((w) => w.id === primaryWeaponId) ?? null)
+    : null;
+  const isTwoHandedMirror =
+    slot === "secondary" && primaryWeapon?.burden === "Two-Handed";
+  const displayWeapon = isTwoHandedMirror ? primaryWeapon : srdWeapon;
+
+  const kickerParts = displayWeapon
     ? [
-        srdWeapon.damageDie,
-        srdWeapon.range,
-        srdWeapon.trait,
-        srdWeapon.burden === "Two-Handed" ? "Two-handed" : "One-handed",
+        displayWeapon.damageDie,
+        displayWeapon.range,
+        displayWeapon.trait,
+        displayWeapon.burden === "Two-Handed" ? "Two-handed" : "One-handed",
       ]
         .filter(Boolean)
         .join(" · ")
     : null;
 
-  const ariaLabel = srdWeapon
-    ? `Edit ${slot} weapon: ${srdWeapon.name}${kickerParts ? `. ${kickerParts}` : ""}`
+  const ariaLabel = displayWeapon
+    ? isTwoHandedMirror
+      ? `Secondary slot occupied by two-handed weapon: ${displayWeapon.name}`
+      : `Edit ${slot} weapon: ${displayWeapon.name}${kickerParts ? `. ${kickerParts}` : ""}`
     : `Add ${slot} weapon — tap to select from inventory`;
 
   // Build roll requests if a weapon is equipped
@@ -1154,17 +1205,19 @@ function WeaponCard({ slot, onRollQueued }: WeaponCardProps) {
   );
 
   // Parse the damage die safely (e.g. "d10+3" → size:"d10", flat:3)
-  const parsedDie = srdWeapon ? parseDamageDie(srdWeapon.damageDie) : null;
+  const parsedDie = displayWeapon ? parseDamageDie(displayWeapon.damageDie) : null;
 
+  // Don't show duplicate roll buttons on the mirrored secondary card — the
+  // primary card already has them.
   const damageRollRequest: RollRequest | null =
-    srdWeapon && parsedDie
+    displayWeapon && parsedDie && !isTwoHandedMirror
       ? {
-          label: `${srdWeapon.name} Damage`,
+          label: `${displayWeapon.name} Damage`,
           type: "damage",
           dice: Array.from({ length: proficiency }, () => ({
             size: parsedDie.size,
             role: "damage" as const,
-            label: srdWeapon.name,
+            label: displayWeapon.name,
           })),
           modifier: parsedDie.flat,
           ...(loadoutBonuses.length > 0 ? { bonuses: loadoutBonuses } : {}),
@@ -1173,16 +1226,16 @@ function WeaponCard({ slot, onRollQueued }: WeaponCardProps) {
       : null;
 
   // Attack roll: 2×d12 (hope + fear) with the weapon's trait stat as modifier
-  const traitKey = srdWeapon
-    ? (srdWeapon.trait.toLowerCase() as CoreStatName)
+  const traitKey = displayWeapon
+    ? (displayWeapon.trait.toLowerCase() as CoreStatName)
     : null;
   const traitValue = traitKey ? (effective[traitKey] ?? 0) : 0;
-  const attackBonuses = srdWeapon
-    ? parseWeaponAttackBonuses(srdWeapon.feature)
+  const attackBonuses = displayWeapon
+    ? parseWeaponAttackBonuses(displayWeapon.feature)
     : [];
-  const attackRollRequest: RollRequest | null = srdWeapon
+  const attackRollRequest: RollRequest | null = displayWeapon && !isTwoHandedMirror
     ? {
-        label: `${srdWeapon.name} Attack`,
+        label: `${displayWeapon.name} Attack`,
         type: "action",
         dice: [
           { size: "d12" as const, role: "hope" as const, label: "Hope" },
@@ -1225,38 +1278,48 @@ function WeaponCard({ slot, onRollQueued }: WeaponCardProps) {
         {/* Single clickable body */}
         <button
           type="button"
-          onClick={() => setSidebarOpen(true)}
+          onClick={() => !isTwoHandedMirror && setSidebarOpen(true)}
           aria-label={ariaLabel}
-          aria-haspopup="dialog"
-          aria-expanded={sidebarOpen}
-          className="
-            w-full text-left px-3 py-3
-            hover:bg-slate-800/60 focus:outline-none focus-visible:ring-2
-            focus-visible:ring-steel-400 focus-visible:ring-inset
-            transition-colors cursor-pointer group
-          "
+          aria-haspopup={isTwoHandedMirror ? undefined : "dialog"}
+          aria-expanded={isTwoHandedMirror ? undefined : sidebarOpen}
+          className={[
+            "w-full text-left px-3 py-3",
+            "focus:outline-none focus-visible:ring-2",
+            "focus-visible:ring-steel-400 focus-visible:ring-inset",
+            "transition-colors group",
+            isTwoHandedMirror
+              ? "cursor-default opacity-75"
+              : "hover:bg-slate-800/60 cursor-pointer",
+          ].join(" ")}
         >
-          {srdWeapon ? (
+          {displayWeapon ? (
             <>
               <p className="text-sm font-semibold text-parchment-100 group-hover:text-parchment-50 leading-snug">
-                {srdWeapon.name}
+                {displayWeapon.name}
+                {isTwoHandedMirror && (
+                  <span className="ml-1.5 text-xs font-normal text-steel-400">
+                    (Two-Handed)
+                  </span>
+                )}
               </p>
               {kickerParts && (
                 <p className="mt-0.5 text-xs text-parchment-500 truncate leading-snug">
                   {kickerParts}
                 </p>
               )}
-              {srdWeapon.feature && (
+              {displayWeapon.feature && (
                 <p className="mt-0.5 text-xs text-gold-600 truncate">
                   <span aria-label="Has feature" className="mr-1">
                     ✦
                   </span>
-                  {srdWeapon.feature}
+                  {displayWeapon.feature}
                 </p>
               )}
-              <p className="mt-1 text-xs text-parchment-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                Tap to change
-              </p>
+              {!isTwoHandedMirror && (
+                <p className="mt-1 text-xs text-parchment-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                  Tap to change
+                </p>
+              )}
             </>
           ) : (
             <>
