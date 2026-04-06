@@ -18,6 +18,8 @@ import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useDomain, type DomainCardsData } from "@/hooks/useGameData";
 import type { DomainCard } from "@shared/types";
 import { MarkdownContent } from "@/components/MarkdownContent";
+import { SourceBadge } from "@/components/SourceBadge";
+import { SourceFilter, type SourceFilterValue } from "@/components/SourceFilter";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -184,6 +186,7 @@ function CardRow({
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-[#f7f7ff] truncate">{card.name}</span>
+            <SourceBadge source={card.source} size="sm" />
             <span className="text-xs text-[#b9baa3]/40 shrink-0">{card.domain}</span>
           </div>
           <div className="flex items-center gap-2 mt-0.5">
@@ -221,11 +224,18 @@ function CardRow({
 interface Props {
   /** Two domain names from the class (e.g. ["Blade", "Valor"]) */
   classDomains: string[];
-  /** Currently selected cardIds (0–2) */
+  /** Currently selected cardIds (0–2) — used in creation mode only */
   selectedCardIds: string[];
   onSelectionChange: (cardIds: string[]) => void;
-  /** Character's current level — cards must be ≤ this level */
+  /** Character's current level — cards must be ≤ this level (creation mode) */
   characterLevel?: number;
+  /**
+   * When provided, the panel enters "locked" mode (post-Level-1 characters).
+   * These are the card IDs already in the character's domainVault.
+   * All toggling is disabled; vault cards show as locked-selected;
+   * cards above characterLevel show as future/greyed.
+   */
+  lockedCardIds?: string[];
 }
 
 export function DomainCardSelectionPanel({
@@ -233,13 +243,18 @@ export function DomainCardSelectionPanel({
   selectedCardIds,
   onSelectionChange,
   characterLevel = 1,
+  lockedCardIds,
 }: Props) {
-  const [detailCard, setDetailCard] = useState<DomainCard | null>(null);
+  const isLocked = lockedCardIds !== undefined;
 
-  // Scroll first selected card into view when the list renders with pre-selections.
+  const [detailCard, setDetailCard] = useState<DomainCard | null>(null);
+  const [sourceFilter, setSourceFilter] = useState<SourceFilterValue>("all");
+
+  // Scroll first selected/locked card into view when the list renders with pre-selections.
   const listRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!selectedCardIds.length || !listRef.current) return;
+    const ids = isLocked ? lockedCardIds : selectedCardIds;
+    if (!ids.length || !listRef.current) return;
     const el = listRef.current.querySelector<HTMLElement>("[data-selected='true']");
     if (el) el.scrollIntoView({ block: "nearest", behavior: "instant" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -249,12 +264,14 @@ export function DomainCardSelectionPanel({
   const domain1Query = useDomain(classDomains[0]);
   const domain2Query = useDomain(classDomains[1]);
 
-  // Combine and filter to level ≤ characterLevel
+  // In locked mode show ALL cards across all levels; in creation mode filter ≤ characterLevel.
   const allCards: DomainCard[] = useMemo(() => {
     const d1 = (domain1Query.data as DomainCardsData | undefined)?.cards ?? [];
     const d2 = (domain2Query.data as DomainCardsData | undefined)?.cards ?? [];
-    return [...d1, ...d2].filter((c) => c.level <= characterLevel);
-  }, [domain1Query.data, domain2Query.data, characterLevel]);
+    const combined = [...d1, ...d2];
+    if (isLocked) return combined; // show everything — sorted by level then name
+    return combined.filter((c) => c.level <= characterLevel);
+  }, [domain1Query.data, domain2Query.data, characterLevel, isLocked]);
 
   const isLoading = domain1Query.isLoading || domain2Query.isLoading;
   const isError = domain1Query.isError || domain2Query.isError;
@@ -262,6 +279,7 @@ export function DomainCardSelectionPanel({
   // Toggle card selection — stored as "domain/cardId" so LoadoutCardSlot and
   // DowntimeProjectsPanel can resolve the card via useDomainCard(domain, id).
   function toggleCard(card: DomainCard) {
+    if (isLocked) return; // no-op in locked mode
     const prefixedId = `${card.domain}/${card.cardId}`;
     if (selectedCardIds.includes(prefixedId)) {
       onSelectionChange(selectedCardIds.filter((id) => id !== prefixedId));
@@ -272,8 +290,11 @@ export function DomainCardSelectionPanel({
 
   // ── Detail view ──
   if (detailCard) {
-    const isSelected = selectedCardIds.includes(`${detailCard.domain}/${detailCard.cardId}`);
-    const canSelect = selectedCardIds.length < 2;
+    const prefixedId = `${detailCard.domain}/${detailCard.cardId}`;
+    const isSelected = isLocked
+      ? lockedCardIds.includes(prefixedId)
+      : selectedCardIds.includes(prefixedId);
+    const canSelect = isLocked ? false : selectedCardIds.length < 2;
     return (
       <CardDetail
         card={detailCard}
@@ -312,35 +333,116 @@ export function DomainCardSelectionPanel({
     );
   }
 
-  // ── List view ──
+  // ── Locked mode: group cards by level tier ──
+  if (isLocked) {
+    const filteredCards = allCards.filter((c) => sourceFilter === "all" || c.source === sourceFilter);
+    const acquiredCards = filteredCards.filter((c) => c.level <= characterLevel);
+    const futureCards   = filteredCards.filter((c) => c.level >  characterLevel);
+
+    return (
+      <div className="flex flex-col h-full">
+        {/* Header */}
+        <div className="shrink-0 px-4 py-3 border-b border-slate-700/30 space-y-2">
+          <div className="flex items-start gap-3">
+            <p className="text-xs text-[#b9baa3]/50 flex-1 min-w-0">
+              Domain cards are managed via the{" "}
+              <strong className="text-[#f7f7ff]">Level Up</strong> wizard.
+              {classDomains.length > 0 && (
+                <span className="ml-1 text-[#577399]">
+                  ({classDomains.join(" & ")})
+                </span>
+              )}
+            </p>
+            <span className="text-sm font-bold px-2 py-0.5 rounded shrink-0 text-[#4ade80]">
+              {lockedCardIds.length} acquired
+            </span>
+          </div>
+          <SourceFilter value={sourceFilter} onChange={setSourceFilter} />
+        </div>
+
+        {/* Card list */}
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4" ref={listRef}>
+          {/* Acquired / current-level cards */}
+          {acquiredCards.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs uppercase tracking-wider text-[#b9baa3]/30 px-1">
+                Levels 1–{characterLevel} (acquired)
+              </p>
+              {acquiredCards.map((card) => {
+                const prefixedId = `${card.domain}/${card.cardId}`;
+                const isInVault = lockedCardIds.includes(prefixedId);
+                return (
+                  <CardRow
+                    key={card.cardId}
+                    card={card}
+                    isSelected={isInVault}
+                    canSelect={false}
+                    onToggle={() => {}}
+                    onDrill={() => setDetailCard(card)}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          {/* Future cards — greyed, drill-able but not selectable */}
+          {futureCards.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs uppercase tracking-wider text-[#b9baa3]/30 px-1">
+                Future levels
+              </p>
+              {futureCards.map((card) => (
+                <div key={card.cardId} className="opacity-40">
+                  <CardRow
+                    card={card}
+                    isSelected={false}
+                    canSelect={false}
+                    onToggle={() => {}}
+                    onDrill={() => setDetailCard(card)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Creation mode list view ──
   const selectionCount = selectedCardIds.length;
   const canSelectMore = selectionCount < 2;
 
   return (
     <div className="flex flex-col h-full">
-      {/* Selection counter */}
-      <div className="shrink-0 px-4 py-3 border-b border-slate-700/30 flex items-start gap-3">
-        <p className="text-xs text-[#b9baa3]/50 flex-1 min-w-0">
-          Select exactly <strong className="text-[#f7f7ff]">2</strong> cards from your class domains
-          {classDomains.length > 0 && (
-            <span className="ml-1 text-[#577399]">
-              ({classDomains.join(" & ")})
-            </span>
-          )}
-        </p>
-        <span
-          className={`
-            text-sm font-bold px-2 py-0.5 rounded shrink-0
-            ${selectionCount === 2 ? "text-[#4ade80]" : "text-[#b9baa3]/50"}
-          `}
-        >
-          {selectionCount}/2
-        </span>
+      {/* Selection counter + source filter */}
+      <div className="shrink-0 px-4 py-3 border-b border-slate-700/30 space-y-2">
+        <div className="flex items-start gap-3">
+          <p className="text-xs text-[#b9baa3]/50 flex-1 min-w-0">
+            Select exactly <strong className="text-[#f7f7ff]">2</strong> cards from your class domains
+            {classDomains.length > 0 && (
+              <span className="ml-1 text-[#577399]">
+                ({classDomains.join(" & ")})
+              </span>
+            )}
+          </p>
+          <span
+            className={`
+              text-sm font-bold px-2 py-0.5 rounded shrink-0
+              ${selectionCount === 2 ? "text-[#4ade80]" : "text-[#b9baa3]/50"}
+            `}
+          >
+            {selectionCount}/2
+          </span>
+        </div>
+        <SourceFilter value={sourceFilter} onChange={setSourceFilter} />
       </div>
 
       {/* Card list */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2" ref={listRef}>
-        {allCards.map((card) => {
+        {allCards
+          .filter((card) => sourceFilter === "all" || card.source === sourceFilter)
+          .map((card) => {
           const isSelected = selectedCardIds.includes(`${card.domain}/${card.cardId}`);
           return (
             <CardRow

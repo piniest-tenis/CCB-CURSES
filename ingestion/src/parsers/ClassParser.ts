@@ -15,6 +15,7 @@ import type {
   SubclassData,
   NamedFeature,
   CoreStatName,
+  CharacterSource,
 } from "@shared/types";
 import { toSlug } from "../transformers/SlugTransformer";
 
@@ -686,8 +687,9 @@ function parseArmorRec(raw: string): string[] {
  *
  * @param filePath   Absolute path to the .md file
  * @param className  Override for the class display name
+ * @param source     Content source — "srd" or "homebrew" (default: "homebrew")
  */
-export function parseClassFile(filePath: string, className?: string): ClassData {
+export function parseClassFile(filePath: string, className?: string, source: CharacterSource = "homebrew"): ClassData {
   const raw = fs.readFileSync(filePath, "utf-8");
   const lines = raw.split(/\r?\n/);
 
@@ -753,6 +755,6 @@ export function parseClassFile(filePath: string, className?: string): ClassData 
     subclasses,
     mechanicalNotes,
     armorRec,
-    source: "homebrew",
+    source,
   };
 }

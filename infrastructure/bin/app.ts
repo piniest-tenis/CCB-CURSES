@@ -1,4 +1,13 @@
 #!/usr/bin/env node
+
+// Load infrastructure/.env so that process.env has Patreon credentials,
+// Google OAuth secrets, etc. when CDK synthesises Lambda environment blocks.
+// This is necessary because npx/Node on Windows does not inherit shell-exported
+// env vars when invoked from WSL, and we don't want to rely on `source .env`.
+import { config } from "dotenv";
+import { resolve } from "path";
+config({ path: resolve(__dirname, "..", ".env") });
+
 import "source-map-support/register";
 import * as cdk from "aws-cdk-lib";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";

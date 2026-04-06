@@ -25,10 +25,136 @@ import { useDomainCard, useClass, useDomain } from "@/hooks/useGameData";
 import { useActionButton, InlineActionError } from "./ActionButton";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { CollapsibleSRDDescription } from "@/components/character/CollapsibleSRDDescription";
+import { DiceRollButton } from "@/components/dice/DiceRollButton";
+import type { RollRequest, DieSize } from "@/types/dice";
+
+// ─── Card text roll parser ────────────────────────────────────────────────────
+// Parses common roll patterns from Daggerheart domain card description text.
+// Returns a RollRequest if a rollable action is found, otherwise null.
+//
+// Supported patterns:
+//   "make a(n) X Roll"                 → action roll, trait = X
+//   "make a(n) X Roll (N)"             → action roll + difficulty N
+//   "make a Spellcast Roll"             → action roll, trait = Spellcast
+//   "deal NdX+M damage"                → damage roll
+//   "roll NdX"                         → generic roll
+//   "roll your damage dice"            → signal — caller must use character weapon
+
+const TRAIT_MAP: Record<string, string> = {
+  agility: "Agility",
+  strength: "Strength",
+  finesse: "Finesse",
+  instinct: "Instinct",
+  presence: "Presence",
+  knowledge: "Knowledge",
+  spellcast: "Spellcast",
+};
+
+function parseCardRollRequest(
+  cardName: string,
+  text: string,
+): RollRequest | null {
+  // ── Pattern 1: "make a(n)? X Roll (N)?" ──────────────────────────────────
+  const actionMatch = text.match(/make an?\s+(\w+)\s+Roll(?:\s*\((\d+)\))?/i);
+  if (actionMatch) {
+    const traitKey = actionMatch[1].toLowerCase();
+    const traitLabel = TRAIT_MAP[traitKey] ?? actionMatch[1];
+    const difficulty = actionMatch[2]
+      ? parseInt(actionMatch[2], 10)
+      : undefined;
+    return {
+      label: `${cardName} — ${traitLabel} Roll`,
+      type: "action",
+      difficulty,
+      dice: [
+        { size: "d12", role: "hope", label: "Hope" },
+        { size: "d12", role: "fear", label: "Fear" },
+      ],
+    };
+  }
+
+  // ── Pattern 2: "deal NdX+M damage" or "deal NdX damage" ──────────────────
+  const damageMatch = text.match(
+    /deal\s+(\d+)?d(\d+)(?:\+(\d+))?\s+\w*\s*damage/i,
+  );
+  if (damageMatch) {
+    const count = damageMatch[1] ? parseInt(damageMatch[1], 10) : 1;
+    const sizeNum = parseInt(damageMatch[2], 10);
+    const flatMod = damageMatch[3] ? parseInt(damageMatch[3], 10) : 0;
+    const validSizes = [4, 6, 8, 10, 12, 20];
+    if (validSizes.includes(sizeNum)) {
+      const dieSize = `d${sizeNum}` as DieSize;
+      return {
+        label: `${cardName} — Damage`,
+        type: "damage",
+        modifier: flatMod || undefined,
+        dice: Array.from({ length: count }, () => ({
+          size: dieSize,
+          role: "damage" as const,
+          label: cardName,
+        })),
+      };
+    }
+  }
+
+  // ── Pattern 3: "roll a? NdX" ──────────────────────────────────────────────
+  const genericMatch = text.match(/roll\s+a?\s*(\d+)?d(\d+)/i);
+  if (genericMatch) {
+    const count = genericMatch[1] ? parseInt(genericMatch[1], 10) : 1;
+    const sizeNum = parseInt(genericMatch[2], 10);
+    const validSizes = [4, 6, 8, 10, 12, 20];
+    if (validSizes.includes(sizeNum)) {
+      const dieSize = `d${sizeNum}` as DieSize;
+      return {
+        label: `${cardName} — Roll`,
+        type: "generic",
+        dice: Array.from({ length: count }, () => ({
+          size: dieSize,
+          role: "generic" as const,
+          label: cardName,
+        })),
+      };
+    }
+  }
+
+  return null;
+}
+
+/** Collect all distinct roll requests from a card (description + grimoire entries). */
+function cardRollRequests(card: DomainCard): RollRequest[] {
+  const reqs: RollRequest[] = [];
+  const seen = new Set<string>();
+
+  const tryAdd = (req: RollRequest | null) => {
+    if (!req) return;
+    const key = req.label;
+    if (seen.has(key)) return;
+    seen.add(key);
+    reqs.push(req);
+  };
+
+  if (card.isGrimoire && card.grimoire.length > 0) {
+    for (const ability of card.grimoire) {
+      tryAdd(
+        parseCardRollRequest(
+          `${card.name}: ${ability.name}`,
+          ability.description,
+        ),
+      );
+    }
+  } else {
+    tryAdd(parseCardRollRequest(card.name, card.description));
+  }
+
+  return reqs;
+}
 
 // ─── Helper: parseCardId ──────────────────────────────────────────────────────
 
-function parseCardId(cardId: string): { domain: string | undefined; id: string } {
+function parseCardId(cardId: string): {
+  domain: string | undefined;
+  id: string;
+} {
   const parts = cardId.includes("/") ? cardId.split("/") : null;
   return { domain: parts?.[0], id: parts?.[1] ?? cardId };
 }
@@ -43,14 +169,14 @@ function parseCardId(cardId: string): { domain: string | undefined; id: string }
 // SRD p. 22-23: "Acquire a new domain card at your level or lower from one of your class's domains"
 
 interface AcquireCardPickerProps {
-  classId:              string | undefined;
-  characterLevel:       number;
-  characterId:          string;
-  acquiredCardIds:      Set<string>;
-  loadoutIds:           string[];
-  multiclassDomainId:   string | null;
-  onCardAcquired:       () => void;
-  onClose:              () => void;
+  classId: string | undefined;
+  characterLevel: number;
+  characterId: string;
+  acquiredCardIds: Set<string>;
+  loadoutIds: string[];
+  multiclassDomainId: string | null;
+  onCardAcquired: () => void;
+  onClose: () => void;
 }
 
 function AcquireCardPicker({
@@ -64,7 +190,10 @@ function AcquireCardPicker({
   onClose,
 }: AcquireCardPickerProps) {
   const { data: classData } = useClass(classId);
-  const [selectedCard, setSelectedCard] = React.useState<{ domain: string; id: string } | null>(null);
+  const [selectedCard, setSelectedCard] = React.useState<{
+    domain: string;
+    id: string;
+  } | null>(null);
   const [isPending, setIsPending] = React.useState(false);
   const [actionError, setActionError] = React.useState<string | null>(null);
 
@@ -83,7 +212,10 @@ function AcquireCardPicker({
   // satisfy Rules of Hooks — pass undefined when the domain doesn't exist).
   const domain0Result = useDomain(domains[0] ?? undefined, characterLevel);
   const domain1Result = useDomain(domains[1] ?? undefined, characterLevel);
-  const domain2Result = useDomain(multiclassDomainId ?? undefined, multiclassLevelCap);
+  const domain2Result = useDomain(
+    multiclassDomainId ?? undefined,
+    multiclassLevelCap,
+  );
 
   // Collect all eligible, unacquired cards
   const eligibleCards = React.useMemo(() => {
@@ -107,8 +239,22 @@ function AcquireCardPicker({
         }
       }
     }
-    return cards.sort((a, b) => a.level - b.level || a.domain.localeCompare(b.domain) || a.name.localeCompare(b.name));
-  }, [domains, domain0Result, domain1Result, multiclassDomainId, domain2Result, multiclassLevelCap, acquiredCardIds, characterLevel]);
+    return cards.sort(
+      (a, b) =>
+        a.level - b.level ||
+        a.domain.localeCompare(b.domain) ||
+        a.name.localeCompare(b.name),
+    );
+  }, [
+    domains,
+    domain0Result,
+    domain1Result,
+    multiclassDomainId,
+    domain2Result,
+    multiclassLevelCap,
+    acquiredCardIds,
+    characterLevel,
+  ]);
 
   const handleAcquire = async () => {
     if (!selectedCard) return;
@@ -120,18 +266,25 @@ function AcquireCardPicker({
       onCardAcquired();
       setSelectedCard(null);
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to acquire card.");
+      setActionError(
+        err instanceof Error ? err.message : "Failed to acquire card.",
+      );
     } finally {
       setIsPending(false);
     }
   };
 
-  const isLoading = domain0Result.isLoading || domain1Result.isLoading || domain2Result.isLoading;
+  const isLoading =
+    domain0Result.isLoading ||
+    domain1Result.isLoading ||
+    domain2Result.isLoading;
 
   return (
     <div className="rounded-xl border border-burgundy-800 bg-slate-900/50 p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-parchment-200">Acquire a card</h4>
+        <h4 className="text-sm font-semibold text-parchment-200">
+          Acquire a card
+        </h4>
         <button
           type="button"
           onClick={onClose}
@@ -145,20 +298,29 @@ function AcquireCardPicker({
       <p className="text-xs text-parchment-600">
         Level {characterLevel} or below from your domains
         {domains.length > 0 && ` (${domains.join(", ")})`}
-        {multiclassDomainId && ` + ${multiclassDomainId} (Lv ${multiclassLevelCap} cap)`}
+        {multiclassDomainId &&
+          ` + ${multiclassDomainId} (Lv ${multiclassLevelCap} cap)`}
       </p>
 
       {isLoading ? (
-        <p className="text-sm text-parchment-500 italic">Loading available cards…</p>
+        <p className="text-sm text-parchment-500 italic">
+          Loading available cards…
+        </p>
       ) : eligibleCards.length === 0 ? (
         <p className="text-sm text-parchment-600 italic">
           No new cards available. Level up to unlock more!
         </p>
       ) : (
-        <ul className="space-y-1 max-h-48 overflow-y-auto" role="listbox" aria-label="Available domain cards">
+        <ul
+          className="space-y-1 max-h-48 overflow-y-auto"
+          role="listbox"
+          aria-label="Available domain cards"
+        >
           {eligibleCards.map((card) => {
             const cardId = `${card.domain}/${card.cardId}`;
-            const isSelected = selectedCard?.id === card.cardId && selectedCard?.domain === card.domain;
+            const isSelected =
+              selectedCard?.id === card.cardId &&
+              selectedCard?.domain === card.domain;
             return (
               <li key={cardId}>
                 <button
@@ -167,7 +329,9 @@ function AcquireCardPicker({
                   aria-selected={isSelected}
                   onClick={() =>
                     setSelectedCard(
-                      isSelected ? null : { domain: card.domain, id: card.cardId }
+                      isSelected
+                        ? null
+                        : { domain: card.domain, id: card.cardId },
                     )
                   }
                   className={[
@@ -181,8 +345,12 @@ function AcquireCardPicker({
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium">{card.name}</span>
                     <span className="flex items-center gap-1.5 flex-shrink-0">
-                      <span className="text-xs text-parchment-600 uppercase">{card.domain}</span>
-                      <span className="text-xs font-bold text-gold-600">Lv{card.level}</span>
+                      <span className="text-xs text-parchment-600 uppercase">
+                        {card.domain}
+                      </span>
+                      <span className="text-xs font-bold text-gold-600">
+                        Lv{card.level}
+                      </span>
                     </span>
                   </div>
                 </button>
@@ -214,7 +382,10 @@ function AcquireCardPicker({
           "
         >
           {isPending ? (
-            <span aria-hidden="true" className="inline-block h-3 w-3 animate-spin rounded-full border border-current border-t-transparent" />
+            <span
+              aria-hidden="true"
+              className="inline-block h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"
+            />
           ) : (
             `Acquire card`
           )}
@@ -224,7 +395,11 @@ function AcquireCardPicker({
   );
 }
 
-function cardHasTokens(card: DomainCard | undefined, cardTokens: Record<string, number>, cardId: string): boolean {
+function cardHasTokens(
+  card: DomainCard | undefined,
+  cardTokens: Record<string, number>,
+  cardId: string,
+): boolean {
   if (!card) return false;
   return card.isCursed || cardId in cardTokens;
 }
@@ -237,22 +412,28 @@ function cardHasAura(card: DomainCard | undefined): boolean {
 // ─── TokenTracker ─────────────────────────────────────────────────────────────
 
 interface TokenTrackerProps {
-  cardId:      string;
+  cardId: string;
   /** Human-readable card name for aria-labels (falls back to cardId). */
-  cardName:    string;
+  cardName: string;
   characterId: string;
-  count:       number;
+  count: number;
 }
 
-function TokenTracker({ cardId, cardName, characterId, count }: TokenTrackerProps) {
+function TokenTracker({
+  cardId,
+  cardName,
+  characterId,
+  count,
+}: TokenTrackerProps) {
   const spendAction = useActionButton(characterId);
-  const addAction   = useActionButton(characterId);
+  const addAction = useActionButton(characterId);
   const clearAction = useActionButton(characterId);
 
-  const isPending = spendAction.isPending || addAction.isPending || clearAction.isPending;
+  const isPending =
+    spendAction.isPending || addAction.isPending || clearAction.isPending;
   const inlineError =
     spendAction.inlineError ?? addAction.inlineError ?? clearAction.inlineError;
-  const errorId   = React.useId();
+  const errorId = React.useId();
   const spinnerId = React.useId();
 
   return (
@@ -347,7 +528,13 @@ interface AuraToggleProps {
   anotherAuraActive: boolean;
 }
 
-function AuraToggle({ cardId, cardName, characterId, isActive, anotherAuraActive }: AuraToggleProps) {
+function AuraToggle({
+  cardId,
+  cardName,
+  characterId,
+  isActive,
+  anotherAuraActive,
+}: AuraToggleProps) {
   const { fire, isPending, inlineError } = useActionButton(characterId);
   const errorId = React.useId();
 
@@ -401,9 +588,16 @@ function AuraToggle({ cardId, cardName, characterId, isActive, anotherAuraActive
 interface DomainCardDetailSidebarProps {
   card: DomainCard | null;
   onClose: () => void;
+  onRollQueued?: () => void;
+  characterName?: string;
 }
 
-function DomainCardDetailSidebar({ card, onClose }: DomainCardDetailSidebarProps) {
+function DomainCardDetailSidebar({
+  card,
+  onClose,
+  onRollQueued,
+  characterName,
+}: DomainCardDetailSidebarProps) {
   const open = card !== null;
   const panelRef = React.useRef<HTMLDivElement>(null);
   const headingId = React.useId();
@@ -413,7 +607,7 @@ function DomainCardDetailSidebar({ card, onClose }: DomainCardDetailSidebarProps
     if (!open) return;
     const t = setTimeout(() => {
       const first = panelRef.current?.querySelector<HTMLElement>(
-        'button, [tabindex]:not([tabindex="-1"])'
+        'button, [tabindex]:not([tabindex="-1"])',
       );
       first?.focus();
     }, 50);
@@ -424,7 +618,10 @@ function DomainCardDetailSidebar({ card, onClose }: DomainCardDetailSidebarProps
   React.useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { e.stopPropagation(); onClose(); }
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
+      }
     };
     document.addEventListener("keydown", handler, true);
     return () => document.removeEventListener("keydown", handler, true);
@@ -447,7 +644,7 @@ function DomainCardDetailSidebar({ card, onClose }: DomainCardDetailSidebarProps
         aria-hidden={!open}
         inert={!open ? ("" as unknown as boolean) : undefined}
         className={[
-          "fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-[28rem] flex-col",
+          "fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-[28rem] flex-col py-12",
           "border-l border-[#577399]/35 bg-[#0f1713] shadow-2xl",
           "transition-transform duration-300 ease-in-out",
           open ? "translate-x-0" : "translate-x-full",
@@ -461,7 +658,10 @@ function DomainCardDetailSidebar({ card, onClose }: DomainCardDetailSidebarProps
                 {card.domain} · Level {card.level}
               </p>
             )}
-            <h2 id={headingId} className="font-serif text-lg font-semibold text-[#f7f7ff]">
+            <h2
+              id={headingId}
+              className="font-serif text-lg font-semibold text-[#f7f7ff]"
+            >
               {card?.name ?? "Domain Card"}
             </h2>
           </div>
@@ -509,7 +709,9 @@ function DomainCardDetailSidebar({ card, onClose }: DomainCardDetailSidebarProps
                 <div className="space-y-3">
                   {card.grimoire.map((ability, i) => (
                     <div key={i}>
-                      <p className="text-sm font-semibold text-[#f7f7ff] mb-1">{ability.name}</p>
+                      <p className="text-sm font-semibold text-[#f7f7ff] mb-1">
+                        {ability.name}
+                      </p>
                       <MarkdownContent className="text-base text-[#b9baa3]/75">
                         {ability.description}
                       </MarkdownContent>
@@ -525,13 +727,38 @@ function DomainCardDetailSidebar({ card, onClose }: DomainCardDetailSidebarProps
 
             {/* Curse text */}
             {card.isCursed && card.curseText && (
-              <div className="rounded-lg border border-[#fe5f55]/30 bg-[#fe5f55]/5 px-4 py-3">
-                <p className="text-xs uppercase tracking-wider text-[#fe5f55]/60 mb-1">Curse</p>
+              <div className="rounded-lg border border-steel-400/30 bg-slate-900/60 px-4 py-3">
+                <p className="text-xs uppercase tracking-wider text-steel-400/60 mb-1">
+                  Curse
+                </p>
                 <MarkdownContent className="text-base text-[#b9baa3]/70">
                   {card.curseText}
                 </MarkdownContent>
               </div>
             )}
+
+            {/* Roll buttons — parsed from card text */}
+            {(() => {
+              const rolls = cardRollRequests(card);
+              if (rolls.length === 0) return null;
+              return (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {rolls.map((req) => (
+                    <DiceRollButton
+                      key={req.label}
+                      rollRequest={
+                        characterName ? { ...req, characterName } : req
+                      }
+                      variant="badge"
+                      label={req.label
+                        .replace(`${card.name} — `, "")
+                        .replace(`${card.name}: `, "")}
+                      onRollQueued={onRollQueued}
+                    />
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>
@@ -542,18 +769,18 @@ function DomainCardDetailSidebar({ card, onClose }: DomainCardDetailSidebarProps
 // ─── LoadoutCardSlot ──────────────────────────────────────────────────────────
 
 interface LoadoutCardSlotProps {
-  cardId:      string;
-  index:       number;
-  total:       number;
+  cardId: string;
+  index: number;
+  total: number;
   characterId: string;
-  onRemove:    () => void;
-  onMoveUp:    () => void;
-  onMoveDown:  () => void;
-  onDrill:     (card: DomainCard) => void;
-  isDragging:  boolean;
+  onRemove: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  onDrill: (card: DomainCard) => void;
+  isDragging: boolean;
   onDragStart: () => void;
   onDragEnter: () => void;
-  onDragEnd:   () => void;
+  onDragEnd: () => void;
 }
 
 function LoadoutCardSlot({
@@ -574,12 +801,12 @@ function LoadoutCardSlot({
   const { domain, id } = parseCardId(cardId);
   const { data: card } = useDomainCard(domain, id);
 
-  const cardTokens     = activeCharacter?.cardTokens ?? {};
-  const activeAuras    = activeCharacter?.activeAuras ?? [];
-  const tokenCount     = cardTokens[cardId] ?? 0;
-  const showTokens     = cardHasTokens(card, cardTokens, cardId);
-  const showAura       = cardHasAura(card);
-  const isAuraActive   = activeAuras.includes(cardId);
+  const cardTokens = activeCharacter?.cardTokens ?? {};
+  const activeAuras = activeCharacter?.activeAuras ?? [];
+  const tokenCount = cardTokens[cardId] ?? 0;
+  const showTokens = cardHasTokens(card, cardTokens, cardId);
+  const showAura = cardHasAura(card);
+  const isAuraActive = activeAuras.includes(cardId);
 
   return (
     <div
@@ -596,8 +823,8 @@ function LoadoutCardSlot({
           isDragging
             ? "opacity-40 border-gold-500 bg-slate-800"
             : isAuraActive
-            ? "border-[#577399]/60 bg-slate-850 shadow-[0_0_10px_rgba(87,115,153,0.25)]"
-            : "border-burgundy-800 bg-slate-850 hover:border-burgundy-600"
+              ? "border-[#577399]/60 bg-slate-850 shadow-[0_0_10px_rgba(87,115,153,0.25)]"
+              : "border-burgundy-800 bg-slate-850 hover:border-burgundy-600"
         }
         shadow-card-fantasy
       `}
@@ -625,12 +852,18 @@ function LoadoutCardSlot({
                   {card.name}
                 </span>
                 {card.isCursed && (
-                  <span title="Cursed" className="text-xs text-burgundy-400 font-bold">
+                  <span
+                    title="Cursed"
+                    className="text-xs text-burgundy-400 font-bold"
+                  >
                     ★
                   </span>
                 )}
                 {card.isLinkedCurse && (
-                  <span title="Linked Curse — long rest only, 6 stress to swap" className="text-xs text-burgundy-400 font-bold">
+                  <span
+                    title="Linked Curse — long rest only, 6 stress to swap"
+                    className="text-xs text-burgundy-400 font-bold"
+                  >
                     ↔
                   </span>
                 )}
@@ -639,7 +872,9 @@ function LoadoutCardSlot({
                     Grimoire
                   </span>
                 )}
-                <span className="ml-auto text-parchment-600 text-xs opacity-0 group-hover:opacity-100 transition-opacity">›</span>
+                <span className="ml-auto text-parchment-600 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                  ›
+                </span>
               </div>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-xs text-parchment-500 uppercase tracking-wider">
@@ -731,23 +966,38 @@ function LoadoutCardSlot({
  */
 
 interface VaultPickerProps {
-  vaultIds:      string[];
-  loadoutIds:    string[];
-  characterId:   string;
+  vaultIds: string[];
+  loadoutIds: string[];
+  characterId: string;
   characterLevel: number;
-  onClose:       () => void;
+  onClose: () => void;
 }
 
-function VaultPicker({ vaultIds, loadoutIds, characterId, characterLevel, onClose }: VaultPickerProps) {
+function VaultPicker({
+  vaultIds,
+  loadoutIds,
+  characterId,
+  characterLevel,
+  onClose,
+}: VaultPickerProps) {
   const available = vaultIds.filter((id) => !loadoutIds.includes(id));
-  const isFull    = loadoutIds.length >= 5;
-  const [selectedVaultCard,   setSelectedVaultCard]   = React.useState<string | null>(null);
-  const [selectedLoadoutCard, setSelectedLoadoutCard] = React.useState<string | null>(null);
+  const isFull = loadoutIds.length >= 5;
+  const [selectedVaultCard, setSelectedVaultCard] = React.useState<
+    string | null
+  >(null);
+  const [selectedLoadoutCard, setSelectedLoadoutCard] = React.useState<
+    string | null
+  >(null);
   const swapAction = useActionButton(characterId);
 
   // Fetch the selected vault card's data so we can read its recall cost
-  const selectedParsed = selectedVaultCard ? parseCardId(selectedVaultCard) : { domain: undefined, id: undefined };
-  const { data: selectedCardData } = useDomainCard(selectedParsed.domain, selectedParsed.id);
+  const selectedParsed = selectedVaultCard
+    ? parseCardId(selectedVaultCard)
+    : { domain: undefined, id: undefined };
+  const { data: selectedCardData } = useDomainCard(
+    selectedParsed.domain,
+    selectedParsed.id,
+  );
 
   const handleSwap = () => {
     if (!selectedVaultCard) return;
@@ -755,10 +1005,11 @@ function VaultPicker({ vaultIds, loadoutIds, characterId, characterLevel, onClos
 
     // Recall cost = card's recallCost field if available, otherwise fall back to card level.
     // During a rest the backend ignores n, but during normal play it charges stress.
-    const recallCost = selectedCardData?.recallCost ?? selectedCardData?.level ?? 0;
+    const recallCost =
+      selectedCardData?.recallCost ?? selectedCardData?.level ?? 0;
 
     swapAction.fire("swap-loadout-card", {
-      vaultCardId:   selectedVaultCard,
+      vaultCardId: selectedVaultCard,
       loadoutCardId: isFull ? selectedLoadoutCard : undefined,
       // During normal play (not rest), Recall Cost applies. The card's recallCost
       // is passed via n so the backend knows how much stress to charge.
@@ -796,16 +1047,27 @@ function VaultPicker({ vaultIds, loadoutIds, characterId, characterLevel, onClos
       ) : (
         <>
           <p className="text-sm text-parchment-500">
-            Select a card to add to your loadout{isFull ? ". Your loadout is full — you must also choose a card to displace." : "."}
+            Select a card to add to your loadout
+            {isFull
+              ? ". Your loadout is full — you must also choose a card to displace."
+              : "."}
           </p>
-          <ul className="space-y-1 max-h-48 overflow-y-auto pr-1" role="listbox" aria-label="Vault cards">
+          <ul
+            className="space-y-1 max-h-48 overflow-y-auto pr-1"
+            role="listbox"
+            aria-label="Vault cards"
+          >
             {available.map((cardId) => (
               <VaultPickerItem
                 key={cardId}
                 cardId={cardId}
                 characterLevel={characterLevel}
                 isSelected={selectedVaultCard === cardId}
-                onSelect={() => setSelectedVaultCard(cardId === selectedVaultCard ? null : cardId)}
+                onSelect={() =>
+                  setSelectedVaultCard(
+                    cardId === selectedVaultCard ? null : cardId,
+                  )
+                }
               />
             ))}
           </ul>
@@ -818,13 +1080,21 @@ function VaultPicker({ vaultIds, loadoutIds, characterId, characterLevel, onClos
           <p className="text-sm text-parchment-500 mb-2">
             Choose a card to move from loadout to vault:
           </p>
-          <ul className="space-y-1 max-h-36 overflow-y-auto pr-1" role="listbox" aria-label="Loadout cards to displace">
+          <ul
+            className="space-y-1 max-h-36 overflow-y-auto pr-1"
+            role="listbox"
+            aria-label="Loadout cards to displace"
+          >
             {loadoutIds.map((cardId) => (
               <DisplacePickerItem
                 key={cardId}
                 cardId={cardId}
                 isSelected={selectedLoadoutCard === cardId}
-                onSelect={() => setSelectedLoadoutCard(cardId === selectedLoadoutCard ? null : cardId)}
+                onSelect={() =>
+                  setSelectedLoadoutCard(
+                    cardId === selectedLoadoutCard ? null : cardId,
+                  )
+                }
               />
             ))}
           </ul>
@@ -887,11 +1157,12 @@ function VaultPickerItem({
           w-full flex items-center gap-2 rounded px-2 py-1.5
           text-left transition-colors
           focus:outline-none focus:ring-1 focus:ring-gold-500
-          ${aboveLevel
-            ? "opacity-40 cursor-not-allowed"
-            : isSelected
-            ? "bg-gold-900/40 border border-gold-600"
-            : "hover:bg-burgundy-900/40"
+          ${
+            aboveLevel
+              ? "opacity-40 cursor-not-allowed"
+              : isSelected
+                ? "bg-gold-900/40 border border-gold-600"
+                : "hover:bg-burgundy-900/40"
           }
         `}
       >
@@ -901,17 +1172,27 @@ function VaultPickerItem({
         {card && (
           <>
             {card.isLinkedCurse && (
-              <span title="Linked Curse — long rest only, 6 stress" className="text-xs text-burgundy-400 font-bold">
+              <span
+                title="Linked Curse — long rest only, 6 stress"
+                className="text-xs text-burgundy-400 font-bold"
+              >
                 ↔
               </span>
             )}
             {card.isCursed && (
-              <span title="Cursed" className="text-xs text-burgundy-400 font-bold">
+              <span
+                title="Cursed"
+                className="text-xs text-burgundy-400 font-bold"
+              >
                 ★
               </span>
             )}
-            <span className="text-xs text-parchment-600 uppercase">{card.domain}</span>
-            <span className={`text-xs font-bold ${aboveLevel ? "text-burgundy-500" : "text-gold-600"}`}>
+            <span className="text-xs text-parchment-600 uppercase">
+              {card.domain}
+            </span>
+            <span
+              className={`text-xs font-bold ${aboveLevel ? "text-burgundy-500" : "text-gold-600"}`}
+            >
               Lv{card.level}
             </span>
           </>
@@ -948,9 +1229,10 @@ function DisplacePickerItem({
           w-full flex items-center gap-2 rounded px-2 py-1.5
           text-left transition-colors
           focus:outline-none focus:ring-1 focus:ring-gold-500
-          ${isSelected
-            ? "bg-burgundy-900/50 border border-burgundy-600"
-            : "hover:bg-burgundy-900/30"
+          ${
+            isSelected
+              ? "bg-burgundy-900/50 border border-burgundy-600"
+              : "hover:bg-burgundy-900/30"
           }
         `}
       >
@@ -959,8 +1241,12 @@ function DisplacePickerItem({
         </span>
         {card && (
           <>
-            <span className="text-xs text-parchment-600 uppercase">{card.domain}</span>
-            <span className="text-xs font-bold text-gold-600">Lv{card.level}</span>
+            <span className="text-xs text-parchment-600 uppercase">
+              {card.domain}
+            </span>
+            <span className="text-xs font-bold text-gold-600">
+              Lv{card.level}
+            </span>
           </>
         )}
       </button>
@@ -970,7 +1256,9 @@ function DisplacePickerItem({
 
 // ─── DomainLoadout (main export) ──────────────────────────────────────────────
 
-export function DomainLoadout() {
+export function DomainLoadout({
+  onRollQueued,
+}: { onRollQueued?: () => void } = {}) {
   const { activeCharacter, removeFromLoadout, reorderLoadout } =
     useCharacterStore();
   const [showPicker, setShowPicker] = useState(false);
@@ -983,7 +1271,14 @@ export function DomainLoadout() {
 
   if (!activeCharacter) return null;
 
-  const { domainLoadout, domainVault, characterId, classId, level, multiclassDomainId } = activeCharacter;
+  const {
+    domainLoadout,
+    domainVault,
+    characterId,
+    classId,
+    level,
+    multiclassDomainId,
+  } = activeCharacter;
 
   const handleDragStart = (index: number) => {
     dragIndex.current = index;
@@ -1027,98 +1322,110 @@ export function DomainLoadout() {
 
   return (
     <>
-    <DomainCardDetailSidebar card={drillCard} onClose={() => setDrillCard(null)} />
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-parchment-400">
-          Active Loadout{" "}
-          <span className="text-parchment-600">({domainLoadout.length}/5)</span>
-        </h3>
-        <button
-          type="button"
-          onClick={handleTogglePicker}
-          aria-expanded={showPicker}
-          aria-controls="domain-card-picker"
-          className="
+      <DomainCardDetailSidebar
+        card={drillCard}
+        onClose={() => setDrillCard(null)}
+        onRollQueued={onRollQueued}
+        characterName={activeCharacter?.name}
+      />
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-parchment-400">
+            Active Loadout{" "}
+            <span className="text-parchment-600">
+              ({domainLoadout.length}/5)
+            </span>
+          </h3>
+          <button
+            type="button"
+            onClick={handleTogglePicker}
+            aria-expanded={showPicker}
+            aria-controls="domain-card-picker"
+            data-field-key="loadout.change"
+            className="
             rounded px-2 py-0.5 text-xs font-semibold
             bg-burgundy-800/60 text-parchment-300 border border-burgundy-700
             hover:bg-burgundy-700 transition-colors
             focus:outline-none focus:ring-2 focus:ring-gold-500
           "
-        >
-          {showPicker
-            ? "Hide"
-            : isFull && canSwap
-            ? "Swap Card"
-            : domainLoadout.length > 0
-            ? "Change Loadout"
-            : "Add Card"}
-        </button>
-      </div>
+          >
+            {showPicker
+              ? "Hide"
+              : isFull && canSwap
+                ? "Swap Card"
+                : domainLoadout.length > 0
+                  ? "Change Loadout"
+                  : "Add Card"}
+          </button>
+        </div>
 
-      {/* Loadout slots */}
-      {domainLoadout.length === 0 ? (
-        <p className="text-sm text-parchment-600 italic">
-          No cards in loadout.
-        </p>
-      ) : (
-        <div role="list" className="space-y-2">
-          {domainLoadout.map((cardId, index) => (
-            <LoadoutCardSlot
-              key={`${cardId}-${index}`}
-              cardId={cardId}
-              index={index}
-              total={domainLoadout.length}
-              characterId={characterId}
-              onRemove={() => removeFromLoadout(cardId)}
-              onMoveUp={() => index > 0 && reorderLoadout(index, index - 1)}
-              onMoveDown={() =>
-                index < domainLoadout.length - 1 &&
-                reorderLoadout(index, index + 1)
+        {/* Loadout slots */}
+        {domainLoadout.length === 0 ? (
+          <p className="text-sm text-parchment-600 italic">
+            No cards in loadout.
+          </p>
+        ) : (
+          <div role="list" className="space-y-2">
+            {domainLoadout.map((cardId, index) => (
+              <div
+                key={`${cardId}-${index}`}
+                data-field-key={`loadout.card.${index}`}
+              >
+                <LoadoutCardSlot
+                  cardId={cardId}
+                  index={index}
+                  total={domainLoadout.length}
+                  characterId={characterId}
+                  onRemove={() => removeFromLoadout(cardId)}
+                  onMoveUp={() => index > 0 && reorderLoadout(index, index - 1)}
+                  onMoveDown={() =>
+                    index < domainLoadout.length - 1 &&
+                    reorderLoadout(index, index + 1)
+                  }
+                  onDrill={setDrillCard}
+                  isDragging={draggingIndex === index}
+                  onDragStart={() => handleDragStart(index)}
+                  onDragEnter={() => handleDragEnter(index)}
+                  onDragEnd={handleDragEnd}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Empty slots visual */}
+        {domainLoadout.length < 5 && (
+          <div className="flex gap-1.5">
+            {Array.from({ length: 5 - domainLoadout.length }, (_, i) => (
+              <div
+                key={i}
+                className="h-8 flex-1 rounded border border-dashed border-burgundy-900/60 bg-slate-900/30"
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Card picker — toggles between Swap and Acquire modes */}
+        {showPicker && (
+          <div id="domain-card-picker">
+            {/* SRD explanation */}
+            <CollapsibleSRDDescription
+              title="Vault & Loadout"
+              content={
+                "Your **Vault** holds every domain card you have unlocked. Your **Loadout** is the subset of up to 5 cards you can use during play. " +
+                "During a **rest**, you may freely swap cards between your vault and loadout at no cost. " +
+                "Outside of a rest, swapping a card from your vault into your loadout costs **Stress** equal to the card's Recall Cost (the lightning bolt number)."
               }
-              onDrill={setDrillCard}
-              isDragging={draggingIndex === index}
-              onDragStart={() => handleDragStart(index)}
-              onDragEnter={() => handleDragEnter(index)}
-              onDragEnd={handleDragEnd}
             />
-          ))}
-        </div>
-      )}
 
-      {/* Empty slots visual */}
-      {domainLoadout.length < 5 && (
-        <div className="flex gap-1.5">
-          {Array.from({ length: 5 - domainLoadout.length }, (_, i) => (
-            <div
-              key={i}
-              className="h-8 flex-1 rounded border border-dashed border-burgundy-900/60 bg-slate-900/30"
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Card picker — toggles between Swap and Acquire modes */}
-      {showPicker && (
-        <div id="domain-card-picker">
-          {/* SRD explanation */}
-          <CollapsibleSRDDescription
-            title="Vault & Loadout"
-            content={
-              "Your **Vault** holds every domain card you have unlocked. Your **Loadout** is the subset of up to 5 cards you can use during play. " +
-              "During a **rest**, you may freely swap cards between your vault and loadout at no cost. " +
-              "Outside of a rest, swapping a card from your vault into your loadout costs **Stress** equal to the card's Recall Cost (the lightning bolt number)."
-            }
-          />
-
-          {/* Mode toggle buttons */}
-          <div className="flex gap-2 mb-3">
-            {canSwap && (
-              <button
-                type="button"
-                onClick={() => handleModeSwitch("swap")}
-                aria-pressed={pickerMode === "swap"}
-                className={`
+            {/* Mode toggle buttons */}
+            <div className="flex gap-2 mb-3">
+              {canSwap && (
+                <button
+                  type="button"
+                  onClick={() => handleModeSwitch("swap")}
+                  aria-pressed={pickerMode === "swap"}
+                  className={`
                   flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-colors
                   focus:outline-none focus:ring-2 focus:ring-gold-500
                   ${
@@ -1127,16 +1434,16 @@ export function DomainLoadout() {
                       : "bg-slate-800 text-parchment-400 border border-slate-700 hover:bg-slate-700"
                   }
                 `}
-              >
-                Swap from Vault ({domainVault.length})
-              </button>
-            )}
-            {canAcquire && (
-              <button
-                type="button"
-                onClick={() => handleModeSwitch("acquire")}
-                aria-pressed={pickerMode === "acquire"}
-                className={`
+                >
+                  Swap from Vault ({domainVault.length})
+                </button>
+              )}
+              {canAcquire && (
+                <button
+                  type="button"
+                  onClick={() => handleModeSwitch("acquire")}
+                  aria-pressed={pickerMode === "acquire"}
+                  className={`
                   flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-colors
                   focus:outline-none focus:ring-2 focus:ring-gold-500
                   ${
@@ -1145,41 +1452,41 @@ export function DomainLoadout() {
                       : "bg-slate-800 text-parchment-400 border border-slate-700 hover:bg-slate-700"
                   }
                 `}
-              >
-                Acquire New Card
-              </button>
+                >
+                  Acquire New Card
+                </button>
+              )}
+            </div>
+
+            {/* Swap mode — show vault picker */}
+            {pickerMode === "swap" && canSwap && (
+              <VaultPicker
+                vaultIds={domainVault}
+                loadoutIds={domainLoadout}
+                characterId={characterId}
+                characterLevel={level}
+                onClose={() => setShowPicker(false)}
+              />
+            )}
+
+            {/* Acquire mode — show acquire picker */}
+            {pickerMode === "acquire" && classId !== undefined && (
+              <AcquireCardPicker
+                classId={classId}
+                characterLevel={level}
+                characterId={characterId}
+                acquiredCardIds={acquiredCardIds}
+                loadoutIds={domainLoadout}
+                multiclassDomainId={multiclassDomainId}
+                onCardAcquired={() => {
+                  setShowPicker(false);
+                }}
+                onClose={() => setShowPicker(false)}
+              />
             )}
           </div>
-
-          {/* Swap mode — show vault picker */}
-          {pickerMode === "swap" && canSwap && (
-            <VaultPicker
-              vaultIds={domainVault}
-              loadoutIds={domainLoadout}
-              characterId={characterId}
-              characterLevel={level}
-              onClose={() => setShowPicker(false)}
-            />
-          )}
-
-          {/* Acquire mode — show acquire picker */}
-          {pickerMode === "acquire" && classId !== undefined && (
-            <AcquireCardPicker
-              classId={classId}
-              characterLevel={level}
-              characterId={characterId}
-              acquiredCardIds={acquiredCardIds}
-              loadoutIds={domainLoadout}
-              multiclassDomainId={multiclassDomainId}
-              onCardAcquired={() => {
-                setShowPicker(false);
-              }}
-              onClose={() => setShowPicker(false)}
-            />
-          )}
-        </div>
-      )}
-    </div>
+        )}
+      </div>
     </>
   );
 }

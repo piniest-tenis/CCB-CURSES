@@ -101,14 +101,44 @@ const config: Config = {
           900: "#0f172a",
           950: "#080d17",
         },
+        // Coral — homebrew indicator badge color
+        coral: {
+          50:  "#fff5f3",
+          100: "#ffe8e4",
+          200: "#ffd5ce",
+          300: "#ffb5aa",
+          400: "#f96854",
+          500: "#f04e3a",
+          600: "#dd3426",
+          700: "#ba281c",
+          800: "#9a241b",
+          900: "#80221d",
+          950: "#460d0a",
+        },
+        // Steel blue — SRD indicator/filter accent
+        steel: {
+          50:  "#f4f6f9",
+          100: "#e8edf3",
+          200: "#cdd7e5",
+          300: "#a3b6cf",
+          400: "#577399",
+          500: "#4a6488",
+          600: "#3d5272",
+          700: "#33435d",
+          800: "#2c394e",
+          900: "#273243",
+          950: "#1a212d",
+        },
       },
       fontFamily: {
-        // warbler-deck — small-caps header font (Adobe Typekit)
-        serif:   ['"warbler-deck"', "Georgia", "Cambria", "serif"],
+        // double-pica — header font (Adobe Typekit)
+        serif:   ['"double-pica"', "Georgia", "Cambria", "serif"],
+        // double-pica-sc — true small-caps variant for section headings
+        "serif-sc": ['"double-pica-sc"', '"double-pica"', "Georgia", "Cambria", "serif"],
         // ibarra-real-nova — default body/UI font (Adobe Typekit)
         sans:    ['"ibarra-real-nova"', "Inter", "system-ui", "sans-serif"],
         // jetsam-collection-basilea — attention-getting display font (Adobe Typekit)
-        display: ['"jetsam-collection-basilea"', '"warbler-deck"', "Georgia", "serif"],
+        display: ['"jetsam-collection-basilea"', '"double-pica"', "Georgia", "serif"],
         mono:    ['"JetBrains Mono"', '"Fira Code"', "monospace"],
       },
       boxShadow: {

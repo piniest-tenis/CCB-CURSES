@@ -14,7 +14,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
-import type { PingEvent } from "@/types/campaign";
+import type { PingEvent, RollRequestEvent, RollRequestPayload } from "@/types/campaign";
+import type { DieRole, RollResult } from "@/types/dice";
+
+/** Per-role colour pair, matching the dice_box constructor shape. */
+export type DiceColorOverrides = Record<DieRole, { dice_color: string; label_color: string }>;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -24,8 +28,23 @@ const BASE_BACKOFF_MS = 1_000; // 1s → 2s → 4s
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+/** Inbound force_crit event broadcast to all campaign connections. */
+export interface ForceCritEvent {
+  type: "force_crit";
+  campaignId: string;
+  targetCharacterId: string;
+  /** true = armed, false = disarmed */
+  active: boolean;
+}
+
 export interface UseGameWebSocketOptions {
   onPing?: (event: PingEvent) => void;
+  /** Called when a dice roll result is broadcast from another client */
+  onDiceRoll?: (result: RollResult, colorOverrides?: DiceColorOverrides) => void;
+  /** Called when the GM arms or disarms a force-crit for a character */
+  onForceCrit?: (event: ForceCritEvent) => void;
+  /** Called when the GM sends a roll prompt to this character */
+  onRollRequest?: (event: RollRequestEvent) => void;
 }
 
 export interface UseGameWebSocketReturn {
@@ -35,6 +54,20 @@ export interface UseGameWebSocketReturn {
    * @param fieldKey          - The data-field-key of the sheet element to highlight.
    */
   sendPing: (targetCharacterId: string, fieldKey: string) => void;
+  /** Broadcast a dice roll result to all campaign participants */
+  sendDiceRoll: (result: RollResult, colorOverrides?: DiceColorOverrides) => void;
+  /**
+   * GM only: arm or disarm a forced critical for a character's next roll.
+   * @param targetCharacterId - The character whose next roll will be forced.
+   * @param active            - true to arm, false to disarm.
+   */
+  sendForceCrit: (targetCharacterId: string, active: boolean) => void;
+  /**
+   * GM only: send a roll prompt to a player's character sheet.
+   * @param targetCharacterId - The character to prompt.
+   * @param rollRequest       - The roll to stage on the target's sheet.
+   */
+  sendRollRequest: (targetCharacterId: string, rollRequest: RollRequestPayload) => void;
   isConnected: boolean;
 }
 
@@ -53,8 +86,14 @@ export function useGameWebSocket(
   const isUnmountedRef    = useRef(false);
 
   // Keep options callback fresh without re-running connect effect
-  const onPingRef = useRef(options?.onPing);
-  useEffect(() => { onPingRef.current = options?.onPing; }, [options?.onPing]);
+  const onPingRef       = useRef(options?.onPing);
+  const onDiceRollRef   = useRef(options?.onDiceRoll);
+  const onForceCritRef  = useRef(options?.onForceCrit);
+  const onRollRequestRef = useRef(options?.onRollRequest);
+  useEffect(() => { onPingRef.current      = options?.onPing;      }, [options?.onPing]);
+  useEffect(() => { onDiceRollRef.current  = options?.onDiceRoll;  }, [options?.onDiceRoll]);
+  useEffect(() => { onForceCritRef.current = options?.onForceCrit; }, [options?.onForceCrit]);
+  useEffect(() => { onRollRequestRef.current = options?.onRollRequest; }, [options?.onRollRequest]);
 
   const [isConnected, setIsConnected] = useState(false);
 
@@ -92,6 +131,32 @@ export function useGameWebSocket(
         (data as Record<string, unknown>).type === "ping"
       ) {
         onPingRef.current?.(data as PingEvent);
+      }
+
+      if (
+        data !== null &&
+        typeof data === "object" &&
+        (data as Record<string, unknown>).type === "dice_roll"
+      ) {
+        const payload = (data as Record<string, unknown>).result as RollResult;
+        const colors  = (data as Record<string, unknown>).colorOverrides as DiceColorOverrides | undefined;
+        if (payload) onDiceRollRef.current?.(payload, colors);
+      }
+
+      if (
+        data !== null &&
+        typeof data === "object" &&
+        (data as Record<string, unknown>).type === "force_crit"
+      ) {
+        onForceCritRef.current?.(data as ForceCritEvent);
+      }
+
+      if (
+        data !== null &&
+        typeof data === "object" &&
+        (data as Record<string, unknown>).type === "roll_request"
+      ) {
+        onRollRequestRef.current?.(data as RollRequestEvent);
       }
     };
 
@@ -164,5 +229,75 @@ export function useGameWebSocket(
     [campaignId]
   );
 
-  return { sendPing, isConnected };
+  // ── sendDiceRoll ──────────────────────────────────────────────────────────────
+  // Broadcasts a resolved roll result to all campaign participants via WebSocket.
+  const sendDiceRoll = useCallback(
+    (result: RollResult, colorOverrides?: DiceColorOverrides) => {
+      const ws = wsRef.current;
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+      const message: Record<string, unknown> = {
+        action:     "dice_roll",
+        campaignId,
+        characterId,
+        result,
+      };
+      if (colorOverrides) message.colorOverrides = colorOverrides;
+
+      try {
+        ws.send(JSON.stringify(message));
+      } catch {
+        // Send failed — connection dropped between check and send
+      }
+    },
+    [campaignId, characterId]
+  );
+
+  // ── sendForceCrit ─────────────────────────────────────────────────────────────
+  // GM only: arms or disarms a forced critical for a character's next roll.
+  const sendForceCrit = useCallback(
+    (targetCharacterId: string, active: boolean) => {
+      const ws = wsRef.current;
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+      const message = {
+        action: "force_crit",
+        campaignId,
+        targetCharacterId,
+        active,
+      };
+
+      try {
+        ws.send(JSON.stringify(message));
+      } catch {
+        // Send failed — connection dropped between check and send
+      }
+    },
+    [campaignId]
+  );
+
+  // ── sendRollRequest ───────────────────────────────────────────────────────────
+  // GM only: sends a roll prompt to a specific player's character sheet.
+  const sendRollRequest = useCallback(
+    (targetCharacterId: string, rollRequest: RollRequestPayload) => {
+      const ws = wsRef.current;
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+      const message = {
+        action: "roll_request",
+        campaignId,
+        targetCharacterId,
+        rollRequest,
+      };
+
+      try {
+        ws.send(JSON.stringify(message));
+      } catch {
+        // Send failed — connection dropped between check and send
+      }
+    },
+    [campaignId]
+  );
+
+  return { sendPing, sendDiceRoll, sendForceCrit, sendRollRequest, isConnected };
 }

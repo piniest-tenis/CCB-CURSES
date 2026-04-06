@@ -228,7 +228,7 @@ function AddToCampaignModal({ character, onClose, onSuccess }: AddToCampaignModa
     if (!selectedCampaignId) return;
     setError(null);
     try {
-      await addMutation.mutateAsync({ characterId: character.characterId });
+      await addMutation.mutateAsync({ characterId: character.characterId, ownerUserId: character.userId });
       onSuccess();
       onClose();
     } catch (err) {

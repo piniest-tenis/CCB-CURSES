@@ -290,7 +290,7 @@ export function LoadingInterstitial({ isVisible }: LoadingInterstitialProps) {
           <div className="px-8 py-6 space-y-3">
             {item ? (
               <>
-                <p className="text-xs font-bold uppercase tracking-[0.25em] text-[#577399] font-serif">
+                <p className="text-xs font-bold tracking-[0.25em] text-[#577399] font-serif-sc">
                   {item.title}
                 </p>
                 <MarkdownContent

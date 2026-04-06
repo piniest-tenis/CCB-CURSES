@@ -52,7 +52,7 @@ export function CampaignRailWidget({ campaigns }: CampaignRailWidgetProps) {
                   {c.memberCount} member{c.memberCount !== 1 ? "s" : ""}
                   {c.callerRole && (
                     <span className={[
-                      "ml-1.5 rounded px-1 py-px text-[10px] font-semibold",
+                      "ml-1.5 rounded px-1 py-px text-[11px] font-semibold",
                       c.callerRole === "gm"
                         ? "bg-gold-900/40 text-gold-400"
                         : "bg-[#577399]/10 text-[#577399]/70",

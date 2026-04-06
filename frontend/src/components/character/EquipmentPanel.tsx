@@ -17,95 +17,379 @@
 import React, { useState } from "react";
 import type { GoldAmount } from "@shared/types";
 import { useCharacterStore } from "@/store/characterStore";
+import { DiceRollButton } from "@/components/dice/DiceRollButton";
+import type { RollRequest, DieSize } from "@/types/dice";
 
 // ─── SRD Equipment Catalog ───────────────────────────────────────────────────
 // Full equipment list from the Daggerheart SRD.
 
 interface SrdEquipmentItem {
-  name:        string;
-  category:    string;
+  name: string;
+  category: string;
   description: string;
 }
 
 const SRD_EQUIPMENT: SrdEquipmentItem[] = [
   // ── Weapons by Tier ──
-  { category: "Weapons — Tier 1", name: "Shortsword",       description: "d6 physical, Melee, One-handed, Tier 1" },
-  { category: "Weapons — Tier 1", name: "Dagger",           description: "d6 physical, Melee/Close, One-handed, Tier 1, Thrown" },
-  { category: "Weapons — Tier 1", name: "Handaxe",          description: "d6 physical, Melee, One-handed, Tier 1, Thrown" },
-  { category: "Weapons — Tier 1", name: "Shortbow",         description: "d6 physical, Far, One-handed, Tier 1" },
-  { category: "Weapons — Tier 1", name: "Light Crossbow",   description: "d6 physical, Far, One-handed, Tier 1, Loading" },
-  { category: "Weapons — Tier 1", name: "Staff",            description: "d6 physical, Melee, Two-handed, Tier 1, Reach" },
-  { category: "Weapons — Tier 1", name: "Spear",            description: "d6 physical, Melee, One-handed, Tier 1, Thrown, Reach" },
-  { category: "Weapons — Tier 1", name: "Sling",            description: "d6 physical, Close, One-handed, Tier 1" },
-  { category: "Weapons — Tier 2", name: "Longsword",        description: "d8 physical, Melee, One-handed, Tier 2" },
-  { category: "Weapons — Tier 2", name: "Greataxe",         description: "d12 physical, Melee, Two-handed, Tier 2" },
-  { category: "Weapons — Tier 2", name: "Warhammer",        description: "d8 physical, Melee, One-handed, Tier 2" },
-  { category: "Weapons — Tier 2", name: "Longbow",          description: "d8 physical, Far, Two-handed, Tier 2" },
-  { category: "Weapons — Tier 2", name: "Heavy Crossbow",   description: "d10 physical, Far, Two-handed, Tier 2, Loading" },
-  { category: "Weapons — Tier 2", name: "Rapier",           description: "d8 physical, Melee, One-handed, Tier 2, Finesse" },
-  { category: "Weapons — Tier 2", name: "Flail",            description: "d8 physical, Melee, One-handed, Tier 2" },
-  { category: "Weapons — Tier 3", name: "Greatsword",       description: "d12 physical, Melee, Two-handed, Tier 3" },
-  { category: "Weapons — Tier 3", name: "Maul",             description: "d12 physical, Melee, Two-handed, Tier 3" },
-  { category: "Weapons — Tier 3", name: "Halberd",          description: "d10 physical, Melee, Two-handed, Tier 3, Reach" },
-  { category: "Weapons — Tier 3", name: "War Bow",          description: "d10 physical, Far, Two-handed, Tier 3" },
-  { category: "Weapons — Tier 3", name: "Arcane Staff",     description: "d8 magic, Melee/Close, Two-handed, Tier 3" },
-  { category: "Weapons — Tier 4", name: "Legendary Sword",  description: "2d10 physical, Melee, One-handed, Tier 4, Reliable" },
-  { category: "Weapons — Tier 4", name: "Legendary Bow",    description: "2d8 physical, Far, Two-handed, Tier 4, Reliable" },
+  {
+    category: "Weapons — Tier 1",
+    name: "Shortsword",
+    description: "d6 physical, Melee, One-handed, Tier 1",
+  },
+  {
+    category: "Weapons — Tier 1",
+    name: "Dagger",
+    description: "d6 physical, Melee/Close, One-handed, Tier 1, Thrown",
+  },
+  {
+    category: "Weapons — Tier 1",
+    name: "Handaxe",
+    description: "d6 physical, Melee, One-handed, Tier 1, Thrown",
+  },
+  {
+    category: "Weapons — Tier 1",
+    name: "Shortbow",
+    description: "d6 physical, Far, One-handed, Tier 1",
+  },
+  {
+    category: "Weapons — Tier 1",
+    name: "Light Crossbow",
+    description: "d6 physical, Far, One-handed, Tier 1, Loading",
+  },
+  {
+    category: "Weapons — Tier 1",
+    name: "Staff",
+    description: "d6 physical, Melee, Two-handed, Tier 1, Reach",
+  },
+  {
+    category: "Weapons — Tier 1",
+    name: "Spear",
+    description: "d6 physical, Melee, One-handed, Tier 1, Thrown, Reach",
+  },
+  {
+    category: "Weapons — Tier 1",
+    name: "Sling",
+    description: "d6 physical, Close, One-handed, Tier 1",
+  },
+  {
+    category: "Weapons — Tier 2",
+    name: "Longsword",
+    description: "d8 physical, Melee, One-handed, Tier 2",
+  },
+  {
+    category: "Weapons — Tier 2",
+    name: "Greataxe",
+    description: "d12 physical, Melee, Two-handed, Tier 2",
+  },
+  {
+    category: "Weapons — Tier 2",
+    name: "Warhammer",
+    description: "d8 physical, Melee, One-handed, Tier 2",
+  },
+  {
+    category: "Weapons — Tier 2",
+    name: "Longbow",
+    description: "d8 physical, Far, Two-handed, Tier 2",
+  },
+  {
+    category: "Weapons — Tier 2",
+    name: "Heavy Crossbow",
+    description: "d10 physical, Far, Two-handed, Tier 2, Loading",
+  },
+  {
+    category: "Weapons — Tier 2",
+    name: "Rapier",
+    description: "d8 physical, Melee, One-handed, Tier 2, Finesse",
+  },
+  {
+    category: "Weapons — Tier 2",
+    name: "Flail",
+    description: "d8 physical, Melee, One-handed, Tier 2",
+  },
+  {
+    category: "Weapons — Tier 3",
+    name: "Greatsword",
+    description: "d12 physical, Melee, Two-handed, Tier 3",
+  },
+  {
+    category: "Weapons — Tier 3",
+    name: "Maul",
+    description: "d12 physical, Melee, Two-handed, Tier 3",
+  },
+  {
+    category: "Weapons — Tier 3",
+    name: "Halberd",
+    description: "d10 physical, Melee, Two-handed, Tier 3, Reach",
+  },
+  {
+    category: "Weapons — Tier 3",
+    name: "War Bow",
+    description: "d10 physical, Far, Two-handed, Tier 3",
+  },
+  {
+    category: "Weapons — Tier 3",
+    name: "Arcane Staff",
+    description: "d8 magic, Melee/Close, Two-handed, Tier 3",
+  },
+  {
+    category: "Weapons — Tier 4",
+    name: "Legendary Sword",
+    description: "2d10 physical, Melee, One-handed, Tier 4, Reliable",
+  },
+  {
+    category: "Weapons — Tier 4",
+    name: "Legendary Bow",
+    description: "2d8 physical, Far, Two-handed, Tier 4, Reliable",
+  },
   // ── Armor ──
-  { category: "Armor — Tier 1",   name: "Leather Armor",    description: "Armor +2, Evasion +0, Tier 1" },
-  { category: "Armor — Tier 1",   name: "Shield",           description: "Armor +1, Evasion +1, Tier 1, One-handed" },
-  { category: "Armor — Tier 2",   name: "Chain Mail",       description: "Armor +3, Evasion −1, Tier 2" },
-  { category: "Armor — Tier 2",   name: "Scale Armor",      description: "Armor +4, Evasion −1, Tier 2" },
-  { category: "Armor — Tier 3",   name: "Half Plate",       description: "Armor +5, Evasion −2, Tier 3" },
-  { category: "Armor — Tier 3",   name: "Tower Shield",     description: "Armor +2, Evasion −1, Tier 3, One-handed" },
-  { category: "Armor — Tier 4",   name: "Full Plate",       description: "Armor +6, Evasion −3, Tier 4" },
-  { category: "Armor — Tier 4",   name: "Legendary Armor",  description: "Armor +7, Evasion −2, Tier 4, Reliable" },
+  {
+    category: "Armor — Tier 1",
+    name: "Leather Armor",
+    description: "Armor +2, Evasion +0, Tier 1",
+  },
+  {
+    category: "Armor — Tier 1",
+    name: "Shield",
+    description: "Armor +1, Evasion +1, Tier 1, One-handed",
+  },
+  {
+    category: "Armor — Tier 2",
+    name: "Chain Mail",
+    description: "Armor +3, Evasion −1, Tier 2",
+  },
+  {
+    category: "Armor — Tier 2",
+    name: "Scale Armor",
+    description: "Armor +4, Evasion −1, Tier 2",
+  },
+  {
+    category: "Armor — Tier 3",
+    name: "Half Plate",
+    description: "Armor +5, Evasion −2, Tier 3",
+  },
+  {
+    category: "Armor — Tier 3",
+    name: "Tower Shield",
+    description: "Armor +2, Evasion −1, Tier 3, One-handed",
+  },
+  {
+    category: "Armor — Tier 4",
+    name: "Full Plate",
+    description: "Armor +6, Evasion −3, Tier 4",
+  },
+  {
+    category: "Armor — Tier 4",
+    name: "Legendary Armor",
+    description: "Armor +7, Evasion −2, Tier 4, Reliable",
+  },
   // ── Loot / Reusables ──
-  { category: "Loot & Reusables", name: "Healing Potion",   description: "Restore 1d6 HP. Can be used in any scene." },
-  { category: "Loot & Reusables", name: "Ration Pack",      description: "One day's food and water for one creature." },
-  { category: "Loot & Reusables", name: "Torch",            description: "Provides bright light in Close range for 1 hour." },
-  { category: "Loot & Reusables", name: "Rope (50 ft)",     description: "Hemp rope, can support up to 1,000 lbs." },
-  { category: "Loot & Reusables", name: "Grappling Hook",   description: "Can be thrown to anchor rope in Far range." },
-  { category: "Loot & Reusables", name: "Crowbar",          description: "+1 to Strength rolls to force open doors or chests." },
-  { category: "Loot & Reusables", name: "Healer's Kit",     description: "10 uses. Spend 1 use to stabilize a fallen ally." },
-  { category: "Loot & Reusables", name: "Thieves' Tools",   description: "+1 to Finesse rolls to pick locks or disarm traps." },
-  { category: "Loot & Reusables", name: "Lantern",          description: "Provides bright light in Close range, burns oil." },
-  { category: "Loot & Reusables", name: "Flask of Oil",     description: "Fuel for a lantern (4 hours) or improvised incendiary." },
-  { category: "Loot & Reusables", name: "Spellbook",        description: "Required for Wizard spell preparation. 20 pages." },
-  { category: "Loot & Reusables", name: "Druidic Focus",    description: "Wooden staff or bundle of herbs. Druid casting focus." },
-  { category: "Loot & Reusables", name: "Arcane Focus",     description: "Crystal orb or wand. Wizard/Sorcerer casting focus." },
-  { category: "Loot & Reusables", name: "Holy Symbol",      description: "Seraph divine focus. +1 to Presence healing rolls." },
-  { category: "Loot & Reusables", name: "Musical Instrument", description: "Bard performance tool. Required for some Bard features." },
-  { category: "Loot & Reusables", name: "Disguise Kit",     description: "8 uses. Spend 1 use to adopt a convincing disguise." },
+  {
+    category: "Loot & Reusables",
+    name: "Healing Potion",
+    description: "Restore 1d6 HP. Can be used in any scene.",
+  },
+  {
+    category: "Loot & Reusables",
+    name: "Ration Pack",
+    description: "One day's food and water for one creature.",
+  },
+  {
+    category: "Loot & Reusables",
+    name: "Torch",
+    description: "Provides bright light in Close range for 1 hour.",
+  },
+  {
+    category: "Loot & Reusables",
+    name: "Rope (50 ft)",
+    description: "Hemp rope, can support up to 1,000 lbs.",
+  },
+  {
+    category: "Loot & Reusables",
+    name: "Grappling Hook",
+    description: "Can be thrown to anchor rope in Far range.",
+  },
+  {
+    category: "Loot & Reusables",
+    name: "Crowbar",
+    description: "+1 to Strength rolls to force open doors or chests.",
+  },
+  {
+    category: "Loot & Reusables",
+    name: "Healer's Kit",
+    description: "10 uses. Spend 1 use to stabilize a fallen ally.",
+  },
+  {
+    category: "Loot & Reusables",
+    name: "Thieves' Tools",
+    description: "+1 to Finesse rolls to pick locks or disarm traps.",
+  },
+  {
+    category: "Loot & Reusables",
+    name: "Lantern",
+    description: "Provides bright light in Close range, burns oil.",
+  },
+  {
+    category: "Loot & Reusables",
+    name: "Flask of Oil",
+    description: "Fuel for a lantern (4 hours) or improvised incendiary.",
+  },
+  {
+    category: "Loot & Reusables",
+    name: "Spellbook",
+    description: "Required for Wizard spell preparation. 20 pages.",
+  },
+  {
+    category: "Loot & Reusables",
+    name: "Druidic Focus",
+    description: "Wooden staff or bundle of herbs. Druid casting focus.",
+  },
+  {
+    category: "Loot & Reusables",
+    name: "Arcane Focus",
+    description: "Crystal orb or wand. Wizard/Sorcerer casting focus.",
+  },
+  {
+    category: "Loot & Reusables",
+    name: "Holy Symbol",
+    description: "Seraph divine focus. +1 to Presence healing rolls.",
+  },
+  {
+    category: "Loot & Reusables",
+    name: "Musical Instrument",
+    description: "Bard performance tool. Required for some Bard features.",
+  },
+  {
+    category: "Loot & Reusables",
+    name: "Disguise Kit",
+    description: "8 uses. Spend 1 use to adopt a convincing disguise.",
+  },
   // ── Consumables ──
-  { category: "Consumables",      name: "Greater Healing Potion",  description: "Restore 2d6+2 HP. Single use." },
-  { category: "Consumables",      name: "Antitoxin",               description: "Clear the Poisoned condition. Single use." },
-  { category: "Consumables",      name: "Smoke Bomb",              description: "Create a Close area of obscuring smoke for 1 round. Single use." },
-  { category: "Consumables",      name: "Alchemist's Fire",        description: "Ranged attack; target becomes Ignited. Single use." },
-  { category: "Consumables",      name: "Calming Draught",         description: "Clear 1 Stress. Single use." },
-  { category: "Consumables",      name: "Scroll of Mending",       description: "Cast Mending once without spell slots. Single use." },
+  {
+    category: "Consumables",
+    name: "Greater Healing Potion",
+    description: "Restore 2d6+2 HP. Single use.",
+  },
+  {
+    category: "Consumables",
+    name: "Antitoxin",
+    description: "Clear the Poisoned condition. Single use.",
+  },
+  {
+    category: "Consumables",
+    name: "Smoke Bomb",
+    description:
+      "Create a Close area of obscuring smoke for 1 round. Single use.",
+  },
+  {
+    category: "Consumables",
+    name: "Alchemist's Fire",
+    description: "Ranged attack; target becomes Ignited. Single use.",
+  },
+  {
+    category: "Consumables",
+    name: "Calming Draught",
+    description: "Clear 1 Stress. Single use.",
+  },
+  {
+    category: "Consumables",
+    name: "Scroll of Mending",
+    description: "Cast Mending once without spell slots. Single use.",
+  },
 ];
 
-const EQUIPMENT_CATEGORIES = Array.from(new Set(SRD_EQUIPMENT.map((i) => i.category)));
+const EQUIPMENT_CATEGORIES = Array.from(
+  new Set(SRD_EQUIPMENT.map((i) => i.category)),
+);
+
+// ─── Weapon Damage Parser ─────────────────────────────────────────────────────
+// Parses weapon damage info from an SRD equipment description string.
+// Returns null if the item is not a weapon (no die pattern found).
+//
+// Supported patterns: "d6 physical", "2d10 physical", "d8 magic"
+
+interface WeaponDamage {
+  dieCount: number;
+  dieSize: DieSize;
+  flatMod: number;
+}
+
+function parseWeaponDamage(description: string): WeaponDamage | null {
+  // Match optional leading count, then dX
+  const match = description.match(/^(\d+)?d(\d+)/i);
+  if (!match) return null;
+  const dieCount = match[1] ? parseInt(match[1], 10) : 1;
+  const size = parseInt(match[2], 10);
+  const validSizes = [4, 6, 8, 10, 12, 20];
+  if (!validSizes.includes(size)) return null;
+  return { dieCount, dieSize: `d${size}` as DieSize, flatMod: 0 };
+}
+
+/** Look up the SRD description for an inventory item by name. */
+function srdDescriptionFor(itemName: string): string | null {
+  return SRD_EQUIPMENT.find((e) => e.name === itemName)?.description ?? null;
+}
+
+/**
+ * Build a damage RollRequest for a weapon.
+ * SRD: damage dice = proficiency × weapon die; flat modifier is NOT multiplied.
+ * For multi-die weapons (e.g. 2d10), base count already encodes proficiency
+ * scaling differently — we multiply base count by proficiency for normal weapons,
+ * but for named multi-die entries (2d10, 2d8) keep base count × prof.
+ */
+function buildWeaponRollRequest(
+  itemName: string,
+  proficiency: number,
+): RollRequest | null {
+  const desc = srdDescriptionFor(itemName);
+  if (!desc) return null;
+  const parsed = parseWeaponDamage(desc);
+  if (!parsed) return null;
+
+  const { dieCount, dieSize, flatMod } = parsed;
+  // Total dice = base die count × proficiency
+  const totalDice = dieCount * proficiency;
+
+  return {
+    label: `${itemName} Damage`,
+    type: "damage",
+    proficiency,
+    modifier: flatMod || undefined,
+    dice: Array.from({ length: totalDice }, () => ({
+      size: dieSize,
+      role: "damage" as const,
+      label: itemName,
+    })),
+  };
+}
 
 // ─── GoldSlotTracker ─────────────────────────────────────────────────────────
 // Visual slot tracker for a single gold denomination.
 
 interface GoldSlotTrackerProps {
-  label:      string;
-  marked:     number;
-  maxSlots:   number;
-  color:      string;
-  onToggle:   (index: number) => void;
+  label: string;
+  marked: number;
+  maxSlots: number;
+  color: string;
+  onToggle: (index: number) => void;
 }
 
-function GoldSlotTracker({ label, marked, maxSlots, color, onToggle }: GoldSlotTrackerProps) {
+function GoldSlotTracker({
+  label,
+  marked,
+  maxSlots,
+  color,
+  onToggle,
+}: GoldSlotTrackerProps) {
   return (
     <div className="flex flex-col gap-1">
       <span className="text-xs font-semibold uppercase tracking-wider text-[#b9baa3]">
         {label}
       </span>
-      <div className="flex flex-wrap gap-1" role="group" aria-label={`${label} slots`}>
+      <div
+        className="flex flex-wrap gap-1"
+        role="group"
+        aria-label={`${label} slots`}
+      >
         {Array.from({ length: maxSlots }, (_, i) => {
           const filled = i < marked;
           return (
@@ -134,7 +418,7 @@ function GoldSlotTracker({ label, marked, maxSlots, color, onToggle }: GoldSlotT
 // Handles the three denominations with rollover mechanics.
 
 interface GoldTrackerProps {
-  gold:     GoldAmount;
+  gold: GoldAmount;
   onChange: (gold: GoldAmount) => void;
 }
 
@@ -223,17 +507,24 @@ function GoldTracker({ gold, onChange }: GoldTrackerProps) {
 // ─── AddEquipmentSidebar ─────────────────────────────────────────────────────
 
 interface AddEquipmentSidebarProps {
-  open:     boolean;
-  onClose:  () => void;
-  onAdd:    (name: string) => void;
-  current:  string[];
+  open: boolean;
+  onClose: () => void;
+  onAdd: (name: string) => void;
+  current: string[];
 }
 
-function AddEquipmentSidebar({ open, onClose, onAdd, current }: AddEquipmentSidebarProps) {
+function AddEquipmentSidebar({
+  open,
+  onClose,
+  onAdd,
+  current,
+}: AddEquipmentSidebarProps) {
   const headingId = React.useId();
-  const panelRef  = React.useRef<HTMLDivElement>(null);
+  const panelRef = React.useRef<HTMLDivElement>(null);
   const [search, setSearch] = React.useState("");
-  const [activeCategory, setActiveCategory] = React.useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = React.useState<string | null>(
+    null,
+  );
 
   // Focus first focusable element when opened
   React.useEffect(() => {
@@ -242,7 +533,7 @@ function AddEquipmentSidebar({ open, onClose, onAdd, current }: AddEquipmentSide
     setActiveCategory(null);
     const t = setTimeout(() => {
       const first = panelRef.current?.querySelector<HTMLElement>(
-        'button, input, [tabindex]:not([tabindex="-1"])'
+        'button, input, [tabindex]:not([tabindex="-1"])',
       );
       first?.focus();
     }, 50);
@@ -253,15 +544,21 @@ function AddEquipmentSidebar({ open, onClose, onAdd, current }: AddEquipmentSide
   React.useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { e.stopPropagation(); onClose(); }
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
+      }
     };
     document.addEventListener("keydown", handler, true);
     return () => document.removeEventListener("keydown", handler, true);
   }, [open, onClose]);
 
   const filteredItems = SRD_EQUIPMENT.filter((item) => {
-    const matchSearch = !search || item.name.toLowerCase().includes(search.toLowerCase()) || item.description.toLowerCase().includes(search.toLowerCase());
-    const matchCat    = !activeCategory || item.category === activeCategory;
+    const matchSearch =
+      !search ||
+      item.name.toLowerCase().includes(search.toLowerCase()) ||
+      item.description.toLowerCase().includes(search.toLowerCase());
+    const matchCat = !activeCategory || item.category === activeCategory;
     return matchSearch && matchCat;
   });
 
@@ -288,7 +585,7 @@ function AddEquipmentSidebar({ open, onClose, onAdd, current }: AddEquipmentSide
         aria-hidden={!open}
         inert={!open ? ("" as unknown as boolean) : undefined}
         className={[
-          "fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-[28rem] flex-col",
+          "fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-[28rem] flex-col py-12",
           "border-l border-[#577399]/35 bg-[#0f1713] shadow-2xl",
           "transition-transform duration-300 ease-in-out",
           open ? "translate-x-0" : "translate-x-full",
@@ -297,8 +594,15 @@ function AddEquipmentSidebar({ open, onClose, onAdd, current }: AddEquipmentSide
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[#577399]/25 px-5 py-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-[#b9baa3]">Equipment</p>
-            <h2 id={headingId} className="font-serif text-lg font-semibold text-[#f7f7ff]">Add Equipment</h2>
+            <p className="text-xs uppercase tracking-[0.24em] text-[#b9baa3]">
+              Equipment
+            </p>
+            <h2
+              id={headingId}
+              className="font-serif text-lg font-semibold text-[#f7f7ff]"
+            >
+              Add Equipment
+            </h2>
           </div>
           <button
             type="button"
@@ -338,7 +642,9 @@ function AddEquipmentSidebar({ open, onClose, onAdd, current }: AddEquipmentSide
               <button
                 key={cat}
                 type="button"
-                onClick={() => setActiveCategory(cat === activeCategory ? null : cat)}
+                onClick={() =>
+                  setActiveCategory(cat === activeCategory ? null : cat)
+                }
                 className={[
                   "rounded-full px-2.5 py-0.5 text-xs font-semibold border transition-colors",
                   activeCategory === cat
@@ -366,9 +672,15 @@ function AddEquipmentSidebar({ open, onClose, onAdd, current }: AddEquipmentSide
                     <li key={item.name}>
                       <button
                         type="button"
-                        onClick={() => { if (!alreadyHave) onAdd(item.name); }}
+                        onClick={() => {
+                          if (!alreadyHave) onAdd(item.name);
+                        }}
                         disabled={alreadyHave}
-                        aria-label={alreadyHave ? `${item.name} — already in inventory` : `Add ${item.name}`}
+                        aria-label={
+                          alreadyHave
+                            ? `${item.name} — already in inventory`
+                            : `Add ${item.name}`
+                        }
                         className={[
                           "w-full text-left rounded-lg px-3 py-2 border transition-colors",
                           alreadyHave
@@ -377,11 +689,17 @@ function AddEquipmentSidebar({ open, onClose, onAdd, current }: AddEquipmentSide
                         ].join(" ")}
                       >
                         <span className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-[#f7f7ff]">{item.name}</span>
+                          <span className="text-sm font-medium text-[#f7f7ff]">
+                            {item.name}
+                          </span>
                           {alreadyHave ? (
-                            <span className="text-xs text-[#577399] font-semibold">✓ Have</span>
+                            <span className="text-xs text-[#577399] font-semibold">
+                              ✓ Have
+                            </span>
                           ) : (
-                            <span className="text-xs text-[#577399]/60">+ Add</span>
+                            <span className="text-xs text-[#577399]/60">
+                              + Add
+                            </span>
                           )}
                         </span>
                         <span className="text-sm text-[#b9baa3] leading-snug block mt-0.5">
@@ -418,14 +736,23 @@ function AddEquipmentSidebar({ open, onClose, onAdd, current }: AddEquipmentSide
 
 // ─── EquipmentPanel ───────────────────────────────────────────────────────────
 
-export function EquipmentPanel() {
+export function EquipmentPanel({
+  onRollQueued,
+}: {
+  onRollQueued?: () => void;
+}) {
   const { activeCharacter, updateField } = useCharacterStore();
   const [addOpen, setAddOpen] = useState(false);
 
   if (!activeCharacter) return null;
 
-  const gold: GoldAmount = activeCharacter.gold ?? { handfuls: 1, bags: 0, chests: 0 };
+  const gold: GoldAmount = activeCharacter.gold ?? {
+    handfuls: 1,
+    bags: 0,
+    chests: 0,
+  };
   const inventory: string[] = activeCharacter.inventory ?? [];
+  const proficiency: number = activeCharacter.proficiency ?? 1;
 
   const handleGoldChange = (next: GoldAmount) => {
     updateField("gold", next);
@@ -438,7 +765,10 @@ export function EquipmentPanel() {
   };
 
   const handleRemoveItem = (name: string) => {
-    updateField("inventory", inventory.filter((i) => i !== name));
+    updateField(
+      "inventory",
+      inventory.filter((i) => i !== name),
+    );
   };
 
   return (
@@ -448,12 +778,12 @@ export function EquipmentPanel() {
         aria-label="Equipment and Gold"
         data-field-key="equipment"
       >
-        <h2 className="font-serif text-sm font-semibold uppercase tracking-widest text-[#577399]">
+        <h2 className="font-serif-sc text-sm font-semibold tracking-widest text-[#577399]">
           Equipment &amp; Gold
         </h2>
 
         {/* Gold tracker */}
-        <div>
+        <div data-field-key="equipment.gold">
           <h3 className="mb-3 text-xs font-medium uppercase tracking-wider text-[#b9baa3]">
             Gold
           </h3>
@@ -464,7 +794,7 @@ export function EquipmentPanel() {
         <div className="border-t border-[#577399]/15" />
 
         {/* Inventory */}
-        <div>
+        <div data-field-key="equipment.inventory">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs font-medium uppercase tracking-wider text-[#b9baa3]">
               Inventory
@@ -474,6 +804,7 @@ export function EquipmentPanel() {
               onClick={() => setAddOpen(true)}
               aria-haspopup="dialog"
               aria-label="Add equipment item"
+              data-field-key="equipment.add"
               className="
                 rounded-lg border border-[#577399]/40 bg-[#577399]/15 px-3 py-1.5
                 text-xs font-semibold text-[#f7f7ff]
@@ -488,26 +819,43 @@ export function EquipmentPanel() {
 
           {inventory.length === 0 ? (
             <p className="text-xs text-[#b9baa3]/60 italic">
-              No equipment yet. Click &ldquo;+ Add Equipment&rdquo; to browse the SRD catalog.
+              No equipment yet. Click &ldquo;+ Add Equipment&rdquo; to browse
+              the SRD catalog.
             </p>
           ) : (
-            <ul className="space-y-1.5" role="list" aria-label="Inventory items">
-              {inventory.map((item) => (
-                <li
-                  key={item}
-                  className="flex items-center justify-between rounded-lg border border-[#577399]/20 bg-slate-900/50 px-3 py-2 gap-2"
-                >
-                  <span className="text-sm text-[#f7f7ff] flex-1 min-w-0 truncate">{item}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveItem(item)}
-                    aria-label={`Remove ${item} from inventory`}
-                    className="h-8 w-8 flex items-center justify-center rounded text-[#577399]/50 hover:text-[#fe5f55] hover:bg-[#fe5f55]/10 transition-colors text-xs focus:outline-none focus:ring-2 focus:ring-[#577399] flex-shrink-0"
+            <ul
+              className="space-y-1.5"
+              role="list"
+              aria-label="Inventory items"
+            >
+              {inventory.map((item) => {
+                const rollReq = buildWeaponRollRequest(item, proficiency);
+                return (
+                  <li
+                    key={item}
+                    className="flex items-center justify-between rounded-lg border border-[#577399]/20 bg-slate-900/50 px-3 py-2 gap-2"
                   >
-                    ✕
-                  </button>
-                </li>
-              ))}
+                    <span className="text-sm text-[#f7f7ff] flex-1 min-w-0 truncate">
+                      {item}
+                    </span>
+                    {rollReq && (
+                      <DiceRollButton
+                        rollRequest={rollReq}
+                        variant="icon"
+                        onRollQueued={onRollQueued}
+                      />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveItem(item)}
+                      aria-label={`Remove ${item} from inventory`}
+                      className="h-8 w-8 flex items-center justify-center rounded text-[#577399]/50 hover:text-[#fe5f55] hover:bg-[#fe5f55]/10 transition-colors text-xs focus:outline-none focus:ring-2 focus:ring-[#577399] flex-shrink-0"
+                    >
+                      ✕
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

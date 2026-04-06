@@ -12,6 +12,8 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useClasses } from "@/hooks/useGameData";
 import type { ClassSummary } from "@shared/types";
+import { SourceBadge } from "@/components/SourceBadge";
+import { SourceFilter, type SourceFilterValue } from "@/components/SourceFilter";
 
 // ---------------------------------------------------------------------------
 // Domain badge colour map
@@ -58,6 +60,7 @@ function ClassCard({ cls }: { cls: ClassSummary }) {
         <h3 className="font-serif text-xl font-semibold text-parchment-100 group-hover:text-gold-300 transition-colors">
           {cls.name}
         </h3>
+        <SourceBadge source={cls.source} size="sm" />
         <span className="shrink-0 rounded border border-gold-800 bg-gold-950/20 px-2 py-0.5 text-xs font-bold text-gold-400">
           {cls.subclasses.length} subclass{cls.subclasses.length !== 1 ? "es" : ""}
         </span>
@@ -105,6 +108,7 @@ export default function ClassesPage() {
   const { data, isLoading, isError } = useClasses();
   const [search, setSearch] = useState("");
   const [filterDomain, setFilterDomain] = useState<string>("");
+  const [sourceFilter, setSourceFilter] = useState<SourceFilterValue>("all");
 
   const classes = data?.classes ?? [];
 
@@ -118,7 +122,9 @@ export default function ClassesPage() {
       c.name.toLowerCase().includes(search.toLowerCase());
     const matchesDomain =
       filterDomain === "" || c.domains.includes(filterDomain);
-    return matchesSearch && matchesDomain;
+    const matchesSource =
+      sourceFilter === "all" || c.source === sourceFilter;
+    return matchesSearch && matchesDomain && matchesSource;
   });
 
   return (
@@ -177,10 +183,11 @@ export default function ClassesPage() {
               <option key={d} value={d}>{d}</option>
             ))}
           </select>
-          {(search || filterDomain) && (
+          <SourceFilter value={sourceFilter} onChange={setSourceFilter} />
+          {(search || filterDomain || sourceFilter !== "all") && (
             <button
               type="button"
-              onClick={() => { setSearch(""); setFilterDomain(""); }}
+              onClick={() => { setSearch(""); setFilterDomain(""); setSourceFilter("all"); }}
               className="text-xs text-parchment-600 hover:text-parchment-400 transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500 rounded"
             >
               Clear filters

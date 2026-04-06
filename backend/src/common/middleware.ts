@@ -293,6 +293,23 @@ export function extractEmail(
   return typeof email === "string" ? email : undefined;
 }
 
+/**
+ * Extract the display name from JWT claims (best-effort; may be undefined).
+ * Checks `custom:displayName` first (set during Cognito sign-up), then falls
+ * back to the standard `name` claim.
+ */
+export function extractDisplayName(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): string | undefined {
+  const claims = event.requestContext?.authorizer?.jwt?.claims;
+  if (!claims) return undefined;
+  const custom = claims["custom:displayName"];
+  if (typeof custom === "string" && custom.trim()) return custom.trim();
+  const name = claims["name"];
+  if (typeof name === "string" && name.trim()) return name.trim();
+  return undefined;
+}
+
 // ─── Parsing Utilities ────────────────────────────────────────────────────────
 
 /**

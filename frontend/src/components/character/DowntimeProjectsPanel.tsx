@@ -664,7 +664,7 @@ export function DowntimeProjectsPanel() {
           aria-controls={panelId}
           className="flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-gold-500 rounded"
         >
-          <h2 className="font-serif text-sm font-semibold uppercase tracking-widest text-gold-600">
+          <h2 className="font-serif-sc text-sm font-semibold tracking-widest text-gold-600">
             Projects
           </h2>
 

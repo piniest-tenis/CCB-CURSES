@@ -62,6 +62,7 @@ import type {
   DomainCard,
   RuleEntry,
   ValidationResult,
+  CharacterSource,
 } from "@shared/types";
 
 // ─── Configuration ────────────────────────────────────────────────────────────
@@ -178,6 +179,22 @@ function printValidationResult(label: string, vr: ValidationResult): void {
 
 // ─── Per-category pipeline functions ─────────────────────────────────────────
 
+// Helper: define source roots to scan for each category.
+// Each entry has a directory path and the source tag to apply.
+interface SourceDir {
+  dir: string;
+  source: CharacterSource;
+}
+
+function getSourceDirs(subdir: string): SourceDir[] {
+  const dirs: SourceDir[] = [];
+  const homebrewDir = path.join(MARKDOWN_ROOT, subdir);
+  if (fs.existsSync(homebrewDir)) dirs.push({ dir: homebrewDir, source: "homebrew" });
+  const srdDir = path.join(MARKDOWN_ROOT, "SRD", subdir);
+  if (fs.existsSync(srdDir)) dirs.push({ dir: srdDir, source: "srd" });
+  return dirs;
+}
+
 // ── Classes ───────────────────────────────────────────────────────────────────
 
 async function runClasses(opts: CliOptions): Promise<CategorySummary> {
@@ -189,81 +206,82 @@ async function runClasses(opts: CliOptions): Promise<CategorySummary> {
     loaded: 0,
   };
 
-  const classesDir = path.join(MARKDOWN_ROOT, "Classes");
-  const allFiles = await glob("*.md", {
-    cwd: classesDir,
-    absolute: true,
-    nocase: true,
-  });
-
-  // Skip any file whose stem matches the folder it lives in (e.g. Classes.md inside Classes/)
-  const folderName = path.basename(classesDir).toLowerCase();
-  const classFiles = allFiles.filter(
-    (f) => path.basename(f, ".md").toLowerCase() !== folderName
-  );
-
   const metadataItems: Record<string, unknown>[] = [];
   const subclassItems: Record<string, unknown>[] = [];
 
-  for (const filePath of classFiles) {
-    const className = path.basename(filePath, ".md");
-    try {
-      const data: ClassData = parseClassFile(filePath, className);
-      summary.parsed++;
+  for (const { dir: classesDir, source } of getSourceDirs("Classes")) {
+    const allFiles = await glob("*.md", {
+      cwd: classesDir,
+      absolute: true,
+      nocase: true,
+    });
 
-      const vr: ValidationResult = validateClass(data);
-      summary.validationErrors += vr.errors.length;
-      summary.validationWarnings += vr.warnings.length;
+    // Skip any file whose stem matches the folder it lives in (e.g. Classes.md inside Classes/)
+    const folderName = path.basename(classesDir).toLowerCase();
+    const classFiles = allFiles.filter(
+      (f) => path.basename(f, ".md").toLowerCase() !== folderName
+    );
 
-      if (opts.verbose) {
-        printValidationResult(`Class: ${className}`, vr);
-      } else if (!vr.valid) {
-        printValidationResult(`Class: ${className}`, vr);
-      }
+    for (const filePath of classFiles) {
+      const className = path.basename(filePath, ".md");
+      try {
+        const data: ClassData = parseClassFile(filePath, className, source);
+        summary.parsed++;
 
-      const pk = `CLASS#${data.classId}`;
+        const vr: ValidationResult = validateClass(data);
+        summary.validationErrors += vr.errors.length;
+        summary.validationWarnings += vr.warnings.length;
 
-      // Class metadata item
-      const metaItem: Record<string, unknown> = {
-        PK: pk,
-        SK: "METADATA",
-        classId: data.classId,
-        name: data.name,
-        domains: data.domains,
-        startingEvasion: data.startingEvasion,
-        startingHitPoints: data.startingHitPoints,
-        classItems: data.classItems,
-        hopeFeature: data.hopeFeature,
-        classFeatures: data.classFeatures,
-        backgroundQuestions: data.backgroundQuestions,
-        connectionQuestions: data.connectionQuestions,
-        mechanicalNotes: data.mechanicalNotes,
-        armorRec: data.armorRec,
-        source: data.source,
-      };
-      metadataItems.push(metaItem);
+        if (opts.verbose) {
+          printValidationResult(`Class: ${className} [${source}]`, vr);
+        } else if (!vr.valid) {
+          printValidationResult(`Class: ${className} [${source}]`, vr);
+        }
 
-      // One item per subclass
-      for (const sc of data.subclasses) {
-        const subclassItem: Record<string, unknown> = {
+        const pk = `CLASS#${data.classId}`;
+
+        // Class metadata item
+        const metaItem: Record<string, unknown> = {
           PK: pk,
-          SK: `SUBCLASS#${sc.subclassId}`,
-          subclassId: sc.subclassId,
-          name: sc.name,
-          description: sc.description,
-          spellcastTrait: sc.spellcastTrait,
-          foundationFeatures: sc.foundationFeatures,
-          specializationFeature: sc.specializationFeature,
-          masteryFeature: sc.masteryFeature,
+          SK: "METADATA",
+          classId: data.classId,
+          name: data.name,
+          domains: data.domains,
+          startingEvasion: data.startingEvasion,
+          startingHitPoints: data.startingHitPoints,
+          classItems: data.classItems,
+          hopeFeature: data.hopeFeature,
+          classFeatures: data.classFeatures,
+          backgroundQuestions: data.backgroundQuestions,
+          connectionQuestions: data.connectionQuestions,
+          mechanicalNotes: data.mechanicalNotes,
+          armorRec: data.armorRec,
+          source: data.source,
         };
-        subclassItems.push(subclassItem);
+        metadataItems.push(metaItem);
+
+        // One item per subclass
+        for (const sc of data.subclasses) {
+          const subclassItem: Record<string, unknown> = {
+            PK: pk,
+            SK: `SUBCLASS#${sc.subclassId}`,
+            subclassId: sc.subclassId,
+            name: sc.name,
+            description: sc.description,
+            spellcastTrait: sc.spellcastTrait,
+            foundationFeatures: sc.foundationFeatures,
+            specializationFeature: sc.specializationFeature,
+            masteryFeature: sc.masteryFeature,
+          };
+          subclassItems.push(subclassItem);
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(
+          `[classes] Error parsing ${path.basename(filePath)} [${source}]: ${msg}`
+        );
+        summary.validationErrors++;
       }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(
-        `[classes] Error parsing ${path.basename(filePath)}: ${msg}`
-      );
-      summary.validationErrors++;
     }
   }
 
@@ -343,47 +361,48 @@ async function runCommunities(opts: CliOptions): Promise<CategorySummary> {
     loaded: 0,
   };
 
-  const commDir = path.join(MARKDOWN_ROOT, "Communities");
-  const allFiles = await glob("*.md", { cwd: commDir, absolute: true });
-  const commFolderName = path.basename(commDir).toLowerCase();
-  const commFiles = allFiles.filter(
-    (f) => path.basename(f, ".md").toLowerCase() !== commFolderName
-  );
-
   const items: Record<string, unknown>[] = [];
 
-  for (const filePath of commFiles) {
-    const name = path.basename(filePath, ".md");
-    try {
-      const data: CommunityData = parseCommunityFile(filePath, name);
-      summary.parsed++;
+  for (const { dir: commDir, source } of getSourceDirs("Communities")) {
+    const allFiles = await glob("*.md", { cwd: commDir, absolute: true });
+    const commFolderName = path.basename(commDir).toLowerCase();
+    const commFiles = allFiles.filter(
+      (f) => path.basename(f, ".md").toLowerCase() !== commFolderName
+    );
 
-      const vr = validateCommunity(data);
-      summary.validationErrors += vr.errors.length;
-      summary.validationWarnings += vr.warnings.length;
+    for (const filePath of commFiles) {
+      const name = path.basename(filePath, ".md");
+      try {
+        const data: CommunityData = parseCommunityFile(filePath, name, source);
+        summary.parsed++;
 
-      if (opts.verbose || !vr.valid) {
-        printValidationResult(`Community: ${name}`, vr);
+        const vr = validateCommunity(data);
+        summary.validationErrors += vr.errors.length;
+        summary.validationWarnings += vr.warnings.length;
+
+        if (opts.verbose || !vr.valid) {
+          printValidationResult(`Community: ${name} [${source}]`, vr);
+        }
+
+        items.push({
+          PK: `COMMUNITY#${data.communityId}`,
+          SK: "METADATA",
+          id: data.communityId,
+          type: "community",
+          name: data.name,
+          flavorText: data.flavorText,
+          traitName: data.traitName,
+          traitDescription: data.traitDescription,
+          source: data.source,
+          ...(data.mechanicalBonuses ? { mechanicalBonuses: data.mechanicalBonuses } : {}),
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(
+          `[communities] Error parsing ${path.basename(filePath)} [${source}]: ${msg}`
+        );
+        summary.validationErrors++;
       }
-
-      items.push({
-        PK: `COMMUNITY#${data.communityId}`,
-        SK: "METADATA",
-        id: data.communityId,
-        type: "community",
-        name: data.name,
-        flavorText: data.flavorText,
-        traitName: data.traitName,
-        traitDescription: data.traitDescription,
-        source: data.source,
-        ...(data.mechanicalBonuses ? { mechanicalBonuses: data.mechanicalBonuses } : {}),
-      });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(
-        `[communities] Error parsing ${path.basename(filePath)}: ${msg}`
-      );
-      summary.validationErrors++;
     }
   }
 
@@ -410,60 +429,61 @@ async function runAncestries(opts: CliOptions): Promise<CategorySummary> {
     loaded: 0,
   };
 
-  const ancestryDir = path.join(MARKDOWN_ROOT, "Ancestries");
-  if (!fs.existsSync(ancestryDir)) {
-    console.log("[ancestries] Directory not found — skipping.");
-    return summary;
-  }
-
-  const allFiles = await glob("*.md", { cwd: ancestryDir, absolute: true });
-  const ancestryFolderName = path.basename(ancestryDir).toLowerCase();
-  const ancestryFiles = allFiles.filter(
-    (f) => path.basename(f, ".md").toLowerCase() !== ancestryFolderName
-  );
-
-  if (ancestryFiles.length === 0) {
-    console.log("[ancestries] No ancestry files found — skipping.");
-    return summary;
-  }
-
   const items: Record<string, unknown>[] = [];
 
-  for (const filePath of ancestryFiles) {
-    const name = path.basename(filePath, ".md");
-    try {
-      const data: AncestryData = parseAncestryFile(filePath, name);
-      summary.parsed++;
+  for (const { dir: ancestryDir, source } of getSourceDirs("Ancestries")) {
+    const allFiles = await glob("*.md", { cwd: ancestryDir, absolute: true });
+    const ancestryFolderName = path.basename(ancestryDir).toLowerCase();
+    const ancestryFiles = allFiles.filter(
+      (f) => path.basename(f, ".md").toLowerCase() !== ancestryFolderName
+    );
 
-      const vr = validateAncestry(data);
-      summary.validationErrors += vr.errors.length;
-      summary.validationWarnings += vr.warnings.length;
-
-      if (opts.verbose || !vr.valid) {
-        printValidationResult(`Ancestry: ${name}`, vr);
-      }
-
-      items.push({
-        PK: `ANCESTRY#${data.ancestryId}`,
-        SK: "METADATA",
-        id: data.ancestryId,
-        type: "ancestry",
-        name: data.name,
-        flavorText: data.flavorText,
-        traitName: data.traitName,
-        traitDescription: data.traitDescription,
-        secondTraitName: data.secondTraitName,
-        secondTraitDescription: data.secondTraitDescription,
-        source: data.source,
-        ...(data.mechanicalBonuses ? { mechanicalBonuses: data.mechanicalBonuses } : {}),
-      });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(
-        `[ancestries] Error parsing ${path.basename(filePath)}: ${msg}`
-      );
-      summary.validationErrors++;
+    if (ancestryFiles.length === 0) {
+      console.log(`[ancestries] No files found in ${ancestryDir} — skipping.`);
+      continue;
     }
+
+    for (const filePath of ancestryFiles) {
+      const name = path.basename(filePath, ".md");
+      try {
+        const data: AncestryData = parseAncestryFile(filePath, name, source);
+        summary.parsed++;
+
+        const vr = validateAncestry(data);
+        summary.validationErrors += vr.errors.length;
+        summary.validationWarnings += vr.warnings.length;
+
+        if (opts.verbose || !vr.valid) {
+          printValidationResult(`Ancestry: ${name} [${source}]`, vr);
+        }
+
+        items.push({
+          PK: `ANCESTRY#${data.ancestryId}`,
+          SK: "METADATA",
+          id: data.ancestryId,
+          type: "ancestry",
+          name: data.name,
+          flavorText: data.flavorText,
+          traitName: data.traitName,
+          traitDescription: data.traitDescription,
+          secondTraitName: data.secondTraitName,
+          secondTraitDescription: data.secondTraitDescription,
+          source: data.source,
+          ...(data.mechanicalBonuses ? { mechanicalBonuses: data.mechanicalBonuses } : {}),
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(
+          `[ancestries] Error parsing ${path.basename(filePath)} [${source}]: ${msg}`
+        );
+        summary.validationErrors++;
+      }
+    }
+  }
+
+  if (items.length === 0) {
+    console.log("[ancestries] No ancestry files found in any source — skipping.");
+    return summary;
   }
 
   if (!opts.dryRun && items.length > 0) {
@@ -489,93 +509,94 @@ async function runDomains(opts: CliOptions): Promise<CategorySummary> {
     loaded: 0,
   };
 
-  const domainsDir = path.join(MARKDOWN_ROOT, "Domains");
-
-  // Each immediate sub-directory is a domain (Artistry, Charm, Violence, etc.)
-  const domainDirs = fs
-    .readdirSync(domainsDir, { withFileTypes: true })
-    .filter((e) => e.isDirectory())
-    .map((e) => ({ name: e.name, dir: path.join(domainsDir, e.name) }));
-
   const items: Record<string, unknown>[] = [];
 
-  for (const { name: domain, dir } of domainDirs) {
-    const allFiles = await glob("*.md", { cwd: dir, absolute: true });
+  for (const { dir: domainsDir, source } of getSourceDirs("Domains")) {
+    // Each immediate sub-directory is a domain (Artistry, Charm, Violence, etc.)
+    const domainDirs = fs
+      .readdirSync(domainsDir, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => ({ name: e.name, dir: path.join(domainsDir, e.name) }));
 
-    // Parse the domain index file (e.g. Artistry.md) for a description.
-    // The description is the text block that follows the Waypoint block.
-    const indexFile = allFiles.find(
-      (f) => path.basename(f, ".md").toLowerCase() === domain.toLowerCase()
-    );
-    let domainDescription: string | null = null;
-    if (indexFile) {
-      const raw = fs.readFileSync(indexFile, "utf-8");
-      const waypointEnd = raw.indexOf("%% End Waypoint %%");
-      if (waypointEnd >= 0) {
-        const afterWaypoint = raw.slice(waypointEnd + "%% End Waypoint %%".length).trim();
-        if (afterWaypoint.length > 0) {
-          domainDescription = afterWaypoint;
+    for (const { name: domain, dir } of domainDirs) {
+      const allFiles = await glob("*.md", { cwd: dir, absolute: true });
+
+      // Parse the domain index file (e.g. Artistry.md) for a description.
+      // The description is the text block that follows the Waypoint block.
+      const indexFile = allFiles.find(
+        (f) => path.basename(f, ".md").toLowerCase() === domain.toLowerCase()
+      );
+      let domainDescription: string | null = null;
+      if (indexFile) {
+        const raw = fs.readFileSync(indexFile, "utf-8");
+        const waypointEnd = raw.indexOf("%% End Waypoint %%");
+        if (waypointEnd >= 0) {
+          const afterWaypoint = raw.slice(waypointEnd + "%% End Waypoint %%".length).trim();
+          if (afterWaypoint.length > 0) {
+            domainDescription = afterWaypoint;
+          }
         }
       }
-    }
 
-    // Store the domain metadata record (description)
-    items.push({
-      PK: `DOMAIN#${domain}`,
-      SK: "METADATA",
-      domain,
-      description: domainDescription,
-    });
+      // Store the domain metadata record (description + source)
+      items.push({
+        PK: `DOMAIN#${domain}`,
+        SK: "METADATA",
+        domain,
+        description: domainDescription,
+        source,
+      });
 
-    // Only process card files — filenames must start with "(Level N)".
-    // Also skip any file whose stem matches the domain folder name (index files).
-    const domainFolderName = domain.toLowerCase();
-    const cardFiles = allFiles.filter(
-      (f) =>
-        /\(Level\s+\d+\)/i.test(path.basename(f)) &&
-        path.basename(f, ".md").toLowerCase() !== domainFolderName
-    );
+      // Only process card files — filenames must start with "(Level N)".
+      // Also skip any file whose stem matches the domain folder name (index files).
+      const domainFolderName = domain.toLowerCase();
+      const cardFiles = allFiles.filter(
+        (f) =>
+          /\(Level\s+\d+\)/i.test(path.basename(f)) &&
+          path.basename(f, ".md").toLowerCase() !== domainFolderName
+      );
 
-    for (const filePath of cardFiles) {
-      const cardFilename = path.basename(filePath);
-      try {
-        const data: DomainCard = parseDomainCardFile(filePath, domain);
-        summary.parsed++;
+      for (const filePath of cardFiles) {
+        const cardFilename = path.basename(filePath);
+        try {
+          const data: DomainCard = parseDomainCardFile(filePath, domain, source);
+          summary.parsed++;
 
-        const vr = validateDomainCard(data);
-        summary.validationErrors += vr.errors.length;
-        summary.validationWarnings += vr.warnings.length;
+          const vr = validateDomainCard(data);
+          summary.validationErrors += vr.errors.length;
+          summary.validationWarnings += vr.warnings.length;
 
-        if (opts.verbose || !vr.valid) {
-          printValidationResult(
-            `DomainCard: ${domain}/${cardFilename}`,
-            vr
+          if (opts.verbose || !vr.valid) {
+            printValidationResult(
+              `DomainCard: ${domain}/${cardFilename} [${source}]`,
+              vr
+            );
+          }
+
+          items.push({
+            PK: `DOMAIN#${domain}`,
+            SK: `CARD#${data.cardId}`,
+            cardId: data.cardId,
+            domain: data.domain,
+            level: data.level,
+            recallCost: data.recallCost,
+            name: data.name,
+            isCursed: data.isCursed,
+            isLinkedCurse: data.isLinkedCurse,
+            isGrimoire: data.isGrimoire,
+            description: data.description,
+            curseText: data.curseText,
+            linkedCardIds: data.linkedCardIds,
+            grimoire: data.grimoire,
+            source: data.source,
+          });
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(
+            `[domains] Error parsing ${domain}/${cardFilename} [${source}]: ${msg}`
           );
+          summary.validationErrors++;
         }
-
-        items.push({
-          PK: `DOMAIN#${domain}`,
-          SK: `CARD#${data.cardId}`,
-          cardId: data.cardId,
-          domain: data.domain,
-          level: data.level,
-          recallCost: data.recallCost,
-          name: data.name,
-          isCursed: data.isCursed,
-          isLinkedCurse: data.isLinkedCurse,
-          isGrimoire: data.isGrimoire,
-          description: data.description,
-          curseText: data.curseText,
-          linkedCardIds: data.linkedCardIds,
-          grimoire: data.grimoire,
-          source: data.source,
-        });
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error(
-          `[domains] Error parsing ${domain}/${cardFilename}: ${msg}`
-        );
-        summary.validationErrors++;
       }
     }
   }

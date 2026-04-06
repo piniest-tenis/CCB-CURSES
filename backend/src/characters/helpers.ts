@@ -554,7 +554,7 @@ export function applyAction(
       };
     }
 
-    // ── HP: mark 1 ───────────────────────────────────────────────────────────
+    // ── HP: mark N ───────────────────────────────────────────────────────────
     case "mark-hp": {
       const { marked, max } = character.trackers.hp;
       if (marked >= max) {
@@ -567,7 +567,7 @@ export function applyAction(
         ...character,
         trackers: {
           ...character.trackers,
-          hp: { max, marked: marked + 1 },
+          hp: { max, marked: Math.min(max, marked + n) },
         },
       };
     }
@@ -986,6 +986,28 @@ export function applyLevelUp(
       [{ field: "advancements", issue: "multiclass/subclass exclusion" }]);
   }
 
+  // subclass-upgrade: once per tier (SRD p.22)
+  const subclassUpgradeInTier = priorTierAdvancements.some((a) => a.type === "subclass-upgrade");
+  const subclassUpgradeInChoices = advancements.filter((a) => a.type === "subclass-upgrade").length;
+  if (subclassUpgradeInChoices > 1) {
+    throw new AppError("INVALID_LEVEL_UP", "subclass-upgrade can only be selected once per level-up", 422,
+      [{ field: "advancements", issue: "duplicate subclass-upgrade" }]);
+  }
+  if (subclassUpgradeInTier && subclassUpgradeInChoices > 0) {
+    throw new AppError("INVALID_LEVEL_UP", "subclass-upgrade already used this tier — can only be taken once per tier", 422,
+      [{ field: "advancements", issue: "subclass-upgrade once per tier" }]);
+  }
+
+  // subclass-upgrade: cannot go beyond Mastery (SRD p.22) — max 2 upgrades ever (Foundation→Spec, Spec→Mastery)
+  if (subclassUpgradeInChoices > 0) {
+    const allHistory = Object.values(history).flat();
+    const totalSubclassUpgrades = allHistory.filter((a) => a.type === "subclass-upgrade").length;
+    if (totalSubclassUpgrades >= 2) {
+      throw new AppError("INVALID_LEVEL_UP", "subclass-upgrade cannot be taken more than twice (already at Mastery)", 422,
+        [{ field: "advancements", issue: "subclass already at Mastery" }]);
+    }
+  }
+
   // multiclass: permanently once only (check ALL history, not just this tier)
   if (choosingMulticlass) {
     const allHistory = Object.values(history).flat();
@@ -1015,6 +1037,14 @@ export function applyLevelUp(
     // Clear marked traits at levels 5 and 8 (SRD p.22)
     if (targetLevel === 5 || targetLevel === 8) {
       updated = { ...updated, markedTraits: [] };
+    }
+    // New Experience at +2 (SRD p.22) — name provided by player; blank = skip
+    const expName = choices.tierAchievementExperienceName?.trim() ?? "";
+    if (expName.length > 0) {
+      updated = {
+        ...updated,
+        experiences: [...updated.experiences, { name: expName, bonus: 2 }],
+      };
     }
   }
 
@@ -1080,9 +1110,16 @@ export function applyLevelUp(
       }
 
       case "evasion": {
+        // Bump both evasion AND baseEvasion so the armor-swap recompute
+        // (evasion = baseEvasion + armorMod) doesn't silently discard advances.
+        const curBase = updated.derivedStats.baseEvasion ?? updated.derivedStats.evasion;
         updated = {
           ...updated,
-          derivedStats: { ...updated.derivedStats, evasion: updated.derivedStats.evasion + 1 },
+          derivedStats: {
+            ...updated.derivedStats,
+            evasion: updated.derivedStats.evasion + 1,
+            baseEvasion: curBase + 1,
+          },
         };
         break;
       }
@@ -1122,10 +1159,27 @@ export function applyLevelUp(
       }
 
       case "additional-domain-card": {
-        const cardId = adv.detail;
-        if (!cardId) {
-          throw new AppError("INVALID_LEVEL_UP", "additional-domain-card requires detail (cardId)", 422,
+        // Detail format: "cardId|level" (e.g. "shadowStep|3")
+        // Legacy: bare cardId (no pipe) is still accepted; level cap check skipped.
+        const detail = adv.detail;
+        if (!detail) {
+          throw new AppError("INVALID_LEVEL_UP", "additional-domain-card requires detail (cardId or cardId|level)", 422,
             [{ field: "advancements.detail", issue: "missing cardId" }]);
+        }
+        const pipIdx = detail.indexOf("|");
+        const cardId = pipIdx !== -1 ? detail.slice(0, pipIdx).trim() : detail.trim();
+        const cardLevelStr = pipIdx !== -1 ? detail.slice(pipIdx + 1).trim() : null;
+        if (!cardId) {
+          throw new AppError("INVALID_LEVEL_UP", "additional-domain-card: cardId is empty", 422,
+            [{ field: "advancements.detail", issue: "missing cardId" }]);
+        }
+        if (cardLevelStr !== null) {
+          const cardLevel = parseInt(cardLevelStr, 10);
+          if (!isNaN(cardLevel) && cardLevel > targetLevel) {
+            throw new AppError("INVALID_LEVEL_UP",
+              `additional-domain-card: card level (${cardLevel}) exceeds target level (${targetLevel})`, 422,
+              [{ field: "advancements.detail", issue: "card level exceeds target level" }]);
+          }
         }
         if (!updated.domainVault.includes(cardId)) {
           updated = { ...updated, domainVault: [...updated.domainVault, cardId] };
@@ -1141,29 +1195,31 @@ export function applyLevelUp(
       }
 
       case "multiclass": {
-        // Detail format: "classId|domainId|subclassId" (SRD p.43)
-        // Persist the three chosen identifiers on the character.
-        // className and subclassName are resolved by the handler after looking
-        // up the class record; here we store only the IDs.
+        // Detail format: "classId|domainId|subclassId|classFeatureIndex" (SRD p.43)
+        // Legacy 3-part format "classId|domainId|subclassId" is also accepted.
         const detail = adv.detail;
         if (!detail) {
           throw new AppError("INVALID_LEVEL_UP",
-            "multiclass requires detail in the format 'classId|domainId|subclassId'", 422,
+            "multiclass requires detail in the format 'classId|domainId|subclassId' or 'classId|domainId|subclassId|classFeatureIndex'", 422,
             [{ field: "advancements.detail", issue: "missing multiclass detail" }]);
         }
         const parts = detail.split("|");
-        if (parts.length !== 3 || parts.some((p) => !p.trim())) {
+        if ((parts.length !== 3 && parts.length !== 4) || parts.slice(0, 3).some((p) => !p.trim())) {
           throw new AppError("INVALID_LEVEL_UP",
-            "multiclass detail must be 'classId|domainId|subclassId'", 422,
+            "multiclass detail must be 'classId|domainId|subclassId' or 'classId|domainId|subclassId|classFeatureIndex'", 422,
             [{ field: "advancements.detail", issue: "invalid multiclass detail format" }]);
         }
-        const [mcClassId, mcDomainId, mcSubclassId] = parts as [string, string, string];
+        const [mcClassId, mcDomainId, mcSubclassId, mcFeatureIndexStr] = parts as [string, string, string, string | undefined];
+        const mcFeatureIndex = mcFeatureIndexStr !== undefined && mcFeatureIndexStr.trim() !== ""
+          ? parseInt(mcFeatureIndexStr.trim(), 10)
+          : null;
         updated = {
           ...updated,
-          multiclassClassId:   mcClassId.trim(),
-          multiclassClassName: null, // resolved by handler after class lookup
-          multiclassSubclassId: mcSubclassId.trim(),
-          multiclassDomainId:  mcDomainId.trim(),
+          multiclassClassId:          mcClassId.trim(),
+          multiclassClassName:         null, // resolved by handler after class lookup
+          multiclassSubclassId:        mcSubclassId.trim(),
+          multiclassDomainId:          mcDomainId.trim(),
+          multiclassClassFeatureIndex: isNaN(mcFeatureIndex as number) ? null : mcFeatureIndex,
         };
         break;
       }
@@ -1186,6 +1242,16 @@ export function applyLevelUp(
       if (!updated.domainVault.includes(exchangeCardId)) {
         throw new AppError("INVALID_LEVEL_UP", `exchangeCardId '${exchangeCardId}' is not in vault`, 422,
           [{ field: "exchangeCardId", issue: "card not in vault" }]);
+      }
+      // SRD p.22: new card level must not exceed the exchanged card's level
+      if (
+        choices.newDomainCardLevel !== undefined &&
+        choices.exchangeCardLevel !== undefined &&
+        choices.newDomainCardLevel > choices.exchangeCardLevel
+      ) {
+        throw new AppError("INVALID_LEVEL_UP",
+          `Exchange: new card level (${choices.newDomainCardLevel}) must not exceed exchanged card level (${choices.exchangeCardLevel})`, 422,
+          [{ field: "newDomainCardId", issue: "new card level exceeds exchanged card level" }]);
       }
       updated = {
         ...updated,

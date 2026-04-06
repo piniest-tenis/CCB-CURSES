@@ -90,7 +90,6 @@ export interface CharacterStore {
   isDirty: boolean;
   /** True while a PATCH request is in-flight. */
   isSaving: boolean;
-
   // ── Lifecycle ──────────────────────────────────────────────────────────────
   /** Load a character into the store and mark it clean. */
   setCharacter: (char: Character) => void;
@@ -334,6 +333,8 @@ export const useCharacterStore = create<CharacterStore>()((set, get) => ({
       );
       // Sync store with server's authoritative response
       set({ activeCharacter: updated, isDirty: false });
+    } catch (err) {
+      throw err; // Re-throw errors
     } finally {
       set({ isSaving: false });
     }

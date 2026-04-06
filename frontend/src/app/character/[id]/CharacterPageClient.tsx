@@ -11,7 +11,11 @@ import { useAuthStore } from "@/store/authStore";
 import { CharacterSheet } from "@/components/character/CharacterSheet";
 import { LoadingInterstitial } from "@/components/LoadingInterstitial";
 import { useCharacter } from "@/hooks/useCharacter";
-import React, { useEffect } from "react";
+import { useDiceStore } from "@/store/diceStore";
+import type { DieRole, DieSpec } from "@/types/dice";
+import { useGameWebSocket, type ForceCritEvent } from "@/hooks/useGameWebSocket";
+import type { RollRequestEvent, RollRequestPayload } from "@/types/campaign";
+import React, { useEffect, useRef } from "react";
 import Link from "next/link";
 
 export default function CharacterPage() {
@@ -33,9 +37,74 @@ export default function CharacterPage() {
   }, [isReady, isAuthenticated, router]);
 
   // Character data loading state — used to drive the interstitial overlay.
-  const { isLoading: charLoading } = useCharacter(
+  const { isLoading: charLoading, data: character } = useCharacter(
     isAuthenticated ? characterId : undefined
   );
+
+  const campaignId = character?.campaignId ?? "";
+
+  // Scope dice broadcasts to this character's campaign so the campaign-specific
+  // OBS overlay (obs/dice?campaign=<id>) receives rolls from this sheet.
+  const setCampaignId = useDiceStore((s) => s.setCampaignId);
+  useEffect(() => {
+    if (character?.campaignId) {
+      setCampaignId(character.campaignId);
+    }
+    return () => { setCampaignId(null); };
+  }, [character?.campaignId, setCampaignId]);
+
+  // ── WebSocket — send dice rolls to all campaign connections (incl. OBS) ──────
+  // Only connects when campaignId and characterId are available (player must be
+  // assigned to a campaign). sendDiceRoll fans out via the dice_roll WS handler.
+  // onForceCrit: received when the GM arms/disarms a force-crit for this character.
+  // onRollRequest: received when the GM sends a roll prompt to this character sheet.
+  const setForceCrit = useDiceStore((s) => s.setForceCrit);
+  const stageRoll    = useDiceStore((s) => s.stageRoll);
+
+  const { sendDiceRoll } = useGameWebSocket(
+    campaignId,
+    characterId,
+    {
+      onForceCrit: React.useCallback(
+        (evt: ForceCritEvent) => {
+          // Only apply if this event targets our character
+          if (evt.targetCharacterId === characterId) {
+            setForceCrit(evt.active);
+          }
+        },
+        [characterId, setForceCrit]
+      ),
+      onRollRequest: React.useCallback(
+        (evt: RollRequestEvent) => {
+          if (evt.targetCharacterId !== characterId) return;
+          const req = evt.rollRequest;
+          stageRoll({
+            label:     req.label,
+            type:      req.type,
+            dice:      req.dice.map((d: RollRequestPayload["dice"][number]) => ({
+              size:  d.size,
+              role:  d.role as DieRole,
+              label: d.label,
+            } satisfies DieSpec)),
+            modifier:   req.modifier,
+            difficulty: req.difficulty,
+            // characterName injected from live character data so it shows correctly in the OBS log
+            characterName: character?.name ?? req.characterName,
+          });
+        },
+        [characterId, stageRoll, character?.name]
+      ),
+    }
+  );
+
+  const diceLog = useDiceStore((s) => s.log);
+  const lastRollId = diceLog[0]?.id;
+  const prevBroadcastIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!lastRollId || lastRollId === prevBroadcastIdRef.current) return;
+    prevBroadcastIdRef.current = lastRollId;
+    sendDiceRoll(diceLog[0]);
+  }, [lastRollId, diceLog, sendDiceRoll]);
 
   // Show the interstitial while auth is still resolving OR character is loading.
   const showInterstitial = !isReady || isLoading || charLoading;
@@ -75,7 +144,7 @@ export default function CharacterPage() {
       <LoadingInterstitial isVisible={charLoading} />
 
       {/* Nav bar */}
-      <header className="relative z-10 border-b border-burgundy-900/50 bg-slate-900/80 backdrop-blur-sm sticky top-0">
+      <header className="relative z-30 border-b border-burgundy-900/50 bg-slate-900/80 backdrop-blur-sm sticky top-0">
         <div className="mx-auto flex max-w-4xl items-center gap-4 px-4 py-3">
           <Link
             href="/dashboard"

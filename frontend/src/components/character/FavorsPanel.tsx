@@ -189,7 +189,7 @@ export function FavorsPanel() {
       data-field-key="favors"
     >
       {/* Header */}
-      <h2 className="font-serif text-sm font-semibold uppercase tracking-widest text-[#577399]">
+      <h2 className="font-serif-sc text-sm font-semibold tracking-widest text-[#577399]">
         Favors
       </h2>
 

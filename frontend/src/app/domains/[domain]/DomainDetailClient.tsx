@@ -14,6 +14,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useDomain } from "@/hooks/useGameData";
 import type { DomainCard } from "@shared/types";
 import { MarkdownContent } from "@/components/MarkdownContent";
+import { SourceBadge } from "@/components/SourceBadge";
+import { SourceFilter, type SourceFilterValue } from "@/components/SourceFilter";
 
 // ---------------------------------------------------------------------------
 // Domain colours
@@ -81,6 +83,7 @@ function CardTile({ card }: { card: DomainCard }) {
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-1.5 mb-1">
             <span className="font-semibold text-sm text-parchment-200">{card.name}</span>
+            <SourceBadge source={card.source} size="sm" />
             {badges}
           </div>
         </div>
@@ -167,6 +170,7 @@ function DomainDetailContent() {
 
   const { data, isLoading, isError } = useDomain(domainName, levelFilter);
   const [search, setSearch] = useState("");
+  const [sourceFilter, setSourceFilter] = useState<SourceFilterValue>("all");
 
   const cards = data?.cards ?? [];
 
@@ -179,13 +183,14 @@ function DomainDetailContent() {
 
   const levels = Object.keys(byLevel).map(Number).sort((a, b) => a - b);
 
-  // Apply search filter
+  // Apply search + source filter
   const filteredByLevel = levels.reduce<Record<number, DomainCard[]>>((acc, level) => {
     const filtered = byLevel[level].filter(
       (c) =>
-        search === "" ||
+        (search === "" ||
         c.name.toLowerCase().includes(search.toLowerCase()) ||
-        c.description.toLowerCase().includes(search.toLowerCase())
+        c.description.toLowerCase().includes(search.toLowerCase())) &&
+        (sourceFilter === "all" || c.source === sourceFilter)
     );
     if (filtered.length > 0) acc[level] = filtered;
     return acc;
@@ -246,7 +251,7 @@ function DomainDetailContent() {
 
         {!isLoading && !isError && cards.length > 0 && (
           <>
-            {/* Search + level filter */}
+            {/* Search + level filter + source filter */}
             <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
               <label htmlFor="card-search" className="sr-only">Search cards</label>
               <input
@@ -261,6 +266,7 @@ function DomainDetailContent() {
                   focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500
                 "
               />
+              <SourceFilter value={sourceFilter} onChange={setSourceFilter} />
               <div role="group" aria-label="Filter by level" className="flex gap-2 flex-wrap">
                 <button
                   type="button"

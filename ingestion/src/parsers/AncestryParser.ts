@@ -12,7 +12,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import type { AncestryData } from "@shared/types";
+import type { AncestryData, CharacterSource } from "@shared/types";
 import { toSlug } from "../transformers/SlugTransformer";
 import { extractMechanicalBonuses } from "../transformers/BonusExtractor";
 
@@ -21,10 +21,12 @@ import { extractMechanicalBonuses } from "../transformers/BonusExtractor";
  *
  * @param filePath  Absolute path to the markdown file.
  * @param name      Display name override (defaults to filename stem without `.md`).
+ * @param source    Content source — "srd" or "homebrew" (default: "homebrew")
  */
 export function parseAncestryFile(
   filePath: string,
-  name?: string
+  name?: string,
+  source: CharacterSource = "homebrew"
 ): AncestryData {
   const raw = fs.readFileSync(filePath, "utf-8");
   const lines = raw.split(/\r?\n/).map((l) => l.trim());
@@ -45,7 +47,7 @@ export function parseAncestryFile(
       traitDescription: "",
       secondTraitName: "",
       secondTraitDescription: "",
-      source: "homebrew",
+      source,
     };
   }
 
@@ -117,7 +119,7 @@ export function parseAncestryFile(
     traitDescription,
     secondTraitName,
     secondTraitDescription,
-    source: "homebrew",
+    source,
     ...(mechanicalBonuses ? { mechanicalBonuses } : {}),
   };
 }

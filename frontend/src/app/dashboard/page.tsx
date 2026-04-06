@@ -23,24 +23,45 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuthStore } from "@/store/authStore";
-import { useCharacters, useCreateCharacter, useDeleteCharacter } from "@/hooks/useCharacter";
+import {
+  useCharacters,
+  useCreateCharacter,
+  useDeleteCharacter,
+} from "@/hooks/useCharacter";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import type { CharacterSummary, CampaignSummary } from "@shared/types";
 
 import { CharacterCard } from "@/components/dashboard/CharacterCard";
-import { CharacterSearchSortBar, type SearchSortState, type SortKey } from "@/components/dashboard/CharacterSearchSortBar";
+import {
+  CharacterSearchSortBar,
+  type SearchSortState,
+  type SortKey,
+} from "@/components/dashboard/CharacterSearchSortBar";
 import { ProfileCard } from "@/components/dashboard/ProfileCard";
 import { CampaignRailWidget } from "@/components/dashboard/CampaignRailWidget";
 import { SessionPanel } from "@/components/dashboard/SessionPanel";
 import { LorePanel } from "@/components/dashboard/LorePanel";
+import { Footer } from "@/components/Footer";
+import { PatreonPaidGate } from "@/components/PatreonGateOverlay";
+import { usePatreonGate, usePatreonOAuth } from "@/hooks/usePatreonGate";
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+/** Must match backend FREE_CHARACTER_LIMIT in characters/handler.ts */
+const FREE_CHARACTER_LIMIT = 5;
 
 // ─── Sort helper ──────────────────────────────────────────────────────────────
 
-function sortCharacters(chars: CharacterSummary[], key: SortKey): CharacterSummary[] {
+function sortCharacters(
+  chars: CharacterSummary[],
+  key: SortKey,
+): CharacterSummary[] {
   return [...chars].sort((a, b) => {
     switch (key) {
       case "updatedAt":
-        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+        return (
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+        );
       case "name":
         return a.name.localeCompare(b.name);
       case "className":
@@ -53,10 +74,10 @@ function sortCharacters(chars: CharacterSummary[], key: SortKey): CharacterSumma
 
 interface CreateModalProps {
   onClose: () => void;
+  defaultName: string;
 }
 
-function CreateCharacterModal({ onClose }: CreateModalProps) {
-  const [name, setName] = useState("");
+function CreateCharacterModal({ onClose, defaultName }: CreateModalProps) {
   const createMutation = useCreateCharacter();
   const router = useRouter();
 
@@ -68,33 +89,35 @@ function CreateCharacterModal({ onClose }: CreateModalProps) {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  const canCreate = Boolean(name.trim());
-
   const handleCreate = async () => {
-    if (!canCreate || createMutation.isPending) return;
-    const char = await createMutation.mutateAsync({ name: name.trim() });
+    if (createMutation.isPending) return;
+    const char = await createMutation.mutateAsync({ name: defaultName });
     router.push(`/character/${char.characterId}/build`);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") { e.preventDefault(); handleCreate(); }
   };
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4"
       role="presentation"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="create-modal-title"
         className="w-full max-w-md rounded-2xl border border-slate-700/60 bg-[#0a100d] shadow-2xl flex flex-col"
-        style={{ boxShadow: "0 0 60px rgba(87,115,153,0.15), 0 24px 48px rgba(0,0,0,0.6)" }}
+        style={{
+          boxShadow:
+            "0 0 60px rgba(87,115,153,0.15), 0 24px 48px rgba(0,0,0,0.6)",
+        }}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700/40">
-          <h2 id="create-modal-title" className="font-serif text-xl font-semibold text-[#f7f7ff]">
+          <h2
+            id="create-modal-title"
+            className="font-serif text-xl font-semibold text-[#f7f7ff]"
+          >
             New Character
           </h2>
           <button
@@ -109,36 +132,17 @@ function CreateCharacterModal({ onClose }: CreateModalProps) {
 
         <div className="px-6 py-6 space-y-4">
           <p className="text-base text-[#b9baa3]/60 leading-relaxed">
-            Name your character to begin. You&apos;ll choose your class, heritage, and equipment next.
+            Ready to create a new character? You&apos;ll choose your class,
+            heritage, equipment, and name in the builder.
           </p>
-          <div>
-            <label
-              htmlFor="char-name"
-              className="block text-xs font-semibold uppercase tracking-widest text-[#b9baa3]/50 mb-1.5"
-            >
-              Character Name <span className="text-[#fe5f55]">*</span>
-            </label>
-            <input
-              id="char-name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Enter a name..."
-              maxLength={60}
-              autoFocus
-              className="
-                w-full rounded-lg border border-slate-700/60 bg-slate-900
-                px-3 py-2.5 font-serif text-base text-[#f7f7ff]
-                placeholder-[#b9baa3]/30
-                focus:outline-none focus:border-[#577399] transition-colors
-              "
-            />
-          </div>
           {createMutation.isError && (
-            <div role="alert" className="rounded-lg border border-[#fe5f55]/40 bg-[#fe5f55]/10 px-4 py-3">
+            <div
+              role="alert"
+              className="rounded-lg border border-[#fe5f55]/40 bg-[#fe5f55]/10 px-4 py-3"
+            >
               <p className="text-sm text-[#fe5f55]">
-                {createMutation.error?.message ?? "Failed to create character. Please try again."}
+                {createMutation.error?.message ??
+                  "Failed to create character. Please try again."}
               </p>
             </div>
           )}
@@ -155,7 +159,7 @@ function CreateCharacterModal({ onClose }: CreateModalProps) {
           <button
             type="button"
             onClick={handleCreate}
-            disabled={!canCreate || createMutation.isPending}
+            disabled={createMutation.isPending}
             className="rounded-lg px-6 py-2.5 font-semibold text-base bg-[#577399] text-[#f7f7ff] hover:bg-[#577399]/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
           >
             {createMutation.isPending ? (
@@ -177,10 +181,22 @@ function CreateCharacterModal({ onClose }: CreateModalProps) {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading: authLoading, isReady, user, signOut } = useAuthStore();
-  const { data: characterData, isLoading: charsLoading, isError: charsError } = useCharacters();
+  const {
+    isAuthenticated,
+    isLoading: authLoading,
+    isReady,
+    user,
+    signOut,
+  } = useAuthStore();
+  const {
+    data: characterData,
+    isLoading: charsLoading,
+    isError: charsError,
+  } = useCharacters();
   const { data: campaignList = [] } = useCampaigns();
   const deleteMutation = useDeleteCharacter();
+  const { hasUnlimitedCharacters, needsPatreon } = usePatreonGate();
+  const { startOAuth, isLinking } = usePatreonOAuth();
   const [showCreate, setShowCreate] = useState(false);
 
   const [searchSort, setSearchSort] = useState<SearchSortState>({
@@ -204,7 +220,7 @@ export default function DashboardPage() {
           (c) =>
             c.name.toLowerCase().includes(q) ||
             c.className.toLowerCase().includes(q) ||
-            (c.subclassName ?? "").toLowerCase().includes(q)
+            (c.subclassName ?? "").toLowerCase().includes(q),
         )
       : allChars;
     return sortCharacters(filtered, searchSort.sortKey);
@@ -213,9 +229,12 @@ export default function DashboardPage() {
   // Most recently updated campaign for session panel
   const topCampaign: CampaignSummary | null = useMemo(() => {
     if (!campaignList.length) return null;
-    return [...campaignList].sort(
-      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-    )[0] ?? null;
+    return (
+      [...campaignList].sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      )[0] ?? null
+    );
   }, [campaignList]);
 
   if (!isReady || authLoading || !isAuthenticated) {
@@ -228,9 +247,15 @@ export default function DashboardPage() {
 
   const characterCount = allChars.length;
   const isLoading = charsLoading || authLoading;
+  const atCharacterLimit =
+    !hasUnlimitedCharacters && characterCount >= FREE_CHARACTER_LIMIT;
+
+  const handlePatreonLink = () => {
+    startOAuth();
+  };
 
   return (
-    <div className="min-h-screen bg-[#0a100d]">
+    <div className="flex min-h-screen flex-col bg-[#0a100d] relative">
       {/* ── Top bar ─────────────────────────────────────────────────────── */}
       <header
         className="border-b border-slate-800/60 sticky top-0 z-10 backdrop-blur-sm"
@@ -271,7 +296,9 @@ export default function DashboardPage() {
               </span>
               <button
                 type="button"
-                onClick={() => signOut().then(() => router.replace("/auth/login"))}
+                onClick={() =>
+                  signOut().then(() => router.replace("/auth/login"))
+                }
                 className="rounded px-2.5 py-1 text-xs font-medium text-[#b9baa3]/50 border border-slate-700/60 hover:text-[#f7f7ff] hover:border-slate-600 transition-colors"
               >
                 Sign out
@@ -282,12 +309,16 @@ export default function DashboardPage() {
       </header>
 
       {/* ── Page body ───────────────────────────────────────────────────── */}
-      <div className="mx-auto max-w-[1200px] px-4 py-8">
-        <div className="flex gap-8 items-start">
-
+      <div
+        className="relative z-[1] flex-1 bg-[#0a100d] py-8"
+        style={{
+          background:
+            "radial-gradient(100vw 80vw at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.35) 75%, rgba(0, 0, 0, .5) 100%), #0a100d;",
+        }}
+      >
+        <div className="mx-auto max-w-[1200px] px-4 flex gap-8 items-start">
           {/* ── Main column ─────────────────────────────────────────────── */}
           <main className="flex-1 min-w-0 space-y-10">
-
             {/* Characters section */}
             <section aria-labelledby="chars-heading">
               {/* Section header */}
@@ -301,14 +332,40 @@ export default function DashboardPage() {
                   </h1>
                   {!isLoading && (
                     <p className="mt-1 text-sm text-[#b9baa3]/40">
-                      {characterCount} character{characterCount !== 1 ? "s" : ""}
+                      {hasUnlimitedCharacters
+                        ? `${characterCount} character${characterCount !== 1 ? "s" : ""}`
+                        : `${characterCount} / ${FREE_CHARACTER_LIMIT} characters`}
                     </p>
                   )}
                 </div>
                 {/* Desktop CTA */}
-                <button
-                  onClick={() => setShowCreate(true)}
-                  className="
+                {atCharacterLimit ? (
+                  <div className="hidden sm:flex flex-col items-end gap-1.5 shrink-0">
+                    <span className="text-xs text-[#b9baa3]/40">
+                      Character limit reached
+                    </span>
+                    <button
+                      onClick={handlePatreonLink}
+                      disabled={isLinking}
+                      className="
+                        inline-flex items-center gap-1.5
+                        rounded-xl border border-[#f96854]/50 bg-[#f96854]/10
+                        px-4 py-2 text-sm font-semibold text-[#f96854]
+                        hover:bg-[#f96854]/20 hover:border-[#f96854]
+                        transition-all duration-150
+                        focus:outline-none focus:ring-2 focus:ring-[#f96854] focus:ring-offset-2 focus:ring-offset-slate-900
+                        disabled:opacity-60 disabled:cursor-wait
+                      "
+                    >
+                      {isLinking
+                        ? "Connecting..."
+                        : "Join FREE Patreon for Unlimited"}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowCreate(true)}
+                    className="
                     hidden sm:flex items-center gap-2
                     rounded-xl border border-[#577399]/60 bg-[#577399]/10
                     px-5 py-2.5 font-semibold text-base text-[#577399]
@@ -316,10 +373,11 @@ export default function DashboardPage() {
                     transition-all duration-150 shadow-sm shrink-0
                     focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2 focus:ring-offset-slate-900
                   "
-                >
-                  <span aria-hidden="true">+</span>
-                  New Character
-                </button>
+                  >
+                    <span aria-hidden="true">+</span>
+                    New Character
+                  </button>
+                )}
               </div>
 
               {/* Search + sort bar */}
@@ -330,7 +388,11 @@ export default function DashboardPage() {
                     onChange={setSearchSort}
                     totalCount={characterCount}
                     filteredCount={filteredAndSorted.length}
-                    onNewCharacter={() => setShowCreate(true)}
+                    onNewCharacter={
+                      atCharacterLimit
+                        ? handlePatreonLink
+                        : () => setShowCreate(true)
+                    }
                   />
                 </div>
               )}
@@ -345,7 +407,9 @@ export default function DashboardPage() {
               {/* Error */}
               {charsError && !isLoading && (
                 <div className="rounded-xl border border-[#fe5f55]/30 bg-slate-900/80 p-8 text-center">
-                  <p className="text-[#fe5f55]/70">Failed to load characters.</p>
+                  <p className="text-[#fe5f55]/70">
+                    Failed to load characters.
+                  </p>
                 </div>
               )}
 
@@ -355,11 +419,19 @@ export default function DashboardPage() {
                   className="rounded-2xl border border-dashed border-slate-700/60 p-16 text-center space-y-5"
                   style={{ background: "rgba(87,115,153,0.03)" }}
                 >
-                  <div className="text-5xl opacity-15 select-none" aria-hidden="true">⚔️</div>
+                  <div
+                    className="text-5xl opacity-15 select-none"
+                    aria-hidden="true"
+                  >
+                    ⚔️
+                  </div>
                   <div className="space-y-2">
-                    <p className="font-serif text-xl text-[#f7f7ff]/70">No characters yet</p>
+                    <p className="font-serif text-xl text-[#f7f7ff]/70">
+                      No characters yet
+                    </p>
                     <p className="text-base text-[#b9baa3]/40 max-w-xs mx-auto leading-relaxed">
-                      Create your first Daggerheart character and begin your adventure.
+                      Create your first Daggerheart character and begin your
+                      adventure.
                     </p>
                   </div>
                   <button
@@ -373,25 +445,31 @@ export default function DashboardPage() {
                       focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2 focus:ring-offset-slate-900
                     "
                   >
-                    <span aria-hidden="true">+</span> Create Your First Character
+                    <span aria-hidden="true">+</span> Create Your First
+                    Character
                   </button>
                 </div>
               )}
 
               {/* Empty filter state */}
-              {!isLoading && !charsError && characterCount > 0 && filteredAndSorted.length === 0 && (
-                <div className="rounded-xl border border-slate-700/40 bg-slate-900/40 p-8 text-center space-y-3">
-                  <p className="text-[#b9baa3]/50">
-                    No characters matching &ldquo;{searchSort.query}&rdquo;
-                  </p>
-                  <button
-                    onClick={() => setSearchSort((s) => ({ ...s, query: "" }))}
-                    className="text-xs text-[#577399] hover:underline"
-                  >
-                    Clear search
-                  </button>
-                </div>
-              )}
+              {!isLoading &&
+                !charsError &&
+                characterCount > 0 &&
+                filteredAndSorted.length === 0 && (
+                  <div className="rounded-xl border border-slate-700/40 bg-slate-900/40 p-8 text-center space-y-3">
+                    <p className="text-[#b9baa3]/50">
+                      No characters matching &ldquo;{searchSort.query}&rdquo;
+                    </p>
+                    <button
+                      onClick={() =>
+                        setSearchSort((s) => ({ ...s, query: "" }))
+                      }
+                      className="text-xs text-[#577399] hover:underline"
+                    >
+                      Clear search
+                    </button>
+                  </div>
+                )}
 
               {/* Character grid */}
               {!isLoading && !charsError && filteredAndSorted.length > 0 && (
@@ -400,8 +478,12 @@ export default function DashboardPage() {
                     <CharacterCard
                       key={char.characterId}
                       character={char}
-                      onOpen={() => router.push(`/character/${char.characterId}`)}
-                      onEdit={() => router.push(`/character/${char.characterId}/build`)}
+                      onOpen={() =>
+                        router.push(`/character/${char.characterId}`)
+                      }
+                      onEdit={() =>
+                        router.push(`/character/${char.characterId}/build`)
+                      }
                       onDelete={() => deleteMutation.mutate(char.characterId)}
                       isDeleting={
                         deleteMutation.isPending &&
@@ -418,16 +500,21 @@ export default function DashboardPage() {
               {user && (
                 <ProfileCard
                   user={user}
-                  onSignOut={() => signOut().then(() => router.replace("/auth/login"))}
+                  onSignOut={() =>
+                    signOut().then(() => router.replace("/auth/login"))
+                  }
                 />
               )}
-              {campaignList.length > 0 && (
-                <CampaignRailWidget campaigns={campaignList} />
-              )}
-              <SessionPanel campaign={topCampaign} />
+              <PatreonPaidGate>
+                <div className="space-y-4">
+                  {campaignList.length > 0 && (
+                    <CampaignRailWidget campaigns={campaignList} />
+                  )}
+                  <SessionPanel campaign={topCampaign} />
+                </div>
+              </PatreonPaidGate>
               <LorePanel />
             </div>
-
           </main>
 
           {/* ── Right rail (xl+) ─────────────────────────────────────────── */}
@@ -438,50 +525,34 @@ export default function DashboardPage() {
             {user && (
               <ProfileCard
                 user={user}
-                onSignOut={() => signOut().then(() => router.replace("/auth/login"))}
+                onSignOut={() =>
+                  signOut().then(() => router.replace("/auth/login"))
+                }
               />
             )}
-            {campaignList.length > 0 && (
-              <CampaignRailWidget campaigns={campaignList} />
-            )}
-            <SessionPanel campaign={topCampaign} />
+            <PatreonPaidGate>
+              <div className="space-y-4">
+                {campaignList.length > 0 && (
+                  <CampaignRailWidget campaigns={campaignList} />
+                )}
+                <SessionPanel campaign={topCampaign} />
+              </div>
+            </PatreonPaidGate>
             <LorePanel />
           </aside>
-
         </div>
       </div>
 
       {/* ── Create character modal ───────────────────────────────────────── */}
       {showCreate && (
-        <CreateCharacterModal onClose={() => setShowCreate(false)} />
+        <CreateCharacterModal
+          onClose={() => setShowCreate(false)}
+          defaultName={`${user?.displayName ?? "New"}'s Character ${characterCount + 1}`}
+        />
       )}
 
       {/* ── Footer ──────────────────────────────────────────────────────── */}
-      <footer className="mt-16 border-t border-slate-800/40 py-6">
-        <div className="mx-auto flex max-w-[1200px] items-center justify-between px-4">
-          <button
-            type="button"
-            onClick={() => alert("Then ask Josh in Discord, you nerd. You thought this would actually do something?")}
-            className="text-xs text-[#b9baa3]/30 hover:text-[#b9baa3]/60 transition-colors"
-          >
-            Need Help?
-          </button>
-          <a
-            href="https://maninjumpsuit.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="opacity-30 hover:opacity-60 transition-opacity"
-          >
-            <Image
-              src="/images/man-in-jumpsuit-logo-white-transparent.png"
-              alt="Man in Jumpsuit Productions"
-              width={80}
-              height={24}
-              className="object-contain"
-            />
-          </a>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

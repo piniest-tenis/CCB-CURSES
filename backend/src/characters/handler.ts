@@ -8,6 +8,7 @@ import type {
 } from "aws-lambda";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
+import { QueryCommand } from "@aws-sdk/lib-dynamodb";
 import {
   S3Client,
   PutObjectCommand,
@@ -42,6 +43,7 @@ import {
   CLASSES_TABLE,
   GAME_DATA_TABLE,
   USERS_TABLE,
+  docClient,
   getItem,
   putItem,
   deleteItem,
@@ -64,7 +66,114 @@ import type {
   LevelUpChoices,
   AdvancementChoice,
   MechanicalBonus,
+  UserPreferences,
+  PatreonLink,
 } from "@shared/types";
+import { canSave, isGrandfathered } from "../users/patreon";
+
+// ─── Patreon Gate ─────────────────────────────────────────────────────────────
+
+/**
+ * DynamoDB user record shape (minimal — only fields needed for the gate check).
+ */
+interface UserRecordForGate {
+  PK: string;
+  SK: string;
+  userId: string;
+  patreon?: PatreonLink | null;
+  preferences: UserPreferences;
+  createdAt: string;
+}
+
+/**
+ * Verify that the user is authorised to persist character data.
+ * Throws 403 if the user is not grandfathered and has no valid Patreon link.
+ */
+async function requireSavePermission(userId: string): Promise<void> {
+  const user = await getItem<UserRecordForGate>({
+    TableName: USERS_TABLE,
+    Key: keys.user(userId),
+  });
+
+  // If no user record exists, they haven't even signed in properly yet.
+  if (!user) throw AppError.unauthorized("User profile not found");
+
+  if (!canSave(user.patreon ?? null, user.createdAt)) {
+    throw new AppError(
+      "PATREON_REQUIRED",
+      "Saving characters requires a linked Patreon account. " +
+      "Join our FREE Patreon at https://patreon.com/CursesAP to unlock saving.",
+      403
+    );
+  }
+}
+
+// ─── Character Creation Limit ─────────────────────────────────────────────────
+// Non-Patreon, non-grandfathered users may create up to 5 level-1 characters.
+// Patreon members (any tier) and grandfathered users have no limit.
+
+const FREE_CHARACTER_LIMIT = 5;
+
+/**
+ * Count the total number of characters belonging to a user.
+ * Uses DynamoDB Select: "COUNT" to avoid fetching full item payloads.
+ */
+async function countUserCharacters(userId: string): Promise<number> {
+  let total = 0;
+  let lastKey: Record<string, unknown> | undefined;
+
+  do {
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: CHARACTERS_TABLE,
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :skPrefix)",
+        ExpressionAttributeValues: {
+          ":pk": `USER#${userId}`,
+          ":skPrefix": "CHARACTER#",
+        },
+        Select: "COUNT",
+        ExclusiveStartKey: lastKey,
+      })
+    );
+    total += result.Count ?? 0;
+    lastKey = result.LastEvaluatedKey as Record<string, unknown> | undefined;
+  } while (lastKey !== undefined);
+
+  return total;
+}
+
+/**
+ * Verify that the user is allowed to create a new character.
+ * Grandfathered and Patreon-linked users have no limit.
+ * All other users are capped at FREE_CHARACTER_LIMIT characters.
+ * Returns the current character count for informational purposes.
+ */
+async function requireCreatePermission(userId: string): Promise<{ characterCount: number }> {
+  const user = await getItem<UserRecordForGate>({
+    TableName: USERS_TABLE,
+    Key: keys.user(userId),
+  });
+
+  if (!user) throw AppError.unauthorized("User profile not found");
+
+  // Grandfathered or Patreon-linked users can create unlimited characters.
+  if (isGrandfathered(user.createdAt) || canSave(user.patreon ?? null, user.createdAt)) {
+    return { characterCount: -1 }; // unlimited, skip count
+  }
+
+  // Non-Patreon user: enforce the character limit.
+  const count = await countUserCharacters(userId);
+  if (count >= FREE_CHARACTER_LIMIT) {
+    throw new AppError(
+      "CHARACTER_LIMIT_REACHED",
+      `You've reached the free limit of ${FREE_CHARACTER_LIMIT} characters. ` +
+      "Join our FREE Patreon at https://patreon.com/CursesAP to create unlimited characters.",
+      403
+    );
+  }
+
+  return { characterCount: count };
+}
 
 // ─── S3 Client (portrait uploads) ────────────────────────────────────────────
 
@@ -327,6 +436,12 @@ const PutCharacterSchema = z.object({
   // ── Level-up history ────────────────────────────────────────────────────
   levelUpHistory: z.record(z.string(), z.array(AdvancementChoiceSchema)).optional().default({}),
   markedTraits: z.array(z.string()).optional().default([]),
+  // ── Dice color preferences ──────────────────────────────────────────────
+  diceColors: z.object({
+    hope: z.object({ diceColor: z.string().regex(/^#[0-9a-fA-F]{6}$/), labelColor: z.string().regex(/^#[0-9a-fA-F]{6}$/) }).optional(),
+    fear: z.object({ diceColor: z.string().regex(/^#[0-9a-fA-F]{6}$/), labelColor: z.string().regex(/^#[0-9a-fA-F]{6}$/) }).optional(),
+    general: z.object({ diceColor: z.string().regex(/^#[0-9a-fA-F]{6}$/), labelColor: z.string().regex(/^#[0-9a-fA-F]{6}$/) }).optional(),
+  }).optional(),
 });
 
 const PatchCharacterSchema = PutCharacterSchema.partial();
@@ -685,10 +800,11 @@ function toCharacterResponse(
     levelUpHistory: record.levelUpHistory ?? {},
     markedTraits: record.markedTraits ?? [],
     // ── Multiclass fields (SRD p.43) ──────────────────────────────────────
-    multiclassClassId: record.multiclassClassId ?? null,
-    multiclassClassName: enrichment?.multiclassClassName ?? record.multiclassClassName ?? null,
-    multiclassSubclassId: record.multiclassSubclassId ?? null,
-    multiclassDomainId: record.multiclassDomainId ?? null,
+    multiclassClassId:           record.multiclassClassId ?? null,
+    multiclassClassName:         enrichment?.multiclassClassName ?? record.multiclassClassName ?? null,
+    multiclassSubclassId:        record.multiclassSubclassId ?? null,
+    multiclassDomainId:          record.multiclassDomainId ?? null,
+    multiclassClassFeatureIndex: record.multiclassClassFeatureIndex ?? null,
     campaignId: record.campaignId ?? null,
   };
 }
@@ -788,10 +904,11 @@ async function listCharacters(
         portraitUrl: record.portraitUrl ?? buildPortraitUrl(record.portraitKey),
         updatedAt: record.updatedAt,
         // Multiclass summary fields
-        multiclassClassId: record.multiclassClassId ?? null,
-        multiclassClassName: record.multiclassClassName ?? null,
-        multiclassSubclassId: record.multiclassSubclassId ?? null,
-        multiclassDomainId: record.multiclassDomainId ?? null,
+        multiclassClassId:           record.multiclassClassId ?? null,
+        multiclassClassName:         record.multiclassClassName ?? null,
+        multiclassSubclassId:        record.multiclassSubclassId ?? null,
+        multiclassDomainId:          record.multiclassDomainId ?? null,
+        multiclassClassFeatureIndex: record.multiclassClassFeatureIndex ?? null,
         campaignId: record.campaignId ?? null,
       };
     })
@@ -807,6 +924,10 @@ async function createCharacter(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
   const userId = extractUserId(event);
+
+  // ── Character creation limit: non-Patreon users capped at 5 characters ────
+  await requireCreatePermission(userId);
+
   const input = parseBody(event, CreateCharacterSchema);
 
   // Look up class to derive starting stats and domains (optional)
@@ -932,10 +1053,11 @@ async function createCharacter(
     levelUpHistory: {},
     markedTraits: [],
     // ── Multiclass (none at creation) ─────────────────────────────────────
-    multiclassClassId:    null,
-    multiclassClassName:  null,
-    multiclassSubclassId: null,
-    multiclassDomainId:   null,
+    multiclassClassId:           null,
+    multiclassClassName:         null,
+    multiclassSubclassId:        null,
+    multiclassDomainId:          null,
+    multiclassClassFeatureIndex: null,
     // ── Campaign (unassigned at creation) ─────────────────────────────────
     campaignId: null,
   };
@@ -1524,6 +1646,9 @@ async function levelUpCharacter(
 ): Promise<APIGatewayProxyResultV2> {
   const userId      = extractUserId(event);
   const characterId = requirePathParam(event, "characterId");
+
+  // ── Patreon gate: leveling up requires a linked Patreon account ──────────
+  await requireSavePermission(userId);
 
   const existing = await getItem<CharacterRecord>({
     TableName: CHARACTERS_TABLE,

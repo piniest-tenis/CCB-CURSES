@@ -1,0 +1,5 @@
+---
+recall_cost: 0
+---
+
+You have advantage on action rolls to pick nonmagical locks, disarm nonmagical traps, or steal items from a target (either through stealth or by force).

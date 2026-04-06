@@ -280,14 +280,14 @@ export function validateAncestry(data: AncestryData): ValidationResult {
 
 // ─── validateDomainCard ───────────────────────────────────────────────────────
 
-const VALID_LEVELS = new Set([1, 2, 3, 4, 5]);
+const VALID_LEVELS = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 
 /**
  * Validate a `DomainCard` object.
  *
  * Errors:
  *   - cardId, name, domain, source are non-empty
- *   - level is in the range 1–5
+ *   - level is in the range 1–10
  *
  * Warnings:
  *   - isCursed = true but curseText is null/empty
@@ -308,7 +308,7 @@ export function validateDomainCard(data: DomainCard): ValidationResult {
       result,
       "level",
       "level-range",
-      `level must be between 1 and 5 (got ${data.level})`
+      `level must be between 1 and 10 (got ${data.level})`
     );
   }
 
@@ -440,11 +440,11 @@ export function validateClassWithSRD(data: ClassData): ValidationResult {
  *
  * STRUCTURAL CHECKS:
  *   - cardId, name, domain, source are non-empty
- *   - level is in range 1-5
+ *   - level is in range 1-10
  *
  * SRD COMPLIANCE CHECKS:
  *   - Cursed cards (★) must have curse mechanics defined
- *   - Card level must respect domain progression (1-5 per SRD page 4)
+ *   - Card level must respect domain progression (1-10 per SRD)
  *
  * Returns: ValidationResult with both structural and SRD errors combined.
  */
@@ -452,12 +452,12 @@ export function validateDomainCardWithSRD(data: DomainCard): ValidationResult {
   const result = validateDomainCard(data); // First, structural validation
 
   // SRD Compliance: Level gating
-  if (data.level < 1 || data.level > 5) {
+  if (data.level < 1 || data.level > 10) {
     addError(
       result,
       "level",
       "srd-level-range",
-      `Domain card level must be 1-5 per SRD page 4 (got ${data.level})`
+      `Domain card level must be 1-10 per SRD (got ${data.level})`
     );
   }
 

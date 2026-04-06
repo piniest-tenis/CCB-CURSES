@@ -91,7 +91,7 @@ function SlotBar({
 }) {
   return (
     <div className="flex items-center gap-1.5">
-      <span className="w-10 shrink-0 text-right text-[10px] font-semibold uppercase tracking-wider text-parchment-500">
+      <span className="w-10 shrink-0 text-right text-[11px] font-semibold uppercase tracking-wider text-parchment-500">
         {label}
       </span>
       <div
@@ -114,7 +114,7 @@ function SlotBar({
           />
         ))}
       </div>
-      <span className="text-[10px] text-parchment-700">
+      <span className="text-[11px] text-parchment-700">
         {marked}/{max}
       </span>
     </div>
@@ -126,7 +126,7 @@ function SlotBar({
 function HopePips({ hope, max }: { hope: number; max: number }) {
   return (
     <div className="flex items-center gap-1.5">
-      <span className="w-10 shrink-0 text-right text-[10px] font-semibold uppercase tracking-wider text-parchment-500">
+      <span className="w-10 shrink-0 text-right text-[11px] font-semibold uppercase tracking-wider text-parchment-500">
         Hope
       </span>
       <div
@@ -252,7 +252,7 @@ function OverlayContent() {
           <h1 className="font-display text-xl font-bold leading-tight text-parchment-100 truncate">
             {character.name}
           </h1>
-          <p className="text-[11px] text-parchment-500 truncate">{kicker}</p>
+          <p className="text-[12px] text-parchment-500 truncate">{kicker}</p>
         </div>
 
         {/* Level badge + full-sheet link */}
@@ -265,7 +265,7 @@ function OverlayContent() {
               px-2 py-0.5
             "
           >
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-gold-600">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-gold-600">
               Lv
             </span>
             <span className="text-sm font-bold text-gold-400 leading-none">
@@ -279,7 +279,7 @@ function OverlayContent() {
             rel="noopener noreferrer"
             aria-label="Open full character sheet in new tab"
             className="
-              text-[10px] font-medium text-parchment-600
+              text-[11px] font-medium text-parchment-600
               hover:text-gold-400 transition-colors
               underline underline-offset-2 decoration-parchment-800
               hover:decoration-gold-700 focus:outline-none
@@ -300,7 +300,7 @@ function OverlayContent() {
               role="listitem"
               className="
                 rounded border border-burgundy-700 bg-burgundy-950/50
-                px-1.5 py-0.5 text-[10px] font-medium text-burgundy-300
+                px-1.5 py-0.5 text-[11px] font-medium text-burgundy-300
               "
             >
               {c}
@@ -318,7 +318,7 @@ function OverlayContent() {
               role="listitem"
               className={`
                 rounded border border-gold-900/60 bg-slate-900/50
-                px-1.5 py-0.5 text-[10px] font-semibold
+                px-1.5 py-0.5 text-[11px] font-semibold
                 ${DOMAIN_TEXT[d] ?? "text-gold-400"}
               `}
             >
@@ -358,7 +358,7 @@ function OverlayContent() {
 
       {/* ── Damage thresholds ────────────────────────────────────────────── */}
       <div
-        className="flex gap-4 text-[10px] text-parchment-600"
+        className="flex gap-4 text-[11px] text-parchment-600"
         aria-label="Damage thresholds"
       >
         <span>

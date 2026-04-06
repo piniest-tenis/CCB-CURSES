@@ -239,6 +239,43 @@ export class CampaignStack extends cdk.Stack {
     this.connectionsTable.grantReadWriteData(wsPingHandler);
     this.campaignsTable.grantReadData(wsPingHandler);
 
+    // ── Dice Roll Lambda ──────────────────────────────────────────────────────
+    const wsDiceRollHandler = new lambda.Function(this, "WsDiceRollHandler", {
+      ...commonLambdaProps,
+      functionName: `daggerheart-ws-dice-roll-${stage}`,
+      description: "WebSocket dice_roll action — fans out roll results to all campaign connections",
+      handler: "index.handler",
+      code: lambda.Code.fromAsset("../backend/dist/ws-dice-roll-handler"),
+      logGroup: makeLambdaLogGroup("ws-dice-roll"),
+    } as lambda.FunctionProps);
+
+    this.connectionsTable.grantReadWriteData(wsDiceRollHandler);
+
+    // ── Force Crit Lambda ─────────────────────────────────────────────────────
+    const wsForceCritHandler = new lambda.Function(this, "WsForceCritHandler", {
+      ...commonLambdaProps,
+      functionName: `daggerheart-ws-force-crit-${stage}`,
+      description: "WebSocket force_crit action — GM arms/disarms a forced critical for a player's next roll",
+      handler: "index.handler",
+      code: lambda.Code.fromAsset("../backend/dist/ws-force-crit-handler"),
+      logGroup: makeLambdaLogGroup("ws-force-crit"),
+    } as lambda.FunctionProps);
+
+    this.connectionsTable.grantReadWriteData(wsForceCritHandler);
+
+    // ── Roll Request Lambda ───────────────────────────────────────────────────
+    const wsRollRequestHandler = new lambda.Function(this, "WsRollRequestHandler", {
+      ...commonLambdaProps,
+      functionName: `daggerheart-ws-roll-request-${stage}`,
+      description: "WebSocket roll_request action — GM sends a roll prompt to a player's character sheet",
+      handler: "index.handler",
+      code: lambda.Code.fromAsset("../backend/dist/ws-roll-request-handler"),
+      logGroup: makeLambdaLogGroup("ws-roll-request"),
+    } as lambda.FunctionProps);
+
+    this.connectionsTable.grantReadWriteData(wsRollRequestHandler);
+    this.campaignsTable.grantReadData(wsRollRequestHandler);
+
     // ── WebSocket API ─────────────────────────────────────────────────────────
     const wsApi = new apigwv2.WebSocketApi(this, "WsApi", {
       apiName: `daggerheart-ws-${stage}`,
@@ -262,6 +299,30 @@ export class CampaignStack extends cdk.Stack {
       integration: new apigwv2Integrations.WebSocketLambdaIntegration(
         "WsPingIntegration",
         wsPingHandler
+      ),
+    });
+
+    // Add the dice_roll route
+    wsApi.addRoute("dice_roll", {
+      integration: new apigwv2Integrations.WebSocketLambdaIntegration(
+        "WsDiceRollIntegration",
+        wsDiceRollHandler
+      ),
+    });
+
+    // Add the force_crit route
+    wsApi.addRoute("force_crit", {
+      integration: new apigwv2Integrations.WebSocketLambdaIntegration(
+        "WsForceCritIntegration",
+        wsForceCritHandler
+      ),
+    });
+
+    // Add the roll_request route
+    wsApi.addRoute("roll_request", {
+      integration: new apigwv2Integrations.WebSocketLambdaIntegration(
+        "WsRollRequestIntegration",
+        wsRollRequestHandler
       ),
     });
 
@@ -317,6 +378,9 @@ export class CampaignStack extends cdk.Stack {
 
     // Grant the WS API permission to invoke Lambda functions
     wsApi.grantManageConnections(wsPingHandler);
+    wsApi.grantManageConnections(wsDiceRollHandler);
+    wsApi.grantManageConnections(wsForceCritHandler);
+    wsApi.grantManageConnections(wsRollRequestHandler);
 
     // Grant ping handler permission to post to connections (execute-api:ManageConnections)
     wsPingHandler.addToRolePolicy(
@@ -330,10 +394,64 @@ export class CampaignStack extends cdk.Stack {
       })
     );
 
+    // Grant dice_roll handler permission to post to connections
+    wsDiceRollHandler.addToRolePolicy(
+      new iam.PolicyStatement({
+        sid: "WsDiceRollManageConnections",
+        effect: iam.Effect.ALLOW,
+        actions: ["execute-api:ManageConnections"],
+        resources: [
+          `arn:aws:execute-api:${this.region}:${this.account}:${wsApi.apiId}/${stage}/POST/@connections/*`,
+        ],
+      })
+    );
+
+    // Grant force_crit handler permission to post to connections
+    wsForceCritHandler.addToRolePolicy(
+      new iam.PolicyStatement({
+        sid: "WsForceCritManageConnections",
+        effect: iam.Effect.ALLOW,
+        actions: ["execute-api:ManageConnections"],
+        resources: [
+          `arn:aws:execute-api:${this.region}:${this.account}:${wsApi.apiId}/${stage}/POST/@connections/*`,
+        ],
+      })
+    );
+
     // Set WS_API_ENDPOINT env var on ping handler after WS API is created
     wsPingHandler.addEnvironment(
       "WS_API_ENDPOINT",
       `https://${wsApi.apiId}.execute-api.${this.region}.amazonaws.com/${stage}`
+    );
+
+    // Set WS_API_ENDPOINT env var on dice_roll handler after WS API is created
+    wsDiceRollHandler.addEnvironment(
+      "WS_API_ENDPOINT",
+      `https://${wsApi.apiId}.execute-api.${this.region}.amazonaws.com/${stage}`
+    );
+
+    // Set WS_API_ENDPOINT env var on force_crit handler after WS API is created
+    wsForceCritHandler.addEnvironment(
+      "WS_API_ENDPOINT",
+      `https://${wsApi.apiId}.execute-api.${this.region}.amazonaws.com/${stage}`
+    );
+
+    // Set WS_API_ENDPOINT env var on roll_request handler after WS API is created
+    wsRollRequestHandler.addEnvironment(
+      "WS_API_ENDPOINT",
+      `https://${wsApi.apiId}.execute-api.${this.region}.amazonaws.com/${stage}`
+    );
+
+    // Grant roll_request handler permission to post to connections
+    wsRollRequestHandler.addToRolePolicy(
+      new iam.PolicyStatement({
+        sid: "WsRollRequestManageConnections",
+        effect: iam.Effect.ALLOW,
+        actions: ["execute-api:ManageConnections"],
+        resources: [
+          `arn:aws:execute-api:${this.region}:${this.account}:${wsApi.apiId}/${stage}/POST/@connections/*`,
+        ],
+      })
     );
 
     // -------------------------------------------------------------------------
@@ -381,6 +499,16 @@ export class CampaignStack extends cdk.Stack {
     new cdk.CfnOutput(this, "WsPingHandlerArn", {
       exportName: `DaggerheartWsPingHandlerArn-${stage}`,
       value: wsPingHandler.functionArn,
+    });
+
+    new cdk.CfnOutput(this, "WsDiceRollHandlerArn", {
+      exportName: `DaggerheartWsDiceRollHandlerArn-${stage}`,
+      value: wsDiceRollHandler.functionArn,
+    });
+
+    new cdk.CfnOutput(this, "WsForceCritHandlerArn", {
+      exportName: `DaggerheartWsForceCritHandlerArn-${stage}`,
+      value: wsForceCritHandler.functionArn,
     });
   }
 }

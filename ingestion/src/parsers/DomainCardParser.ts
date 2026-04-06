@@ -36,7 +36,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import type { DomainCard, GrimoireAbility } from "@shared/types";
+import type { DomainCard, GrimoireAbility, CharacterSource } from "@shared/types";
 import { toCardId, resolveWikiLink } from "../transformers/SlugTransformer";
 
 // ─── Filename parsing ─────────────────────────────────────────────────────────
@@ -209,8 +209,9 @@ function extractFrontmatter(lines: string[]): { frontmatter: CardFrontmatter; bo
  *
  * @param filePath  Absolute path to the `.md` file.
  * @param domain    Domain name (typically the parent directory name, e.g. "Artistry").
+ * @param source    Content source — "srd" or "homebrew" (default: "homebrew")
  */
-export function parseDomainCardFile(filePath: string, domain: string): DomainCard {
+export function parseDomainCardFile(filePath: string, domain: string, source: CharacterSource = "homebrew"): DomainCard {
   const raw = fs.readFileSync(filePath, "utf-8");
   const filename = path.basename(filePath);
   const { level, name, isCursed, isLinkedCurse } = parseFilename(filename);
@@ -238,7 +239,7 @@ export function parseDomainCardFile(filePath: string, domain: string): DomainCar
       curseText: null,
       linkedCardIds: [],
       grimoire: [],
-      source: "homebrew",
+      source,
     };
   }
 
@@ -328,6 +329,6 @@ export function parseDomainCardFile(filePath: string, domain: string): DomainCar
     curseText,
     linkedCardIds,
     grimoire,
-    source: "homebrew",
+    source,
   };
 }

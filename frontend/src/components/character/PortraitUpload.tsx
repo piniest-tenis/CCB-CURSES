@@ -311,7 +311,7 @@ function PortraitUploadSidebar({
         aria-hidden={!open}
         inert={!open ? ("" as unknown as boolean) : undefined}
         className={[
-          "fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-[28rem] flex-col",
+          "fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-[28rem] flex-col py-12",
           "border-l border-[#577399]/35 bg-[#0f1713] shadow-2xl",
           "transition-transform duration-300 ease-in-out",
           open ? "translate-x-0" : "translate-x-full",
@@ -535,7 +535,7 @@ export function PortraitDisplay({ characterId }: PortraitDisplayProps) {
               transition-opacity duration-200
             "
           >
-            <span className="text-[9px] font-semibold uppercase tracking-wider text-[#f7f7ff] bg-[#0a100d]/70 rounded px-1.5 py-0.5">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#f7f7ff] bg-[#0a100d]/70 rounded px-1.5 py-0.5">
               {portraitUrl ? "Change" : "Upload"}
             </span>
           </div>

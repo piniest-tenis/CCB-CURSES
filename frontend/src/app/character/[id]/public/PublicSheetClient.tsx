@@ -35,6 +35,7 @@ import type {
   CoreStatName,
   DomainCard,
 } from "@shared/types";
+import { computeTraitModifiers } from "@/hooks/useTraitModifiers";
 
 // ─── Public API fetcher (no auth, bypasses apiClient to avoid global 401 redirect) ──
 
@@ -196,6 +197,122 @@ function SheetDivider({
   );
 }
 
+// ─── Lightweight stat tooltip for the public sheet ────────────────────────────
+
+interface PublicTooltipLine {
+  label: string;
+  value: string;
+  isTotal?: boolean;
+}
+
+function PublicStatTooltip({
+  lines,
+  ariaLabel,
+  children,
+}: {
+  lines: PublicTooltipLine[];
+  ariaLabel?: string;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const triggerRef = React.useRef<HTMLDivElement>(null);
+  const popoverRef = React.useRef<HTMLDivElement>(null);
+  const popoverId = React.useId();
+  const inPopover = React.useRef(false);
+
+  const handleMouseEnter = () => setOpen(true);
+  const handleMouseLeave = () => {
+    setTimeout(() => {
+      if (!inPopover.current) setOpen(false);
+    }, 80);
+  };
+
+  // Close on click-outside (mobile)
+  React.useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node;
+      if (
+        triggerRef.current?.contains(target) ||
+        popoverRef.current?.contains(target)
+      )
+        return;
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", handler, true);
+    document.addEventListener("touchstart", handler, true);
+    return () => {
+      document.removeEventListener("mousedown", handler, true);
+      document.removeEventListener("touchstart", handler, true);
+    };
+  }, [open]);
+
+  return (
+    <div
+      ref={triggerRef}
+      className="relative cursor-default select-none"
+      aria-describedby={open ? popoverId : undefined}
+      aria-label={ariaLabel}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onTouchStart={() => setOpen((prev) => !prev)}
+    >
+      {children}
+      {open && (
+        <div
+          ref={popoverRef}
+          id={popoverId}
+          role="tooltip"
+          onMouseEnter={() => { inPopover.current = true; }}
+          onMouseLeave={() => { inPopover.current = false; setOpen(false); }}
+          className="
+            absolute bottom-full left-1/2 mb-2 z-50
+            -translate-x-1/2
+            w-56
+            rounded-lg border border-[#577399]/40 bg-slate-900 shadow-xl
+            text-[#f7f7ff] text-xs
+          "
+        >
+          <span
+            aria-hidden="true"
+            className="
+              absolute -bottom-1.5 left-1/2 -translate-x-1/2
+              h-3 w-3 rotate-45
+              border-b border-r border-[#577399]/40 bg-slate-900
+            "
+          />
+          <dl className="p-3 space-y-1.5">
+            {lines.map((line, i) => (
+              <div
+                key={i}
+                className={[
+                  "flex items-baseline justify-between gap-2",
+                  line.isTotal ? "mt-1.5 pt-1.5 border-t border-[#577399]/30" : "",
+                ].join(" ")}
+              >
+                <dt className={line.isTotal ? "text-[#b9cfe8] font-semibold" : "text-[#b9baa3]"}>
+                  {line.label}
+                </dt>
+                <dd
+                  className={[
+                    "tabular-nums font-mono shrink-0",
+                    line.isTotal ? "text-[#f7f7ff] font-bold" : "text-[#f7f7ff]",
+                  ].join(" ")}
+                >
+                  {line.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <p className="px-3 pb-2.5 text-[11px] text-[#577399] border-t border-[#577399]/20 pt-1.5">
+            SRD p. 3, 23, 29
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Stat card (read-only, mirrors builder's SVG card art) ────────────────────
 
 const STAT_CARD_IMAGES: Record<CoreStatName, string> = {
@@ -216,13 +333,49 @@ const STAT_LABELS_FULL: Record<CoreStatName, string> = {
   knowledge: "Knowledge",
 };
 
-function StatCard({ name, value }: { name: CoreStatName; value: number }) {
+function StatCard({
+  name,
+  value,
+  modTotal,
+  modEntries,
+}: {
+  name: CoreStatName;
+  value: number;
+  modTotal?: number;
+  modEntries?: { source: string; value: number }[];
+}) {
   const label = STAT_LABELS_FULL[name];
   const cardImage = STAT_CARD_IMAGES[name];
-  return (
+  const total = modTotal ?? 0;
+  const effectiveValue = value + total;
+  const hasModifier = total !== 0;
+  const isPenalty = total < 0;
+  const isBonus = total > 0;
+
+  // Nameplate — always white bg, left-border accent for modifier status
+  const nameplateStyle: React.CSSProperties = isPenalty
+    ? { background: "#f7f7ff", borderLeftWidth: "3px", borderLeftColor: "#f87171" }
+    : isBonus
+    ? { background: "#f7f7ff", borderLeftWidth: "3px", borderLeftColor: "#2dd4bf" }
+    : { background: "#f7f7ff" };
+
+  const nameplateColor = isPenalty
+    ? "#dc2626"
+    : isBonus
+    ? "#0d9488"
+    : "#0a100d";
+
+  // Value color on the card face
+  const valueColor = isPenalty
+    ? "#dc2626"
+    : isBonus
+    ? "#0f766e"
+    : "#0a100d";
+
+  const card = (
     <div
       className="flex flex-col items-center"
-      aria-label={`${label}: ${value >= 0 ? "+" : ""}${value}`}
+      aria-label={`${label}: ${effectiveValue >= 0 ? "+" : ""}${effectiveValue}${hasModifier ? ` (base ${value >= 0 ? "+" : ""}${value}, modifier ${total >= 0 ? "+" : ""}${total})` : ""}`}
     >
       <div className="flex flex-col items-center w-full">
         {/* Card art with value */}
@@ -244,32 +397,60 @@ function StatCard({ name, value }: { name: CoreStatName; value: number }) {
               style={{
                 fontFamily: "'jetsam-collection-basilea', serif",
                 fontSize: "6rem",
-                color: "#0a100d",
+                color: valueColor,
                 filter: "drop-shadow(0 1px 0 rgba(249,236,216,0.6))",
                 transform: "translateY(-1.5rem)",
                 display: "block",
               }}
             >
-              {value >= 0 ? `+${value}` : value}
+              {effectiveValue >= 0 ? `+${effectiveValue}` : effectiveValue}
             </span>
           </div>
         </div>
         {/* Label tab */}
         <div
-          className="w-full rounded-b-xl border border-t-0 border-[#577399]/40 px-1 py-1"
-          style={{ background: "#f7f7ff" }}
+          className="w-full rounded-b-xl border border-t-0 px-1 py-1"
+          style={nameplateStyle}
           aria-hidden="true"
         >
           <span
             className="block text-center text-sm font-semibold leading-tight tracking-wide"
-            style={{ color: "#0a100d" }}
+            style={{ color: nameplateColor }}
           >
             {label}
+            {hasModifier && (
+              <span style={{ marginLeft: "0.2em", fontSize: "0.75em", opacity: 0.8 }}>
+                ({isPenalty ? "▾" : "▴"}{Math.abs(total)})
+              </span>
+            )}
           </span>
         </div>
       </div>
     </div>
   );
+
+  // Wrap in tooltip when modified
+  if (hasModifier && modEntries && modEntries.length > 0) {
+    const lines = [
+      { label: `Base ${label}`, value: String(value) },
+      ...modEntries.map((e) => ({
+        label: e.source,
+        value: e.value >= 0 ? `+${e.value}` : String(e.value),
+      })),
+      {
+        label: `= Effective ${label}`,
+        value: String(effectiveValue),
+        isTotal: true as const,
+      },
+    ];
+    return (
+      <PublicStatTooltip lines={lines} ariaLabel={`${label} breakdown`}>
+        {card}
+      </PublicStatTooltip>
+    );
+  }
+
+  return card;
 }
 
 // ─── Data fetching ────────────────────────────────────────────────────────────
@@ -386,7 +567,7 @@ function SectionCard({
             }}
           />
           <h2
-            className="font-serif text-base font-semibold uppercase tracking-widest pb-1"
+            className="font-serif-sc text-base font-semibold tracking-widest pb-1"
             style={{
               color: "#d4a94a",
               background:
@@ -430,7 +611,7 @@ function SlotRow({
   return (
     <div className="flex items-center gap-3">
       <span
-        className="w-24 font-serif text-xs uppercase tracking-widest"
+        className="w-24 font-serif-sc text-xs tracking-widest"
         style={{ color: "#e8c96d" }}
       >
         {label}
@@ -675,6 +856,15 @@ function PublicSheetContent() {
   const spellcastTrait = (classData?.subclasses?.find(
     (sc) => sc.subclassId === character?.subclassId,
   )?.spellcastTrait ?? null) as CoreStatName | null;
+
+  // Compute trait modifiers from equipped weapons + armor
+  const traitMods = React.useMemo(() => {
+    if (!character) return null;
+    return computeTraitModifiers(
+      character.weapons,
+      character.activeArmorId ?? null,
+    );
+  }, [character]);
 
   // Determine error message
   const errorMessage = (() => {
@@ -927,7 +1117,7 @@ function PublicSheetContent() {
                   }}
                 >
                   <span
-                    className="font-serif text-xs font-semibold tracking-widest uppercase"
+                    className="font-serif-sc text-xs font-semibold tracking-widest"
                     style={{ color: "#e8c96d" }}
                   >
                     LVL
@@ -983,7 +1173,7 @@ function PublicSheetContent() {
                         key={d}
                         href={`/domains/${encodeURIComponent(d)}`}
                         role="listitem"
-                        className="rounded-[20px] border px-3 py-0.5 font-serif text-xs uppercase tracking-wider font-semibold transition-all duration-150 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-[#fbbf24] focus:ring-offset-1 focus:ring-offset-slate-900"
+                        className="rounded-[20px] border px-3 py-0.5 font-serif-sc text-xs tracking-wider font-semibold transition-all duration-150 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-[#fbbf24] focus:ring-offset-1 focus:ring-offset-slate-900"
                         style={{ borderWidth: "1.5px", ...domainStyle(d) }}
                         aria-label={`${d} domain wiki`}
                       >
@@ -1060,6 +1250,8 @@ function PublicSheetContent() {
                     key={stat}
                     name={stat}
                     value={character.stats[stat]}
+                    modTotal={traitMods?.totals[stat] ?? 0}
+                    modEntries={traitMods?.modifiers[stat]}
                   />
                 ))}
               </div>
@@ -1122,7 +1314,7 @@ function PublicSheetContent() {
                   {/* Proficiency */}
                   <div className="flex flex-col items-center gap-0.5">
                     <span
-                      className="text-[10px] font-semibold uppercase tracking-[0.15em]"
+                      className="text-[11px] font-semibold uppercase tracking-[0.15em]"
                       style={{ color: "#b8872c" }}
                     >
                       Proficiency
@@ -1138,7 +1330,7 @@ function PublicSheetContent() {
                   {/* Hope */}
                   <div className="flex flex-col items-center gap-1.5">
                     <span
-                      className="text-[10px] font-semibold uppercase tracking-[0.15em]"
+                      className="text-[11px] font-semibold uppercase tracking-[0.15em]"
                       style={{ color: "#b8872c" }}
                     >
                       Hope
@@ -1204,7 +1396,7 @@ function PublicSheetContent() {
                       }}
                     >
                       <span
-                        className="text-[10px] font-semibold uppercase tracking-[0.15em]"
+                        className="text-[11px] font-semibold uppercase tracking-[0.15em]"
                         style={{ color: "#fb923c" }}
                       >
                         Major
@@ -1216,7 +1408,7 @@ function PublicSheetContent() {
                         {character.damageThresholds.major}
                       </span>
                       <span
-                        className="text-[9px] uppercase tracking-wider"
+                        className="text-[10px] uppercase tracking-wider"
                         style={{ color: "rgba(251,146,60,0.55)" }}
                       >
                         dmg
@@ -1230,7 +1422,7 @@ function PublicSheetContent() {
                       }}
                     >
                       <span
-                        className="text-[10px] font-semibold uppercase tracking-[0.15em]"
+                        className="text-[11px] font-semibold uppercase tracking-[0.15em]"
                         style={{ color: "#f87171" }}
                       >
                         Severe
@@ -1242,7 +1434,7 @@ function PublicSheetContent() {
                         {character.damageThresholds.severe}
                       </span>
                       <span
-                        className="text-[9px] uppercase tracking-wider"
+                        className="text-[10px] uppercase tracking-wider"
                         style={{ color: "rgba(239,68,68,0.45)" }}
                       >
                         dmg
@@ -1497,7 +1689,7 @@ function PublicSheetContent() {
             >
               <Link
                 href="/auth/register"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-[10px] font-serif text-base uppercase tracking-widest text-parchment-100 no-underline transition-all duration-200 hover:-translate-y-px active:translate-y-0"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-[10px] font-serif-sc text-base tracking-widest text-parchment-100 no-underline transition-all duration-200 hover:-translate-y-px active:translate-y-0"
                 style={{
                   border: "1.5px solid rgba(203,45,86,0.70)",
                   background:

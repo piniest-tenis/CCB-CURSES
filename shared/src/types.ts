@@ -150,6 +150,12 @@ export interface CharacterSummary {
    * Null until multiclassed.
    */
   multiclassDomainId: string | null;
+  /**
+   * The classFeature index (0-based) chosen from the multiclass class's classFeatures array,
+   * or null if not yet chosen / legacy character. Stored as a numeric index into ClassData.classFeatures.
+   * Null until multiclassed or if the class has no choosable class features.
+   */
+  multiclassClassFeatureIndex: number | null;
 }
 
 export interface Character extends CharacterSummary {
@@ -236,6 +242,11 @@ export interface Character extends CharacterSummary {
    * Stored as stat names, e.g. ["agility", "strength"].
    */
   markedTraits: string[];
+  /**
+   * Character-scoped dice color overrides. Takes precedence over
+   * UserPreferences.diceColors and the system defaults.
+   */
+  diceColors?: DiceColorPrefs;
 }
 
 // ─── Class & Subclass ─────────────────────────────────────────────────────────
@@ -391,11 +402,75 @@ export interface FactionData {
   reputationScore: number; // -3 to +3
 }
 
+// ─── Dice Color Preferences ───────────────────────────────────────────────────
+
+/** Face + label (number) color pair for a single die category. */
+export interface DieColorPair {
+  /** Hex color for the die body/face (e.g. "#DAA520"). */
+  diceColor: string;
+  /** Hex color for the number/label on the die (e.g. "#36454F"). */
+  labelColor: string;
+}
+
+/**
+ * Per-category dice color preferences. Each key is optional — when absent the
+ * system falls back to user-level defaults, then to hardcoded system defaults.
+ */
+export interface DiceColorPrefs {
+  hope?: DieColorPair;
+  fear?: DieColorPair;
+  general?: DieColorPair;
+}
+
 // ─── User ─────────────────────────────────────────────────────────────────────
 
 export interface UserPreferences {
   theme: "dark" | "light" | "system";
   defaultDiceStyle: string;
+  /** User-level default dice colors applied to all owned characters without character-scoped overrides. */
+  diceColors?: DiceColorPrefs;
+}
+
+// ─── Patreon Integration ──────────────────────────────────────────────────────
+
+/**
+ * Membership status for a user's linked Patreon account on the CursesAP campaign.
+ *
+ * "none"           — No Patreon account linked, or the linked account is NOT a
+ *                    member/follower of CursesAP.
+ * "free"           — User is a free follower of the CursesAP Patreon page.
+ *                    Unlocks: character saving.
+ *                    Does NOT unlock: campaigns, sessions, dice colors.
+ * "active_patron"  — User is an active paid patron of CursesAP.
+ *                    Tier-specific unlocks (campaigns, etc.) are gated by
+ *                    `patreonTier` when tier configuration is provided.
+ */
+export type PatreonMembershipStatus = "none" | "free" | "active_patron";
+
+/**
+ * Patreon account linkage and membership information stored on the user profile.
+ * Present only after a user has completed the Patreon OAuth flow.
+ */
+export interface PatreonLink {
+  /** The Patreon user ID returned by the Patreon Identity API. */
+  patreonUserId: string;
+  /** Membership status relative to the CursesAP Patreon campaign. */
+  membershipStatus: PatreonMembershipStatus;
+  /**
+   * Patreon tier title (e.g. "Free", "Adventurer", "Hero") for paid patrons.
+   * Null when membershipStatus is "none" or "free".
+   * The actual tier names and their feature gates will be configured later.
+   */
+  tierTitle: string | null;
+  /**
+   * Patreon tier amount in cents (e.g. 500 = $5/month).
+   * Null when membershipStatus is "none" or "free".
+   */
+  tierAmountCents: number | null;
+  /** ISO 8601 timestamp when the Patreon account was linked. */
+  linkedAt: string;
+  /** ISO 8601 timestamp of the last membership status refresh from the Patreon API. */
+  lastCheckedAt: string;
 }
 
 export interface UserProfile {
@@ -404,6 +479,12 @@ export interface UserProfile {
   displayName: string;
   avatarUrl: string | null;
   preferences: UserPreferences;
+  /**
+   * Patreon account linkage, or null if no Patreon account has been connected.
+   * When null, the frontend checks `createdAt` against the Patreon gate cutoff
+   * date to determine if the user is grandfathered.
+   */
+  patreon: PatreonLink | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -579,13 +660,16 @@ export interface AdvancementChoice {
    * Depending on type:
    * - trait-bonus: comma-separated pair of stat names, e.g. "agility,strength"
    * - experience-bonus: comma-separated pair of experience names, e.g. "Stealth,Athletics"
-   * - additional-domain-card: cardId
+   * - additional-domain-card: pipe-delimited "cardId|level", e.g. "shadowStep|3"
+   *     cardId = the chosen card; level = card.level (for backend level-cap validation)
    * - subclass-upgrade: "specialization" | "mastery"
-   * - multiclass: pipe-delimited string "classId|domainId|subclassId"
-   *     e.g. "bard|codex|luminary"
-   *     classId    = the chosen secondary class
-   *     domainId   = which of that class's two domains was chosen
-   *     subclassId = the subclass whose Foundation card was taken
+   * - multiclass: pipe-delimited string "classId|domainId|subclassId|classFeatureIndex"
+   *     e.g. "bard|codex|luminary|0"
+   *     classId           = the chosen secondary class
+   *     domainId          = which of that class's two domains was chosen
+   *     subclassId        = the subclass whose Foundation card was taken
+   *     classFeatureIndex = 0-based index into ClassData.classFeatures (omit or "" if none)
+   *     Note: 3-part format "classId|domainId|subclassId" remains valid for legacy data.
    * All others: no detail needed.
    */
   detail?: string;
@@ -611,6 +695,22 @@ export interface LevelUpChoices {
    * new card level ≤ exchanged card level; SRD p.22).
    */
   exchangeCardId?: string | null;
+  /**
+   * SRD p.22: Tier Achievement (+2, +5, +8) grants a new Experience at +2.
+   * The player names it here. If omitted or blank, the experience is not added
+   * (player can name it later via a character edit). Must be non-empty to be stored.
+   */
+  tierAchievementExperienceName?: string;
+  /**
+   * Level of the new domain card being acquired (newDomainCardId).
+   * Passed by the frontend so the backend can validate exchange level cap (SRD p.22).
+   */
+  newDomainCardLevel?: number;
+  /**
+   * Level of the card being exchanged (exchangeCardId).
+   * Used to enforce: new card level ≤ exchanged card level (SRD p.22).
+   */
+  exchangeCardLevel?: number;
 }
 
 // ─── Campaign System ──────────────────────────────────────────────────────────
@@ -624,6 +724,12 @@ export interface Campaign {
   primaryGmId: string;
   /** Recurring session schedule, or null if none has been configured. */
   schedule: SessionSchedule | null;
+  /**
+   * SRD Fear resource tracked by the GM. Range 0–12.
+   * Starts at 1 per PC at the beginning of a session; max 12; min 0.
+   * Defaults to 0 if never set.
+   */
+  currentFear?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -691,6 +797,35 @@ export interface PingEvent {
   fieldKey: string;
   senderUserId: string;
   timestamp: string;
+}
+
+/**
+ * Sent by the GM to trigger a dice roll prompt on a specific player's character sheet.
+ * The player's sheet receives this and calls stageRoll() with the provided RollRequestPayload.
+ */
+export interface RollRequestEvent {
+  type: "roll_request";
+  campaignId: string;
+  targetCharacterId: string;
+  senderUserId: string;
+  timestamp: string;
+  /** The roll to stage on the target character's sheet. */
+  rollRequest: RollRequestPayload;
+}
+
+/**
+ * A serialisable roll request suitable for transmission over WebSocket.
+ * Mirrors the frontend RollRequest type but avoids importing frontend-only modules.
+ */
+export interface RollRequestPayload {
+  label: string;
+  type: "action" | "damage" | "reaction" | "generic";
+  dice: Array<{ size: "d4" | "d6" | "d8" | "d10" | "d12" | "d20"; role: string; label?: string }>;
+  modifier?: number;
+  difficulty?: number;
+  /** Optional flavor text shown as a subtitle in the roll modal. */
+  flavorText?: string;
+  characterName?: string;
 }
 
 // ─── Session Schedule ─────────────────────────────────────────────────────────

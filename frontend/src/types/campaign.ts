@@ -49,6 +49,12 @@ export interface Campaign {
   primaryGmId: string;
   /** Recurring session schedule, or null if none has been configured. */
   schedule: SessionSchedule | null;
+  /**
+   * SRD Fear resource tracked by the GM. Range 0–12.
+   * Starts at 1 per PC at the beginning of a session; max 12; min 0.
+   * Defaults to 0 if never set.
+   */
+  currentFear?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -115,6 +121,33 @@ export interface PingEvent {
   timestamp: string;
 }
 
+/**
+ * A serialisable roll request suitable for transmission over WebSocket.
+ * Mirrors the RollRequest type but avoids importing frontend-only modules.
+ */
+export interface RollRequestPayload {
+  label: string;
+  type: "action" | "damage" | "reaction" | "generic";
+  dice: Array<{ size: "d4" | "d6" | "d8" | "d10" | "d12" | "d20"; role: string; label?: string }>;
+  modifier?: number;
+  difficulty?: number;
+  /** Optional flavor text shown as a subtitle in the roll modal. */
+  flavorText?: string;
+  characterName?: string;
+}
+
+/**
+ * Sent by the GM to trigger a roll prompt on a specific player's character sheet.
+ */
+export interface RollRequestEvent {
+  type: "roll_request";
+  campaignId: string;
+  targetCharacterId: string;
+  senderUserId: string;
+  timestamp: string;
+  rollRequest: RollRequestPayload;
+}
+
 // ─── Mutation input shapes ─────────────────────────────────────────────────────
 
 export interface CreateCampaignInput {
@@ -126,6 +159,8 @@ export interface UpdateCampaignInput {
   name?: string;
   description?: string | null;
   schedule?: SessionSchedule | null;
+  /** GM Fear counter update. Clamped 0–12 server-side. */
+  fear?: number;
 }
 
 export interface CreateInviteInput {
@@ -140,5 +175,7 @@ export interface UpdateMemberRoleInput {
 
 export interface AddCharacterInput {
   characterId: string;
+  /** The character owner's userId. Required when an admin adds a player's character. */
+  ownerUserId?: string;
 }
 

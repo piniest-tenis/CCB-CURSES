@@ -158,6 +158,10 @@ export function useUpdateCharacter(
       // Invalidate the list so the updatedAt timestamp refreshes
       queryClient.invalidateQueries({ queryKey: characterKeys.lists() });
     },
+    onError: (err) => {
+      // Errors are handled by the global error handler in providers.tsx.
+      // Individual consumers can check mutation.error if needed.
+    },
   });
 }
 
@@ -222,6 +226,12 @@ export interface LevelUpInput {
   exchangeCardId?: string | null;
   newSubclassId?: string | null;
   newClassId?: string | null;
+  /** SRD p.22 Tier Achievement: name for the new experience at +2. */
+  tierAchievementExperienceName?: string;
+  /** Level of the newly acquired domain card (for exchange level-cap validation). */
+  newDomainCardLevel?: number;
+  /** Level of the card being exchanged (for exchange level-cap validation). */
+  exchangeCardLevel?: number;
 }
 
 /**

@@ -1,5 +1,8 @@
 import * as cdk from "aws-cdk-lib";
 import * as cognito from "aws-cdk-lib/aws-cognito";
+import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as iam from "aws-cdk-lib/aws-iam";
+import * as path from "path";
 import { Construct } from "constructs";
 
 export interface AuthStackProps extends cdk.StackProps {
@@ -89,9 +92,9 @@ export class AuthStack extends cdk.Stack {
       // Auto-verify email; require email verification before sign-in
       autoVerify: { email: true },
       userVerification: {
-        emailSubject: "Verify your Daggerheart account",
+        emailSubject: "Your Curses! CCB verification code",
         emailBody:
-          "Welcome to Daggerheart Character Platform! Your verification code is {####}",
+          "Welcome to Curses! Custom Character Builder!\n\nYour email verification code is: {####}\n\nEnter this code on the confirmation page to activate your account. The code expires in 24 hours.\n\nIf you did not create an account, you can safely ignore this email.",
         emailStyle: cognito.VerificationEmailStyle.CODE,
       },
 
@@ -106,6 +109,50 @@ export class AuthStack extends cdk.Stack {
 
       deletionProtection: isProd,
     });
+
+    // -----------------------------------------------------------------------
+    // Post-Confirmation Lambda (welcome email via SES)
+    // -----------------------------------------------------------------------
+    // Fires once after a user successfully verifies their email address.
+    // Sends a styled HTML welcome email explaining Campaigns and how to build
+    // a first character.
+    //
+    // NOTE: SES must be out of sandbox mode (or the recipient address must be
+    // a verified identity) before this will deliver to real inboxes.
+    // To exit sandbox: https://console.aws.amazon.com/ses/ → Account dashboard
+    // → Request production access.
+    const postConfirmationFn = new lambda.Function(this, "PostConfirmationFn", {
+      functionName: `curses-ccb-post-confirmation-${stage}`,
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: "index.handler",
+      code: lambda.Code.fromAsset(
+        path.join(__dirname, "../../backend/dist/post-confirmation-handler")
+      ),
+      timeout: cdk.Duration.seconds(10),
+      memorySize: 256,
+      environment: {
+        SES_FROM_ADDRESS: isProd
+          ? "noreply@curses-ccb.maninjumpsuit.com"
+          : "noreply@curses-ccb.maninjumpsuit.com", // same address; SES identity covers both
+        APP_BASE_URL: isProd
+          ? "https://curses-ccb.maninjumpsuit.com"
+          : "http://localhost:3000",
+      },
+    });
+
+    // Grant the Lambda permission to send email via SES.
+    postConfirmationFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["ses:SendEmail", "ses:SendRawEmail"],
+        resources: ["*"],
+      })
+    );
+
+    // Attach the trigger to the User Pool.
+    this.userPool.addTrigger(
+      cognito.UserPoolOperation.POST_CONFIRMATION,
+      postConfirmationFn
+    );
 
     // -----------------------------------------------------------------------
     // Cognito User Pool Client (SPA — no client secret)
