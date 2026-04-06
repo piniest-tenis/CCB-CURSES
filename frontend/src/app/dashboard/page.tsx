@@ -279,8 +279,8 @@ export default function DashboardPage() {
       </header>
 
       {/* ── Page body ───────────────────────────────────────────────────── */}
-      <div className="relative z-[1] mx-auto max-w-[1200px] border-x border-slate-800/60 bg-[#0a100d] px-4 py-8">
-        <div className="flex gap-8 items-start">
+      <div className="relative z-[1] flex-1 bg-[#0a100d] py-8">
+        <div className="mx-auto max-w-[1200px] px-4 flex gap-8 items-start">
 
           {/* ── Main column ─────────────────────────────────────────────── */}
           <main className="flex-1 min-w-0 space-y-10">
