@@ -481,7 +481,7 @@ function SheetHeader({
 
         {/* Evasion + Armor Score — defensive stats group */}
         <div
-          className="flex-shrink-0 flex items-center gap-3 rounded-xl border border-steel-400/25 bg-steel-400/[0.06] px-3 py-2"
+          className="flex-shrink-0 flex items-center gap-3 rounded-xl bg-steel-400/[0.06] px-2 py-0.5"
           role="group"
           aria-label="Defensive Stats"
         >
@@ -604,14 +604,7 @@ function SheetHeader({
           "
           aria-label="Open Character Builder"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            className="w-3.5 h-3.5"
-          >
-            <path d="M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z" />
-          </svg>
+          <i className="fa-solid fa-pen text-[11px]" aria-hidden="true"></i>
           <span>Edit</span>
         </button>
 
@@ -642,53 +635,13 @@ function SheetHeader({
           }
         >
           {shareState === "loading" ? (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className="w-3.5 h-3.5 animate-spin"
-            >
-              <path
-                fillRule="evenodd"
-                d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.389zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
-                clipRule="evenodd"
-              />
-            </svg>
+            <i className="fa-solid fa-arrows-rotate text-[11px] animate-spin" aria-hidden="true"></i>
           ) : shareState === "copied" ? (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className="w-3.5 h-3.5"
-            >
-              <path
-                fillRule="evenodd"
-                d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-                clipRule="evenodd"
-              />
-            </svg>
+            <i className="fa-solid fa-check text-[11px]" aria-hidden="true"></i>
           ) : shareState === "error" ? (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className="w-3.5 h-3.5"
-            >
-              <path
-                fillRule="evenodd"
-                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z"
-                clipRule="evenodd"
-              />
-            </svg>
+            <i className="fa-solid fa-circle-exclamation text-[11px]" aria-hidden="true"></i>
           ) : (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className="w-3.5 h-3.5"
-            >
-              <path d="M13 4.5a2.5 2.5 0 11.702 1.737L6.97 9.604a2.518 2.518 0 010 .792l6.733 3.367a2.5 2.5 0 11-.671 1.341l-6.733-3.367a2.5 2.5 0 110-3.474l6.733-3.366A2.52 2.52 0 0113 4.5z" />
-            </svg>
+            <i className="fa-solid fa-share-nodes text-[11px]" aria-hidden="true"></i>
           )}
           <span>
             {shareState === "copied"
@@ -715,18 +668,7 @@ function SheetHeader({
               "
               aria-label="Level up character"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                className="w-3.5 h-3.5"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 17a.75.75 0 01-.75-.75V5.612L5.29 9.77a.75.75 0 01-1.08-1.04l5.25-5.5a.75.75 0 011.08 0l5.25 5.5a.75.75 0 11-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0110 17z"
-                  clipRule="evenodd"
-                />
-              </svg>
+              <i className="fa-solid fa-arrow-up w-3.5 h-3.5 text-center text-[0.7rem] leading-[0.875rem]" aria-hidden="true" />
               <span>Level Up</span>
             </button>
           ) : (
@@ -746,20 +688,7 @@ function SheetHeader({
               aria-label="Link Patreon to unlock leveling up"
               title="Join our free Patreon to unlock leveling up"
             >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                className="w-3.5 h-3.5"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
-                />
-              </svg>
+              <i className="fa-solid fa-lock w-3.5 h-3.5 text-center text-[0.7rem] leading-[0.875rem]" aria-hidden="true" />
               <span>{isLinking ? "Linking\u2026" : "Level Up"}</span>
             </button>
           ))}
@@ -774,21 +703,10 @@ function SheetHeader({
           aria-expanded={diceColorsOpen}
           aria-controls="sheet-dice-colors-panel"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            className={[
-              "w-3.5 h-3.5 shrink-0 text-steel-accessible transition-transform duration-150",
+          <i className={[
+              "fa-solid fa-chevron-right w-3.5 h-3.5 shrink-0 text-center text-[0.6rem] leading-[0.875rem] text-steel-accessible transition-transform duration-150",
               diceColorsOpen ? "rotate-90" : "",
-            ].join(" ")}
-          >
-            <path
-              fillRule="evenodd"
-              d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
-              clipRule="evenodd"
-            />
-          </svg>
+            ].join(" ")} aria-hidden="true" />
           <span className="text-xs uppercase tracking-widest text-[#b9baa3] font-medium group-hover:text-[#f7f7ff] transition-colors">
             Dice Colors
           </span>
@@ -803,14 +721,7 @@ function SheetHeader({
           {/* Premium badge — inline when gated */}
           {diceColorsGated && (
             <span className="flex items-center gap-1 shrink-0 ml-auto rounded border border-gold-500/30 bg-gold-500/10 px-1.5 py-0.5">
-              <svg
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="w-3 h-3 text-gold-400/80"
-                aria-hidden="true"
-              >
-                <path d="M2 19h20v3H2v-3zm1-1L6 6l4 4 2-6 2 6 4-4 3 12H3z" />
-              </svg>
+              <i className="fa-solid fa-crown w-3 h-3 text-center text-[0.6rem] leading-3 text-gold-400/80" aria-hidden="true" />
               <span className="text-[11px] font-semibold text-gold-400/80">
                 Paid
               </span>
@@ -864,14 +775,7 @@ function SheetHeader({
           {diceColorsGated ? (
             <div className="mt-2 space-y-2">
               <div className="flex items-center gap-2 rounded-lg border border-gold-500/25 bg-gold-500/6 px-3 py-2">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  className="w-3.5 h-3.5 shrink-0 text-gold-400/80"
-                  aria-hidden="true"
-                >
-                  <path d="M2 19h20v3H2v-3zm1-1L6 6l4 4 2-6 2 6 4-4 3 12H3z" />
-                </svg>
+                <i className="fa-solid fa-crown w-3.5 h-3.5 shrink-0 text-center text-[0.65rem] leading-[0.875rem] text-gold-400/80" aria-hidden="true" />
                 <p className="flex-1 text-xs text-[#b9baa3]/80 leading-snug">
                   <span className="font-semibold text-gold-400">
                     Paid membership
