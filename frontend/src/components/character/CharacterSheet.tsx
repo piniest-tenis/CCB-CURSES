@@ -479,13 +479,18 @@ function SheetHeader({
           )}
         </div>
 
-        {/* Evasion + Armor Score — derived stats in the header */}
-        <div className="flex-shrink-0 flex gap-2">
+        {/* Evasion + Armor Score — defensive stats group */}
+        <div
+          className="flex-shrink-0 flex items-center gap-3 rounded-xl border border-steel-400/25 bg-steel-400/[0.06] px-3 py-2"
+          role="group"
+          aria-label="Defensive Stats"
+        >
           <div
-            className="flex flex-col items-center gap-1"
+            className="flex flex-col items-center gap-1.5"
             data-field-key="sheet.evasion"
           >
-            <span className="text-[11px] sm:text-xs uppercase tracking-widest text-parchment-500 font-medium">
+            <span className="flex items-center gap-1 text-[11px] sm:text-xs uppercase tracking-widest text-steel-accessible font-semibold">
+              <i className="fa-solid fa-shield-halved text-[10px] sm:text-[11px] opacity-80" aria-hidden="true"></i>
               Evasion
             </span>
             <StatTooltip
@@ -495,17 +500,18 @@ function SheetHeader({
             >
               <output
                 aria-label={`Evasion ${activeCharacter.derivedStats.evasion}`}
-                className="w-12 rounded-lg border border-steel-400/40 bg-slate-850 py-1.5 text-center text-2xl font-bold text-[#f7f7ff] font-serif leading-none hover:border-steel-400 transition-colors"
+                className="w-14 min-h-[2.75rem] rounded-lg border-2 border-steel-400/50 bg-slate-850 py-2 text-center text-3xl font-bold text-[#f7f7ff] leading-none hover:border-steel-400 hover:bg-steel-400/[0.08] transition-colors tabular-nums"
               >
                 {activeCharacter.derivedStats.evasion}
               </output>
             </StatTooltip>
           </div>
           <div
-            className="flex flex-col items-center gap-1"
+            className="flex flex-col items-center gap-1.5"
             data-field-key="sheet.armor"
           >
-            <span className="text-[11px] sm:text-xs uppercase tracking-widest text-parchment-500 font-medium">
+            <span className="flex items-center gap-1 text-[11px] sm:text-xs uppercase tracking-widest text-steel-accessible font-semibold">
+              <i className="fa-solid fa-shield text-[10px] sm:text-[11px] opacity-80" aria-hidden="true"></i>
               Armor
             </span>
             <StatTooltip
@@ -515,7 +521,7 @@ function SheetHeader({
             >
               <output
                 aria-label={`Armor Score ${activeCharacter.derivedStats.armor}`}
-                className="w-12 rounded-lg border border-steel-400/40 bg-slate-850 py-1.5 text-center text-2xl font-bold text-[#f7f7ff] font-serif leading-none hover:border-steel-400 transition-colors"
+                className="w-14 min-h-[2.75rem] rounded-lg border-2 border-steel-400/50 bg-slate-850 py-2 text-center text-3xl font-bold text-[#f7f7ff] leading-none hover:border-steel-400 hover:bg-steel-400/[0.08] transition-colors tabular-nums"
               >
                 {activeCharacter.derivedStats.armor}
               </output>
