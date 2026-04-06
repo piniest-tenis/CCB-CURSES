@@ -205,7 +205,7 @@ function SheetPingWrapper({ characterId, characterName, isGm, onPingField }: She
           <button
             type="button"
             onClick={() => setBannerDismissed(false)}
-            className="text-[10px] text-[#b9baa3]/30 hover:text-[#b9baa3]/60 transition-colors"
+            className="text-[11px] text-[#b9baa3]/30 hover:text-[#b9baa3]/60 transition-colors"
           >
             ⓘ Ping help
           </button>
@@ -400,7 +400,7 @@ function GmTabBar({ activeTab, onTabChange, encounterCount }: GmTabBarProps) {
                 className="
                   ml-1 inline-flex items-center justify-center
                   h-4 min-w-[1rem] rounded-full px-1
-                  text-[10px] font-bold tabular-nums
+                  text-[11px] font-bold tabular-nums
                   bg-[#fe5f55]/20 text-[#fe5f55]
                 "
               >
@@ -445,7 +445,7 @@ function MobileBottomNav({ activeTab, onTabChange, encounterCount }: MobileBotto
             aria-current={isActive ? "page" : undefined}
             className={`
               relative flex-1 flex flex-col items-center justify-center gap-0.5
-              text-[10px] font-semibold transition-colors
+              text-[11px] font-semibold transition-colors
               focus:outline-none focus-visible:ring-2 focus-visible:ring-[#577399]
               ${isActive ? "text-[#577399]" : "text-[#b9baa3]/50 hover:text-[#b9baa3]"}
             `}
@@ -467,7 +467,7 @@ function MobileBottomNav({ activeTab, onTabChange, encounterCount }: MobileBotto
                   absolute top-1.5 right-[calc(50%-20px)]
                   inline-flex items-center justify-center
                   h-4 min-w-[1rem] rounded-full px-1
-                  text-[9px] font-bold tabular-nums
+                  text-[10px] font-bold tabular-nums
                   bg-[#fe5f55] text-white
                 "
               >

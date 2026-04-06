@@ -96,7 +96,7 @@ export function QuickAddPanel({
             >
               <TierBadge tier={a.tier} size="sm" />
               <span className="text-sm font-medium text-[#f7f7ff]">{a.name}</span>
-              <span className="text-[10px] text-[#b9baa3]/50 ml-auto">
+              <span className="text-[11px] text-[#b9baa3]/50 ml-auto">
                 {a.type} · HP {a.hp}
               </span>
             </button>

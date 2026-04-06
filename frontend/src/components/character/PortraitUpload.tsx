@@ -535,7 +535,7 @@ export function PortraitDisplay({ characterId }: PortraitDisplayProps) {
               transition-opacity duration-200
             "
           >
-            <span className="text-[9px] font-semibold uppercase tracking-wider text-[#f7f7ff] bg-[#0a100d]/70 rounded px-1.5 py-0.5">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#f7f7ff] bg-[#0a100d]/70 rounded px-1.5 py-0.5">
               {portraitUrl ? "Change" : "Upload"}
             </span>
           </div>

@@ -110,7 +110,7 @@ export function EncounterAdversaryRow({
                   <span className="ml-1 text-[#DAA520]">{instance.label}</span>
                 )}
               </h3>
-              <span className="text-[10px] text-[#b9baa3]/50">
+              <span className="text-[11px] text-[#b9baa3]/50">
                 {tier != null && `T${tier} · `}
                 {adversaryType && `${adversaryType} · `}
                 Diff {instance.difficulty}
@@ -121,7 +121,7 @@ export function EncounterAdversaryRow({
             <div className="mt-2 space-y-1.5">
               {/* HP */}
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#fe5f55]/70 w-10 shrink-0">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#fe5f55]/70 w-10 shrink-0">
                   HP
                 </span>
                 <div
@@ -155,7 +155,7 @@ export function EncounterAdversaryRow({
                       </button>
                     );
                   })}
-                  <span className="ml-1.5 text-[10px] font-bold text-[#b9baa3] tabular-nums shrink-0">
+                  <span className="ml-1.5 text-[11px] font-bold text-[#b9baa3] tabular-nums shrink-0">
                     {instance.hpMarked}/{instance.hpMax}
                   </span>
                 </div>
@@ -163,7 +163,7 @@ export function EncounterAdversaryRow({
 
               {/* Stress */}
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#577399]/70 w-10 shrink-0">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#577399]/70 w-10 shrink-0">
                   Stress
                 </span>
                 <div
@@ -197,7 +197,7 @@ export function EncounterAdversaryRow({
                       </button>
                     );
                   })}
-                  <span className="ml-1.5 text-[10px] font-bold text-[#b9baa3] tabular-nums shrink-0">
+                  <span className="ml-1.5 text-[11px] font-bold text-[#b9baa3] tabular-nums shrink-0">
                     {instance.stressMarked}/{instance.stressMax}
                   </span>
                 </div>
@@ -205,7 +205,7 @@ export function EncounterAdversaryRow({
             </div>
 
             {/* Thresholds — inline, color-coded */}
-            <div className="mt-1.5 flex items-center gap-2 text-[10px]">
+            <div className="mt-1.5 flex items-center gap-2 text-[11px]">
               <span className="text-[#b9baa3]/40 uppercase tracking-wider font-semibold">
                 Thresholds
               </span>
@@ -256,14 +256,14 @@ export function EncounterAdversaryRow({
             "
           >
             🎲{" "}
-            <span className="font-mono text-[10px]">
+            <span className="font-mono text-[11px]">
               {instance.attackDamage.split(" ")[0]}
             </span>
           </button>
 
           {/* Quick damage buttons */}
           <div className="flex items-center gap-1 border-l border-slate-800/60 pl-2 ml-1">
-            <span className="text-[9px] text-[#b9baa3]/40 uppercase tracking-wider mr-1">
+            <span className="text-[10px] text-[#b9baa3]/40 uppercase tracking-wider mr-1">
               Mark
             </span>
             <button
@@ -276,7 +276,7 @@ export function EncounterAdversaryRow({
               title="Mark 1 HP (below major)"
               className="
                 rounded border border-parchment-400/20 bg-parchment-400/5
-                px-1.5 py-0.5 text-[10px] font-bold text-parchment-400
+                px-1.5 py-0.5 text-[11px] font-bold text-parchment-400
                 hover:bg-parchment-400/15 transition-colors
                 focus:outline-none focus:ring-1 focus:ring-parchment-400
               "
@@ -293,7 +293,7 @@ export function EncounterAdversaryRow({
               title="Mark 2 HP (major)"
               className="
                 rounded border border-[#DAA520]/20 bg-[#DAA520]/5
-                px-1.5 py-0.5 text-[10px] font-bold text-[#DAA520]
+                px-1.5 py-0.5 text-[11px] font-bold text-[#DAA520]
                 hover:bg-[#DAA520]/15 transition-colors
                 focus:outline-none focus:ring-1 focus:ring-[#DAA520]
               "
@@ -310,7 +310,7 @@ export function EncounterAdversaryRow({
               title="Mark 3 HP (severe)"
               className="
                 rounded border border-[#fe5f55]/20 bg-[#fe5f55]/5
-                px-1.5 py-0.5 text-[10px] font-bold text-[#fe5f55]
+                px-1.5 py-0.5 text-[11px] font-bold text-[#fe5f55]
                 hover:bg-[#fe5f55]/15 transition-colors
                 focus:outline-none focus:ring-1 focus:ring-[#fe5f55]
               "
@@ -351,7 +351,7 @@ export function EncounterAdversaryRow({
               animate-slide-in-left
             "
           >
-            <span className="text-[10px] text-[#b9baa3]/50 uppercase tracking-wider shrink-0">
+            <span className="text-[11px] text-[#b9baa3]/50 uppercase tracking-wider shrink-0">
               {lastRoll.label.includes("Attack") ? "Atk" : "Dmg"}
             </span>
             <span
@@ -363,11 +363,11 @@ export function EncounterAdversaryRow({
               {lastRoll.total}
             </span>
             {isCrit && (
-              <span className="rounded-full bg-[#DAA520]/20 border border-[#DAA520]/40 px-1.5 py-0.5 text-[10px] font-bold text-[#DAA520] uppercase tracking-wider">
+              <span className="rounded-full bg-[#DAA520]/20 border border-[#DAA520]/40 px-1.5 py-0.5 text-[11px] font-bold text-[#DAA520] uppercase tracking-wider">
                 Crit
               </span>
             )}
-            <span className="text-[10px] text-[#b9baa3]/50 font-mono">
+            <span className="text-[11px] text-[#b9baa3]/50 font-mono">
               ({lastRoll.diceValues.join(" + ")}
               {lastRoll.modifier !== 0 &&
                 ` ${lastRoll.modifier > 0 ? "+" : ""}${lastRoll.modifier}`}

@@ -53,7 +53,7 @@ import { SYSTEM_DEFAULTS, resolveDiceColors, resolveGmDiceColor, buildColorOverr
 import { useAuthStore } from "@/store/authStore";
 import { StatTooltip } from "./StatTooltip";
 import { useStatBreakdowns } from "@/hooks/useStatBreakdowns";
-import { PatreonPaidGate } from "@/components/PatreonGateOverlay";
+import { usePatreonGate, usePatreonOAuth } from "@/hooks/usePatreonGate";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -138,13 +138,13 @@ function ConditionsSidebar({
         inert={!open ? ("" as unknown as boolean) : undefined}
         className={[
           "fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-[28rem] flex-col",
-          "border-l border-[#577399]/35 bg-[#0f1713] shadow-2xl",
+          "border-l border-steel-400/35 bg-[#0f1713] shadow-2xl",
           "transition-transform duration-300 ease-in-out",
           open ? "translate-x-0" : "translate-x-full",
         ].join(" ")}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#577399]/25 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-steel-400/25 px-5 py-4">
           <div>
             <p className="text-xs uppercase tracking-[0.24em] sidebar-text-secondary">Character</p>
             <h2 id={headingId} className="font-serif text-lg font-semibold text-[#f7f7ff]">Conditions</h2>
@@ -153,7 +153,7 @@ function ConditionsSidebar({
             type="button"
             onClick={onClose}
             aria-label="Close conditions panel"
-            className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#577399]/30 text-[#b9baa3] hover:bg-[#577399]/12 hover:text-[#f7f7ff] focus:outline-none focus:ring-2 focus:ring-[#577399]"
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-steel-400/30 text-[#b9baa3] hover:bg-steel-400/12 hover:text-[#f7f7ff] focus:outline-none focus:ring-2 focus:ring-steel-400"
           >
             ✕
           </button>
@@ -178,8 +178,8 @@ function ConditionsSidebar({
                         "flex items-center gap-3 rounded-lg px-3 py-3 cursor-pointer",
                         "border transition-colors",
                         checked
-                          ? "border-[#577399] bg-[#577399]/20 text-[#f7f7ff]"
-                          : "border-transparent hover:border-[#577399]/40 hover:bg-slate-800/50 text-[#b9baa3]",
+                          ? "border-steel-400 bg-steel-400/20 text-[#f7f7ff]"
+                          : "border-transparent hover:border-steel-400/40 hover:bg-slate-800/50 text-[#b9baa3]",
                       ].join(" ")}
                     >
                       <input
@@ -187,7 +187,7 @@ function ConditionsSidebar({
                         type="checkbox"
                         checked={checked}
                         onChange={() => onToggle(cond)}
-                        className="h-4 w-4 rounded border-[#577399]/60 bg-slate-900 accent-[#577399] focus:ring-2 focus:ring-[#577399]"
+                        className="h-4 w-4 rounded border-steel-400/60 bg-slate-900 accent-steel-400 focus:ring-2 focus:ring-steel-400"
                       />
                       <span className="text-sm font-medium">{cond}</span>
                     </label>
@@ -215,8 +215,8 @@ function ConditionsSidebar({
                           "flex items-start gap-3 rounded-lg px-3 py-3 cursor-pointer",
                           "border transition-colors",
                           checked
-                            ? "border-[#577399] bg-[#577399]/20 text-[#f7f7ff]"
-                            : "border-transparent hover:border-[#577399]/40 hover:bg-slate-800/50 text-parchment-400",
+                            ? "border-steel-400 bg-steel-400/20 text-[#f7f7ff]"
+                            : "border-transparent hover:border-steel-400/40 hover:bg-slate-800/50 text-parchment-400",
                         ].join(" ")}
                       >
                         <input
@@ -224,7 +224,7 @@ function ConditionsSidebar({
                           type="checkbox"
                           checked={checked}
                           onChange={() => onToggle(cond.conditionId)}
-                          className="mt-0.5 h-4 w-4 rounded border-[#577399]/60 bg-slate-900 accent-[#577399] focus:ring-2 focus:ring-[#577399]"
+                          className="mt-0.5 h-4 w-4 rounded border-steel-400/60 bg-slate-900 accent-steel-400 focus:ring-2 focus:ring-steel-400"
                         />
                         <span className="flex flex-col gap-0.5">
                           <span className="text-sm font-medium">
@@ -245,11 +245,11 @@ function ConditionsSidebar({
         </div>
 
         {/* Footer */}
-        <div className="border-t border-[#577399]/25 px-5 py-4">
+        <div className="border-t border-steel-400/25 px-5 py-4">
           <button
             type="button"
             onClick={onClose}
-            className="w-full rounded-xl border border-[#577399]/40 bg-[#577399]/15 px-4 py-3 text-sm font-semibold text-[#f7f7ff] hover:bg-[#577399]/25 focus:outline-none focus:ring-2 focus:ring-[#577399]"
+            className="w-full rounded-xl border border-steel-400/40 bg-steel-400/15 px-4 py-3 text-sm font-semibold text-[#f7f7ff] hover:bg-steel-400/25 focus:outline-none focus:ring-2 focus:ring-steel-400"
           >
             Done
           </button>
@@ -279,7 +279,7 @@ const DIVIDER_MAP: Partial<Record<CoreStatName, string>> = {
 function SheetDivider({ spellcastTrait }: { spellcastTrait?: CoreStatName | null }) {
   const src = spellcastTrait ? DIVIDER_MAP[spellcastTrait] : null;
   if (!src) {
-    return <div className="my-1 border-t border-[#577399]/15" aria-hidden="true" />;
+    return <div className="my-1 border-t border-steel-400/15" aria-hidden="true" />;
   }
   return (
     <div className="my-1 w-full overflow-hidden" aria-hidden="true">
@@ -317,6 +317,9 @@ function SheetHeader({ characterId, classData, onLevelUp, isDirty = false }: She
   const [shareState, setShareState] = React.useState<ShareState>("idle");
   const [diceColorsOpen, setDiceColorsOpen] = React.useState(false);
   const userPrefs = useAuthStore((s) => s.user?.preferences);
+  const { canAccessCampaigns, canLevelUp, needsPatreon } = usePatreonGate();
+  const { startOAuth, isLinking } = usePatreonOAuth();
+  const diceColorsGated = !canAccessCampaigns;
 
   const handleShare = React.useCallback(async () => {
     if (shareState === "loading") return;
@@ -368,7 +371,16 @@ function SheetHeader({ characterId, classData, onLevelUp, isDirty = false }: She
   const kickerParts: string[] = [];
   if (activeCharacter.communityId) kickerParts.push(communityName);
   if (activeCharacter.ancestryId)  kickerParts.push(ancestryName);
-  if (activeCharacter.classId)     kickerParts.push(classDisplay);
+
+  // Resolve subclass name for the kicker line
+  const subclassName = (classData?.subclasses ?? []).find(
+    (sc) => sc.subclassId === activeCharacter.subclassId
+  )?.name ?? null;
+
+  // Build class display with subclass appended: "Warrior (Stalwart)"
+  const classWithSubclass = subclassName
+    ? `${classDisplay} (${subclassName})`
+    : classDisplay;
 
   // Conditions collapsed display
   const activeConditionLabels = activeConditions.map((id) => {
@@ -391,94 +403,23 @@ function SheetHeader({ characterId, classData, onLevelUp, isDirty = false }: She
           <div className="flex items-center gap-2">
             <EditableField
               field={CHARACTER_NAME_FIELD}
-              activeClassName="ring-2 ring-[#577399]/60 rounded-lg"
+              activeClassName="ring-2 ring-steel-400/60 rounded-lg"
             >
               <h1 className="text-4xl font-bold font-serif text-[#f7f7ff] leading-normal">
                 {activeCharacter.name || "Unnamed Character"}
               </h1>
             </EditableField>
-
-            {/* Pencil icon → builder */}
-            <button
-              type="button"
-              onClick={() => router.push(`/character/${characterId}/build`)}
-              data-field-key="sheet.edit"
-              className="
-                group relative shrink-0 p-1.5 rounded-md
-                text-[#b9baa3]/40 hover:text-[#577399] hover:bg-[#577399]/10
-                transition-colors
-                focus:outline-none focus:ring-2 focus:ring-[#577399]
-              "
-              aria-label="Open Character Builder"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                <path d="M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z" />
-              </svg>
-              <span className="
-                pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2
-                whitespace-nowrap rounded bg-slate-800 px-2 py-1 text-xs text-[#f7f7ff]
-                opacity-0 group-hover:opacity-100 transition-opacity
-                border border-slate-700
-              ">
-                Character Builder
-              </span>
-            </button>
-
-            {/* Share icon → copy public sheet URL */}
-            <button
-              type="button"
-              onClick={handleShare}
-              disabled={shareState === "loading"}
-              data-field-key="sheet.share"
-              className="
-                group relative shrink-0 p-1.5 rounded-md
-                text-[#b9baa3]/40 hover:text-[#577399] hover:bg-[#577399]/10
-                transition-colors
-                focus:outline-none focus:ring-2 focus:ring-[#577399]
-                disabled:opacity-50 disabled:cursor-wait
-              "
-              aria-label={
-                shareState === "copied" ? "Link copied!" :
-                shareState === "error"  ? "Copy failed" :
-                "Copy public sheet link"
-              }
-            >
-              {shareState === "loading" ? (
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 animate-spin">
-                  <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.389zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clipRule="evenodd" />
-                </svg>
-              ) : shareState === "copied" ? (
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-green-400">
-                  <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-                </svg>
-              ) : shareState === "error" ? (
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-red-400">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                  <path d="M13 4.5a2.5 2.5 0 11.702 1.737L6.97 9.604a2.518 2.518 0 010 .792l6.733 3.367a2.5 2.5 0 11-.671 1.341l-6.733-3.367a2.5 2.5 0 110-3.474l6.733-3.366A2.52 2.52 0 0113 4.5z" />
-                </svg>
-              )}
-              <span className={[
-                "pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2",
-                "whitespace-nowrap rounded px-2 py-1 text-xs",
-                "opacity-0 group-hover:opacity-100 transition-opacity",
-                "border",
-                shareState === "copied"
-                  ? "bg-green-900 border-green-700 text-green-200"
-                  : shareState === "error"
-                  ? "bg-red-900 border-red-700 text-red-200"
-                  : "bg-slate-800 border-slate-700 text-[#f7f7ff]",
-              ].join(" ")}>
-                {shareState === "copied" ? "Copied!" : shareState === "error" ? "Copy failed" : "Copy public link"}
-              </span>
-            </button>
           </div>
 
-          {kickerParts.length > 0 && (
+          {(kickerParts.length > 0 || activeCharacter.classId) && (
             <p className="text-sm text-[#b9baa3] font-serif">
               {kickerParts.join(" · ")}
+              {activeCharacter.classId && (
+                <>
+                  {kickerParts.length > 0 && " · "}
+                  <span className="font-semibold text-[#f7f7ff]">{classWithSubclass}</span>
+                </>
+              )}
             </p>
           )}
         </div>
@@ -486,7 +427,7 @@ function SheetHeader({ characterId, classData, onLevelUp, isDirty = false }: She
         {/* Evasion + Armor Score — derived stats in the header */}
         <div className="flex-shrink-0 flex gap-2">
           <div className="flex flex-col items-center gap-1" data-field-key="sheet.evasion">
-            <span className="text-xs uppercase tracking-widest text-parchment-500 font-medium hidden sm:block">
+            <span className="text-[11px] sm:text-xs uppercase tracking-widest text-parchment-500 font-medium">
               Evasion
             </span>
             <StatTooltip
@@ -496,14 +437,14 @@ function SheetHeader({ characterId, classData, onLevelUp, isDirty = false }: She
             >
               <output
                 aria-label={`Evasion ${activeCharacter.derivedStats.evasion}`}
-                className="w-12 rounded-lg border border-[#577399]/40 bg-slate-850 py-1.5 text-center text-2xl font-bold text-[#f7f7ff] font-serif leading-none hover:border-[#577399] transition-colors"
+                className="w-12 rounded-lg border border-steel-400/40 bg-slate-850 py-1.5 text-center text-2xl font-bold text-[#f7f7ff] font-serif leading-none hover:border-steel-400 transition-colors"
               >
                 {activeCharacter.derivedStats.evasion}
               </output>
             </StatTooltip>
           </div>
           <div className="flex flex-col items-center gap-1" data-field-key="sheet.armor">
-            <span className="text-xs uppercase tracking-widest text-parchment-500 font-medium hidden sm:block">
+            <span className="text-[11px] sm:text-xs uppercase tracking-widest text-parchment-500 font-medium">
               Armor
             </span>
             <StatTooltip
@@ -513,7 +454,7 @@ function SheetHeader({ characterId, classData, onLevelUp, isDirty = false }: She
             >
               <output
                 aria-label={`Armor Score ${activeCharacter.derivedStats.armor}`}
-                className="w-12 rounded-lg border border-[#577399]/40 bg-slate-850 py-1.5 text-center text-2xl font-bold text-[#f7f7ff] font-serif leading-none hover:border-[#577399] transition-colors"
+                className="w-12 rounded-lg border border-steel-400/40 bg-slate-850 py-1.5 text-center text-2xl font-bold text-[#f7f7ff] font-serif leading-none hover:border-steel-400 transition-colors"
               >
                 {activeCharacter.derivedStats.armor}
               </output>
@@ -523,7 +464,7 @@ function SheetHeader({ characterId, classData, onLevelUp, isDirty = false }: She
 
         {/* Conditions — compact column, same width as Level */}
         <div className="flex-shrink-0 flex flex-col items-center gap-1" data-field-key="sheet.conditions">
-          <span className="text-xs uppercase tracking-widest text-parchment-500 font-medium hidden sm:block">
+          <span className="text-[11px] sm:text-xs uppercase tracking-widest text-parchment-500 font-medium">
             Conditions
           </span>
           <button
@@ -536,78 +477,162 @@ function SheetHeader({ characterId, classData, onLevelUp, isDirty = false }: She
             }
             aria-haspopup="dialog"
             aria-expanded={conditionsOpen}
-            className="
-              w-12 min-h-[2.75rem] rounded-lg border border-[#577399]/40 bg-slate-850 px-1 py-1.5
-              flex flex-col items-center justify-center gap-0.5
-              hover:border-[#577399] hover:bg-slate-800
-              focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-1 focus:ring-offset-slate-900
-              transition-colors cursor-pointer
-            "
+            className={[
+              "w-12 min-h-[2.75rem] rounded-lg border px-1 py-1.5",
+              "flex flex-col items-center justify-center gap-0.5",
+              "hover:border-steel-400 hover:bg-slate-800",
+              "focus:outline-none focus:ring-2 focus:ring-steel-400 focus:ring-offset-1 focus:ring-offset-slate-900",
+              "transition-colors cursor-pointer",
+              activeConditions.length > 0
+                ? "border-[#fe5f55]/40 bg-[#fe5f55]/8"
+                : "border-steel-400/40 bg-slate-850",
+            ].join(" ")}
           >
             {activeConditions.length === 0 ? (
               <span className="text-xl font-bold text-[#b9baa3] font-serif leading-none">—</span>
             ) : (
-              <>
-                {visibleChips.map((label) => (
-                  <span
-                    key={label}
-                    className="w-full text-center truncate rounded border border-[#577399]/60 bg-[#577399]/20 px-1 py-px text-xs font-semibold text-[#f7f7ff] leading-tight"
-                  >
-                    {label}
-                  </span>
-                ))}
-                {overflowCount > 0 && (
-                <span className="text-xs text-[#b9baa3] leading-tight">+{overflowCount}</span>
-                )}
-              </>
+              <span className={[
+                "text-2xl font-bold font-serif leading-none",
+                activeConditions.length >= 3 ? "text-[#fe5f55]" : "text-[#f7f7ff]",
+              ].join(" ")}>
+                {activeConditions.length}
+              </span>
             )}
           </button>
         </div>
 
         {/* Level — flex-shrink-0 so it never wraps into the name */}
         <div className="flex-shrink-0 flex flex-col items-center gap-1" role="group" aria-label="Character Level" data-field-key="sheet.level">
-          <span className="text-xs uppercase tracking-widest text-parchment-500 font-medium hidden sm:block">
+          <span className="text-[11px] sm:text-xs uppercase tracking-widest text-parchment-500 font-medium">
             Level
           </span>
           <output
             aria-live="polite"
             aria-label={`Level ${activeCharacter.level}`}
-            className="w-12 rounded-lg border border-[#577399]/40 bg-slate-850 py-1.5 text-center text-2xl font-bold text-[#f7f7ff] font-serif leading-none"
+            className="w-12 rounded-lg border border-amber-500/40 bg-amber-950/30 py-1.5 text-center text-2xl font-bold text-[#f7f7ff] font-serif leading-none"
           >
             {activeCharacter.level}
           </output>
-          {activeCharacter.level < 10 && (
-            <button
-              type="button"
-              onClick={onLevelUp}
-              aria-label="Level up character"
-              className="
-                min-h-[36px] rounded border border-[#577399]/40 bg-[#577399]/10 px-2 py-1
-                text-xs font-semibold text-[#f7f7ff] whitespace-nowrap
-                hover:bg-[#577399]/20 hover:border-[#577399]
-                transition-all duration-150
-                focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-1 focus:ring-offset-slate-900
-              "
-            >
-              Level Up
-            </button>
-          )}
         </div>
       </div>
 
-      {/* ── Subclass ─────────────────────────────────────────────── */}
-      {!!classData?.subclasses.length && activeCharacter.subclassId && (
-        <div className="pt-2 border-t border-[#577399]/20">
-          <p className="text-xs uppercase tracking-widest text-[#b9baa3] font-medium">Subclass</p>
-          <p className="mt-0.5 text-sm font-medium text-[#f7f7ff]">
-            {classData.subclasses.find((sc) => sc.subclassId === activeCharacter.subclassId)?.name ?? "Unknown"}
-          </p>
-        </div>
-      )}
+      {/* ── Actions Toolbar (Edit, Share, Level Up) ──── */}
+      <div className="flex items-center gap-2 rounded-lg border border-steel-400/20 bg-slate-900/60 px-3 py-2">
+        {/* Edit — pill button */}
+        <button
+          type="button"
+          onClick={() => router.push(`/character/${characterId}/build`)}
+          data-field-key="sheet.edit"
+          className="
+            flex items-center gap-1.5 rounded-full border border-steel-400/30 bg-transparent
+            px-3 py-1.5 text-xs font-semibold text-[#b9baa3]
+            hover:border-amber-500 hover:text-amber-500
+            transition-all duration-150 sm:[transition-delay:0.5s]
+            focus:outline-none focus:ring-2 focus:ring-amber-500
+          "
+          aria-label="Open Character Builder"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+            <path d="M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z" />
+          </svg>
+          <span>Edit</span>
+        </button>
 
-      {/* ── Dice Colors ──────────────────────────────────────────── */}
-      <PatreonPaidGate>
-      <div className="pt-2 border-t border-[#577399]/20">
+        {/* Share — pill button */}
+        <button
+          type="button"
+          onClick={handleShare}
+          disabled={shareState === "loading"}
+          data-field-key="sheet.share"
+          className={[
+            "flex items-center gap-1.5 rounded-full border bg-transparent",
+            "px-3 py-1.5 text-xs font-semibold",
+            "transition-all duration-150 sm:[transition-delay:0.5s]",
+            "focus:outline-none focus:ring-2 focus:ring-amber-500",
+            "disabled:opacity-50 disabled:cursor-wait",
+            shareState === "copied"
+              ? "border-green-500/50 text-green-400"
+              : shareState === "error"
+              ? "border-red-500/50 text-red-400"
+              : "border-steel-400/30 text-[#b9baa3] hover:border-amber-500 hover:text-amber-500",
+          ].join(" ")}
+          aria-label={
+            shareState === "copied" ? "Link copied!" :
+            shareState === "error"  ? "Copy failed" :
+            "Copy public sheet link"
+          }
+        >
+          {shareState === "loading" ? (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 animate-spin">
+              <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.389zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clipRule="evenodd" />
+            </svg>
+          ) : shareState === "copied" ? (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+              <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+            </svg>
+          ) : shareState === "error" ? (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+              <path d="M13 4.5a2.5 2.5 0 11.702 1.737L6.97 9.604a2.518 2.518 0 010 .792l6.733 3.367a2.5 2.5 0 11-.671 1.341l-6.733-3.367a2.5 2.5 0 110-3.474l6.733-3.366A2.52 2.52 0 0113 4.5z" />
+            </svg>
+          )}
+          <span>
+            {shareState === "copied" ? "Copied!" : shareState === "error" ? "Failed" : "Share"}
+          </span>
+        </button>
+
+        {/* Level Up — right-aligned, with Patreon gate */}
+        {activeCharacter.level < 10 && (
+          canLevelUp ? (
+            <button
+              type="button"
+              onClick={onLevelUp}
+              data-field-key="sheet.levelup"
+              className="
+                ml-auto flex items-center gap-1.5 rounded-full border border-steel-400/30 bg-transparent
+                px-3 py-1.5 text-xs font-semibold text-[#b9baa3]
+                hover:border-amber-500 hover:text-amber-500
+                transition-all duration-150 sm:[transition-delay:0.5s]
+                focus:outline-none focus:ring-2 focus:ring-amber-500
+              "
+              aria-label="Level up character"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                <path fillRule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L5.29 9.77a.75.75 0 01-1.08-1.04l5.25-5.5a.75.75 0 011.08 0l5.25 5.5a.75.75 0 11-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0110 17z" clipRule="evenodd" />
+              </svg>
+              <span>Level Up</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={startOAuth}
+              disabled={isLinking}
+              data-field-key="sheet.levelup"
+              className="
+                ml-auto flex items-center gap-1.5 rounded-full border border-coral-400/30 bg-transparent
+                px-3 py-1.5 text-xs font-semibold text-coral-400/80
+                hover:border-coral-400/50 hover:text-coral-400
+                transition-all duration-150
+                focus:outline-none focus:ring-2 focus:ring-coral-400
+                disabled:opacity-60 disabled:cursor-wait
+              "
+              aria-label="Link Patreon to unlock leveling up"
+              title="Join our free Patreon to unlock leveling up"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+              </svg>
+              <span>{isLinking ? "Linking\u2026" : "Level Up"}</span>
+            </button>
+          )
+        )}
+      </div>
+
+      {/* ── Dice Colors (visually separate from header stats) ──── */}
+      <div className="rounded-lg border border-steel-400/20 bg-slate-900/60 px-3 py-2">
         <button
           type="button"
           onClick={() => setDiceColorsOpen((o) => !o)}
@@ -620,7 +645,7 @@ function SheetHeader({ characterId, classData, onLevelUp, isDirty = false }: She
             viewBox="0 0 20 20"
             fill="currentColor"
             className={[
-              "w-3.5 h-3.5 shrink-0 text-[#577399] transition-transform duration-150",
+              "w-3.5 h-3.5 shrink-0 text-steel-400 transition-transform duration-150",
               diceColorsOpen ? "rotate-90" : "",
             ].join(" ")}
           >
@@ -633,12 +658,21 @@ function SheetHeader({ characterId, classData, onLevelUp, isDirty = false }: She
           {isDirty && !diceColorsOpen && (
             <span
               aria-hidden="true"
-              className="ml-1 h-1.5 w-1.5 rounded-full bg-[#577399] opacity-60"
+              className="ml-1 h-1.5 w-1.5 rounded-full bg-steel-400 opacity-60"
               title="Changes pending save"
             />
           )}
+          {/* Premium badge — inline when gated */}
+          {diceColorsGated && (
+            <span className="flex items-center gap-1 shrink-0 ml-auto rounded border border-gold-500/30 bg-gold-500/10 px-1.5 py-0.5">
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3 text-gold-400/80" aria-hidden="true">
+                <path d="M2 19h20v3H2v-3zm1-1L6 6l4 4 2-6 2 6 4-4 3 12H3z" />
+              </svg>
+              <span className="text-[11px] font-semibold text-gold-400/80">Paid</span>
+            </span>
+          )}
           {/* Quick preview swatches — die-face style */}
-          {!diceColorsOpen && (
+          {!diceColorsOpen && !diceColorsGated && (
             <span className="flex gap-1 ml-auto" aria-hidden="true">
               {(() => {
                 const resolved = resolveDiceColors(activeCharacter.diceColors, userPrefs?.diceColors);
@@ -676,33 +710,73 @@ function SheetHeader({ characterId, classData, onLevelUp, isDirty = false }: She
         </button>
         {/* Kept mounted (hidden attr) so the editor retains working state across toggles */}
         <div id="sheet-dice-colors-panel" hidden={!diceColorsOpen}>
-          <div className="mt-2">
-            <p className="text-xs text-[#b9baa3]/40 mb-2">
-              Overrides your{" "}
-              <span className="text-[#577399]/70">default dice colors</span>
-              {" "}for this character only. Changes save automatically.
-            </p>
-            <DiceColorEditor
-              value={activeCharacter.diceColors}
-              defaults={(() => {
-                // Defaults come from user preferences, falling back to system defaults
-                const up = userPrefs?.diceColors;
-                return {
-                  hope:    up?.hope    ?? SYSTEM_DEFAULTS.hope,
-                  fear:    up?.fear    ?? SYSTEM_DEFAULTS.fear,
-                  general: up?.general ?? SYSTEM_DEFAULTS.general,
-                };
-              })()}
-              onChange={(prefs: DiceColorPrefs) => {
-                // Store the full prefs object (or undefined if all defaults)
-                const hasAny = prefs.hope || prefs.fear || prefs.general;
-                updateField("diceColors", hasAny ? prefs : undefined);
-              }}
-            />
-          </div>
+          {diceColorsGated ? (
+            <div className="mt-2 space-y-2">
+              <div className="flex items-center gap-2 rounded-lg border border-gold-500/25 bg-gold-500/6 px-3 py-2">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 shrink-0 text-gold-400/80" aria-hidden="true">
+                  <path d="M2 19h20v3H2v-3zm1-1L6 6l4 4 2-6 2 6 4-4 3 12H3z" />
+                </svg>
+                <p className="flex-1 text-xs text-[#b9baa3]/80 leading-snug">
+                  <span className="font-semibold text-gold-400">Paid membership</span>{" "}
+                  required for custom dice colors.
+                </p>
+                <a
+                  href="https://patreon.com/CursesAP"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 rounded-md border border-gold-500/40 bg-gold-500/15 px-3 py-1 text-xs font-semibold text-gold-400 hover:bg-gold-500/25 hover:border-gold-500/60 transition-colors focus:outline-none focus:ring-2 focus:ring-gold-400 focus:ring-offset-1 focus:ring-offset-slate-900"
+                >
+                  View Tiers
+                </a>
+              </div>
+              <div className="pointer-events-none select-none opacity-50" aria-hidden="true" inert>
+                <p className="text-xs text-[#b9baa3]/40 mb-2">
+                  Overrides your{" "}
+                  <span className="text-steel-400/70">default dice colors</span>
+                  {" "}for this character only. Changes save automatically.
+                </p>
+                <DiceColorEditor
+                  value={activeCharacter.diceColors}
+                  defaults={(() => {
+                    const up = userPrefs?.diceColors;
+                    return {
+                      hope:    up?.hope    ?? SYSTEM_DEFAULTS.hope,
+                      fear:    up?.fear    ?? SYSTEM_DEFAULTS.fear,
+                      general: up?.general ?? SYSTEM_DEFAULTS.general,
+                    };
+                  })()}
+                  onChange={() => {}}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="mt-2">
+              <p className="text-xs text-[#b9baa3]/40 mb-2">
+                Overrides your{" "}
+                <span className="text-steel-400/70">default dice colors</span>
+                {" "}for this character only. Changes save automatically.
+              </p>
+              <DiceColorEditor
+                value={activeCharacter.diceColors}
+                defaults={(() => {
+                  // Defaults come from user preferences, falling back to system defaults
+                  const up = userPrefs?.diceColors;
+                  return {
+                    hope:    up?.hope    ?? SYSTEM_DEFAULTS.hope,
+                    fear:    up?.fear    ?? SYSTEM_DEFAULTS.fear,
+                    general: up?.general ?? SYSTEM_DEFAULTS.general,
+                  };
+                })()}
+                onChange={(prefs: DiceColorPrefs) => {
+                  // Store the full prefs object (or undefined if all defaults)
+                  const hasAny = prefs.hope || prefs.fear || prefs.general;
+                  updateField("diceColors", hasAny ? prefs : undefined);
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
-      </PatreonPaidGate>
 
       {/* Conditions slide-in panel */}
       <ConditionsSidebar
@@ -749,12 +823,12 @@ function FeatureActionButton({
           aria-describedby={inlineError ? errorId : undefined}
           aria-busy={isPending}
           className="
-            rounded-lg border border-[#577399]/40 bg-[#577399]/15 px-3 py-1.5
+            rounded-lg border border-steel-400/40 bg-steel-400/15 px-3 py-1.5
             text-xs font-semibold text-[#f7f7ff]
-            hover:bg-[#577399]/25 hover:border-[#577399]
+            hover:bg-steel-400/25 hover:border-steel-400
             disabled:opacity-50 disabled:cursor-wait
             transition-all duration-150
-            focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-1 focus:ring-offset-slate-900
+            focus:outline-none focus:ring-2 focus:ring-steel-400 focus:ring-offset-1 focus:ring-offset-slate-900
           "
         >
           {isPending ? (
@@ -845,11 +919,11 @@ function FeaturesPanel({ classData, characterId, onRollQueued }: FeaturesPanelPr
 
   return (
     <section
-      className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-5 shadow-card space-y-4"
+      className="rounded-xl border border-steel-400/30 bg-slate-900/80 p-5 shadow-card space-y-4"
       aria-label="Features"
       data-field-key="features"
     >
-      <h2 className="font-serif text-sm font-semibold uppercase tracking-widest text-[#577399]">
+      <h2 className="font-serif-sc text-[0.975rem] font-semibold tracking-widest text-[#7a9ab5]">
         Features
       </h2>
 
@@ -857,14 +931,14 @@ function FeaturesPanel({ classData, characterId, onRollQueued }: FeaturesPanelPr
       {(classData.classFeatures?.length ?? 0) > 0 && (
         <div className="space-y-2" data-field-key="features.class">
           {classData.classFeatures.length > 1 && (
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#577399]">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-steel-400">
               Class Features
             </h3>
           )}
           {classData.classFeatures.map((feature) => (
             <div
               key={feature.name}
-              className="rounded-lg border border-[#577399]/20 bg-slate-850 p-4 space-y-3"
+              className="rounded-lg border border-steel-400/20 bg-slate-850 p-4 space-y-3"
             >
               <div>
                 <h3 className="mb-1 font-serif text-sm font-semibold text-[#f7f7ff]">
@@ -904,13 +978,13 @@ function FeaturesPanel({ classData, characterId, onRollQueued }: FeaturesPanelPr
 
       {/* Hope Feature — always has a hopeCost; always gets an action button */}
       {classData.hopeFeature && (
-        <div className="rounded-lg border border-[#577399]/30 bg-[#577399]/8 p-4 space-y-3" data-field-key="features.hope">
+        <div className="rounded-lg border border-steel-400/30 bg-steel-400/8 p-4 space-y-3" data-field-key="features.hope">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-serif text-sm font-semibold text-[#f7f7ff]">
                 {classData.hopeFeature.name}
               </h3>
-              <span className="rounded bg-[#577399]/30 px-1.5 text-xs font-bold text-[#f7f7ff]">
+              <span className="rounded bg-steel-400/30 px-1.5 text-xs font-bold text-[#f7f7ff]">
                 {classData.hopeFeature.hopeCost} Hope
               </span>
             </div>
@@ -933,7 +1007,7 @@ function FeaturesPanel({ classData, characterId, onRollQueued }: FeaturesPanelPr
       {/* Subclass features */}
       {activeSubclass && (
         <div className="space-y-2" data-field-key="features.subclass">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-[#577399]">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-steel-400">
             {activeSubclass.name} — Subclass Features
           </h3>
 
@@ -942,7 +1016,7 @@ function FeaturesPanel({ classData, characterId, onRollQueued }: FeaturesPanelPr
             return (
               <div
                 key={feat.name}
-                className="rounded border border-[#577399]/20 bg-slate-900 p-3 space-y-2"
+                className="rounded border border-steel-400/20 bg-slate-900 p-3 space-y-2"
               >
                 <div>
                   <p className="text-sm font-medium text-[#f7f7ff]">{feat.name}</p>
@@ -964,13 +1038,13 @@ function FeaturesPanel({ classData, characterId, onRollQueued }: FeaturesPanelPr
           })}
 
           {tier >= 2 && (
-            <div className="rounded border border-[#577399]/30 bg-slate-900 p-3 space-y-2">
+            <div className="rounded border border-steel-400/30 bg-slate-900 p-3 space-y-2">
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <p className="text-sm font-medium text-[#f7f7ff]">
                     {activeSubclass.specializationFeature.name}
                   </p>
-                  <span className="rounded bg-[#577399]/25 px-1.5 text-xs font-bold text-[#f7f7ff]">
+                  <span className="rounded bg-steel-400/25 px-1.5 text-xs font-bold text-[#f7f7ff]">
                     Specialization
                   </span>
                 </div>
@@ -994,13 +1068,13 @@ function FeaturesPanel({ classData, characterId, onRollQueued }: FeaturesPanelPr
           )}
 
           {tier >= 3 && (
-            <div className="rounded border border-[#577399]/40 bg-slate-900 p-3 space-y-2">
+            <div className="rounded border border-steel-400/40 bg-slate-900 p-3 space-y-2">
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <p className="text-sm font-medium text-[#f7f7ff]">
                     {activeSubclass.masteryFeature.name}
                   </p>
-                  <span className="rounded bg-[#577399]/35 px-1.5 text-xs font-bold text-[#f7f7ff]">
+                  <span className="rounded bg-steel-400/35 px-1.5 text-xs font-bold text-[#f7f7ff]">
                     Mastery
                   </span>
                 </div>
@@ -1029,10 +1103,10 @@ function FeaturesPanel({ classData, characterId, onRollQueued }: FeaturesPanelPr
       {multiclassData && (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#577399]">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-steel-400">
               {multiclassData.name} — Multiclass Features
             </h3>
-            <span className="rounded bg-[#577399]/20 px-1.5 text-xs font-bold text-[#f7f7ff]">
+            <span className="rounded bg-steel-400/20 px-1.5 text-xs font-bold text-[#f7f7ff]">
               Multiclass
             </span>
           </div>
@@ -1041,14 +1115,14 @@ function FeaturesPanel({ classData, characterId, onRollQueued }: FeaturesPanelPr
           {(multiclassData.classFeatures?.length ?? 0) > 0 && (
             <div className="space-y-2">
               {multiclassData.classFeatures.length > 1 && (
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-[#577399]">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-steel-400">
                   Class Features
                 </h4>
               )}
               {multiclassData.classFeatures.map((feature) => (
                 <div
                   key={feature.name}
-                  className="rounded-lg border border-[#577399]/20 bg-slate-850 p-4 space-y-3"
+                  className="rounded-lg border border-steel-400/20 bg-slate-850 p-4 space-y-3"
                 >
                   <div>
                     <h4 className="mb-1 font-serif text-sm font-semibold text-[#f7f7ff]">
@@ -1090,12 +1164,12 @@ function FeaturesPanel({ classData, characterId, onRollQueued }: FeaturesPanelPr
             return (
               <div
                 key={feat.name}
-                className="rounded border border-[#577399]/20 bg-slate-900 p-3 space-y-2"
+                className="rounded border border-steel-400/20 bg-slate-900 p-3 space-y-2"
               >
                 <div>
                   <div className="flex items-center gap-2 mb-0.5">
                     <p className="text-sm font-medium text-[#f7f7ff]">{feat.name}</p>
-                    <span className="rounded bg-[#577399]/15 px-1.5 text-xs font-semibold text-[#b9baa3]">
+                    <span className="rounded bg-steel-400/15 px-1.5 text-xs font-semibold text-[#b9baa3]">
                       Foundation
                     </span>
                   </div>
@@ -1152,7 +1226,7 @@ function SaveStatus({ isDirty, isSaving }: SaveStatusProps) {
   }
   if (isDirty) {
     return (
-      <span role="status" aria-live="polite" className="text-xs text-[#577399]">
+      <span role="status" aria-live="polite" className="text-xs text-steel-400">
         Unsaved changes
       </span>
     );
@@ -1227,7 +1301,7 @@ export function CharacterSheet({ characterId }: CharacterSheetProps) {
         <div className="space-y-3 text-center">
           <div
         aria-hidden="true"
-        className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[#577399] border-t-transparent"
+        className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-steel-400 border-t-transparent"
       />
           <p className="text-sm text-parchment-500">Loading character…</p>
         </div>
@@ -1240,7 +1314,7 @@ export function CharacterSheet({ characterId }: CharacterSheetProps) {
     return (
       <div
         role="alert"
-        className="rounded-xl border border-[#577399]/40 bg-slate-900 p-8 text-center"
+        className="rounded-xl border border-steel-400/40 bg-slate-900 p-8 text-center"
       >
         <p className="font-serif text-lg text-[#f7f7ff]">
           Failed to load character
@@ -1332,10 +1406,10 @@ function CharacterSheetContent({
           aria-haspopup="dialog"
           data-field-key="sheet.downtime"
           className="
-            rounded-lg border border-[#577399]/40 bg-[#577399]/15 px-4 py-1.5
+            rounded-lg border border-steel-400/40 bg-steel-400/15 px-4 py-1.5
             text-sm font-semibold text-[#f7f7ff]
-            hover:bg-[#577399]/25 hover:border-[#577399] transition-colors shadow-card
-            focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2 focus:ring-offset-slate-950
+            hover:bg-steel-400/25 hover:border-steel-400 transition-colors shadow-card
+            focus:outline-none focus:ring-2 focus:ring-steel-400 focus:ring-offset-2 focus:ring-offset-slate-950
           "
         >
           Downtime / Rest
@@ -1344,7 +1418,7 @@ function CharacterSheetContent({
 
       {/* Header card */}
       <section
-        className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-5 shadow-card"
+        className="rounded-xl border border-steel-400/30 bg-slate-900/80 p-5 shadow-card"
         data-field-key="header"
       >
         <SheetHeader characterId={characterId} classData={classData} onLevelUp={() => setLevelUpOpen(true)} isDirty={isDirty} isSaving={isSaving} />
@@ -1395,21 +1469,21 @@ function CharacterSheetContent({
 
       {/* Notes */}
       <section
-        className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-5 shadow-card"
+        className="rounded-xl border border-steel-400/30 bg-slate-900/80 p-5 shadow-card"
         aria-label="Notes"
         data-field-key="notes"
       >
-        <h2 className="mb-3 font-serif text-sm font-semibold uppercase tracking-widest text-[#577399]">
+        <h2 className="mb-3 font-serif-sc text-[0.975rem] font-semibold tracking-widest text-[#7a9ab5]">
           Notes
         </h2>
         <EditableField
           field={CHARACTER_NOTES_FIELD}
           className="block w-full text-left"
-          activeClassName="ring-2 ring-[#577399]/60 rounded-lg"
+          activeClassName="ring-2 ring-steel-400/60 rounded-lg"
         >
           <div
             className="
-              w-full rounded border border-[#577399]/20 bg-slate-950
+              w-full rounded border border-steel-400/20 bg-slate-950
               px-3 py-2 text-sm text-[#b9baa3] 
               min-h-[8rem] whitespace-pre-wrap break-words
             "

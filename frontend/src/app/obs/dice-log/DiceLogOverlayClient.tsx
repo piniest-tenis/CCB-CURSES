@@ -70,7 +70,7 @@ function LogRow({ entry }: { entry: LogEntry }) {
     >
       {/* Character name — prominent if present */}
       {characterName && (
-        <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: nameColor }}>
+        <p className="text-[12px] font-bold uppercase tracking-widest" style={{ color: nameColor }}>
           {characterName}
         </p>
       )}
@@ -78,7 +78,7 @@ function LogRow({ entry }: { entry: LogEntry }) {
       {/* Top row: roll label + time */}
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-bold text-[#f7f7ff] truncate">{request.label}</p>
-        <span className="text-[9px] text-[#b9baa3] shrink-0">{timeStr}</span>
+        <span className="text-[10px] text-[#b9baa3] shrink-0">{timeStr}</span>
       </div>
 
       {/* Die breakdown */}
@@ -104,7 +104,7 @@ function LogRow({ entry }: { entry: LogEntry }) {
 
       {/* Hope vs Fear inline */}
       {hopeValue !== undefined && fearValue !== undefined && (
-        <p className="text-[10px]">
+        <p className="text-[11px]">
           <span style={{ color: colorOverrides?.hope?.dice_color ?? "#DAA520" }}>Hope {hopeValue}</span>
           <span className="text-[#b9baa3]"> · </span>
           <span style={{ color: colorOverrides?.fear?.dice_color ?? "#9BB5CC" }}>Fear {fearValue}</span>
@@ -224,7 +224,7 @@ export default function DiceLogOverlayClient() {
           Dice Log
         </span>
         {log.length === 0 && (
-          <span className="text-[10px] text-[#b9baa3]/50 italic">No rolls yet</span>
+          <span className="text-[11px] text-[#b9baa3]/50 italic">No rolls yet</span>
         )}
       </div>
 

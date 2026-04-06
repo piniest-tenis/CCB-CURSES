@@ -162,7 +162,7 @@ export function CompanionPanel({ onRollQueued }: { onRollQueued?: () => void }) 
           focus:outline-none focus:ring-2 focus:ring-gold-500 rounded
         "
       >
-        <h2 className="font-serif text-sm font-semibold uppercase tracking-widest text-[#577399]">
+        <h2 className="font-serif-sc text-sm font-semibold tracking-widest text-[#577399]">
           Companion
         </h2>
         <span

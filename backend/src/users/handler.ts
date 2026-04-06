@@ -14,6 +14,7 @@ import {
   createErrorResponse,
   extractUserId,
   extractEmail,
+  extractDisplayName,
   parseBody,
   withErrorHandling,
 } from "../common/middleware";
@@ -139,6 +140,7 @@ async function getMe(
 
   if (!record) {
     const email = extractEmail(event) ?? "";
+    const jwtDisplayName = extractDisplayName(event);
     const now = new Date().toISOString();
 
     record = {
@@ -146,7 +148,7 @@ async function getMe(
       SK: "PROFILE",
       userId,
       email,
-      displayName: deriveDisplayName(email),
+      displayName: jwtDisplayName || deriveDisplayName(email),
       avatarKey: null,
       preferences: { ...DEFAULT_PREFERENCES },
       createdAt: now,
@@ -174,6 +176,28 @@ async function getMe(
       } else {
         throw err;
       }
+    }
+  }
+
+  // ── Reconcile display name ─────────────────────────────────────────────
+  // If the stored displayName is still the email-derived default and the JWT
+  // carries the actual name the user entered during registration, update it.
+  const jwtName = extractDisplayName(event);
+  if (
+    jwtName &&
+    record.displayName === deriveDisplayName(record.email)
+  ) {
+    record.displayName = jwtName;
+    record.updatedAt = new Date().toISOString();
+    try {
+      await updateItem({
+        TableName: USERS_TABLE,
+        Key: keys.user(userId),
+        UpdateExpression: "SET displayName = :dn, updatedAt = :ts",
+        ExpressionAttributeValues: { ":dn": jwtName, ":ts": record.updatedAt },
+      });
+    } catch {
+      // Non-fatal — the profile is still usable with the old name.
     }
   }
 

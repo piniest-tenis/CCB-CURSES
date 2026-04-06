@@ -59,7 +59,7 @@ export function DefeatedSection({ defeated, onRestore }: DefeatedSectionProps) {
             <button
               type="button"
               onClick={() => onRestore(a.instanceId)}
-              className="ml-auto text-[10px] text-[#577399]/50 hover:text-[#577399] transition-colors"
+              className="ml-auto text-[11px] text-[#577399]/50 hover:text-[#577399] transition-colors"
             >
               Restore
             </button>

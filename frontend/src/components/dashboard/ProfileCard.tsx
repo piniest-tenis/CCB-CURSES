@@ -13,7 +13,7 @@ import { DiceColorEditor } from "@/components/dice/DiceColorEditor";
 import { SYSTEM_DEFAULTS, resolveDiceColors } from "@/lib/diceColorResolver";
 import { apiClient } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
-import { PatreonPaidGate } from "@/components/PatreonGateOverlay";
+import { usePatreonGate } from "@/hooks/usePatreonGate";
 
 interface ProfileCardProps {
   user: UserProfile;
@@ -26,6 +26,51 @@ export function ProfileCard({ user, onSignOut }: ProfileCardProps) {
   const initial = (user.displayName || user.email).charAt(0).toUpperCase();
   const [diceColorsOpen, setDiceColorsOpen] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const { canAccessCampaigns, hasPatreon } = usePatreonGate();
+  const diceColorsGated = !canAccessCampaigns;
+
+  // ── Editable display name ─────────────────────────────────────────────
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState(user.displayName || "");
+  const [nameSaveState, setNameSaveState] = useState<SaveState>("idle");
+  const nameTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync from server when user prop changes (e.g. after reconciliation)
+  useEffect(() => {
+    if (!editingName) setNameValue(user.displayName || "");
+  }, [user.displayName, editingName]);
+
+  const handleNameSave = useCallback(async () => {
+    const trimmed = nameValue.trim();
+    if (!trimmed || trimmed === user.displayName) {
+      setEditingName(false);
+      setNameValue(user.displayName || "");
+      return;
+    }
+    setNameSaveState("saving");
+    try {
+      const updated = await apiClient.put<UserProfile>("/users/me", {
+        displayName: trimmed,
+      });
+      useAuthStore.getState().setUser(updated);
+      setNameSaveState("saved");
+      setEditingName(false);
+      if (nameTimerRef.current) clearTimeout(nameTimerRef.current);
+      nameTimerRef.current = setTimeout(() => setNameSaveState("idle"), 2500);
+    } catch {
+      setNameSaveState("error");
+      if (nameTimerRef.current) clearTimeout(nameTimerRef.current);
+      nameTimerRef.current = setTimeout(() => setNameSaveState("idle"), 4000);
+    }
+  }, [nameValue, user.displayName]);
+
+  const handleNameKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter") { e.preventDefault(); handleNameSave(); }
+      if (e.key === "Escape") { setEditingName(false); setNameValue(user.displayName || ""); }
+    },
+    [handleNameSave, user.displayName],
+  );
 
   // Optimistic local prefs — updated synchronously on every change so the
   // editor never reads stale server data when the accordion is toggled.
@@ -103,15 +148,62 @@ export function ProfileCard({ user, onSignOut }: ProfileCardProps) {
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-[#f7f7ff] text-sm truncate">
-            {user.displayName || "Adventurer"}
-          </p>
-          <p className="text-xs text-[#b9baa3]/50 truncate">{user.email}</p>
+          {editingName ? (
+            <div className="flex items-center gap-1.5">
+              <input
+                type="text"
+                value={nameValue}
+                onChange={(e) => setNameValue(e.target.value)}
+                onKeyDown={handleNameKeyDown}
+                onBlur={handleNameSave}
+                maxLength={50}
+                autoFocus
+                className="
+                  w-full rounded border border-[#577399]/50 bg-slate-900
+                  px-1.5 py-0.5 text-sm font-semibold text-[#f7f7ff]
+                  focus:outline-none focus:border-[#577399] transition-colors
+                "
+              />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setEditingName(true)}
+              className="group flex items-center gap-1 max-w-full text-left"
+              title="Click to edit display name"
+            >
+              <span className="font-semibold text-[#f7f7ff] text-sm truncate">
+                {user.displayName || "Adventurer"}
+              </span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 16 16"
+                fill="currentColor"
+                className="w-3 h-3 shrink-0 text-[#b9baa3]/0 group-hover:text-[#b9baa3]/50 transition-colors"
+              >
+                <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L3.22 10.303a.75.75 0 0 0-.178.31l-.893 3.124a.75.75 0 0 0 .926.926l3.124-.893a.75.75 0 0 0 .31-.178l7.791-7.792a1.75 1.75 0 0 0 0-2.475l-.812-.812ZM11.72 3.22a.25.25 0 0 1 .354 0l.812.812a.25.25 0 0 1 0 .354L5.595 11.68l-1.644.47.47-1.644L11.72 3.22Z" />
+              </svg>
+            </button>
+          )}
+          {nameSaveState !== "idle" && (
+            <p className={[
+              "text-[11px] mt-0.5",
+              nameSaveState === "saving" ? "text-[#577399]" : "",
+              nameSaveState === "saved"  ? "text-emerald-400/80" : "",
+              nameSaveState === "error"  ? "text-red-400/80" : "",
+            ].join(" ")}>
+              {nameSaveState === "saving" && "Saving..."}
+              {nameSaveState === "saved" && "Name updated"}
+              {nameSaveState === "error" && "Failed to save"}
+            </p>
+          )}
+          {nameSaveState === "idle" && (
+            <p className="text-xs text-[#b9baa3]/50 truncate">{user.email}</p>
+          )}
         </div>
       </div>
 
       {/* ── Default Dice Colors ──────────────────────────────────── */}
-      <PatreonPaidGate>
       <div className="mt-4 pt-3 border-t border-[#577399]/20">
         <button
           type="button"
@@ -138,14 +230,24 @@ export function ProfileCard({ user, onSignOut }: ProfileCardProps) {
               Default Dice Colors
             </span>
             {!diceColorsOpen && (
-              <p className="text-[10px] text-[#b9baa3]/35 mt-0.5 leading-tight">
+              <p className="text-[11px] text-[#b9baa3]/35 mt-0.5 leading-tight">
                 Applies to all characters · tap to customize
               </p>
             )}
           </div>
 
+          {/* Premium badge — inline when gated */}
+          {diceColorsGated && (
+            <span className="flex items-center gap-1 shrink-0 rounded border border-gold-500/30 bg-gold-500/10 px-1.5 py-0.5">
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3 text-gold-400/80" aria-hidden="true">
+                <path d="M2 19h20v3H2v-3zm1-1L6 6l4 4 2-6 2 6 4-4 3 12H3z" />
+              </svg>
+              <span className="text-[11px] font-semibold text-gold-400/80">Paid</span>
+            </span>
+          )}
+
           {/* Quick preview swatches — die-face style */}
-          {!diceColorsOpen && (
+          {!diceColorsOpen && !diceColorsGated && (
             <span className="flex gap-1 shrink-0" aria-hidden="true">
               <span
                 className="w-4 h-4 rounded-sm border border-white/10"
@@ -175,18 +277,50 @@ export function ProfileCard({ user, onSignOut }: ProfileCardProps) {
           )}
         </button>
 
-        {/* Editor panel — kept mounted to preserve working state across toggles */}
+        {/* Editor panel — gated content: dimmed when locked */}
         <div id="profile-dice-colors-panel" hidden={!diceColorsOpen}>
-          <div className="mt-2">
-            <p className="text-xs text-[#b9baa3]/40 mb-2">
-              Set default dice colors for all your characters. Individual characters can override these.
-            </p>
-            <DiceColorEditor
-              value={localPrefs}
-              defaults={SYSTEM_DEFAULTS}
-              onChange={handleDiceColorChange}
-            />
-          </div>
+          {diceColorsGated ? (
+            <div className="mt-2 space-y-2">
+              <div className="flex items-center gap-2 rounded-lg border border-gold-500/25 bg-gold-500/6 px-3 py-2">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 shrink-0 text-gold-400/80" aria-hidden="true">
+                  <path d="M2 19h20v3H2v-3zm1-1L6 6l4 4 2-6 2 6 4-4 3 12H3z" />
+                </svg>
+                <p className="flex-1 text-xs text-[#b9baa3]/80 leading-snug">
+                  <span className="font-semibold text-gold-400">Paid membership</span>{" "}
+                  required for custom dice colors.
+                </p>
+                <a
+                  href="https://patreon.com/CursesAP"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 rounded-md border border-gold-500/40 bg-gold-500/15 px-3 py-1 text-xs font-semibold text-gold-400 hover:bg-gold-500/25 hover:border-gold-500/60 transition-colors focus:outline-none focus:ring-2 focus:ring-gold-400 focus:ring-offset-1 focus:ring-offset-slate-900"
+                >
+                  View Tiers
+                </a>
+              </div>
+              <div className="pointer-events-none select-none opacity-50" aria-hidden="true" inert>
+                <p className="text-xs text-[#b9baa3]/40 mb-2">
+                  Set default dice colors for all your characters. Individual characters can override these.
+                </p>
+                <DiceColorEditor
+                  value={localPrefs}
+                  defaults={SYSTEM_DEFAULTS}
+                  onChange={() => {}}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="mt-2">
+              <p className="text-xs text-[#b9baa3]/40 mb-2">
+                Set default dice colors for all your characters. Individual characters can override these.
+              </p>
+              <DiceColorEditor
+                value={localPrefs}
+                defaults={SYSTEM_DEFAULTS}
+                onChange={handleDiceColorChange}
+              />
+            </div>
+          )}
         </div>
 
         {/* Save status — always visible, outside the accordion button */}
@@ -224,11 +358,26 @@ export function ProfileCard({ user, onSignOut }: ProfileCardProps) {
           </div>
         )}
       </div>
-      </PatreonPaidGate>
 
       {/* ── Sign Out ─────────────────────────────────────────────── */}
       {/* Stronger separator distinguishes this from the editor above */}
-      <div className="mt-5 pt-4 border-t border-slate-800/60">
+      <div className="mt-5 pt-4 border-t border-slate-800/60 space-y-2">
+        {hasPatreon && (
+          <a
+            href="https://www.patreon.com/settings/memberships"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="
+              block w-full rounded-lg px-3 py-2 text-xs font-medium text-center
+              border border-slate-700/30 text-[#b9baa3]/40
+              hover:border-[#f96854]/40 hover:text-[#f96854]/70
+              transition-colors
+              focus:outline-none focus:ring-2 focus:ring-[#f96854]/40 focus:ring-offset-2 focus:ring-offset-slate-900
+            "
+          >
+            Manage Patreon Membership
+          </a>
+        )}
         <button
           type="button"
           onClick={onSignOut}

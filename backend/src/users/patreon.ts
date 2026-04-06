@@ -19,14 +19,16 @@ import type { PatreonLink, PatreonMembershipStatus } from "@shared/types";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const PATREON_CLIENT_ID     = process.env["PATREON_CLIENT_ID"]     ?? "";
-const PATREON_CLIENT_SECRET = process.env["PATREON_CLIENT_SECRET"] ?? "";
-const PATREON_REDIRECT_URI  = process.env["PATREON_REDIRECT_URI"]  ?? "";
-const PATREON_CAMPAIGN_ID   = process.env["PATREON_CAMPAIGN_ID"]   ?? "";
+const PATREON_CLIENT_ID            = process.env["PATREON_CLIENT_ID"]            ?? "";
+const PATREON_CLIENT_SECRET        = process.env["PATREON_CLIENT_SECRET"]        ?? "";
+const PATREON_REDIRECT_URI         = process.env["PATREON_REDIRECT_URI"]         ?? "";
+const PATREON_CAMPAIGN_ID          = process.env["PATREON_CAMPAIGN_ID"]          ?? "";
+const PATREON_CREATOR_ACCESS_TOKEN = process.env["PATREON_CREATOR_ACCESS_TOKEN"] ?? "";
 
-const PATREON_AUTHORIZE_URL = "https://www.patreon.com/oauth2/authorize";
-const PATREON_TOKEN_URL     = "https://www.patreon.com/api/oauth2/token";
-const PATREON_IDENTITY_URL  = "https://www.patreon.com/api/oauth2/v2/identity";
+const PATREON_AUTHORIZE_URL   = "https://www.patreon.com/oauth2/authorize";
+const PATREON_TOKEN_URL       = "https://www.patreon.com/api/oauth2/token";
+const PATREON_IDENTITY_URL    = "https://www.patreon.com/api/oauth2/v2/identity";
+const PATREON_CAMPAIGN_MEMBERS_URL = `https://www.patreon.com/api/oauth2/v2/campaigns/${PATREON_CAMPAIGN_ID}/members`;
 
 // ─── Grandfathering ───────────────────────────────────────────────────────────
 
@@ -109,91 +111,148 @@ interface PatreonMembershipResult {
 }
 
 /**
- * Fetch the Patreon user's identity and their membership status for the
- * CursesAP campaign. Uses the Patreon API v2 with JSON:API includes.
+ * Fetch the Patreon user's identity (to get their patreonUserId) and then
+ * check their membership status on the CursesAP campaign using the
+ * **creator access token** via the campaign members endpoint.
  *
- * Returns "free" if the user is a member with no active pledge or a
- * follower. Returns "active_patron" if they have an active paid pledge.
- * Returns "none" if no membership relationship exists.
+ * Why two steps?
+ * The Patreon `/identity?include=memberships` endpoint does NOT reliably
+ * return membership records for **free followers** — only paid patrons
+ * show up there. The creator's `/campaigns/{id}/members` endpoint is the
+ * only reliable way to detect free followers and their entitled tiers.
+ *
+ * Flow:
+ *   1. GET /identity (user token) → patreonUserId
+ *   2. GET /campaigns/{id}/members (creator token) → paginate to find
+ *      the member whose `relationships.user.data.id` matches patreonUserId
+ *
+ * Returns "free" if the user is a follower/free member.
+ * Returns "active_patron" if they have an active paid pledge.
+ * Returns "none" if they are not a member of the campaign at all.
  */
 export async function fetchMembership(
   accessToken: string
 ): Promise<PatreonMembershipResult> {
-  // Request identity with memberships included. The `fields[member]` parameter
-  // ensures we get patron_status and currently_entitled_tiers.
-  const params = new URLSearchParams({
-    "include":                     "memberships,memberships.currently_entitled_tiers",
-    "fields[user]":                "full_name",
-    "fields[member]":              "patron_status,currently_entitled_amount_cents,campaign_lifetime_support_cents",
-    "fields[tier]":                "title,amount_cents",
-  });
-
-  const res = await fetch(`${PATREON_IDENTITY_URL}?${params.toString()}`, {
+  // ── Step 1: Get the Patreon user ID from the identity endpoint ──────────
+  const identityRes = await fetch(`${PATREON_IDENTITY_URL}?fields[user]=full_name`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Patreon identity fetch failed (${res.status}): ${text}`);
+  if (!identityRes.ok) {
+    const text = await identityRes.text();
+    throw new Error(`Patreon identity fetch failed (${identityRes.status}): ${text}`);
   }
 
-  const json = await res.json() as {
-    data: { id: string };
-    included?: Array<{
-      type: string;
-      id: string;
-      attributes?: Record<string, unknown>;
-      relationships?: {
-        campaign?: { data?: { id: string } };
-        currently_entitled_tiers?: { data?: Array<{ id: string }> };
+  const identityJson = await identityRes.json() as { data: { id: string } };
+  const patreonUserId = identityJson.data.id;
+
+  // ── Step 2: Look up this user in the campaign members list ──────────────
+  // Uses the creator access token, which can see ALL members (free + paid).
+  // Paginate through all members since the API returns max ~1000 per page.
+  if (!PATREON_CREATOR_ACCESS_TOKEN) {
+    console.warn("PATREON_CREATOR_ACCESS_TOKEN not set — cannot verify membership via creator API");
+    return { patreonUserId, membershipStatus: "none", tierTitle: null, tierAmountCents: null };
+  }
+
+  let nextUrl: string | null = PATREON_CAMPAIGN_MEMBERS_URL +
+    "?" +
+    new URLSearchParams({
+      "include":        "currently_entitled_tiers,user",
+      "fields[member]": "patron_status,currently_entitled_amount_cents",
+      "fields[tier]":   "title,amount_cents",
+      "fields[user]":   "full_name",
+      "page[count]":    "500",
+    }).toString();
+
+  while (nextUrl) {
+    const membersRes = await fetch(nextUrl, {
+      headers: { Authorization: `Bearer ${PATREON_CREATOR_ACCESS_TOKEN}` },
+    });
+
+    if (!membersRes.ok) {
+      const text = await membersRes.text();
+      throw new Error(`Patreon campaign members fetch failed (${membersRes.status}): ${text}`);
+    }
+
+    const membersJson = await membersRes.json() as {
+      data: Array<{
+        id: string;
+        type: string;
+        attributes?: Record<string, unknown>;
+        relationships?: {
+          user?: { data?: { id: string; type: string } };
+          currently_entitled_tiers?: { data?: Array<{ id: string; type: string }> };
+        };
+      }>;
+      included?: Array<{
+        id: string;
+        type: string;
+        attributes?: Record<string, unknown>;
+      }>;
+      meta?: {
+        pagination?: { cursors?: { next?: string | null }; total?: number };
       };
-    }>;
-  };
-
-  const patreonUserId = json.data.id;
-
-  // Find the membership record for our campaign
-  const membership = json.included?.find(
-    (inc) =>
-      inc.type === "member" &&
-      inc.relationships?.campaign?.data?.id === PATREON_CAMPAIGN_ID
-  );
-
-  if (!membership) {
-    return {
-      patreonUserId,
-      membershipStatus: "none",
-      tierTitle: null,
-      tierAmountCents: null,
     };
-  }
 
-  const patronStatus = membership.attributes?.["patron_status"] as string | undefined;
-
-  // patron_status values: "active_patron", "declined_patron", "former_patron", null (free member)
-  if (patronStatus === "active_patron") {
-    // Find the entitled tier details
-    const entitledTierIds =
-      membership.relationships?.currently_entitled_tiers?.data?.map((t) => t.id) ?? [];
-    const tierRecord = json.included?.find(
-      (inc) => inc.type === "tier" && entitledTierIds.includes(inc.id)
+    // Find the member record whose related user matches our patreonUserId
+    const member = membersJson.data.find(
+      (m) => m.relationships?.user?.data?.id === patreonUserId
     );
 
-    return {
-      patreonUserId,
-      membershipStatus: "active_patron",
-      tierTitle: (tierRecord?.attributes?.["title"] as string) ?? null,
-      tierAmountCents: (tierRecord?.attributes?.["amount_cents"] as number) ?? null,
-    };
+    if (member) {
+      const patronStatus = member.attributes?.["patron_status"] as string | undefined | null;
+
+      if (patronStatus === "active_patron") {
+        // Paid patron — find the entitled tier details
+        const entitledTierIds =
+          member.relationships?.currently_entitled_tiers?.data?.map((t) => t.id) ?? [];
+        const tierRecord = membersJson.included?.find(
+          (inc) => inc.type === "tier" && entitledTierIds.includes(inc.id)
+        );
+        return {
+          patreonUserId,
+          membershipStatus: "active_patron",
+          tierTitle: (tierRecord?.attributes?.["title"] as string) ?? null,
+          tierAmountCents: (tierRecord?.attributes?.["amount_cents"] as number) ?? null,
+        };
+      }
+
+      // patron_status is null (free follower), "former_patron", or "declined_patron"
+      // If they appear in the members list at all, they have a relationship with
+      // the campaign. Treat as "free" member — they followed/joined for free.
+      const entitledTierIds =
+        member.relationships?.currently_entitled_tiers?.data?.map((t) => t.id) ?? [];
+      const tierRecord = membersJson.included?.find(
+        (inc) => inc.type === "tier" && entitledTierIds.includes(inc.id)
+      );
+      return {
+        patreonUserId,
+        membershipStatus: "free",
+        tierTitle: (tierRecord?.attributes?.["title"] as string) ?? null,
+        tierAmountCents: (tierRecord?.attributes?.["amount_cents"] as number) ?? null,
+      };
+    }
+
+    // Not found on this page — check for next page
+    const nextCursor = membersJson.meta?.pagination?.cursors?.next;
+    if (nextCursor) {
+      const url = new URL(PATREON_CAMPAIGN_MEMBERS_URL);
+      url.searchParams.set("include", "currently_entitled_tiers,user");
+      url.searchParams.set("fields[member]", "patron_status,currently_entitled_amount_cents");
+      url.searchParams.set("fields[tier]", "title,amount_cents");
+      url.searchParams.set("fields[user]", "full_name");
+      url.searchParams.set("page[count]", "500");
+      url.searchParams.set("page[cursor]", nextCursor);
+      nextUrl = url.toString();
+    } else {
+      nextUrl = null;
+    }
   }
 
-  // Any other status (null, "former_patron", "declined_patron") — if they
-  // have a membership record at all, they are at minimum a free follower.
-  // However, former/declined patrons should be treated as free members
-  // since they still have a membership relationship with the campaign.
+  // User not found in campaign members at all
   return {
     patreonUserId,
-    membershipStatus: "free",
+    membershipStatus: "none",
     tierTitle: null,
     tierAmountCents: null,
   };

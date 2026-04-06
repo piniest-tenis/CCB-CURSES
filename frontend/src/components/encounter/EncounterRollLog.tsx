@@ -41,7 +41,7 @@ export function EncounterRollLog({ rollLog, onClear }: EncounterRollLogProps) {
         <button
           type="button"
           onClick={onClear}
-          className="text-[10px] text-[#b9baa3]/40 hover:text-[#fe5f55] transition-colors"
+          className="text-[11px] text-[#b9baa3]/40 hover:text-[#fe5f55] transition-colors"
         >
           Clear
         </button>
@@ -52,7 +52,7 @@ export function EncounterRollLog({ rollLog, onClear }: EncounterRollLogProps) {
             key={`${roll.timestamp}-${i}`}
             className="flex items-center gap-2 text-xs py-1"
           >
-            <span className="text-[#b9baa3]/30 font-mono text-[10px] tabular-nums shrink-0">
+            <span className="text-[#b9baa3]/30 font-mono text-[11px] tabular-nums shrink-0">
               {formatTime(roll.timestamp)}
             </span>
             <span className="text-[#b9baa3]/60 truncate">{roll.label}</span>

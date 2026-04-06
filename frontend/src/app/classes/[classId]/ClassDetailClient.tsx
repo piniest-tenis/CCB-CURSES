@@ -14,6 +14,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useClass } from "@/hooks/useGameData";
 import type { SubclassData, NamedFeature } from "@shared/types";
 import { MarkdownContent } from "@/components/MarkdownContent";
+import { SourceBadge } from "@/components/SourceBadge";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -277,6 +278,7 @@ export default function ClassDetailPage() {
                 <h1 className="font-serif text-4xl font-bold text-parchment-100">
                   {cls.name}
                 </h1>
+                <SourceBadge source={cls.source} size="md" />
                 <div className="flex gap-2 items-center pt-1">
                   {cls.domains.map((d) => (
                     <DomainBadge key={d} domain={d} />

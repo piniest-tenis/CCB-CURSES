@@ -17,7 +17,7 @@ interface DifficultyDiamondProps {
 export function DifficultyDiamond({ difficulty }: DifficultyDiamondProps) {
   return (
     <div className="shrink-0 flex flex-col items-center gap-0.5">
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-[#b9baa3]/50">
+      <span className="text-[11px] font-semibold uppercase tracking-wider text-[#b9baa3]/50">
         Diff
       </span>
       <div

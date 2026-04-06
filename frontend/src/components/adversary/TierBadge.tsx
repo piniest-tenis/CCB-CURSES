@@ -29,7 +29,7 @@ export function TierBadge({ tier, size = "md" }: TierBadgeProps) {
       <span
         className={`
           inline-flex items-center gap-0.5 rounded border
-          px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider
+          px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider
           ${TIER_STYLES[tier]}
         `}
       >
@@ -46,7 +46,7 @@ export function TierBadge({ tier, size = "md" }: TierBadgeProps) {
         ${TIER_STYLES[tier]}
       `}
     >
-      <span className="text-[10px] font-semibold uppercase tracking-wider leading-none">
+      <span className="text-[11px] font-semibold uppercase tracking-wider leading-none">
         Tier
       </span>
       <span className="text-lg font-bold font-serif leading-none">

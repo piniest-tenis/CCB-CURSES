@@ -37,6 +37,7 @@ export interface BuilderDraft {
   equipmentSelections: StartingEquipmentSelections;
   selectedDomainCardIds: string[];
   heritageTab: "ancestry" | "community";
+  characterName?: string;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────

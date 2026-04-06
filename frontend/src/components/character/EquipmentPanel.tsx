@@ -512,7 +512,7 @@ export function EquipmentPanel({ onRollQueued }: { onRollQueued?: () => void }) 
         aria-label="Equipment and Gold"
         data-field-key="equipment"
       >
-        <h2 className="font-serif text-sm font-semibold uppercase tracking-widest text-[#577399]">
+        <h2 className="font-serif-sc text-sm font-semibold tracking-widest text-[#577399]">
           Equipment &amp; Gold
         </h2>
 

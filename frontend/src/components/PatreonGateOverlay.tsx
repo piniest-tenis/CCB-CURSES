@@ -3,25 +3,64 @@
 /**
  * src/components/PatreonGateOverlay.tsx
  *
- * Overlay components for gating UI sections behind Patreon membership.
+ * Inline gate components for gating UI sections behind Patreon membership.
+ * Uses subtle inline banners instead of absolute-positioned overlays to
+ * prevent escaping container bounds and overlapping adjacent content.
  *
  * Two variants:
- * 1. `PatreonSaveGate` — Wraps sections that require save capability.
- *    Shows a semi-transparent overlay with the Patreon CTA for users
- *    who cannot save (no Patreon, not grandfathered).
+ * 1. `PatreonSaveGate` — Wraps sections requiring Patreon membership (free tier).
+ *    Shows a compact inline banner with a Patreon link CTA.
+ *    Note: Character saving is no longer gated; this is now primarily used
+ *    as a fallback by PatreonPaidGate for users with no Patreon link at all.
  *
- * 2. `PatreonPaidGate` — Wraps campaign/dice/session sections that
- *    require a paid Patreon tier. Shows a prominent overlay message
- *    for free Patreon members explaining paid access is needed.
+ * 2. `PatreonPaidGate` — Wraps campaign/dice/session sections requiring
+ *    a paid Patreon tier. Shows a subtle gold-accented premium banner.
  *
- * Both variants render children underneath (visible but greyed out and
- * non-interactive) to give users a preview of what they're missing.
+ * Both variants render children underneath with light dimming and
+ * pointer-events-none to give users a preview of gated content.
+ *
+ * All "Join Patreon" actions trigger the OAuth authorize flow via
+ * GET /users/me/patreon/authorize (not a direct link to patreon.com).
  */
 
 import React from "react";
-import { usePatreonGate } from "@/hooks/usePatreonGate";
+import { usePatreonGate, usePatreonOAuth } from "@/hooks/usePatreonGate";
 
-const PATREON_URL = "https://patreon.com/CursesAP";
+// ─── Inline Lock Icon (small, 14px) ──────────────────────────────────────────
+
+function LockIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      className={`w-3.5 h-3.5 shrink-0 ${className}`}
+      aria-hidden="true"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
+      />
+    </svg>
+  );
+}
+
+// ─── Inline Crown Icon (small, 14px) ─────────────────────────────────────────
+
+function CrownIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={`w-3.5 h-3.5 shrink-0 ${className}`}
+      aria-hidden="true"
+    >
+      <path d="M2 19h20v3H2v-3zm1-1L6 6l4 4 2-6 2 6 4-4 3 12H3z" />
+    </svg>
+  );
+}
 
 // ─── Save Gate ────────────────────────────────────────────────────────────────
 
@@ -32,57 +71,48 @@ interface PatreonSaveGateProps {
 }
 
 /**
- * Wraps children with a non-interactive overlay when the user cannot save.
- * Children are rendered greyed-out underneath so users can preview the UI.
+ * Wraps children with a non-interactive inline banner when the user cannot save.
+ * Children are rendered with light dimming underneath so users can preview the UI.
+ * The banner sits WITHIN the document flow — no absolute positioning.
  */
 export function PatreonSaveGate({ children, className = "" }: PatreonSaveGateProps) {
   const { canSave } = usePatreonGate();
+  const { isLinking, startOAuth } = usePatreonOAuth();
 
   if (canSave) {
     return <div className={className}>{children}</div>;
   }
 
   return (
-    <div className={`relative ${className}`}>
-      {/* Children rendered but greyed out and non-interactive */}
+    <div className={`overflow-hidden ${className}`}>
+      {/* Inline banner — sits in normal flow at the top of the gated section */}
       <div
-        className="pointer-events-none select-none opacity-40 grayscale"
+        role="status"
+        className="flex items-center gap-2 rounded-lg border border-[#f96854]/25 bg-[#f96854]/8 px-3 py-2 mb-2"
+      >
+        <LockIcon className="text-[#f96854]/70" />
+        <p className="flex-1 text-xs text-[#b9baa3]/80 leading-snug">
+          Join our{" "}
+          <span className="font-semibold text-[#f96854]">free Patreon</span>{" "}
+          to unlock this feature.
+        </p>
+        <button
+          type="button"
+          onClick={startOAuth}
+          disabled={isLinking}
+          className="shrink-0 rounded-md bg-[#f96854] px-3 py-1 text-xs font-semibold text-white hover:bg-[#ff8a75] transition-colors focus:outline-none focus:ring-2 focus:ring-[#f96854] focus:ring-offset-1 focus:ring-offset-slate-900 disabled:opacity-60 disabled:cursor-wait"
+        >
+          {isLinking ? "Linking…" : "Link Patreon"}
+        </button>
+      </div>
+
+      {/* Children rendered with light dimming — still visible for preview */}
+      <div
+        className="pointer-events-none select-none opacity-50"
         aria-hidden="true"
         inert
       >
         {children}
-      </div>
-
-      {/* Overlay message */}
-      <div className="absolute inset-0 flex items-center justify-center bg-slate-950/60 backdrop-blur-[2px] rounded-lg">
-        <div className="text-center px-6 py-4 max-w-sm">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.5}
-            className="mx-auto h-10 w-10 text-gold-400 mb-3"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
-            />
-          </svg>
-          <p className="text-parchment-200 font-semibold text-sm leading-snug">
-            Join our{" "}
-            <a
-              href={PATREON_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[#f96854] underline underline-offset-2 hover:text-[#ff8a75] transition-colors"
-            >
-              FREE Patreon
-            </a>{" "}
-            to unlock this feature.
-          </p>
-        </div>
       </div>
     </div>
   );
@@ -97,14 +127,17 @@ interface PatreonPaidGateProps {
 }
 
 /**
- * Wraps campaign/dice/session sections with a prominent overlay for users
+ * Wraps campaign/dice/session sections with a subtle inline banner for users
  * who have a free Patreon account but need a paid tier.
  *
- * Shows the overlay when:
+ * Shows the banner when:
  * - User is authenticated and has a free Patreon link (but not paid)
  * - User is NOT grandfathered
  *
- * Also shows the `PatreonSaveGate` overlay if the user has no Patreon at all.
+ * Also defers to `PatreonSaveGate` if the user has no Patreon at all.
+ *
+ * Design: A compact gold-accented ribbon sitting within normal document flow.
+ * No absolute overlays, no backdrop-blur, no escaping container bounds.
  */
 export function PatreonPaidGate({ children, className = "" }: PatreonPaidGateProps) {
   const { canAccessCampaigns, needsPaidTier, needsPatreon } = usePatreonGate();
@@ -126,48 +159,34 @@ export function PatreonPaidGate({ children, className = "" }: PatreonPaidGatePro
   // User has free Patreon but needs paid tier
   if (needsPaidTier) {
     return (
-      <div className={`relative ${className}`}>
-        {/* Children rendered greyed out */}
+      <div className={`overflow-hidden ${className}`}>
+        {/* Inline premium banner — compact ribbon in normal flow */}
         <div
-          className="pointer-events-none select-none opacity-30 grayscale"
+          role="status"
+          className="flex items-center gap-2 rounded-lg border border-gold-500/25 bg-gold-500/6 px-3 py-2 mb-2"
+        >
+          <CrownIcon className="text-gold-400/80" />
+          <p className="flex-1 text-xs text-[#b9baa3]/80 leading-snug">
+            <span className="font-semibold text-gold-400">Paid membership</span>{" "}
+            required for this feature.
+          </p>
+          <a
+            href="https://patreon.com/CursesAP"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 rounded-md border border-gold-500/40 bg-gold-500/15 px-3 py-1 text-xs font-semibold text-gold-400 hover:bg-gold-500/25 hover:border-gold-500/60 transition-colors focus:outline-none focus:ring-2 focus:ring-gold-400 focus:ring-offset-1 focus:ring-offset-slate-900"
+          >
+            View Tiers
+          </a>
+        </div>
+
+        {/* Children rendered with light dimming — visible preview, no grayscale */}
+        <div
+          className="pointer-events-none select-none opacity-[0.55]"
           aria-hidden="true"
           inert
         >
           {children}
-        </div>
-
-        {/* Paid tier overlay */}
-        <div className="absolute inset-0 flex items-center justify-center bg-slate-950/70 backdrop-blur-[3px] rounded-lg">
-          <div className="text-center px-6 py-5 max-w-md rounded-xl bg-slate-900/90 border border-gold-600/30 shadow-glow-gold">
-            {/* Crown / premium icon */}
-            <svg
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              className="mx-auto h-10 w-10 text-gold-400 mb-3"
-              aria-hidden="true"
-            >
-              <path d="M2 19h20v3H2v-3zm1-1L6 6l4 4 2-6 2 6 4-4 3 12H3z" />
-            </svg>
-            <p className="text-gold-300 font-bold text-base sm:text-lg leading-snug mb-2">
-              Premium Feature
-            </p>
-            <p className="text-parchment-300 text-sm leading-relaxed mb-4">
-              Access to campaigns, session scheduling, and dice customization is
-              available with a{" "}
-              <span className="font-semibold text-gold-400">
-                paid monthly membership
-              </span>{" "}
-              to the CursesAP Patreon.
-            </p>
-            <a
-              href={PATREON_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block rounded-lg bg-gradient-to-r from-gold-600 to-gold-500 px-6 py-2.5 text-slate-950 font-bold text-sm shadow-lg hover:from-gold-500 hover:to-gold-400 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-gold-400 focus:ring-offset-2 focus:ring-offset-slate-900"
-            >
-              View Tiers on Patreon
-            </a>
-          </div>
         </div>
       </div>
     );

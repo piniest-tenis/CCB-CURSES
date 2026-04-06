@@ -207,12 +207,12 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
 }
 
 // ─── MulticlassPicker ─────────────────────────────────────────────────────────
-// A three-phase inline picker: Class → Domain → Subclass.
+// A four-phase inline picker: Class → Domain → Subclass → Class Feature.
 // Uses the same card-row drill-down pattern as DomainCardPicker.
 
 interface MulticlassPickerProps {
   currentClassId: string;
-  /** Pipe-delimited "classId|domainId|subclassId" or "" */
+  /** Pipe-delimited "classId|domainId|subclassId|classFeatureIndex" or "" */
   value: string;
   onChange: (detail: string) => void;
 }
@@ -221,14 +221,14 @@ function MulticlassPicker({ currentClassId, value, onChange }: MulticlassPickerP
   const { data: classListData, isLoading: classListLoading } = useClasses();
 
   // Parse current value
-  const [selectedClassId, selectedDomainId, selectedSubclassId] = useMemo(() => {
-    if (!value) return ["", "", ""];
+  const [selectedClassId, selectedDomainId, selectedSubclassId, selectedFeatureIndex] = useMemo(() => {
+    if (!value) return ["", "", "", ""];
     const parts = value.split("|");
-    return [parts[0] ?? "", parts[1] ?? "", parts[2] ?? ""];
+    return [parts[0] ?? "", parts[1] ?? "", parts[2] ?? "", parts[3] ?? ""];
   }, [value]);
 
-  const [phase, setPhase] = useState<"class" | "domain" | "subclass">(
-    selectedSubclassId ? "subclass" : selectedDomainId ? "domain" : "class"
+  const [phase, setPhase] = useState<"class" | "domain" | "subclass" | "feature">(
+    selectedSubclassId ? (selectedFeatureIndex !== "" ? "feature" : "subclass") : selectedDomainId ? "domain" : "class"
   );
 
   // Fetch data for the chosen class (for domain and subclass steps)
@@ -269,8 +269,8 @@ function MulticlassPicker({ currentClassId, value, onChange }: MulticlassPickerP
                 key={cls.classId}
                 type="button"
                 onClick={() => {
-                  // Reset domain/subclass when class changes
-                  onChange(`${cls.classId}||`);
+                  // Reset domain/subclass/feature when class changes
+                  onChange(`${cls.classId}|||`);
                   setPhase("domain");
                 }}
                 className={`
@@ -335,7 +335,7 @@ function MulticlassPicker({ currentClassId, value, onChange }: MulticlassPickerP
                   key={domain}
                   type="button"
                   onClick={() => {
-                    onChange(`${selectedClassId}|${domain}|`);
+                    onChange(`${selectedClassId}|${domain}||`);
                     setPhase("subclass");
                   }}
                   className={`
@@ -364,61 +364,137 @@ function MulticlassPicker({ currentClassId, value, onChange }: MulticlassPickerP
 
   // ── Phase: Subclass ────────────────────────────────────────────────────────
 
-  const subclasses = chosenClassData?.subclasses ?? [];
+  if (phase === "subclass") {
+    const subclasses = chosenClassData?.subclasses ?? [];
+
+    return (
+      <div className="space-y-2">
+        <button
+          type="button"
+          onClick={() => setPhase("domain")}
+          className="flex items-center gap-1.5 text-sm text-parchment-500 hover:text-parchment-300 transition-colors focus:outline-none focus:ring-2 focus:ring-[#577399] rounded"
+        >
+          <span aria-hidden="true">←</span> Change domain
+        </button>
+        <p className="text-sm text-parchment-500">
+          Choose a <span className="font-semibold text-[#f7f7ff]">subclass</span> from{" "}
+          <span className="font-semibold text-[#f7f7ff]">{chosenClassData?.name ?? selectedClassId}</span>{" "}
+          to take its <span className="font-semibold text-[#f7f7ff]">Foundation</span> feature card.
+          You cannot upgrade this subclass beyond Foundation.
+        </p>
+        {chosenClassLoading ? (
+          <div className="flex items-center gap-2 py-2">
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#577399] border-t-transparent" aria-hidden="true" />
+             <span className="text-sm text-parchment-500">Loading class details...</span>
+          </div>
+        ) : (
+          <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+            {subclasses.map((sc) => {
+              const isSelected = sc.subclassId === selectedSubclassId;
+              return (
+                <button
+                  key={sc.subclassId}
+                  type="button"
+                  onClick={() => {
+                    onChange(`${selectedClassId}|${selectedDomainId}|${sc.subclassId}|`);
+                    setPhase("feature");
+                  }}
+                  className={`
+                    w-full flex items-center rounded-lg border transition-all text-left px-3 py-2.5
+                    ${isSelected
+                      ? "border-[#577399] bg-[#577399]/15"
+                      : "border-slate-700/60 bg-slate-900/30 hover:border-slate-600"
+                    }
+                  `}
+                >
+                  {/* Selection circle */}
+                  <span
+                    className={`
+                      mr-3 h-6 w-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors
+                      ${isSelected ? "border-[#577399] bg-[#577399]" : "border-slate-600"}
+                    `}
+                  >
+                    {isSelected && <span className="h-2 w-2 rounded-full bg-white" />}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-semibold text-[#f7f7ff]">{sc.name}</span>
+                    {sc.description && (
+                      <p className="text-sm text-parchment-500 mt-0.5 truncate">{sc.description}</p>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Phase: Class Feature ──────────────────────────────────────────────────
+
+  const classFeatures = chosenClassData?.classFeatures ?? [];
 
   return (
     <div className="space-y-2">
       <button
         type="button"
-        onClick={() => setPhase("domain")}
+        onClick={() => setPhase("subclass")}
         className="flex items-center gap-1.5 text-sm text-parchment-500 hover:text-parchment-300 transition-colors focus:outline-none focus:ring-2 focus:ring-[#577399] rounded"
       >
-        <span aria-hidden="true">←</span> Change domain
+        <span aria-hidden="true">←</span> Change subclass
       </button>
       <p className="text-sm text-parchment-500">
-        Choose a <span className="font-semibold text-[#f7f7ff]">subclass</span> from{" "}
-        <span className="font-semibold text-[#f7f7ff]">{chosenClassData?.name ?? selectedClassId}</span>{" "}
-        to take its <span className="font-semibold text-[#f7f7ff]">Foundation</span> feature card.
-        You cannot upgrade this subclass beyond Foundation.
+        Choose a <span className="font-semibold text-[#f7f7ff]">class feature</span> from{" "}
+        <span className="font-semibold text-[#f7f7ff]">{chosenClassData?.name ?? selectedClassId}</span>.
+        {classFeatures.length === 0 && " (This class has no choosable class features — skip this step.)"}
       </p>
       {chosenClassLoading ? (
         <div className="flex items-center gap-2 py-2">
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#577399] border-t-transparent" aria-hidden="true" />
-           <span className="text-sm text-parchment-500">Loading class details...</span>
+          <span className="text-sm text-parchment-500">Loading class details...</span>
+        </div>
+      ) : classFeatures.length === 0 ? (
+        <div className="rounded border border-[#577399]/30 bg-[#577399]/10 px-3 py-2">
+          <p className="text-sm text-parchment-400">No class features to choose — your multiclass selection is complete.</p>
+          {/* Auto-set feature index to empty and mark as done */}
+          {selectedFeatureIndex === "" && (() => {
+            // Side-effect: mark complete with empty feature index
+            // We can't call onChange here directly in render; use a button instead
+            return null;
+          })()}
         </div>
       ) : (
         <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
-          {subclasses.map((sc) => {
-            const isSelected = sc.subclassId === selectedSubclassId;
+          {classFeatures.map((cf, idx) => {
+            const isSelected = selectedFeatureIndex === String(idx);
             return (
               <button
-                key={sc.subclassId}
+                key={idx}
                 type="button"
                 onClick={() => {
-                  onChange(`${selectedClassId}|${selectedDomainId}|${sc.subclassId}`);
-                  // Stay in subclass phase so user can see their final selection
+                  onChange(`${selectedClassId}|${selectedDomainId}|${selectedSubclassId}|${idx}`);
                 }}
                 className={`
-                  w-full flex items-center rounded-lg border transition-all text-left px-3 py-2.5
+                  w-full flex items-start rounded-lg border transition-all text-left px-3 py-2.5
                   ${isSelected
                     ? "border-[#577399] bg-[#577399]/15"
                     : "border-slate-700/60 bg-slate-900/30 hover:border-slate-600"
                   }
                 `}
               >
-                {/* Selection circle */}
                 <span
                   className={`
-                    mr-3 h-6 w-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors
+                    mt-0.5 mr-3 h-5 w-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors
                     ${isSelected ? "border-[#577399] bg-[#577399]" : "border-slate-600"}
                   `}
                 >
-                  {isSelected && <span className="h-2 w-2 rounded-full bg-white" />}
+                  {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <span className="text-sm font-semibold text-[#f7f7ff]">{sc.name}</span>
-                  {sc.description && (
-                    <p className="text-sm text-parchment-500 mt-0.5 truncate">{sc.description}</p>
+                  <span className="text-sm font-semibold text-[#f7f7ff]">{cf.name}</span>
+                  {cf.description && (
+                    <p className="text-xs text-parchment-500 mt-0.5 line-clamp-2">{cf.description}</p>
                   )}
                 </div>
               </button>
@@ -427,14 +503,17 @@ function MulticlassPicker({ currentClassId, value, onChange }: MulticlassPickerP
         </div>
       )}
 
-      {/* Summary when all three are chosen */}
-      {selectedClassId && selectedDomainId && selectedSubclassId && (
+      {/* Summary when all four are chosen */}
+      {selectedClassId && selectedDomainId && selectedSubclassId && (selectedFeatureIndex !== "" || classFeatures.length === 0) && (
         <div className="rounded border border-[#577399]/40 bg-[#577399]/10 px-3 py-2 mt-2">
           <p className="text-sm text-[#b9baa3]">
             <span className="font-semibold text-[#f7f7ff]">Multiclass Summary:</span>{" "}
             {chosenClassData?.name ?? selectedClassId} ·{" "}
             <span className="text-[#577399]">{selectedDomainId}</span> domain ·{" "}
-            {subclasses.find((s) => s.subclassId === selectedSubclassId)?.name ?? selectedSubclassId} Foundation
+            {chosenClassData?.subclasses.find((s) => s.subclassId === selectedSubclassId)?.name ?? selectedSubclassId} Foundation
+            {classFeatures.length > 0 && selectedFeatureIndex !== "" && (
+              <> · {classFeatures[parseInt(selectedFeatureIndex, 10)]?.name ?? `Feature ${selectedFeatureIndex}`}</>
+            )}
           </p>
         </div>
       )}
@@ -489,6 +568,11 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
     return Object.values(history).flat().some((a) => a.type === "multiclass");
   }, [history]);
 
+  // Count total subclass-upgrades across all history (Foundation→Spec = 1, Spec→Mastery = 2; max 2)
+  const totalSubclassUpgradesEver = useMemo(() => {
+    return Object.values(history).flat().filter((a) => a.type === "subclass-upgrade").length;
+  }, [history]);
+
   // Check current selections in this level-up
   const choosingSubclass = choices.some((a) => a.type === "subclass-upgrade");
   const choosingMulticlass = choices.some((a) => a.type === "multiclass");
@@ -526,6 +610,8 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
       // Also only 1 subclass-upgrade per tier
       const subclassInTierOrChoices = subclassUsedThisTier || choosingSubclass;
       if (subclassInTierOrChoices) return false;
+      // Cannot exceed Mastery (max 2 total upgrades ever)
+      if (totalSubclassUpgradesEver >= 2) return false;
     }
     if (opt.type === "multiclass") {
       if (subclassUsedThisTier || choosingSubclass) return false;
@@ -561,7 +647,8 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
       onChange([...choices, { type: pendingType, detail: `${detailValue1},${detailValue2}` }]);
     } else if (pendingType === "multiclass") {
       const parts = multiclassDetail.split("|");
-      if (parts.length !== 3 || parts.some((p) => !p.trim())) return;
+      // Accept 3 or 4 parts; first 3 must be non-empty
+      if ((parts.length !== 3 && parts.length !== 4) || parts.slice(0, 3).some((p) => !p.trim())) return;
       onChange([...choices, { type: pendingType, detail: multiclassDetail }]);
     } else {
       // Fallback (should not be reached for current option set)
@@ -597,7 +684,8 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
     }
     if (pendingType === "multiclass") {
       const parts = multiclassDetail.split("|");
-      return parts.length === 3 && parts.every((p) => p.trim().length > 0);
+      // Accept 3 or 4 parts; first 3 required non-empty; 4th (featureIndex) optional
+      return (parts.length === 3 || parts.length === 4) && parts.slice(0, 3).every((p) => p.trim().length > 0);
     }
     return !!detailValue1.trim();
   };
@@ -749,7 +837,8 @@ function AdvancementPicker({ targetLevel, character, choices, onChange }: Advanc
         .join(", ");
     }
     if (choice.type === "multiclass") {
-      const parts = choice.detail.split("|");
+      // Display first 3 parts (classId · domainId · subclassId); skip empty feature index
+      const parts = choice.detail.split("|").slice(0, 3);
       return parts.filter(Boolean).join(" · ");
     }
     return choice.detail;
@@ -1277,6 +1366,10 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
   const [selectedDomainCardIds, setSelectedDomainCardIds] = useState<string[]>([]);
   // Maps cardId → human-readable card name for display in the confirm step
   const [cardNameMap, setCardNameMap] = useState<Record<string, string>>({});
+  // Maps cardId → level number for encoding additional-domain-card detail
+  const [cardLevelMap, setCardLevelMap] = useState<Record<string, number>>({});
+  // Tier Achievement: player names the new experience at +2 (SRD p.22)
+  const [tierAchievementExperienceName, setTierAchievementExperienceName] = useState("");
 
   const levelUpMutation = useCharacterLevelUp(character.characterId);
 
@@ -1367,16 +1460,14 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
   }, [step, advancementsComplete, domainCardSatisfied]);
 
   const handleSubmit = () => {
-    // Strip "Domain/" prefix before sending to backend — backend stores bare cardId in domainVault
-    const toBareId = (prefixedOrBare: string) => {
-      const slash = prefixedOrBare.indexOf("/");
-      return slash !== -1 ? prefixedOrBare.slice(slash + 1) : prefixedOrBare;
-    };
-
-    // Build advancements with extra domain card detail filled in
+    // Build advancements with extra domain card detail filled in as "cardId|level"
+    // Card IDs are in "domain/cardId" format — send as-is; backend stores them prefixed.
     const finalAdvancements = advancements.map((adv) => {
       if (adv.type === "additional-domain-card" && selectedDomainCardIds.length > 1) {
-        return { ...adv, detail: toBareId(selectedDomainCardIds[1]) };
+        const rawId = selectedDomainCardIds[1]!;
+        const cardLevel = cardLevelMap[rawId];
+        const detail = cardLevel !== undefined ? `${rawId}|${cardLevel}` : rawId;
+        return { ...adv, detail };
       }
       return adv;
     });
@@ -1384,7 +1475,10 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
     const input: LevelUpInput = {
       targetLevel,
       advancements: finalAdvancements,
-      newDomainCardId: selectedDomainCardIds[0] ? toBareId(selectedDomainCardIds[0]) : null,
+      newDomainCardId: selectedDomainCardIds[0] ?? null,
+      ...(hasTierAchievement && tierAchievementExperienceName.trim()
+        ? { tierAchievementExperienceName: tierAchievementExperienceName.trim() }
+        : {}),
     };
 
     levelUpMutation.mutate(input, {
@@ -1508,9 +1602,27 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
                         <span className="text-[#577399] text-xs font-bold">+1</span>
                         <span className="text-[#b9baa3]">Proficiency (Tier Achievement)</span>
                       </li>
-                      <li className="flex items-center gap-2">
-                        <span className="text-[#577399] text-xs font-bold">+1</span>
-                        <span className="text-[#b9baa3]">New Experience at +2 (Tier Achievement)</span>
+                      <li className="flex flex-col gap-1 pt-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[#577399] text-xs font-bold">+1</span>
+                          <span className="text-[#b9baa3]">New Experience at +2 (Tier Achievement)</span>
+                        </div>
+                        <input
+                          type="text"
+                          value={tierAchievementExperienceName}
+                          onChange={(e) => setTierAchievementExperienceName(e.target.value)}
+                          placeholder="Name your new experience (optional)"
+                          maxLength={60}
+                          aria-label="Name for new Tier Achievement experience"
+                          className="
+                            mt-1 w-full rounded bg-slate-900 px-2 py-1.5 text-sm text-parchment-200
+                            border border-[#577399]/40 focus:outline-none focus:ring-1 focus:ring-[#577399]
+                            placeholder:text-parchment-700
+                          "
+                        />
+                        <p className="text-xs text-parchment-600 italic">
+                          Leave blank to name it later via character edit.
+                        </p>
                       </li>
                     </>
                   )}
@@ -1568,6 +1680,7 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
             setSelectedDomainCardIds={setSelectedDomainCardIds}
             onNoCardsAvailable={setNoCardsAvailable}
             onCardNameMap={setCardNameMap}
+            onCardLevelMap={setCardLevelMap}
             pendingMulticlassDomain={pendingMulticlassDomain}
           />
         )}
@@ -1583,6 +1696,7 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
             slotsUsed={slotsUsed}
             selectedDomainCardIds={selectedDomainCardIds}
             cardNameMap={cardNameMap}
+            tierAchievementExperienceName={tierAchievementExperienceName}
             levelUpError={levelUpMutation.isError ? levelUpMutation.error : null}
           />
         )}
@@ -1663,6 +1777,7 @@ function ConfirmStep({
   slotsUsed,
   selectedDomainCardIds,
   cardNameMap,
+  tierAchievementExperienceName,
   levelUpError,
 }: {
   character: Character;
@@ -1673,6 +1788,7 @@ function ConfirmStep({
   slotsUsed: number;
   selectedDomainCardIds: string[];
   cardNameMap: Record<string, string>;
+  tierAchievementExperienceName: string;
   levelUpError: unknown;
 }) {
   const formatAdvancementDetail = (adv: AdvancementChoice): string | null => {
@@ -1684,8 +1800,14 @@ function ConfirmStep({
         .join(", ");
     }
     if (adv.type === "multiclass") {
-      const parts = adv.detail.split("|");
+      // Show first 3 parts (class · domain · subclass); skip empty feature index
+      const parts = adv.detail.split("|").slice(0, 3);
       return parts.filter(Boolean).join(" · ");
+    }
+    if (adv.type === "additional-domain-card") {
+      // Detail may be "cardId|level"; show only the cardId part
+      const pipIdx = adv.detail.indexOf("|");
+      return pipIdx !== -1 ? adv.detail.slice(0, pipIdx) : adv.detail;
     }
     return adv.detail;
   };
@@ -1710,8 +1832,15 @@ function ConfirmStep({
               Tier Achievement
             </p>
             <p className="text-sm text-[#b9baa3]">
-              +1 Proficiency, +1 Experience at +2
+              +1 Proficiency
               {clearsMarkedTraits && ", Clear Marked Traits"}
+            </p>
+            <p className="text-sm text-[#b9baa3] mt-0.5">
+              +1 Experience at +2:{" "}
+              {tierAchievementExperienceName.trim()
+                ? <span className="font-semibold text-[#f7f7ff]">&ldquo;{tierAchievementExperienceName.trim()}&rdquo;</span>
+                : <span className="italic text-parchment-600">unnamed (fill in later)</span>
+              }
             </p>
           </div>
         )}
@@ -1790,6 +1919,7 @@ function DomainCardPickerWrapper({
   setSelectedDomainCardIds,
   onNoCardsAvailable,
   onCardNameMap,
+  onCardLevelMap,
   pendingMulticlassDomain,
 }: {
   character: Character;
@@ -1800,6 +1930,7 @@ function DomainCardPickerWrapper({
   setSelectedDomainCardIds: (ids: string[]) => void;
   onNoCardsAvailable: (v: boolean) => void;
   onCardNameMap: (map: Record<string, string>) => void;
+  onCardLevelMap: (map: Record<string, number>) => void;
   pendingMulticlassDomain?: string | null;
 }) {
   // Fetch authoritative domain names from class data (matches DomainCardPicker/DomainLoadout pattern)
@@ -1816,20 +1947,27 @@ function DomainCardPickerWrapper({
 
   const mcCardCap = multiclassDomainCardCap(targetLevel);
 
-  // Build card name map from loaded domain data and propagate to parent
+  // Build card name map and card level map from loaded domain data and propagate to parent
   React.useEffect(() => {
-    const map: Record<string, string> = {};
+    const nameMap: Record<string, string> = {};
+    const levelMap: Record<string, number> = {};
     for (const cards of [d0?.cards, d1?.cards, dmc?.cards]) {
       if (cards) {
         for (const card of cards) {
-          map[`${card.domain}/${card.cardId}`] = card.name;
+          const key = `${card.domain}/${card.cardId}`;
+          nameMap[key] = card.name;
+          levelMap[key] = card.level;
+          // Also index by bare cardId for convenience
+          nameMap[card.cardId] = card.name;
+          levelMap[card.cardId] = card.level;
         }
       }
     }
-    if (Object.keys(map).length > 0) {
-      onCardNameMap(map);
+    if (Object.keys(nameMap).length > 0) {
+      onCardNameMap(nameMap);
+      onCardLevelMap(levelMap);
     }
-  }, [d0, d1, dmc, onCardNameMap]);
+  }, [d0, d1, dmc, onCardNameMap, onCardLevelMap]);
 
   // Detect no-cards scenario
   React.useEffect(() => {

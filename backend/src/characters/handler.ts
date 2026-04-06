@@ -8,6 +8,7 @@ import type {
 } from "aws-lambda";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
+import { QueryCommand } from "@aws-sdk/lib-dynamodb";
 import {
   S3Client,
   PutObjectCommand,
@@ -42,6 +43,7 @@ import {
   CLASSES_TABLE,
   GAME_DATA_TABLE,
   USERS_TABLE,
+  docClient,
   getItem,
   putItem,
   deleteItem,
@@ -67,7 +69,7 @@ import type {
   UserPreferences,
   PatreonLink,
 } from "@shared/types";
-import { canSave } from "../users/patreon";
+import { canSave, isGrandfathered } from "../users/patreon";
 
 // ─── Patreon Gate ─────────────────────────────────────────────────────────────
 
@@ -104,6 +106,73 @@ async function requireSavePermission(userId: string): Promise<void> {
       403
     );
   }
+}
+
+// ─── Character Creation Limit ─────────────────────────────────────────────────
+// Non-Patreon, non-grandfathered users may create up to 5 level-1 characters.
+// Patreon members (any tier) and grandfathered users have no limit.
+
+const FREE_CHARACTER_LIMIT = 5;
+
+/**
+ * Count the total number of characters belonging to a user.
+ * Uses DynamoDB Select: "COUNT" to avoid fetching full item payloads.
+ */
+async function countUserCharacters(userId: string): Promise<number> {
+  let total = 0;
+  let lastKey: Record<string, unknown> | undefined;
+
+  do {
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: CHARACTERS_TABLE,
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :skPrefix)",
+        ExpressionAttributeValues: {
+          ":pk": `USER#${userId}`,
+          ":skPrefix": "CHARACTER#",
+        },
+        Select: "COUNT",
+        ExclusiveStartKey: lastKey,
+      })
+    );
+    total += result.Count ?? 0;
+    lastKey = result.LastEvaluatedKey as Record<string, unknown> | undefined;
+  } while (lastKey !== undefined);
+
+  return total;
+}
+
+/**
+ * Verify that the user is allowed to create a new character.
+ * Grandfathered and Patreon-linked users have no limit.
+ * All other users are capped at FREE_CHARACTER_LIMIT characters.
+ * Returns the current character count for informational purposes.
+ */
+async function requireCreatePermission(userId: string): Promise<{ characterCount: number }> {
+  const user = await getItem<UserRecordForGate>({
+    TableName: USERS_TABLE,
+    Key: keys.user(userId),
+  });
+
+  if (!user) throw AppError.unauthorized("User profile not found");
+
+  // Grandfathered or Patreon-linked users can create unlimited characters.
+  if (isGrandfathered(user.createdAt) || canSave(user.patreon ?? null, user.createdAt)) {
+    return { characterCount: -1 }; // unlimited, skip count
+  }
+
+  // Non-Patreon user: enforce the character limit.
+  const count = await countUserCharacters(userId);
+  if (count >= FREE_CHARACTER_LIMIT) {
+    throw new AppError(
+      "CHARACTER_LIMIT_REACHED",
+      `You've reached the free limit of ${FREE_CHARACTER_LIMIT} characters. ` +
+      "Join our FREE Patreon at https://patreon.com/CursesAP to create unlimited characters.",
+      403
+    );
+  }
+
+  return { characterCount: count };
 }
 
 // ─── S3 Client (portrait uploads) ────────────────────────────────────────────
@@ -856,8 +925,8 @@ async function createCharacter(
 ): Promise<APIGatewayProxyResultV2> {
   const userId = extractUserId(event);
 
-  // ── Patreon gate: block save for non-linked, non-grandfathered users ────
-  await requireSavePermission(userId);
+  // ── Character creation limit: non-Patreon users capped at 5 characters ────
+  await requireCreatePermission(userId);
 
   const input = parseBody(event, CreateCharacterSchema);
 
@@ -1052,9 +1121,6 @@ async function updateCharacter(
   const userId = extractUserId(event);
   const characterId = requirePathParam(event, "characterId");
 
-  // ── Patreon gate: block save for non-linked, non-grandfathered users ────
-  await requireSavePermission(userId);
-
   const existing = await getItem<CharacterRecord>({
     TableName: CHARACTERS_TABLE,
     Key: keys.character(userId, characterId),
@@ -1107,9 +1173,6 @@ async function patchCharacter(
 ): Promise<APIGatewayProxyResultV2> {
   const userId = extractUserId(event);
   const characterId = requirePathParam(event, "characterId");
-
-  // ── Patreon gate: block save for non-linked, non-grandfathered users ────
-  await requireSavePermission(userId);
 
   const existing = await getItem<CharacterRecord>({
     TableName: CHARACTERS_TABLE,
@@ -1518,9 +1581,6 @@ async function executeAction(
   const userId = extractUserId(event);
   const characterId = requirePathParam(event, "characterId");
 
-  // ── Patreon gate: block save for non-linked, non-grandfathered users ────
-  await requireSavePermission(userId);
-
   const existing = await getItem<CharacterRecord>({
     TableName: CHARACTERS_TABLE,
     Key: keys.character(userId, characterId),
@@ -1587,7 +1647,7 @@ async function levelUpCharacter(
   const userId      = extractUserId(event);
   const characterId = requirePathParam(event, "characterId");
 
-  // ── Patreon gate: block save for non-linked, non-grandfathered users ────
+  // ── Patreon gate: leveling up requires a linked Patreon account ──────────
   await requireSavePermission(userId);
 
   const existing = await getItem<CharacterRecord>({

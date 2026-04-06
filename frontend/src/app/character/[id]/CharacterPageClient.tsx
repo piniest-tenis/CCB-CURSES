@@ -144,7 +144,7 @@ export default function CharacterPage() {
       <LoadingInterstitial isVisible={charLoading} />
 
       {/* Nav bar */}
-      <header className="relative z-10 border-b border-burgundy-900/50 bg-slate-900/80 backdrop-blur-sm sticky top-0">
+      <header className="relative z-30 border-b border-burgundy-900/50 bg-slate-900/80 backdrop-blur-sm sticky top-0">
         <div className="mx-auto flex max-w-4xl items-center gap-4 px-4 py-3">
           <Link
             href="/dashboard"

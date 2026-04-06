@@ -132,7 +132,7 @@ export function EncounterHeader({
             <span
               className={`
                 inline-flex items-center gap-1 rounded-full px-2 py-0.5
-                text-[10px] font-semibold uppercase tracking-wider
+                text-[11px] font-semibold uppercase tracking-wider
                 ${statusStyles}
               `}
             >
@@ -150,7 +150,7 @@ export function EncounterHeader({
             </span>
           </div>
           {statusSubline && (
-            <p className="text-[10px] text-[#b9baa3]/40 mt-0.5 leading-relaxed">
+            <p className="text-[11px] text-[#b9baa3]/40 mt-0.5 leading-relaxed">
               {statusSubline}
             </p>
           )}
@@ -160,7 +160,7 @@ export function EncounterHeader({
       {/* Center: Round counter */}
       <div className="flex items-center gap-3">
         <div className="flex flex-col items-center">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-[#b9baa3]/50">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[#b9baa3]/50">
             Round
           </span>
           <span

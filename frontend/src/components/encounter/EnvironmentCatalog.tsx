@@ -33,7 +33,7 @@ function FeatureRow({ feature }: { feature: EnvironmentFeature }) {
           title={feature.isPassive ? "Passive (always active)" : "Activated ability"}
           className={`
             mt-0.5 shrink-0 rounded px-1 py-0.5
-            text-[9px] font-bold uppercase tracking-wider
+            text-[10px] font-bold uppercase tracking-wider
             ${feature.isPassive
               ? "bg-[#577399]/20 text-[#577399]"
               : "bg-[#fe5f55]/15 text-[#fe5f55]"}
@@ -110,11 +110,11 @@ function EnvironmentCard({
             {environment.name}
           </h3>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-slate-800 text-[#b9baa3]/60">
+            <span className="rounded px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider bg-slate-800 text-[#b9baa3]/60">
               {environment.type}
             </span>
             {environment.tone.map((t) => (
-              <span key={t} className="text-[10px] italic text-[#b9baa3]/40">
+              <span key={t} className="text-[11px] italic text-[#b9baa3]/40">
                 {t}
               </span>
             ))}
@@ -122,11 +122,11 @@ function EnvironmentCard({
         </div>
 
         <div className="flex flex-col items-end gap-1 shrink-0">
-          <span className="text-[10px] text-[#b9baa3]/40">
+          <span className="text-[11px] text-[#b9baa3]/40">
             DC {environment.difficulty}
           </span>
           {isLoaded && (
-            <span className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-[#577399]/20 text-[#577399]">
+            <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#577399]/20 text-[#577399]">
               In Encounter
             </span>
           )}
@@ -180,11 +180,11 @@ function EnvironmentCard({
       {suggestedAdversaries.length > 0 && (
         <div className="px-4 pt-3">
           <div className="flex items-center gap-2 mb-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#b9baa3]/50">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#b9baa3]/50">
               Potential Adversaries
             </p>
             {onAddAdversary && (
-              <span className="text-[9px] italic text-[#b9baa3]/30">
+              <span className="text-[10px] italic text-[#b9baa3]/30">
                 Tap to add to encounter
               </span>
             )}
@@ -215,7 +215,7 @@ function EnvironmentCard({
                   {added ? (
                     <span aria-hidden="true">✓</span>
                   ) : (
-                    onAddAdversary && <span aria-hidden="true" className="text-[9px]">+</span>
+                    onAddAdversary && <span aria-hidden="true" className="text-[10px]">+</span>
                   )}
                   {adv.name}
                 </button>
@@ -280,7 +280,7 @@ function EnvironmentCard({
             Load into Encounter
           </button>
         )}
-        <span className="text-[10px] text-[#b9baa3]/30">
+        <span className="text-[11px] text-[#b9baa3]/30">
           {environment.potentialAdversaryNames.length} suggested adversar
           {environment.potentialAdversaryNames.length !== 1 ? "ies" : "y"}
         </span>
@@ -368,7 +368,7 @@ export function EnvironmentCatalog({
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-serif text-sm font-semibold uppercase tracking-widest text-[#577399]">
+        <h2 className="font-serif-sc text-sm font-semibold tracking-widest text-[#577399]">
           Environments
         </h2>
         {activeEnvironment && (

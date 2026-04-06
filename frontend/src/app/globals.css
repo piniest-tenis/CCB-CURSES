@@ -63,9 +63,7 @@
     outline-offset: 2px;
   }
 
-  /* warbler-deck — small-caps are now handled by the <WarblerText> React
-     component (src/components/WarblerText.tsx) which wraps every capital
-     letter in a <span style="font-size:1.2em">. No CSS font-variant needed. */
+  /* double-pica serif font — small-caps handled by font-serif-sc (double-pica-sc) */
 
   /* jetsam-collection-basilea display font — no size override needed here */
 

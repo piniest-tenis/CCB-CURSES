@@ -98,7 +98,7 @@ export function AdversaryCatalog({ campaignId, onAddToEncounter }: AdversaryCata
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-serif text-sm font-semibold uppercase tracking-widest text-[#577399]">
+        <h2 className="font-serif-sc text-sm font-semibold tracking-widest text-[#577399]">
           Adversaries
         </h2>
         {/* TODO: wire up + New Adversary modal */}

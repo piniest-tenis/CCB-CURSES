@@ -77,7 +77,7 @@ function EnvironmentPicker({ onLoad, onDismiss }: {
   return (
     <div className="mt-3 rounded-xl border border-[#577399]/25 bg-slate-950/40 p-3 space-y-2">
       <div className="flex items-center justify-between">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-[#577399]/70">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-[#577399]/70">
           Choose Environment
         </p>
         <button
@@ -124,9 +124,9 @@ function EnvironmentPicker({ onLoad, onDismiss }: {
                   <TierBadge tier={env.tier} />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-[#f7f7ff] truncate">{env.name}</p>
-                    <p className="text-[10px] text-[#b9baa3]/40">{env.type} · DC {env.difficulty}</p>
+                    <p className="text-[11px] text-[#b9baa3]/40">{env.type} · DC {env.difficulty}</p>
                   </div>
-                  <span className="text-[10px] text-[#577399]/60 shrink-0">Load →</span>
+                  <span className="text-[11px] text-[#577399]/60 shrink-0">Load →</span>
                 </button>
               ))}
             </div>
@@ -218,18 +218,18 @@ function FeatureCard({
             {feature.name}
           </span>
           {hasFearCost && (
-            <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider
+            <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider
               text-amber-500/70 border border-amber-500/30 rounded px-1 py-px">
               {fearCost} Fear
             </span>
           )}
           {hasRoll && (
-            <span className="shrink-0 text-[9px] font-medium text-slate-400/50 italic">
+            <span className="shrink-0 text-[10px] font-medium text-slate-400/50 italic">
               roll required
             </span>
           )}
         </div>
-        <span className={`shrink-0 text-[10px] transition-transform duration-150 text-[#b9baa3]/30 ${
+        <span className={`shrink-0 text-[11px] transition-transform duration-150 text-[#b9baa3]/30 ${
           expanded ? "rotate-180" : ""
         }`} aria-hidden="true">▾</span>
       </button>
@@ -250,7 +250,7 @@ function FeatureCard({
 
           {/* Roll spec preview */}
           {feature.rollSpec && (
-            <div className="flex items-center gap-2 text-[10px] text-[#b9baa3]/40">
+            <div className="flex items-center gap-2 text-[11px] text-[#b9baa3]/40">
               <span className="font-mono bg-slate-800/60 px-1.5 py-0.5 rounded">
                 {feature.rollSpec.dice.map((d) => d.size).join(" + ")}
               </span>
@@ -285,7 +285,7 @@ function FeatureCard({
                   {showTargetPicker && (
                     <div className="w-full rounded-lg border border-slate-700/40
                       bg-slate-900/60 p-2 space-y-1">
-                      <p className="text-[9px] font-semibold uppercase tracking-wider
+                      <p className="text-[10px] font-semibold uppercase tracking-wider
                         text-[#b9baa3]/40 mb-1">
                         Choose target
                       </p>
@@ -316,11 +316,11 @@ function FeatureCard({
                                   : "border-slate-700/50 bg-slate-800/50 text-[#b9baa3] hover:border-[#577399]/50 hover:bg-[#577399]/10 hover:text-[#f7f7ff]"
                                 }`}
                             >
-                              <span aria-hidden="true" className="text-[10px]">
+                              <span aria-hidden="true" className="text-[11px]">
                                 {isSent ? "✓" : "→"}
                               </span>
                               <span className="flex-1 truncate">{char.name}</span>
-                              <span className="text-[10px] text-[#b9baa3]/30 shrink-0">
+                              <span className="text-[11px] text-[#b9baa3]/30 shrink-0">
                                 {char.className} {char.level}
                               </span>
                             </button>
@@ -413,7 +413,7 @@ function ActiveEnvironmentBanner({
             <p className="text-xs font-semibold text-[#577399] uppercase tracking-wider truncate">
               Scene: {env.name}
             </p>
-            <p className="text-[10px] text-[#b9baa3]/50">
+            <p className="text-[11px] text-[#b9baa3]/50">
               {env.type} · DC {env.difficulty}
               {env.tone.length > 0 && (
                 <span className="text-[#b9baa3]/30"> · {env.tone.join(", ")}</span>
@@ -437,7 +437,7 @@ function ActiveEnvironmentBanner({
       {/* ── Passive features ── */}
       {passiveFeatures.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-[9px] font-semibold uppercase tracking-wider text-[#577399]/50">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-[#577399]/50">
             Passive Effects
           </p>
           {passiveFeatures.map((f) => (
@@ -455,7 +455,7 @@ function ActiveEnvironmentBanner({
       {/* ── Active features ── */}
       {activeFeatures.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-[9px] font-semibold uppercase tracking-wider text-[#fe5f55]/50">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-[#fe5f55]/50">
             Activated Effects
           </p>
           {activeFeatures.map((f) => (
@@ -473,7 +473,7 @@ function ActiveEnvironmentBanner({
       {/* ── Suggested adversary chips ── */}
       {suggested.length > 0 && (
         <div>
-          <p className="text-[9px] font-semibold uppercase tracking-wider text-[#b9baa3]/40 mb-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-[#b9baa3]/40 mb-1.5">
             Suggested Adversaries
           </p>
           <div className="flex flex-wrap gap-1.5">
@@ -558,7 +558,7 @@ export function EncounterConsole({
     return (
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-serif text-sm font-semibold uppercase tracking-widest text-[#577399]">
+          <h2 className="font-serif-sc text-sm font-semibold tracking-widest text-[#577399]">
             Encounter
           </h2>
         </div>
@@ -605,7 +605,7 @@ export function EncounterConsole({
     return (
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-serif text-sm font-semibold uppercase tracking-widest text-[#577399]">
+          <h2 className="font-serif-sc text-sm font-semibold tracking-widest text-[#577399]">
             Encounter
           </h2>
         </div>
@@ -642,7 +642,7 @@ export function EncounterConsole({
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-serif text-sm font-semibold uppercase tracking-widest text-[#577399]">
+        <h2 className="font-serif-sc text-sm font-semibold tracking-widest text-[#577399]">
           Encounter
         </h2>
       </div>

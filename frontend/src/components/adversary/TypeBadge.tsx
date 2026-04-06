@@ -19,7 +19,7 @@ export function TypeBadge({ type }: TypeBadgeProps) {
     <span
       className="
         inline-block rounded border px-1.5 py-0.5
-        text-[10px] font-semibold uppercase tracking-wider
+        text-[11px] font-semibold uppercase tracking-wider
         bg-slate-800/60 text-[#b9baa3]/80 border-slate-700/40
       "
     >

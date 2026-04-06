@@ -109,21 +109,21 @@ export function DiceRollButton({
       title={`Roll ${rollRequest.label}`}
       className={[
         "group flex h-9 w-9 items-center justify-center rounded",
-        // Resting: solid #7a9dbf — 3.8:1 contrast on dark bg (WCAG AA ✓)
-        "border border-transparent text-[#7a9dbf]",
-        // Hover: brighter #9bb8d4 — 5.2:1 contrast, perceptible state change
-        "hover:border-[#577399]/50 hover:bg-[#577399]/10 hover:text-[#9bb8d4]",
+        // Resting: goldenrod at 75% opacity
+        "border border-transparent text-amber-500/75",
+        // Hover: full goldenrod
+        "hover:border-amber-500/50 hover:bg-amber-500/10 hover:text-amber-500",
         "disabled:opacity-30 disabled:cursor-not-allowed",
         "transition-all duration-150",
         // ring-offset ensures focus ring is legible against the button border
-        "focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-1 focus:ring-offset-slate-900",
+        "focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1 focus:ring-offset-slate-900",
         className,
       ].join(" ")}
     >
       {isRolling ? (
         <span className="h-4 w-4 animate-spin rounded-full border border-current border-t-transparent" aria-hidden="true" />
       ) : (
-        <DieIcon className="h-4 w-4" />
+        <DieIcon className="h-5 w-5" />
       )}
     </button>
   );

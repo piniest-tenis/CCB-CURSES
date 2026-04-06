@@ -81,19 +81,19 @@ function LogEntry({
       <div className="flex items-center justify-between gap-2">
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold text-[#f7f7ff] truncate">{request.label}</p>
-          <p className="text-[10px] text-[#b9baa3]">
+          <p className="text-[11px] text-[#b9baa3]">
             {diceLabel}{request.modifier ? ` ${request.modifier > 0 ? "+" : ""}${request.modifier}` : ""} = <strong className="text-[#f7f7ff]">{total}</strong>
           </p>
         </div>
         <div className="flex flex-col items-end gap-0.5 shrink-0">
           {outcome ? (
-            <span className={`text-[9px] font-bold uppercase border rounded px-1 py-px ${OUTCOME_COLOR[outcome]}`}>
+            <span className={`text-[10px] font-bold uppercase border rounded px-1 py-px ${OUTCOME_COLOR[outcome]}`}>
               {OUTCOME_SHORT[outcome]}
             </span>
           ) : (
             <span className="text-sm font-bold text-[#f7f7ff] leading-none">{total}</span>
           )}
-          <span className="text-[9px] text-[#b9baa3]">{timeStr}</span>
+          <span className="text-[10px] text-[#b9baa3]">{timeStr}</span>
         </div>
       </div>
     </button>
@@ -143,7 +143,7 @@ function LogEntryDetail({ result }: { result: RollResult }) {
 
       {/* Hope vs Fear */}
       {hopeValue !== undefined && fearValue !== undefined && (
-        <p className="text-[10px] text-[#b9baa3]">
+        <p className="text-[11px] text-[#b9baa3]">
           <span style={{ color: "#DAA520" }}>Hope {hopeValue}</span>
           {" · "}
           <span style={{ color: "#9BB5CC" }}>Fear {fearValue}</span>
@@ -214,7 +214,7 @@ function CustomRollTray({ onRoll, characterName }: { onRoll: () => void; charact
 
   return (
     <div className="border-t border-[#577399]/20 px-3 py-3 space-y-3 bg-slate-950/40">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-[#577399]">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-[#577399]">
         Custom Roll
       </p>
 
@@ -249,7 +249,7 @@ function CustomRollTray({ onRoll, characterName }: { onRoll: () => void; charact
                     draggable={false}
                   />
                 ) : (
-                  <span className="text-[9px] font-bold text-[#b9baa3]">{size}</span>
+                  <span className="text-[10px] font-bold text-[#b9baa3]">{size}</span>
                 )}
                 {count > 0 && (
                   <span className="absolute -right-1 -top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[#577399] px-0.5 text-[8px] font-bold text-white leading-none">
@@ -265,7 +265,7 @@ function CustomRollTray({ onRoll, characterName }: { onRoll: () => void; charact
                     onClick={() => adjust(size, -1)}
                     disabled={count === 0 || isRolling}
                     aria-label={`Remove a ${size}`}
-                    className="flex h-3.5 w-3.5 items-center justify-center rounded text-[#b9baa3] border border-[#577399]/30 hover:border-[#577399] hover:text-[#f7f7ff] disabled:opacity-30 text-[9px] transition-colors focus:outline-none focus:ring-1 focus:ring-[#577399]"
+                    className="flex h-3.5 w-3.5 items-center justify-center rounded text-[#b9baa3] border border-[#577399]/30 hover:border-[#577399] hover:text-[#f7f7ff] disabled:opacity-30 text-[10px] transition-colors focus:outline-none focus:ring-1 focus:ring-[#577399]"
                   >−</button>
                 )}
                 <span className="text-[8px] text-[#b9baa3]">{size}</span>
@@ -277,7 +277,7 @@ function CustomRollTray({ onRoll, characterName }: { onRoll: () => void; charact
 
       {/* Modifier */}
       <div className="flex items-center gap-2">
-        <label className="text-[10px] text-[#b9baa3] uppercase tracking-wider">Modifier</label>
+        <label className="text-[11px] text-[#b9baa3] uppercase tracking-wider">Modifier</label>
         <input
           type="number"
           value={modifier}
@@ -351,7 +351,7 @@ export function DiceLog({ characterName }: { characterName?: string } = {}) {
                 aria-pressed={showCustom}
                 title="Custom roll"
                 className={[
-                  "rounded px-2 py-0.5 text-[10px] font-semibold transition-colors focus:outline-none focus:ring-1 focus:ring-[#577399]",
+                  "rounded px-2 py-0.5 text-[11px] font-semibold transition-colors focus:outline-none focus:ring-1 focus:ring-[#577399]",
                   showCustom
                     ? "bg-[#577399]/20 text-[#577399]"
                     : "text-[#b9baa3]/60 hover:text-[#f7f7ff] hover:bg-[#577399]/10",
@@ -364,7 +364,7 @@ export function DiceLog({ characterName }: { characterName?: string } = {}) {
                   type="button"
                   onClick={clearLog}
                   aria-label="Clear dice log"
-                  className="rounded px-2 py-0.5 text-[10px] font-semibold text-[#b9baa3]/60 hover:text-[#fe5f55] hover:bg-[#fe5f55]/10 transition-colors focus:outline-none focus:ring-1 focus:ring-[#fe5f55]"
+                  className="rounded px-2 py-0.5 text-[11px] font-semibold text-[#b9baa3]/60 hover:text-[#fe5f55] hover:bg-[#fe5f55]/10 transition-colors focus:outline-none focus:ring-1 focus:ring-[#fe5f55]"
                 >
                   Clear
                 </button>
@@ -420,19 +420,19 @@ export function DiceLog({ characterName }: { characterName?: string } = {}) {
         aria-label={isExpanded ? "Collapse dice log" : "Open dice log"}
         aria-expanded={isExpanded}
         className="
-          relative flex h-10 w-10 items-center justify-center rounded-full
-          border border-[#577399]/40 bg-[#0d1610] shadow-lg
-          text-[#577399] hover:border-[#577399] hover:text-[#f7f7ff] hover:bg-[#0f1d17]
+          relative flex h-[3.75rem] w-[3.75rem] items-center justify-center rounded-full
+          border-2 border-amber-500/50 bg-[#0d1610] shadow-lg
+          text-amber-500 hover:border-amber-500 hover:text-[#f7f7ff] hover:bg-[#0f1d17]
           transition-all duration-150
-          focus:outline-none focus:ring-2 focus:ring-[#577399]
+          focus:outline-none focus:ring-2 focus:ring-amber-500
         "
       >
-        <DieIcon className="h-[26px] w-[26px]" />
+        <DieIcon className="h-[39px] w-[39px]" />
         {/* Roll count badge */}
         {log.length > 0 && (
           <span
             aria-hidden="true"
-            className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#577399] px-1 text-[9px] font-bold text-white leading-none"
+            className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[11px] font-bold text-slate-900 leading-none"
           >
             {log.length > 99 ? "99+" : log.length}
           </span>

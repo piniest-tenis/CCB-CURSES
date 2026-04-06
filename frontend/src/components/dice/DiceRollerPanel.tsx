@@ -97,7 +97,7 @@ function DieImageButton({
         )}
         {/* Count badge */}
         {count > 0 && (
-          <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#577399] px-1 text-[9px] font-bold text-white leading-none">
+          <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#577399] px-1 text-[10px] font-bold text-white leading-none">
             {count}
           </span>
         )}
@@ -111,12 +111,12 @@ function DieImageButton({
             onClick={onRemove}
             disabled={disabled || count === 0}
             aria-label={`Remove a ${size}`}
-            className="flex h-4 w-4 items-center justify-center rounded text-[#b9baa3] border border-[#577399]/30 hover:border-[#577399] hover:text-[#f7f7ff] disabled:opacity-30 text-[10px] transition-colors focus:outline-none focus:ring-1 focus:ring-[#577399]"
+            className="flex h-4 w-4 items-center justify-center rounded text-[#b9baa3] border border-[#577399]/30 hover:border-[#577399] hover:text-[#f7f7ff] disabled:opacity-30 text-[11px] transition-colors focus:outline-none focus:ring-1 focus:ring-[#577399]"
           >
             −
           </button>
         )}
-        <span className="text-[9px] text-[#b9baa3] font-medium">{size}</span>
+        <span className="text-[10px] text-[#b9baa3] font-medium">{size}</span>
       </div>
     </div>
   );
@@ -244,7 +244,7 @@ function StagingPanel({
 
       {/* Dice pool */}
       <div>
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-[#577399] mb-2">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-[#577399] mb-2">
           Dice Pool
           {totalDice > 0 && (
             <span className="ml-1.5 font-normal text-[#b9baa3] normal-case tracking-normal">
@@ -270,7 +270,7 @@ function StagingPanel({
 
       {/* Advantage / Disadvantage toggles (SRD p.20) */}
       <div>
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-[#577399] mb-2">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-[#577399] mb-2">
           Modifiers
         </p>
         <div className="flex gap-1.5">
@@ -301,7 +301,7 @@ function StagingPanel({
             )}
             <span className="flex-1 text-left font-medium text-xs">Advantage</span>
             {advantage && (
-              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#577399] px-1 text-[9px] font-bold text-white leading-none shrink-0">
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#577399] px-1 text-[10px] font-bold text-white leading-none shrink-0">
                 +d6
               </span>
             )}
@@ -334,7 +334,7 @@ function StagingPanel({
             )}
             <span className="flex-1 text-left font-medium text-xs">Disadvantage</span>
             {disadvantage && (
-              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#fe5f55]/70 px-1 text-[9px] font-bold text-white leading-none shrink-0">
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#fe5f55]/70 px-1 text-[10px] font-bold text-white leading-none shrink-0">
                 −d6
               </span>
             )}
@@ -358,10 +358,10 @@ function StagingPanel({
                 : "border-[#577399]/25 bg-transparent text-[#b9baa3] hover:border-[#577399]/50 hover:text-[#f7f7ff]",
             ].join(" ")}
           >
-            <span className="text-[10px] shrink-0" aria-hidden="true">✦</span>
+            <span className="text-[11px] shrink-0" aria-hidden="true">✦</span>
             <span className="flex-1 text-left font-medium text-xs">{bonus.label}</span>
             {bonus.cost && (
-              <span className={["text-[9px] shrink-0 rounded px-1 py-0.5 border", activeBonuses[i] ? "border-[#DAA520]/40 text-[#DAA520]" : "border-[#577399]/20 text-[#b9baa3]/60"].join(" ")}>
+              <span className={["text-[10px] shrink-0 rounded px-1 py-0.5 border", activeBonuses[i] ? "border-[#DAA520]/40 text-[#DAA520]" : "border-[#577399]/20 text-[#b9baa3]/60"].join(" ")}>
                 {bonus.cost}
               </span>
             )}
@@ -390,13 +390,13 @@ function StagingPanel({
         </p>
       )}
       {disadvantage && (
-        <p className="text-center text-[10px] text-[#fe5f55]/70">
+        <p className="text-center text-[11px] text-[#fe5f55]/70">
           Disadvantage d6 will be subtracted from total
         </p>
       )}
 
       {/* Hint */}
-      <p className="text-center text-[10px] text-[#b9baa3]/50">
+      <p className="text-center text-[11px] text-[#b9baa3]/50">
         Tap a die to add · tap − to remove
       </p>
 
@@ -469,7 +469,7 @@ function ResultPanel({ result }: { result: RollResult }) {
               >
                 {hopeValue}
               </span>
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-[#DAA520]">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#DAA520]">
                 Hope
               </span>
             </div>
@@ -483,7 +483,7 @@ function ResultPanel({ result }: { result: RollResult }) {
               >
                 {fearValue}
               </span>
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-[#b9baa3]">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#b9baa3]">
                 Fear
               </span>
             </div>
@@ -520,7 +520,7 @@ function ResultPanel({ result }: { result: RollResult }) {
                 >
                   {isDisadv ? `-${d.value}` : d.value}
                 </span>
-                <span className="text-[9px] text-[#b9baa3]">{isDisadv ? `−${d.size}` : d.size}</span>
+                <span className="text-[10px] text-[#b9baa3]">{isDisadv ? `−${d.size}` : d.size}</span>
               </div>
             );
           })}

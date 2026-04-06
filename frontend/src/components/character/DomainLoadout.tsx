@@ -643,8 +643,8 @@ function DomainCardDetailSidebar({ card, onClose, onRollQueued, characterName }:
 
             {/* Curse text */}
             {card.isCursed && card.curseText && (
-              <div className="rounded-lg border border-[#fe5f55]/30 bg-[#fe5f55]/5 px-4 py-3">
-                <p className="text-xs uppercase tracking-wider text-[#fe5f55]/60 mb-1">Curse</p>
+              <div className="rounded-lg border border-steel-400/30 bg-slate-900/60 px-4 py-3">
+                <p className="text-xs uppercase tracking-wider text-steel-400/60 mb-1">Curse</p>
                 <MarkdownContent className="text-base text-[#b9baa3]/70">
                   {card.curseText}
                 </MarkdownContent>

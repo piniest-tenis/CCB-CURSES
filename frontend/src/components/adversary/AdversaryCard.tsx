@@ -78,7 +78,7 @@ export function AdversaryCard({
       <div className="px-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
         {/* HP */}
         <div className="flex flex-col items-center">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-[#fe5f55]/70">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[#fe5f55]/70">
             HP
           </span>
           <span className="text-lg font-bold font-serif text-[#f7f7ff]">
@@ -87,7 +87,7 @@ export function AdversaryCard({
         </div>
         {/* Stress */}
         <div className="flex flex-col items-center">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-[#577399]/70">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[#577399]/70">
             Stress
           </span>
           <span className="text-lg font-bold font-serif text-[#f7f7ff]">
@@ -96,7 +96,7 @@ export function AdversaryCard({
         </div>
         {/* Attack */}
         <div className="flex flex-col items-center">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-[#b9baa3]/50">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[#b9baa3]/50">
             Atk
           </span>
           <span className="text-lg font-bold font-serif text-[#f7f7ff]">
@@ -105,20 +105,20 @@ export function AdversaryCard({
         </div>
         {/* Damage */}
         <div className="flex flex-col items-center">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-[#b9baa3]/50">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[#b9baa3]/50">
             Dmg
           </span>
           <span className="font-mono text-xs font-medium text-parchment-400 text-center leading-tight">
             {adversary.attackDamage.split(" ")[0]}
           </span>
-          <span className="text-[9px] text-[#b9baa3]/40">
+          <span className="text-[10px] text-[#b9baa3]/40">
             {adversary.attackRange}
           </span>
         </div>
       </div>
 
       {/* Thresholds */}
-      <div className="px-4 mt-2 flex items-center justify-center gap-2 text-[10px]">
+      <div className="px-4 mt-2 flex items-center justify-center gap-2 text-[11px]">
         {adversary.damageThresholds.major !== null ? (
           <>
             <span className="text-[#DAA520]">

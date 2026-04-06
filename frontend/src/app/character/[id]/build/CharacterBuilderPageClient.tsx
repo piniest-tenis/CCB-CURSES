@@ -28,6 +28,8 @@ import { useClass, useClasses, useAncestries, useCommunities, useDomainCard } fr
 import type { Character, AncestryData, CommunityData, CoreStats } from "@shared/types";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { CollapsibleSRDDescription } from "@/components/character/CollapsibleSRDDescription";
+import { SourceBadge } from "@/components/SourceBadge";
+import { SourceFilter, type SourceFilterValue } from "@/components/SourceFilter";
 import { TraitAssignmentPanel, type TraitBonuses } from "@/components/character/TraitAssignmentPanel";
 import { WeaponSelectionPanel } from "@/components/character/WeaponSelectionPanel";
 import { ArmorSelectionPanel } from "@/components/character/ArmorSelectionPanel";
@@ -193,10 +195,17 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
     sessionDraft?.selectedDomainCardIds ?? character?.domainLoadout ?? []
   );
 
+  // Character name (editable in Review step)
+  const [characterName, setCharacterName] = useState(
+    sessionDraft?.characterName ?? character?.name ?? ""
+  );
+
   const [heritageTab, setHeritageTab] = useState<"ancestry" | "community">(
     sessionDraft?.heritageTab ?? "ancestry"
   );
   const [error, setError] = useState<string | null>(null);
+  const [classSourceFilter, setClassSourceFilter] = useState<SourceFilterValue>("all");
+  const [heritageSourceFilter, setHeritageSourceFilter] = useState<SourceFilterValue>("all");
 
   // ── Persist builder state to sessionStorage on every change ─────────────
   const builderDraft = useMemo(
@@ -213,11 +222,13 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
       equipmentSelections,
       selectedDomainCardIds,
       heritageTab,
+      characterName,
     }),
     [
       step, classId, subclassId, ancestryId, communityId,
       traitBonuses, primaryWeaponId, secondaryWeaponId,
       armorId, equipmentSelections, selectedDomainCardIds, heritageTab,
+      characterName,
     ]
   );
   const { clearSession } = useBuilderSessionStorage(characterId, builderDraft);
@@ -236,6 +247,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
     if (!subclassId && character.subclassId) setSubclassId(character.subclassId);
     if (!ancestryId && character.ancestryId) setAncestryId(character.ancestryId);
     if (!communityId && character.communityId) setCommunityId(character.communityId);
+    if (!characterName && character.name) setCharacterName(character.name);
     if (!primaryWeaponId && character.weapons?.primary?.weaponId)
       setPrimaryWeaponId(character.weapons.primary.weaponId);
     if (!secondaryWeaponId && character.weapons?.secondary?.weaponId)
@@ -314,7 +326,9 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
   const canGoNext5 = Boolean(primaryWeaponId); // secondary is optional
   const canGoNext6 = Boolean(armorId);
   const canGoNext7 = Boolean(equipmentSelections.consumableId && equipmentSelections.classItem);
-  const canGoNext8 = selectedDomainCardIds.length === 2;
+  // Post-Level-1: domain cards are managed via the level-up wizard — always allow Next.
+  const isLockedDomainStep = Boolean(character && character.level > 1);
+  const canGoNext8 = isLockedDomainStep || selectedDomainCardIds.length === 2;
 
   // ── Steps 5 (weapons) and 6 (armor): skip when already saved ────────────
   // Once weapons/armor have been selected and persisted via a previous builder run,
@@ -404,6 +418,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
       };
 
       const updated = await updateMutation.mutateAsync({
+        name: characterName.trim() || character?.name || "Unnamed Character",
         classId,
         subclassId: subclassId || undefined,
         ancestryId: ancestryId || undefined,
@@ -420,8 +435,12 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
         },
         gold: STARTING_GOLD,
         inventory,
-        domainLoadout: selectedDomainCardIds,
-        domainVault: selectedDomainCardIds,
+        // Only write domain card fields at character creation (Level 1).
+        // Post-Level-1, domain cards are managed exclusively via the level-up wizard.
+        ...(isLockedDomainStep ? {} : {
+          domainLoadout: selectedDomainCardIds,
+          domainVault: selectedDomainCardIds,
+        }),
       } as Partial<Character>);
       
       // Redirect back to character sheet
@@ -485,7 +504,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                 Edit Character
               </h2>
               <p className="text-sm text-[#b9baa3]/60 mt-0.5">
-                {character.name} • Step {step} of 9
+                {characterName || character.name} • Step {step} of 9
               </p>
             </div>
             
@@ -534,13 +553,16 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
               <div className="flex flex-col sm:flex-row sm:h-full">
                 {/* Left: class list — full width stacked on mobile, fixed sidebar on sm+ */}
                 <div className="w-full sm:w-64 lg:w-72 shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/40 flex flex-col max-h-[40vh] sm:max-h-none overflow-y-auto">
-                  <div className="px-4 pt-3 pb-2 shrink-0">
+                  <div className="px-4 pt-3 pb-2 shrink-0 space-y-2">
                     <p className="text-xs font-medium uppercase tracking-wider text-[#b9baa3]/50">
                       Choose a Class
                     </p>
+                    <SourceFilter value={classSourceFilter} onChange={setClassSourceFilter} />
                   </div>
                  <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0" ref={classListRef}>
-                    {[...(classesData?.classes ?? [])].sort((a, b) => a.name.localeCompare(b.name)).map((c) => (
+                    {[...(classesData?.classes ?? [])]
+                      .filter((c) => classSourceFilter === "all" || c.source === classSourceFilter)
+                      .sort((a, b) => a.name.localeCompare(b.name)).map((c) => (
                        <button
                          key={c.classId}
                          type="button"
@@ -557,7 +579,10 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                           }
                         `}
                       >
-                        <p className="text-sm font-semibold text-[#f7f7ff]">{c.name}</p>
+                        <p className="text-sm font-semibold text-[#f7f7ff] flex items-center gap-1.5">
+                          {c.name}
+                          <SourceBadge source={c.source} size="xs" />
+                        </p>
                         {c.subclasses.length > 0 && (
                           <p className="text-sm italic text-[#b9baa3]/50 mt-0.5">
                             {c.subclasses.map((s) => s.name).join(" · ")}
@@ -763,8 +788,13 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                   </div>
                   
                   {/* List */}
+                  <div className="px-4 pt-2 pb-1 shrink-0">
+                    <SourceFilter value={heritageSourceFilter} onChange={setHeritageSourceFilter} />
+                  </div>
                   <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0" ref={heritageListRef}>
-                    {heritageTab === "ancestry" && ancestriesData?.ancestries.map((a) => (
+                    {heritageTab === "ancestry" && ancestriesData?.ancestries
+                      .filter((a) => heritageSourceFilter === "all" || a.source === heritageSourceFilter)
+                      .map((a) => (
                        <button
                          key={a.ancestryId}
                          type="button"
@@ -778,13 +808,18 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                           }
                         `}
                       >
-                        <p className="text-sm font-semibold text-[#f7f7ff]">{a.name}</p>
+                        <p className="text-sm font-semibold text-[#f7f7ff] flex items-center gap-1.5">
+                          {a.name}
+                          <SourceBadge source={a.source} size="xs" />
+                        </p>
                         <p className="text-sm text-[#b9baa3]/50 truncate">
                           {a.traitName}{a.secondTraitName ? ` · ${a.secondTraitName}` : ""}
                         </p>
                       </button>
                     ))}
-                    {heritageTab === "community" && communitiesData?.communities.map((c) => (
+                    {heritageTab === "community" && communitiesData?.communities
+                      .filter((c) => heritageSourceFilter === "all" || c.source === heritageSourceFilter)
+                      .map((c) => (
                        <button
                          key={c.communityId}
                          type="button"
@@ -798,7 +833,10 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                           }
                         `}
                       >
-                        <p className="text-sm font-semibold text-[#f7f7ff]">{c.name}</p>
+                        <p className="text-sm font-semibold text-[#f7f7ff] flex items-center gap-1.5">
+                          {c.name}
+                          <SourceBadge source={c.source} size="xs" />
+                        </p>
                       </button>
                     ))}
                   </div>
@@ -1022,12 +1060,13 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                   />
                 </div>
                 <div className="flex-1 min-h-0 overflow-hidden border-t border-slate-700/30">
-                  <DomainCardSelectionPanel
-                    classDomains={selectedClassData.domains}
-                    selectedCardIds={selectedDomainCardIds}
-                    onSelectionChange={setSelectedDomainCardIds}
-                    characterLevel={character?.level ?? 1}
-                  />
+                   <DomainCardSelectionPanel
+                     classDomains={selectedClassData.domains}
+                     selectedCardIds={selectedDomainCardIds}
+                     onSelectionChange={isLockedDomainStep ? () => {} : setSelectedDomainCardIds}
+                     characterLevel={character?.level ?? 1}
+                     lockedCardIds={isLockedDomainStep ? (character?.domainVault ?? character?.domainLoadout ?? []) : undefined}
+                   />
                 </div>
               </div>
             )}
@@ -1041,6 +1080,34 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                   </h3>
                   
                   <div className="space-y-4">
+                    {/* Character Name */}
+                    <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
+                      <label
+                        htmlFor="character-name-input"
+                        className="text-xs uppercase tracking-wider text-[#b9baa3]/50 font-medium mb-2 block"
+                      >
+                        Character Name
+                      </label>
+                      <input
+                        id="character-name-input"
+                        type="text"
+                        value={characterName}
+                        onChange={(e) => setCharacterName(e.target.value)}
+                        placeholder="Enter a name for your character"
+                        maxLength={60}
+                        className="
+                          w-full rounded-lg border border-slate-700/60 bg-[#0a100d]
+                          px-4 py-2.5 text-lg font-serif font-semibold text-[#f7f7ff]
+                          placeholder:text-[#b9baa3]/30
+                          focus:outline-none focus:ring-2 focus:ring-[#577399] focus:border-transparent
+                          transition-colors
+                        "
+                      />
+                      <p className="text-xs text-[#b9baa3]/30 mt-1.5">
+                        You can always rename your character later.
+                      </p>
+                    </div>
+
                     {/* Class */}
                     <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
                       <p className="text-xs uppercase tracking-wider text-[#b9baa3]/50 font-medium mb-1">
@@ -1183,19 +1250,25 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                       </div>
                     </div>
 
-                    {/* Domain Cards */}
-                    {selectedDomainCardIds.length > 0 && (
-                      <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
-                        <p className="text-xs uppercase tracking-wider text-[#b9baa3]/50 font-medium mb-3">
-                          Domain Cards ({selectedDomainCardIds.length}/2)
-                        </p>
-                        <div className="space-y-2">
-                          {selectedDomainCardIds.map((cardId) => (
-                            <DomainCardSummary key={cardId} cardId={cardId} />
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                     {/* Domain Cards */}
+                     {(isLockedDomainStep || selectedDomainCardIds.length > 0) && (
+                       <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
+                         <p className="text-xs uppercase tracking-wider text-[#b9baa3]/50 font-medium mb-3">
+                           Domain Cards {isLockedDomainStep ? "(managed via level-up)" : `(${selectedDomainCardIds.length}/2)`}
+                         </p>
+                         {isLockedDomainStep ? (
+                           <p className="text-sm text-[#b9baa3]/50 italic">
+                             {(character?.domainVault ?? character?.domainLoadout ?? []).length} cards in vault — not modified here.
+                           </p>
+                         ) : (
+                           <div className="space-y-2">
+                             {selectedDomainCardIds.map((cardId) => (
+                               <DomainCardSummary key={cardId} cardId={cardId} />
+                             ))}
+                           </div>
+                         )}
+                       </div>
+                     )}
                   </div>
                   
                   {error && (
@@ -1255,10 +1328,12 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                 },
                 {
                   num: 8, name: "Domain Cards",
-                  done: selectedDomainCardIds.length === 2, locked: false,
-                  summary: selectedDomainCardIds.length > 0
-                    ? `${selectedDomainCardIds.length}/2 selected`
-                    : null,
+                  done: isLockedDomainStep || selectedDomainCardIds.length === 2, locked: false,
+                  summary: isLockedDomainStep
+                    ? "Via level-up wizard"
+                    : selectedDomainCardIds.length > 0
+                      ? `${selectedDomainCardIds.length}/2 selected`
+                      : null,
                 },
                 {
                   num: 9, name: "Review & Save",
