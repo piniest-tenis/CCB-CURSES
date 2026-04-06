@@ -19,9 +19,17 @@ import type { GoldAmount } from "@shared/types";
 import { useCharacterStore } from "@/store/characterStore";
 import { DiceRollButton } from "@/components/dice/DiceRollButton";
 import type { RollRequest, DieSize } from "@/types/dice";
+import {
+  ALL_TIER1_WEAPONS,
+  ALL_ARMOR,
+} from "@/lib/srdEquipment";
+import type { SRDWeapon, SRDArmor } from "@/lib/srdEquipment";
 
 // ─── SRD Equipment Catalog ───────────────────────────────────────────────────
-// Full equipment list from the Daggerheart SRD.
+// Derived from the canonical srdEquipment.ts weapons + armor data, plus
+// supplementary loot & consumable items. This ensures the Add Equipment
+// sidebar uses the exact same names as the weapon/armor equip sidebars,
+// so items can always be equipped after being added to inventory.
 
 interface SrdEquipmentItem {
   name: string;
@@ -29,159 +37,51 @@ interface SrdEquipmentItem {
   description: string;
 }
 
-const SRD_EQUIPMENT: SrdEquipmentItem[] = [
-  // ── Weapons by Tier ──
-  {
-    category: "Weapons — Tier 1",
-    name: "Shortsword",
-    description: "d6 physical, Melee, One-handed, Tier 1",
-  },
-  {
-    category: "Weapons — Tier 1",
-    name: "Dagger",
-    description: "d6 physical, Melee/Close, One-handed, Tier 1, Thrown",
-  },
-  {
-    category: "Weapons — Tier 1",
-    name: "Handaxe",
-    description: "d6 physical, Melee, One-handed, Tier 1, Thrown",
-  },
-  {
-    category: "Weapons — Tier 1",
-    name: "Shortbow",
-    description: "d6 physical, Far, One-handed, Tier 1",
-  },
-  {
-    category: "Weapons — Tier 1",
-    name: "Light Crossbow",
-    description: "d6 physical, Far, One-handed, Tier 1, Loading",
-  },
-  {
-    category: "Weapons — Tier 1",
-    name: "Staff",
-    description: "d6 physical, Melee, Two-handed, Tier 1, Reach",
-  },
-  {
-    category: "Weapons — Tier 1",
-    name: "Spear",
-    description: "d6 physical, Melee, One-handed, Tier 1, Thrown, Reach",
-  },
-  {
-    category: "Weapons — Tier 1",
-    name: "Sling",
-    description: "d6 physical, Close, One-handed, Tier 1",
-  },
-  {
-    category: "Weapons — Tier 2",
-    name: "Longsword",
-    description: "d8 physical, Melee, One-handed, Tier 2",
-  },
-  {
-    category: "Weapons — Tier 2",
-    name: "Greataxe",
-    description: "d12 physical, Melee, Two-handed, Tier 2",
-  },
-  {
-    category: "Weapons — Tier 2",
-    name: "Warhammer",
-    description: "d8 physical, Melee, One-handed, Tier 2",
-  },
-  {
-    category: "Weapons — Tier 2",
-    name: "Longbow",
-    description: "d8 physical, Far, Two-handed, Tier 2",
-  },
-  {
-    category: "Weapons — Tier 2",
-    name: "Heavy Crossbow",
-    description: "d10 physical, Far, Two-handed, Tier 2, Loading",
-  },
-  {
-    category: "Weapons — Tier 2",
-    name: "Rapier",
-    description: "d8 physical, Melee, One-handed, Tier 2, Finesse",
-  },
-  {
-    category: "Weapons — Tier 2",
-    name: "Flail",
-    description: "d8 physical, Melee, One-handed, Tier 2",
-  },
-  {
-    category: "Weapons — Tier 3",
-    name: "Greatsword",
-    description: "d12 physical, Melee, Two-handed, Tier 3",
-  },
-  {
-    category: "Weapons — Tier 3",
-    name: "Maul",
-    description: "d12 physical, Melee, Two-handed, Tier 3",
-  },
-  {
-    category: "Weapons — Tier 3",
-    name: "Halberd",
-    description: "d10 physical, Melee, Two-handed, Tier 3, Reach",
-  },
-  {
-    category: "Weapons — Tier 3",
-    name: "War Bow",
-    description: "d10 physical, Far, Two-handed, Tier 3",
-  },
-  {
-    category: "Weapons — Tier 3",
-    name: "Arcane Staff",
-    description: "d8 magic, Melee/Close, Two-handed, Tier 3",
-  },
-  {
-    category: "Weapons — Tier 4",
-    name: "Legendary Sword",
-    description: "2d10 physical, Melee, One-handed, Tier 4, Reliable",
-  },
-  {
-    category: "Weapons — Tier 4",
-    name: "Legendary Bow",
-    description: "2d8 physical, Far, Two-handed, Tier 4, Reliable",
-  },
-  // ── Armor ──
-  {
-    category: "Armor — Tier 1",
-    name: "Leather Armor",
-    description: "Armor +2, Evasion +0, Tier 1",
-  },
-  {
-    category: "Armor — Tier 1",
-    name: "Shield",
-    description: "Armor +1, Evasion +1, Tier 1, One-handed",
-  },
-  {
-    category: "Armor — Tier 2",
-    name: "Chain Mail",
-    description: "Armor +3, Evasion −1, Tier 2",
-  },
-  {
-    category: "Armor — Tier 2",
-    name: "Scale Armor",
-    description: "Armor +4, Evasion −1, Tier 2",
-  },
-  {
-    category: "Armor — Tier 3",
-    name: "Half Plate",
-    description: "Armor +5, Evasion −2, Tier 3",
-  },
-  {
-    category: "Armor — Tier 3",
-    name: "Tower Shield",
-    description: "Armor +2, Evasion −1, Tier 3, One-handed",
-  },
-  {
-    category: "Armor — Tier 4",
-    name: "Full Plate",
-    description: "Armor +6, Evasion −3, Tier 4",
-  },
-  {
-    category: "Armor — Tier 4",
-    name: "Legendary Armor",
-    description: "Armor +7, Evasion −2, Tier 4, Reliable",
-  },
+/** Build a concise description string from an SRDWeapon record. */
+function weaponToDescription(w: SRDWeapon): string {
+  const parts = [
+    `${w.damageDie} ${w.damageType.toLowerCase()}`,
+    w.range,
+    w.burden === "Two-Handed" ? "Two-handed" : "One-handed",
+    w.trait,
+  ];
+  if (w.feature) parts.push(w.feature.split(":")[0]); // e.g. "Reliable"
+  return parts.join(", ");
+}
+
+/** Build a concise description string from an SRDArmor record. */
+function armorToDescription(a: SRDArmor): string {
+  const parts = [
+    `Tier ${a.tier}`,
+    `Score ${a.baseArmorScore}`,
+    `Major ${a.baseMajorThreshold}+`,
+    `Severe ${a.baseSevereThreshold}+`,
+  ];
+  if (a.feature) parts.push(a.feature.split(":")[0]);
+  return parts.join(", ");
+}
+
+// Weapons grouped by category
+const WEAPON_ITEMS: SrdEquipmentItem[] = ALL_TIER1_WEAPONS.map((w) => ({
+  name: w.name,
+  category:
+    w.category === "Secondary"
+      ? "Weapons — Secondary"
+      : w.damageType === "Magic"
+        ? "Weapons — Primary (Magic)"
+        : "Weapons — Primary (Physical)",
+  description: weaponToDescription(w),
+}));
+
+// Armor from all tiers
+const ARMOR_ITEMS: SrdEquipmentItem[] = ALL_ARMOR.map((a) => ({
+  name: a.name,
+  category: `Armor — Tier ${a.tier}`,
+  description: armorToDescription(a),
+}));
+
+// Supplementary loot & consumable items (not in srdEquipment.ts)
+const LOOT_AND_CONSUMABLE_ITEMS: SrdEquipmentItem[] = [
   // ── Loot / Reusables ──
   {
     category: "Loot & Reusables",
@@ -297,15 +197,21 @@ const SRD_EQUIPMENT: SrdEquipmentItem[] = [
   },
 ];
 
+const SRD_EQUIPMENT: SrdEquipmentItem[] = [
+  ...WEAPON_ITEMS,
+  ...ARMOR_ITEMS,
+  ...LOOT_AND_CONSUMABLE_ITEMS,
+];
+
 const EQUIPMENT_CATEGORIES = Array.from(
   new Set(SRD_EQUIPMENT.map((i) => i.category)),
 );
 
 // ─── Weapon Damage Parser ─────────────────────────────────────────────────────
-// Parses weapon damage info from an SRD equipment description string.
-// Returns null if the item is not a weapon (no die pattern found).
+// Looks up the canonical SRDWeapon record by name and parses its damageDie field
+// to build a rollable damage request. Returns null for non-weapon items.
 //
-// Supported patterns: "d6 physical", "2d10 physical", "d8 magic"
+// SRDWeapon.damageDie examples: "d8", "d10+3", "d6+1", "d12+3"
 
 interface WeaponDamage {
   dieCount: number;
@@ -313,18 +219,26 @@ interface WeaponDamage {
   flatMod: number;
 }
 
-function parseWeaponDamage(description: string): WeaponDamage | null {
-  // Match optional leading count, then dX
-  const match = description.match(/^(\d+)?d(\d+)/i);
+/** Parse a damageDie string like "d10+3" or "2d8" into structured data. */
+function parseWeaponDamageDie(damageDie: string): WeaponDamage | null {
+  const match = damageDie.match(/^(\d+)?d(\d+)(?:\+(\d+))?$/i);
   if (!match) return null;
   const dieCount = match[1] ? parseInt(match[1], 10) : 1;
   const size = parseInt(match[2], 10);
   const validSizes = [4, 6, 8, 10, 12, 20];
   if (!validSizes.includes(size)) return null;
-  return { dieCount, dieSize: `d${size}` as DieSize, flatMod: 0 };
+  const flatMod = match[3] ? parseInt(match[3], 10) : 0;
+  return { dieCount, dieSize: `d${size}` as DieSize, flatMod };
 }
 
-/** Look up the SRD description for an inventory item by name. */
+/** Find the SRDWeapon record for an inventory item name (case-insensitive). */
+function findSrdWeapon(itemName: string): SRDWeapon | undefined {
+  return ALL_TIER1_WEAPONS.find(
+    (w) => w.name.toLowerCase() === itemName.toLowerCase(),
+  );
+}
+
+/** Look up the SRD catalog description for an inventory item by name. */
 function srdDescriptionFor(itemName: string): string | null {
   return SRD_EQUIPMENT.find((e) => e.name === itemName)?.description ?? null;
 }
@@ -332,17 +246,14 @@ function srdDescriptionFor(itemName: string): string | null {
 /**
  * Build a damage RollRequest for a weapon.
  * SRD: damage dice = proficiency × weapon die; flat modifier is NOT multiplied.
- * For multi-die weapons (e.g. 2d10), base count already encodes proficiency
- * scaling differently — we multiply base count by proficiency for normal weapons,
- * but for named multi-die entries (2d10, 2d8) keep base count × prof.
  */
 function buildWeaponRollRequest(
   itemName: string,
   proficiency: number,
 ): RollRequest | null {
-  const desc = srdDescriptionFor(itemName);
-  if (!desc) return null;
-  const parsed = parseWeaponDamage(desc);
+  const weapon = findSrdWeapon(itemName);
+  if (!weapon) return null;
+  const parsed = parseWeaponDamageDie(weapon.damageDie);
   if (!parsed) return null;
 
   const { dieCount, dieSize, flatMod } = parsed;
@@ -765,6 +676,27 @@ export function EquipmentPanel({
   };
 
   const handleRemoveItem = (name: string) => {
+    // Auto-unequip: if the removed item is currently equipped as a weapon or
+    // armor, clear that slot so the character sheet doesn't reference an item
+    // that's no longer in inventory.
+    const weapon = findSrdWeapon(name);
+    if (weapon) {
+      const weapons = activeCharacter.weapons;
+      if (weapons?.primary?.weaponId === weapon.id) {
+        updateField("weapons.primary.weaponId", null);
+      }
+      if (weapons?.secondary?.weaponId === weapon.id) {
+        updateField("weapons.secondary.weaponId", null);
+      }
+    }
+
+    const armor = ALL_ARMOR.find(
+      (a) => a.name.toLowerCase() === name.toLowerCase(),
+    );
+    if (armor && activeCharacter.activeArmorId === armor.id) {
+      updateField("activeArmorId", null);
+    }
+
     updateField(
       "inventory",
       inventory.filter((i) => i !== name),
