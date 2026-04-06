@@ -7,11 +7,12 @@
  *
  * Replaces the old master-detail split and drill-down-replace patterns with a
  * unified expandable tile that supports:
- *   - Collapsed summary row with radio indicator, name, subtitle, badges, quick-select
+ *   - Collapsed summary row with name, subtitle, badges, quick-select
+ *   - "click to expand" hover hint (60% opacity, hidden when expanded)
  *   - Animated expand/collapse of detail content (children)
  *   - Full-width action button inside the expanded panel
  *   - `alwaysShowDetail` mode for SRD domain cards (no accordion, always visible)
- *   - Mobile-first responsive design with 44×44 touch targets
+ *   - Mobile-first responsive design with 44x44 touch targets
  *   - Full ARIA accordion pattern for accessibility
  *   - Auto-scroll on expand so the tile header stays visible
  *
@@ -277,12 +278,9 @@ export function SelectionTile({
          * In accordion mode this is a <button> inside an <h3>.
          * In alwaysShowDetail mode it's a plain <div>.
          */}
-        {alwaysShowDetail ? (
+         {alwaysShowDetail ? (
           /* ── Always-show-detail header (non-interactive) ── */
           <div className="flex-1 min-w-0 flex items-start gap-3 px-3 py-3 sm:px-4">
-            {/* Radio indicator */}
-            <RadioIndicator isSelected={isSelected} />
-
             {/* Name + subtitle + badges */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
@@ -304,7 +302,7 @@ export function SelectionTile({
           </div>
         ) : (
           /* ── Accordion header (interactive) ── */
-          <h3 className="flex-1 min-w-0 m-0">
+          <h3 className="flex-1 min-w-0 m-0 group/tile">
             <button
               ref={headerRef}
               id={headerId}
@@ -316,13 +314,8 @@ export function SelectionTile({
                          bg-transparent border-0 cursor-pointer
                          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#577399]
                          focus-visible:ring-offset-1 focus-visible:ring-offset-[#0a100d]
-                         rounded-sm"
+                         rounded-sm group/btn"
             >
-              {/* Radio indicator */}
-              <div className="mt-0.5">
-                <RadioIndicator isSelected={isSelected} />
-              </div>
-
               {/* Name + subtitle + badges */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -342,15 +335,20 @@ export function SelectionTile({
                 )}
               </div>
 
-              {/* Chevron expand indicator */}
+              {/* Hover hint — hidden when expanded, shown on hover */}
               <span
-                className="text-parchment-600 text-xs mt-1 flex-shrink-0 transition-transform duration-200"
-                style={{
-                  transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
-                }}
+                className={`
+                  text-xs whitespace-nowrap flex-shrink-0 mt-0.5
+                  transition-opacity duration-150 select-none
+                  ${isExpanded
+                    ? "opacity-0 pointer-events-none"
+                    : "opacity-0 group-hover/btn:opacity-60"
+                  }
+                `}
+                style={{ color: "#b9baa3" }}
                 aria-hidden="true"
               >
-                ▾
+                click to expand
               </span>
             </button>
           </h3>
@@ -544,26 +542,4 @@ export function SelectionTile({
   );
 }
 
-/* ─────────────────────── Sub-components ─────────────────────── */
-
-/**
- * RadioIndicator
- * ──────────────
- * A purely visual radio-button circle. Shows a filled inner dot when selected.
- */
-function RadioIndicator({ isSelected }: { isSelected: boolean }) {
-  return (
-    <span
-      className={`
-        flex items-center justify-center
-        h-5 w-5 rounded-full border-2
-        flex-shrink-0
-        transition-colors duration-150
-        ${isSelected ? "border-[#577399] bg-[#577399]" : "border-slate-600"}
-      `}
-      aria-hidden="true"
-    >
-      {isSelected && <span className="h-2 w-2 rounded-full bg-white" />}
-    </span>
-  );
-}
+/* ─────────────────────── End ─────────────────────── */
