@@ -17,6 +17,7 @@
 import React, { useState } from "react";
 import { useDiceStore } from "@/store/diceStore";
 import type { RollResult, ActionOutcome, DieSize, DieSpec } from "@/types/dice";
+import { usePatreonCTAVisible, usePatreonBannerStore } from "@/components/PatreonCTA";
 
 // ─── Outcome colors ───────────────────────────────────────────────────────────
 
@@ -309,6 +310,17 @@ export function DiceLog({ characterName }: { characterName?: string } = {}) {
   const [selectedId,    setSelectedId]    = useState<string | null>(null);
   const [showCustom,    setShowCustom]    = useState(false);
 
+  // Offset the FAB above the Patreon CTA bar when it is visible.
+  // When the bar is dismissed the CSS transition animates the FAB back down.
+  const ctaVisible = usePatreonCTAVisible();
+  const ctaDismissed = usePatreonBannerStore((s) => s.dismissed);
+  // The bar is rendered (and takes space) when ctaVisible AND not dismissed
+  const barActive = ctaVisible && !ctaDismissed;
+  // bottom-4 = 16px, Patreon bar ≈ 40px → bump to 56px (3.5rem) when active
+  const bottomStyle = barActive
+    ? { bottom: "3.5rem",  transition: "bottom 1s ease" }
+    : { bottom: "1rem",    transition: "bottom 1s ease" };
+
   // Auto-expand when a new roll arrives and auto-select the latest
   const lastId = log[0]?.id;
   const prevLastIdRef = React.useRef<string | null>(null);
@@ -325,7 +337,8 @@ export function DiceLog({ characterName }: { characterName?: string } = {}) {
 
   return (
     <div
-      className="fixed bottom-4 left-4 z-40 flex flex-col items-start"
+      className="fixed left-4 z-40 flex flex-col items-start"
+      style={bottomStyle}
       aria-label="Dice roll log"
     >
       {/* Expanded panel */}

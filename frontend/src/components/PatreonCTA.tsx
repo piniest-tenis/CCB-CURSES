@@ -3,7 +3,7 @@
 /**
  * src/components/PatreonCTA.tsx
  *
- * Slim, persistent call-to-action bar displayed at the bottom of the viewport
+ * Slim, dismissable call-to-action bar displayed at the bottom of the viewport
  * for authenticated users who have not linked a valid Patreon account.
  *
  * Design: Cookie-consent-bar height (~40px), compact layout, Patreon coral
@@ -11,20 +11,36 @@
  * banner is visible to avoid being hidden behind it.
  *
  * Requirements:
- * - Small, persistent bar visible at all times
+ * - Small bar visible at all times (until dismissed)
  * - Text: "Unlock leveling up & unlimited characters by joining our FREE Patreon"
+ * - Desktop: "×" dismiss button on the far right
+ * - Mobile: swipe down to dismiss
  * - "Join Now" button triggers the Patreon OAuth flow via
  *   GET /users/me/patreon/authorize → opens Patreon authorize URL
  * - After the Patreon callback redirects the user back, the app refetches
  *   the user profile (handled by providers/dashboard)
  * - Focus-based re-check is kept as a backup for edge cases
+ * - Dismissed state is session-only (bar re-appears on hard reload / new session)
  */
 
 import React, { useCallback, useEffect, useRef } from "react";
+import { create } from "zustand";
 import { usePatreonGate, usePatreonOAuth } from "@/hooks/usePatreonGate";
 import { useAuthStore } from "@/store/authStore";
 import { apiClient } from "@/lib/api";
 import type { PatreonLink } from "@shared/types";
+
+// ── Tiny store for banner dismissed state ────────────────────────────────────
+// Shared so DiceLog (and any other consumer) can react to dismissal.
+interface PatreonBannerStore {
+  dismissed: boolean;
+  dismiss: () => void;
+}
+
+export const usePatreonBannerStore = create<PatreonBannerStore>((set) => ({
+  dismissed: false,
+  dismiss: () => set({ dismissed: true }),
+}));
 
 export function PatreonCTA() {
   const { needsPatreon } = usePatreonGate();
@@ -33,14 +49,17 @@ export function PatreonCTA() {
   const setUser = useAuthStore((s) => s.setUser);
   const user = useAuthStore((s) => s.user);
 
+  const dismissed = usePatreonBannerStore((s) => s.dismissed);
+  const dismiss = usePatreonBannerStore((s) => s.dismiss);
+
+  // Touch-swipe tracking for mobile dismiss
+  const touchStartYRef = useRef<number | null>(null);
+
   // Track whether the user has clicked the Patreon link so we only
   // re-check on focus when relevant
   const clickedPatreonRef = useRef(false);
 
   // ── Focus-based re-check ─────────────────────────────────────────────────
-  // Backup mechanism: if the user switches away (e.g. to complete Patreon
-  // signup in another tab) and comes back without going through the callback,
-  // we re-check the status from DynamoDB.
   const recheckPatreonStatus = useCallback(async () => {
     if (!clickedPatreonRef.current) return;
     if (!isAuthenticated || !user) return;
@@ -51,7 +70,6 @@ export function PatreonCTA() {
         createdAt: string;
       }>("/users/me/patreon/status");
 
-      // If the Patreon status changed, update the user profile in the store
       if (result.patreon && !user.patreon) {
         setUser({ ...user, patreon: result.patreon });
       } else if (
@@ -69,10 +87,7 @@ export function PatreonCTA() {
   }, [isAuthenticated, user, setUser]);
 
   useEffect(() => {
-    const onFocus = () => {
-      recheckPatreonStatus();
-    };
-
+    const onFocus = () => recheckPatreonStatus();
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [recheckPatreonStatus]);
@@ -83,14 +98,31 @@ export function PatreonCTA() {
     startOAuth();
   }, [startOAuth]);
 
-  // Don't render if the user doesn't need Patreon
-  if (!isAuthenticated || !needsPatreon) return null;
+  // ── Swipe-down to dismiss (mobile) ───────────────────────────────────────
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartYRef.current = e.touches[0]?.clientY ?? null;
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartYRef.current === null) return;
+    const deltaY = (e.changedTouches[0]?.clientY ?? 0) - touchStartYRef.current;
+    // Swipe down ≥ 30px → dismiss
+    if (deltaY >= 30) {
+      dismiss();
+    }
+    touchStartYRef.current = null;
+  }, [dismiss]);
+
+  // Don't render if the user doesn't need Patreon or has dismissed
+  if (!isAuthenticated || !needsPatreon || dismissed) return null;
 
   return (
     <div
       className="fixed bottom-0 inset-x-0 z-50"
       role="banner"
       aria-label="Patreon call to action"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
       {/* Slim bar — compact, single-line layout */}
       <div className="bg-gradient-to-r from-[#f96854] via-[#ff6b4a] to-[#f96854] px-4 py-2 shadow-[0_-2px_12px_rgba(249,104,84,0.3)]">
@@ -120,6 +152,33 @@ export function PatreonCTA() {
           >
             {isLinking ? "Connecting…" : "Join Now"}
           </button>
+
+          {/* Dismiss button — desktop only (sm+) */}
+          <button
+            type="button"
+            onClick={() => dismiss()}
+            aria-label="Dismiss Patreon banner"
+            className="
+              hidden sm:flex
+              shrink-0 ml-1 items-center justify-center
+              h-6 w-6 rounded-full
+              text-white/70 hover:text-white hover:bg-white/15
+              transition-colors
+              focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-1 focus:ring-offset-[#f96854]
+            "
+          >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              className="h-3.5 w-3.5"
+            >
+              <path d="M3 3l10 10M13 3L3 13" />
+            </svg>
+          </button>
         </div>
       </div>
     </div>
@@ -130,6 +189,13 @@ export function PatreonCTA() {
  * Utility hook: returns whether the PatreonCTA banner is currently visible.
  * Use this to conditionally add bottom padding to page content so it
  * isn't hidden behind the fixed-bottom CTA bar.
+ *
+ * NOTE: This does not track the dismissed state — it only reflects whether
+ * the user needs Patreon. Components that need to respond to dismissal
+ * should use `usePatreonCTAVisible` from PatreonCTA directly or subscribe
+ * to a shared context. For the DiceLog offset we use a CSS-only approach
+ * keyed off the same needsPatreon boolean; once dismissed the bar unmounts
+ * and CSS transitions handle the animation.
  */
 export function usePatreonCTAVisible(): boolean {
   const { needsPatreon } = usePatreonGate();
