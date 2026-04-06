@@ -10,14 +10,15 @@
  * Flow:
  *   1. Choose Class
  *   2. Choose Subclass
- *   3. Choose Heritage (Ancestry + Community)
- *   4. Assign Traits
- *   5. Choose Starting Weapons
- *   6. Choose Starting Armor
- *   7. Take Starting Equipment
- *   8. Create Your Experiences
- *   9. Take Domain Deck Cards
- *  10. Review & Save
+ *   3. Choose Ancestry
+ *   4. Choose Community
+ *   5. Assign Traits
+ *   6. Choose Starting Weapons
+ *   7. Choose Starting Armor
+ *   8. Take Starting Equipment
+ *   9. Create Your Experiences
+ *  10. Take Domain Deck Cards
+ *  11. Review & Save
  *
  * After saving, redirects back to character sheet.
  */
@@ -57,7 +58,7 @@ function DomainCardName({ cardId }: { cardId: string }) {
 
 // ─── DomainCardSummary ────────────────────────────────────────────────────────
 // Renders the full card with name, domain, recall cost, and description
-// for use in the Step 10 review panel.
+// for use in the Step 11 review panel.
 
 function DomainCardSummary({ cardId }: { cardId: string }) {
   const parts = cardId.includes("/") ? cardId.split("/") : null;
@@ -145,8 +146,8 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
   // mid-wizard and refreshed).  For a fresh builder or an already-saved
   // character the normal server-recovery path wins.
   const updateMutation = useUpdateCharacter(characterId);
-  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10>(
-    () => (sessionDraft?.step as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10) ?? 1
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11>(
+    () => (sessionDraft?.step as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11) ?? 1
   );
   const [classId, setClassId] = useState(
     sessionDraft?.classId ?? character?.classId ?? ""
@@ -176,7 +177,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
     return TIER1_ARMOR.find((a) => inv.includes(a.name))?.id ?? null;
   });
 
-  // Step 7: Starting Equipment
+  // Step 8: Starting Equipment
   const [equipmentSelections, setEquipmentSelections] = useState<StartingEquipmentSelections>(() => {
     if (sessionDraft?.equipmentSelections) return sessionDraft.equipmentSelections;
     const inv = character?.inventory ?? [];
@@ -191,12 +192,12 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
     return { consumableId, classItem };
   });
 
-  // Step 8: Domain Cards
+  // Step 10: Domain Cards
   const [selectedDomainCardIds, setSelectedDomainCardIds] = useState<string[]>(
     sessionDraft?.selectedDomainCardIds ?? character?.domainLoadout ?? []
   );
 
-  // Step 8: Experiences (inserted before Domain Cards in the wizard flow)
+  // Step 9: Experiences (inserted before Domain Cards in the wizard flow)
   const [experiences, setExperiences] = useState<Experience[]>(() => {
     if (sessionDraft?.experiences) return sessionDraft.experiences;
     if (character?.experiences?.length) return character.experiences;
@@ -311,9 +312,10 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
   const selectedCommunity: CommunityData | undefined =
     communitiesData?.communities.find((c) => c.communityId === communityId);
 
-  // ── Scroll-into-view refs for Step 1 (class list) and Step 3 (heritage lists) ──
+  // ── Scroll-into-view refs for Step 1 (class list), Step 3 (ancestry list), Step 4 (community list) ──
   const classListRef = useRef<HTMLDivElement>(null);
-  const heritageListRef = useRef<HTMLDivElement>(null);
+  const ancestryListRef = useRef<HTMLDivElement>(null);
+  const communityListRef = useRef<HTMLDivElement>(null);
 
   // When entering Step 1 with a pre-selected class, scroll it into view.
   useEffect(() => {
@@ -322,30 +324,36 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
     if (el) el.scrollIntoView({ block: "nearest", behavior: "instant" });
   }, [step, classId]);
 
-  // When entering Step 3 (or switching tabs) with a pre-selected heritage, scroll it into view.
+  // When entering Step 3 with a pre-selected ancestry, scroll it into view.
   useEffect(() => {
-    if (step !== 3 || !heritageListRef.current) return;
-    const selectedId = heritageTab === "ancestry" ? ancestryId : communityId;
-    if (!selectedId) return;
-    const el = heritageListRef.current.querySelector<HTMLElement>("[data-selected='true']");
+    if (step !== 3 || !ancestryId || !ancestryListRef.current) return;
+    const el = ancestryListRef.current.querySelector<HTMLElement>("[data-selected='true']");
     if (el) el.scrollIntoView({ block: "nearest", behavior: "instant" });
-  }, [step, heritageTab, ancestryId, communityId]);
+  }, [step, ancestryId]);
+
+  // When entering Step 4 with a pre-selected community, scroll it into view.
+  useEffect(() => {
+    if (step !== 4 || !communityId || !communityListRef.current) return;
+    const el = communityListRef.current.querySelector<HTMLElement>("[data-selected='true']");
+    if (el) el.scrollIntoView({ block: "nearest", behavior: "instant" });
+  }, [step, communityId]);
   
   // Validators
   const canGoNext1 = Boolean(classId);
   const canGoNext2 = Boolean(subclassId);
-  const canGoNext3 = Boolean(ancestryId && communityId);
-  const canGoNext4 = Object.keys(traitBonuses).length === 4;
-  const canGoNext5 = Boolean(primaryWeaponId); // secondary is optional
-  const canGoNext6 = Boolean(armorId);
-  const canGoNext7 = Boolean(equipmentSelections.consumableId && equipmentSelections.classItem);
-  // Step 8: Experiences — both experience names must be non-empty
-  const canGoNext8 = experiences.length >= 2 && experiences.every((e) => e.name.trim().length > 0);
+  const canGoNext3 = Boolean(ancestryId);
+  const canGoNext4 = Boolean(communityId);
+  const canGoNext5 = Object.keys(traitBonuses).length === 4;
+  const canGoNext6 = Boolean(primaryWeaponId); // secondary is optional
+  const canGoNext7 = Boolean(armorId);
+  const canGoNext8 = Boolean(equipmentSelections.consumableId && equipmentSelections.classItem);
+  // Step 9: Experiences — both experience names must be non-empty
+  const canGoNext9 = experiences.length >= 2 && experiences.every((e) => e.name.trim().length > 0);
   // Post-Level-1: domain cards are managed via the level-up wizard — always allow Next.
   const isLockedDomainStep = Boolean(character && character.level > 1);
-  const canGoNext9 = isLockedDomainStep || selectedDomainCardIds.length === 2;
+  const canGoNext10 = isLockedDomainStep || selectedDomainCardIds.length === 2;
 
-  // ── Steps 5 (weapons) and 6 (armor): skip when already saved ────────────
+  // ── Steps 6 (weapons) and 7 (armor): skip when already saved ────────────
   // Once weapons/armor have been selected and persisted via a previous builder run,
   // they are managed from the equipment page on the character sheet.
   // Detect from the server character data (not local draft state).
@@ -355,21 +363,21 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
   );
 
   // Build the ordered list of active steps (skipping locked equipment steps).
-  const activeSteps = useMemo<Array<1|2|3|4|5|6|7|8|9|10>>(() => {
-    const all: Array<1|2|3|4|5|6|7|8|9|10> = [1,2,3,4,5,6,7,8,9,10];
+  const activeSteps = useMemo<Array<1|2|3|4|5|6|7|8|9|10|11>>(() => {
+    const all: Array<1|2|3|4|5|6|7|8|9|10|11> = [1,2,3,4,5,6,7,8,9,10,11];
     return all.filter((s) => {
-      if (s === 5 && hasExistingWeapons) return false;
-      if (s === 6 && hasExistingArmor) return false;
+      if (s === 6 && hasExistingWeapons) return false;
+      if (s === 7 && hasExistingArmor) return false;
       return true;
     });
   }, [hasExistingWeapons, hasExistingArmor]);
 
   function nextActiveStep(current: number): number {
-    const idx = activeSteps.indexOf(current as 1|2|3|4|5|6|7|8|9|10);
+    const idx = activeSteps.indexOf(current as 1|2|3|4|5|6|7|8|9|10|11);
     return idx !== -1 && idx < activeSteps.length - 1 ? activeSteps[idx + 1] : current;
   }
   function prevActiveStep(current: number): number {
-    const idx = activeSteps.indexOf(current as 1|2|3|4|5|6|7|8|9|10);
+    const idx = activeSteps.indexOf(current as 1|2|3|4|5|6|7|8|9|10|11);
     return idx > 0 ? activeSteps[idx - 1] : current;
   }
 
@@ -521,7 +529,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                 Edit Character
               </h2>
               <p className="text-sm text-[#b9baa3]/60 mt-0.5">
-                {characterName || character.name} • Step {step} of 10
+                {characterName || character.name} • Step {step} of 11
               </p>
             </div>
             
@@ -542,10 +550,10 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
               role="progressbar"
               aria-valuenow={step}
               aria-valuemin={1}
-              aria-valuemax={10}
-              aria-label={`Step ${step} of 10`}
+              aria-valuemax={11}
+              aria-label={`Step ${step} of 11`}
             >
-              {Array.from({ length: 10 }, (_, i) => (
+              {Array.from({ length: 11 }, (_, i) => (
                 <div
                   key={i}
                   aria-hidden="true"
@@ -557,7 +565,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
               ))}
             </div>
             <p className="text-xs text-[#b9baa3]/60 mt-1">
-              Step {step} of 10
+              Step {step} of 11
             </p>
           </div>
           
@@ -764,52 +772,19 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
               </div>
             )}
             
-            {/* Step 3: Heritage */}
+            {/* Step 3: Choose Ancestry */}
             {step === 3 && (
               <div className="flex flex-col sm:flex-row sm:h-full">
-                {/* Left pane: tab switcher + list — full width stacked on mobile, fixed sidebar on sm+ */}
+                {/* Left pane: ancestry list — full width stacked on mobile, fixed sidebar on sm+ */}
                 <div className="w-full sm:w-64 lg:w-72 shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/40 flex flex-col max-h-[40vh] sm:max-h-none overflow-y-auto">
-                  {/* Tab switcher */}
-                  <div className="flex shrink-0 border-b border-slate-700/30" role="tablist" aria-label="Heritage selection">
-                    {(["ancestry", "community"] as const).map((tab) => {
-                      const isActive = heritageTab === tab;
-                      const isComplete = tab === "ancestry" ? !!ancestryId : !!communityId;
-                      const shouldPulse = !isActive && !isComplete;
-                      return (
-                        <button
-                          key={tab}
-                          type="button"
-                          role="tab"
-                          aria-selected={heritageTab === tab}
-                          onClick={() => setHeritageTab(tab)}
-                          className={`
-                            flex-1 py-3 px-2 text-xs font-semibold uppercase tracking-wider transition-colors
-                            ${isActive
-                              ? "text-[#577399] border-b-2 border-[#577399]"
-                              : "text-parchment-600 hover:text-parchment-400 border-b-2 border-transparent"
-                            }
-                          `}
-                        >
-                          <span className={shouldPulse ? "animate-pulse-glow-goldenrod" : undefined}>
-                            {tab === "ancestry" ? "Ancestry" : "Community"}
-                          </span>
-                          {tab === "ancestry" && ancestryId && (
-                            <span className="ml-1.5 text-[#577399]">✓</span>
-                          )}
-                          {tab === "community" && communityId && (
-                            <span className="ml-1.5 text-[#577399]">✓</span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  
-                  {/* List */}
-                  <div className="px-4 pt-2 pb-1 shrink-0">
+                  <div className="px-4 pt-3 pb-2 shrink-0 space-y-2">
+                    <p className="text-xs font-medium uppercase tracking-wider text-parchment-500">
+                      Choose an Ancestry
+                    </p>
                     <SourceFilter value={heritageSourceFilter} onChange={setHeritageSourceFilter} />
                   </div>
-                  <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0" ref={heritageListRef}>
-                    {heritageTab === "ancestry" && ancestriesData?.ancestries
+                  <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0" ref={ancestryListRef}>
+                    {ancestriesData?.ancestries
                       .filter((a) => heritageSourceFilter === "all" || a.source === heritageSourceFilter)
                       .map((a) => (
                        <button
@@ -834,34 +809,12 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                         </p>
                       </button>
                     ))}
-                    {heritageTab === "community" && communitiesData?.communities
-                      .filter((c) => heritageSourceFilter === "all" || c.source === heritageSourceFilter)
-                      .map((c) => (
-                       <button
-                         key={c.communityId}
-                         type="button"
-                         data-selected={communityId === c.communityId ? "true" : undefined}
-                         onClick={() => setCommunityId(c.communityId)}
-                        className={`
-                          w-full text-left px-4 py-3 transition-colors
-                          ${communityId === c.communityId
-                            ? "bg-[#577399]/20 border-l-2 border-[#577399]"
-                            : "border-l-2 border-transparent hover:bg-slate-800/60"
-                          }
-                        `}
-                      >
-                        <p className="text-sm font-semibold text-[#f7f7ff] flex items-center gap-1.5">
-                          {c.name}
-                          <SourceBadge source={c.source} size="xs" />
-                        </p>
-                      </button>
-                    ))}
                   </div>
                 </div>
                 
-                {/* Right pane: detail panel */}
+                {/* Right pane: ancestry detail */}
                 <div className="flex-1 overflow-y-auto p-4 sm:p-6 min-h-[120px]">
-                  {heritageTab === "ancestry" && !ancestryId && (
+                  {!ancestryId && (
                     <div className="flex h-full items-center justify-center">
                       <div className="text-center space-y-3">
                         <div className="text-4xl opacity-20" aria-hidden="true">🌿</div>
@@ -869,16 +822,8 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                       </div>
                     </div>
                   )}
-                  {heritageTab === "community" && !communityId && (
-                    <div className="flex h-full items-center justify-center">
-                      <div className="text-center space-y-3">
-                        <div className="text-4xl opacity-20" aria-hidden="true">🏘</div>
-                        <p className="text-sm text-parchment-600">Select a community to see details</p>
-                      </div>
-                    </div>
-                  )}
                   
-                  {heritageTab === "ancestry" && selectedAncestry && (
+                  {selectedAncestry && (
                     <div className="space-y-4">
                       <div>
                         <h3 className="font-serif text-2xl font-bold text-[#f7f7ff]">{selectedAncestry.name}</h3>
@@ -908,8 +853,59 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                       )}
                     </div>
                   )}
+                </div>
+              </div>
+            )}
+            
+            {/* Step 4: Choose Community */}
+            {step === 4 && (
+              <div className="flex flex-col sm:flex-row sm:h-full">
+                {/* Left pane: community list — full width stacked on mobile, fixed sidebar on sm+ */}
+                <div className="w-full sm:w-64 lg:w-72 shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/40 flex flex-col max-h-[40vh] sm:max-h-none overflow-y-auto">
+                  <div className="px-4 pt-3 pb-2 shrink-0 space-y-2">
+                    <p className="text-xs font-medium uppercase tracking-wider text-parchment-500">
+                      Choose a Community
+                    </p>
+                    <SourceFilter value={heritageSourceFilter} onChange={setHeritageSourceFilter} />
+                  </div>
+                  <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0" ref={communityListRef}>
+                    {communitiesData?.communities
+                      .filter((c) => heritageSourceFilter === "all" || c.source === heritageSourceFilter)
+                      .map((c) => (
+                       <button
+                         key={c.communityId}
+                         type="button"
+                         data-selected={communityId === c.communityId ? "true" : undefined}
+                         onClick={() => setCommunityId(c.communityId)}
+                        className={`
+                          w-full text-left px-4 py-3 transition-colors
+                          ${communityId === c.communityId
+                            ? "bg-[#577399]/20 border-l-2 border-[#577399]"
+                            : "border-l-2 border-transparent hover:bg-slate-800/60"
+                          }
+                        `}
+                      >
+                        <p className="text-sm font-semibold text-[#f7f7ff] flex items-center gap-1.5">
+                          {c.name}
+                          <SourceBadge source={c.source} size="xs" />
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Right pane: community detail */}
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6 min-h-[120px]">
+                  {!communityId && (
+                    <div className="flex h-full items-center justify-center">
+                      <div className="text-center space-y-3">
+                        <div className="text-4xl opacity-20" aria-hidden="true">🏘</div>
+                        <p className="text-sm text-parchment-600">Select a community to see details</p>
+                      </div>
+                    </div>
+                  )}
                   
-                  {heritageTab === "community" && selectedCommunity && (
+                  {selectedCommunity && (
                     <div className="space-y-4">
                       <div>
                         <h3 className="font-serif text-2xl font-bold text-[#f7f7ff]">{selectedCommunity.name}</h3>
@@ -932,8 +928,8 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
               </div>
             )}
             
-            {/* Step 4: Assign Traits */}
-            {step === 4 && (
+            {/* Step 5: Assign Traits */}
+            {step === 5 && (
               <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 max-w-2xl mx-auto w-full min-h-0">
                 <div>
                   <h3 className="font-serif text-2xl font-bold text-[#f7f7ff] mb-1">
@@ -959,8 +955,8 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
               </div>
             )}
             
-            {/* Step 5: Choose Starting Weapons */}
-            {step === 5 && (
+            {/* Step 6: Choose Starting Weapons */}
+            {step === 6 && (
               <div className="flex flex-1 min-h-0 flex-col">
                 <div className="px-4 sm:px-6 pt-4 sm:pt-5 pb-3 shrink-0 space-y-3">
                   <div>
@@ -992,8 +988,8 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
               </div>
             )}
 
-            {/* Step 6: Choose Starting Armor */}
-            {step === 6 && selectedClassData && (
+            {/* Step 7: Choose Starting Armor */}
+            {step === 7 && selectedClassData && (
               <div className="flex flex-1 min-h-0 flex-col">
                 <div className="px-4 sm:px-6 pt-4 sm:pt-5 pb-3 shrink-0 space-y-3">
                   <div>
@@ -1020,8 +1016,8 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
               </div>
             )}
 
-            {/* Step 7: Starting Equipment */}
-            {step === 7 && selectedClassData && (
+            {/* Step 8: Starting Equipment */}
+            {step === 8 && selectedClassData && (
               <div className="flex flex-1 min-h-0 flex-col">
                 <div className="px-4 sm:px-6 pt-4 sm:pt-5 pb-3 shrink-0 space-y-3">
                   <div>
@@ -1052,8 +1048,8 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
               </div>
             )}
 
-            {/* Step 8: Create Your Experiences */}
-            {step === 8 && (
+            {/* Step 9: Create Your Experiences */}
+            {step === 9 && (
               <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 max-w-2xl mx-auto w-full min-h-0">
                 <div>
                   <h3 className="font-serif text-2xl font-bold text-[#f7f7ff] mb-1">
@@ -1130,8 +1126,8 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
               </div>
             )}
 
-            {/* Step 9: Domain Deck Cards */}
-            {step === 9 && selectedClassData && (
+            {/* Step 10: Domain Deck Cards */}
+            {step === 10 && selectedClassData && (
               <div className="flex flex-1 min-h-0 flex-col">
                 <div className="px-4 sm:px-6 pt-4 sm:pt-5 pb-3 shrink-0 space-y-3">
                   <div>
@@ -1166,8 +1162,8 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
               </div>
             )}
 
-            {/* Step 10: Review */}
-            {step === 10 && (
+            {/* Step 11: Review */}
+            {step === 11 && (
               <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 min-h-0">
                 <div className="max-w-xl mx-auto space-y-6">
                   <h3 className="font-serif text-xl font-semibold text-[#f7f7ff]">
@@ -1408,45 +1404,48 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                   summary: selectedSubclass?.name ?? null,
                 },
                 {
-                  num: 3, name: "Heritage",
-                  done: Boolean(ancestryId && communityId), locked: false,
-                  summary: (selectedAncestry && selectedCommunity)
-                    ? `${selectedAncestry.name} · ${selectedCommunity.name}`
-                    : selectedAncestry?.name ?? selectedCommunity?.name ?? null,
+                  num: 3, name: "Ancestry",
+                  done: Boolean(ancestryId), locked: false,
+                  summary: selectedAncestry?.name ?? null,
                 },
                 {
-                  num: 4, name: "Traits",
+                  num: 4, name: "Community",
+                  done: Boolean(communityId), locked: false,
+                  summary: selectedCommunity?.name ?? null,
+                },
+                {
+                  num: 5, name: "Traits",
                   done: Object.keys(traitBonuses).length === 4, locked: false,
                   summary: Object.keys(traitBonuses).length === 4 ? "Assigned" : null,
                 },
                 {
-                  num: 5, name: "Weapons",
+                  num: 6, name: "Weapons",
                   done: Boolean(primaryWeaponId),
                   locked: hasExistingWeapons,
                   summary: hasExistingWeapons ? "Via equipment page" : (primaryWeapon?.name ?? null),
                 },
                 {
-                  num: 6, name: "Armor",
+                  num: 7, name: "Armor",
                   done: Boolean(armorId),
                   locked: hasExistingArmor,
                   summary: hasExistingArmor ? "Via equipment page" : (selectedArmorData?.name.replace(" Armor", "") ?? null),
                 },
                 {
-                  num: 7, name: "Equipment",
+                  num: 8, name: "Equipment",
                   done: Boolean(equipmentSelections.consumableId && equipmentSelections.classItem), locked: false,
                   summary: equipmentSelections.consumableId
                     ? (equipmentSelections.consumableId === "minor-health-potion" ? "Health Potion" : "Stamina Potion")
                     : null,
                 },
                 {
-                  num: 8, name: "Experiences",
+                  num: 9, name: "Experiences",
                   done: experiences.length >= 2 && experiences.every((e) => e.name.trim().length > 0), locked: false,
                   summary: experiences.filter((e) => e.name.trim()).length > 0
                     ? experiences.filter((e) => e.name.trim()).map((e) => e.name).join(" · ")
                     : null,
                 },
                 {
-                  num: 9, name: "Domain Cards",
+                  num: 10, name: "Domain Cards",
                   done: isLockedDomainStep || selectedDomainCardIds.length === 2, locked: false,
                   summary: isLockedDomainStep
                     ? "Via level-up wizard"
@@ -1455,7 +1454,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                       : null,
                 },
                 {
-                  num: 10, name: "Review & Save",
+                  num: 11, name: "Review & Save",
                   done: false, locked: false,
                   summary: null,
                 },
@@ -1470,7 +1469,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                       key={s.num}
                       type="button"
                       disabled={s.locked}
-                      onClick={() => !s.locked && setStep(s.num as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10)}
+                      onClick={() => !s.locked && setStep(s.num as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11)}
                       aria-current={step === s.num ? "step" : undefined}
                       className={`
                         w-full text-left px-3 py-2 transition-colors rounded-none
@@ -1509,7 +1508,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                  if (step === activeSteps[0]) {
                    router.push(`/character/${characterId}`);
                  } else {
-                   setStep(prevActiveStep(step) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10);
+                    setStep(prevActiveStep(step) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11);
                  }
                }}
                className="
@@ -1526,18 +1525,19 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                {step !== activeSteps[activeSteps.length - 1] && (
                  <button
                    type="button"
-                    onClick={() => setStep(nextActiveStep(step) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10)}
-                    disabled={
-                      (step === 1 && !canGoNext1) ||
-                      (step === 2 && !canGoNext2) ||
-                      (step === 3 && !canGoNext3) ||
-                      (step === 4 && !canGoNext4) ||
-                      (step === 5 && !canGoNext5) ||
-                      (step === 6 && !canGoNext6) ||
-                      (step === 7 && !canGoNext7) ||
-                      (step === 8 && !canGoNext8) ||
-                      (step === 9 && !canGoNext9)
-                    }
+                     onClick={() => setStep(nextActiveStep(step) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11)}
+                     disabled={
+                       (step === 1 && !canGoNext1) ||
+                       (step === 2 && !canGoNext2) ||
+                       (step === 3 && !canGoNext3) ||
+                       (step === 4 && !canGoNext4) ||
+                       (step === 5 && !canGoNext5) ||
+                       (step === 6 && !canGoNext6) ||
+                       (step === 7 && !canGoNext7) ||
+                       (step === 8 && !canGoNext8) ||
+                       (step === 9 && !canGoNext9) ||
+                       (step === 10 && !canGoNext10)
+                     }
                     className="
                        rounded-lg px-6 py-3 font-semibold text-base min-h-[44px]
                       bg-[#577399] text-[#f7f7ff]
