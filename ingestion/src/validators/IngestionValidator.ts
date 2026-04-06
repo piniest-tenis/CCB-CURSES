@@ -187,11 +187,11 @@ export function validateClass(data: ClassData): ValidationResult {
       requireNonEmpty(result, sc.name, `${prefix}.name`);
       requireNonEmpty(result, sc.spellcastTrait, `${prefix}.spellcastTrait`);
 
-      if (!Array.isArray(sc.foundationFeatures) || sc.foundationFeatures.length < 2) {
+      if (!Array.isArray(sc.foundationFeatures) || sc.foundationFeatures.length < 1) {
         addWarning(
           result,
           `${prefix}.foundationFeatures`,
-          `expected 2 foundation features (found ${sc.foundationFeatures?.length ?? 0})`
+          `expected at least 1 foundation feature (found ${sc.foundationFeatures?.length ?? 0})`
         );
       } else {
         sc.foundationFeatures.forEach((ff, j) => {

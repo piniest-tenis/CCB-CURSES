@@ -603,9 +603,9 @@ function parseSubclassDetails(
     // ── Strategy 1: Structured (### headers present) ──────────────────────
     const spellcastSection = extractSection(bodyLines, /^###\s+Spellcast Trait/i);
     if (spellcastSection !== null) {
-      const foundationSection = extractSection(bodyLines, /^###\s+Foundation Features/i);
-      const specSection = extractSection(bodyLines, /^###\s+Specialization Feature/i);
-      const masterySection = extractSection(bodyLines, /^###\s+Mastery Feature/i);
+      const foundationSection = extractSection(bodyLines, /^###\s+Foundation Features?/i);
+      const specSection = extractSection(bodyLines, /^###\s+Specialization Features?/i);
+      const masterySection = extractSection(bodyLines, /^###\s+Mastery Features?/i);
 
       return {
         subclassId,
