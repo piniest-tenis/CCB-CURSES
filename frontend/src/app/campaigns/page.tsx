@@ -9,16 +9,15 @@
  */
 
 import React, { useEffect } from "react";
-import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { useCampaigns } from "@/hooks/useCampaigns";
+import { AppHeader } from "@/components/AppHeader";
 import { CampaignCard, CampaignCardSkeleton } from "@/components/campaign/CampaignCard";
 
 export default function CampaignsPage() {
   const router = useRouter();
-  const { isAuthenticated, isReady, isLoading: authLoading, user, signOut } = useAuthStore();
+  const { isAuthenticated, isReady, isLoading: authLoading, user } = useAuthStore();
   const { data: campaigns, isLoading, isError, error } = useCampaigns();
 
   // Auth guard
@@ -44,48 +43,7 @@ export default function CampaignsPage() {
   return (
     <div className="min-h-screen bg-[#0a100d]">
       {/* Top bar */}
-      <header
-        className="sticky top-0 z-10 border-b border-slate-800/60 backdrop-blur-sm"
-        style={{ backgroundColor: "rgba(10,16,13,0.90)" }}
-      >
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <Link
-            href="/dashboard"
-            className="focus:outline-none focus:ring-2 focus:ring-[#577399] rounded"
-            aria-label="Back to dashboard"
-          >
-            <Image
-              src="/images/curses-isolated-logo.png"
-              alt="Curses!"
-              width={140}
-              height={40}
-              className="object-contain"
-              priority
-            />
-          </Link>
-
-          {user && (
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-[#b9baa3]/50 hidden sm:inline">
-                {user.displayName || user.email}
-              </span>
-              <button
-                type="button"
-                onClick={() => signOut().then(() => router.replace("/auth/login"))}
-                className="
-                  rounded px-2.5 py-1 text-xs font-medium
-                  text-[#b9baa3]/50 border border-slate-700/60
-                  hover:text-[#f7f7ff] hover:border-slate-600
-                  transition-colors
-                  focus:outline-none focus:ring-2 focus:ring-[#577399]
-                "
-              >
-                Sign out
-              </button>
-            </div>
-          )}
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="mx-auto max-w-6xl px-4 py-8">
         {/* Page header */}

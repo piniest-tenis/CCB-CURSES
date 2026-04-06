@@ -121,7 +121,7 @@ function ProjectNotesField({ characterId, projectId, initialNotes }: ProjectNote
         aria-label="Project notes"
         className="
           w-full resize-none rounded border border-burgundy-800/60 bg-slate-950
-          px-2 py-1.5 text-xs text-parchment-400 placeholder-parchment-700
+          px-2 py-1.5 text-xs text-parchment-400 placeholder-parchment-600
           focus:outline-none focus:border-gold-600 transition-colors
         "
       />
@@ -324,7 +324,7 @@ function ProjectCard({ project, characterId }: ProjectCardProps) {
               aria-busy={isPending}
               className="
                 rounded px-2.5 py-1 text-xs font-semibold
-                bg-[#577399]/20 text-[#577399] border border-[#577399]/40
+                bg-[#577399]/20 text-steel-accessible border border-[#577399]/40
                 hover:bg-[#577399]/30 disabled:opacity-50 disabled:cursor-wait
                 transition-colors focus:outline-none focus:ring-2 focus:ring-[#577399]
               "
@@ -473,7 +473,7 @@ function NewProjectForm({ characterId, onCreated, onCancel }: NewProjectFormProp
             className="
               w-full rounded bg-slate-850 px-2 py-1.5 text-sm text-parchment-200
               border border-burgundy-800 focus:outline-none focus:ring-2 focus:ring-gold-500
-              placeholder-parchment-700 transition-colors
+              placeholder-parchment-600 transition-colors
             "
           />
         </div>
@@ -578,7 +578,7 @@ function NewProjectForm({ characterId, onCreated, onCancel }: NewProjectFormProp
               className="
                 mt-1.5 w-full rounded bg-slate-850 px-2 py-1.5 text-sm text-parchment-300
                 border border-burgundy-800 focus:outline-none focus:ring-2 focus:ring-gold-500
-                placeholder-parchment-700 transition-colors
+                placeholder-parchment-600 transition-colors
               "
             />
           )}
@@ -673,7 +673,7 @@ export function DowntimeProjectsPanel() {
             <span
               className="
                 rounded-full bg-[#577399]/20 border border-[#577399]/40
-                px-2 py-0 text-xs font-bold text-[#577399]
+                px-2 py-0 text-xs font-bold text-steel-accessible
               "
               aria-label={`${activeProjects.length} active project${activeProjects.length !== 1 ? "s" : ""}`}
             >
@@ -721,7 +721,7 @@ export function DowntimeProjectsPanel() {
 
           {/* Empty state */}
           {displayProjects.length === 0 && !showNewForm && (
-            <p className="text-sm text-parchment-600 italic">
+            <p className="text-sm text-parchment-600">
               No active projects. Domain cards with downtime projects will appear here
               when added to your loadout.
             </p>

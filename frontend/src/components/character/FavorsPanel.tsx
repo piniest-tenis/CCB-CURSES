@@ -189,13 +189,13 @@ export function FavorsPanel() {
       data-field-key="favors"
     >
       {/* Header */}
-      <h2 className="font-serif-sc text-sm font-semibold tracking-widest text-[#577399]">
+      <h2 className="font-serif-sc text-sm font-semibold tracking-widest text-steel-accessible">
         Favors
       </h2>
 
       {/* SRD reference note */}
       <div className="rounded-lg border border-[#577399]/15 bg-[#577399]/5 px-3 py-2">
-        <p className="text-xs leading-relaxed text-[#b9baa3] italic">
+        <p className="text-xs leading-relaxed text-[#b9baa3]">
           Spend a Favor to make a reasonable request of a faction or adherent.
           +2 Attitude on the request. Retained if denied.
         </p>
@@ -203,7 +203,7 @@ export function FavorsPanel() {
 
       {/* Favor entries */}
       {entries.length === 0 ? (
-        <p className="text-sm text-[#b9baa3]/60 italic">
+        <p className="text-sm text-parchment-500">
           No favors earned yet. Favors are earned narratively through faction
           interactions.
         </p>
@@ -243,7 +243,7 @@ export function FavorsPanel() {
             aria-describedby={addError || addAction.inlineError ? addErrorId : undefined}
             className="
               flex-1 min-w-0 rounded-lg border border-[#577399]/30 bg-slate-950
-              px-3 py-2 text-sm text-[#f7f7ff] placeholder:text-[#b9baa3]/40
+              px-3 py-2 text-sm text-[#f7f7ff] placeholder:text-parchment-600
               focus:outline-none focus:ring-2 focus:ring-[#577399] focus:border-[#577399]
               transition-colors
             "

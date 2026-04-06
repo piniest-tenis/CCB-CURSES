@@ -303,11 +303,11 @@ function AcquireCardPicker({
       </p>
 
       {isLoading ? (
-        <p className="text-sm text-parchment-500 italic">
+        <p className="text-sm text-parchment-500">
           Loading available cards…
         </p>
       ) : eligibleCards.length === 0 ? (
-        <p className="text-sm text-parchment-600 italic">
+        <p className="text-sm text-parchment-500">
           No new cards available. Level up to unlock more!
         </p>
       ) : (
@@ -728,7 +728,7 @@ function DomainCardDetailSidebar({
             {/* Curse text */}
             {card.isCursed && card.curseText && (
               <div className="rounded-lg border border-steel-400/30 bg-slate-900/60 px-4 py-3">
-                <p className="text-xs uppercase tracking-wider text-steel-400/60 mb-1">
+                <p className="text-xs uppercase tracking-wider text-steel-accessible mb-1">
                   Curse
                 </p>
                 <MarkdownContent className="text-base text-[#b9baa3]/70">
@@ -886,7 +886,7 @@ function LoadoutCardSlot({
               </div>
             </button>
           ) : (
-            <span className="text-sm text-parchment-600 italic">Loading…</span>
+            <span className="text-sm text-parchment-500">Loading…</span>
           )}
         </div>
 
@@ -1041,7 +1041,7 @@ function VaultPicker({
 
       {/* Vault card selection */}
       {available.length === 0 ? (
-        <p className="text-sm text-parchment-600 italic">
+        <p className="text-sm text-parchment-500">
           No more cards in vault (all are already in loadout or vault is empty).
         </p>
       ) : (
@@ -1361,7 +1361,7 @@ export function DomainLoadout({
 
         {/* Loadout slots */}
         {domainLoadout.length === 0 ? (
-          <p className="text-sm text-parchment-600 italic">
+          <p className="text-sm text-parchment-500">
             No cards in loadout.
           </p>
         ) : (

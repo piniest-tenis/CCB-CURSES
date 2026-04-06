@@ -15,8 +15,9 @@
  *   5. Choose Starting Weapons
  *   6. Choose Starting Armor
  *   7. Take Starting Equipment
- *   8. Take Domain Deck Cards
- *   9. Review & Save
+ *   8. Create Your Experiences
+ *   9. Take Domain Deck Cards
+ *  10. Review & Save
  *
  * After saving, redirects back to character sheet.
  */
@@ -25,7 +26,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useCharacter, useUpdateCharacter } from "@/hooks/useCharacter";
 import { useClass, useClasses, useAncestries, useCommunities, useDomainCard } from "@/hooks/useGameData";
-import type { Character, AncestryData, CommunityData, CoreStats } from "@shared/types";
+import type { Character, AncestryData, CommunityData, CoreStats, Experience } from "@shared/types";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { CollapsibleSRDDescription } from "@/components/character/CollapsibleSRDDescription";
 import { SourceBadge } from "@/components/SourceBadge";
@@ -51,12 +52,12 @@ function DomainCardName({ cardId }: { cardId: string }) {
   }
   // Fallback: title-case the slug while loading
   const fallback = id.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-  return <span className="text-parchment-500 italic">{fallback}</span>;
+  return <span className="text-parchment-500">{fallback}</span>;
 }
 
 // ─── DomainCardSummary ────────────────────────────────────────────────────────
 // Renders the full card with name, domain, recall cost, and description
-// for use in the Step 9 review panel.
+// for use in the Step 10 review panel.
 
 function DomainCardSummary({ cardId }: { cardId: string }) {
   const parts = cardId.includes("/") ? cardId.split("/") : null;
@@ -69,7 +70,7 @@ function DomainCardSummary({ cardId }: { cardId: string }) {
     const fallback = id.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
     return (
       <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-3">
-        <p className="text-sm font-semibold text-[#b9baa3]/60 italic">{fallback}</p>
+        <p className="text-sm font-semibold text-parchment-500">{fallback}</p>
       </div>
     );
   }
@@ -78,11 +79,11 @@ function DomainCardSummary({ cardId }: { cardId: string }) {
     <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-3 space-y-2">
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-sm font-semibold text-[#f7f7ff]">{card.name}</span>
-        <span className="text-xs text-[#b9baa3]/40">{card.domain}</span>
+        <span className="text-xs text-parchment-600">{card.domain}</span>
         {card.isGrimoire && (
           <span className="text-xs text-[#daa520]/70 uppercase tracking-wider">Grimoire</span>
         )}
-        <span className="ml-auto text-xs text-[#b9baa3]/40 shrink-0">
+        <span className="ml-auto text-xs text-parchment-600 shrink-0">
           Recall {card.level}⚡
         </span>
       </div>
@@ -144,8 +145,8 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
   // mid-wizard and refreshed).  For a fresh builder or an already-saved
   // character the normal server-recovery path wins.
   const updateMutation = useUpdateCharacter(characterId);
-  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>(
-    () => (sessionDraft?.step as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9) ?? 1
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10>(
+    () => (sessionDraft?.step as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10) ?? 1
   );
   const [classId, setClassId] = useState(
     sessionDraft?.classId ?? character?.classId ?? ""
@@ -195,6 +196,13 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
     sessionDraft?.selectedDomainCardIds ?? character?.domainLoadout ?? []
   );
 
+  // Step 8: Experiences (inserted before Domain Cards in the wizard flow)
+  const [experiences, setExperiences] = useState<Experience[]>(() => {
+    if (sessionDraft?.experiences) return sessionDraft.experiences;
+    if (character?.experiences?.length) return character.experiences;
+    return [{ name: "", bonus: 2 }, { name: "", bonus: 2 }];
+  });
+
   // Character name (editable in Review step)
   const [characterName, setCharacterName] = useState(
     sessionDraft?.characterName ?? character?.name ?? ""
@@ -221,13 +229,14 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
       armorId,
       equipmentSelections,
       selectedDomainCardIds,
+      experiences,
       heritageTab,
       characterName,
     }),
     [
       step, classId, subclassId, ancestryId, communityId,
       traitBonuses, primaryWeaponId, secondaryWeaponId,
-      armorId, equipmentSelections, selectedDomainCardIds, heritageTab,
+      armorId, equipmentSelections, selectedDomainCardIds, experiences, heritageTab,
       characterName,
     ]
   );
@@ -275,6 +284,10 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
     // Trait bonuses backfill
     if (!Object.keys(traitBonuses).length && character.traitBonuses && Object.keys(character.traitBonuses).length) {
       setTraitBonuses(character.traitBonuses);
+    }
+    // Experiences backfill
+    if (experiences.every((e) => !e.name) && character.experiences?.length) {
+      setExperiences(character.experiences);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [character]);
@@ -326,9 +339,11 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
   const canGoNext5 = Boolean(primaryWeaponId); // secondary is optional
   const canGoNext6 = Boolean(armorId);
   const canGoNext7 = Boolean(equipmentSelections.consumableId && equipmentSelections.classItem);
+  // Step 8: Experiences — both experience names must be non-empty
+  const canGoNext8 = experiences.length >= 2 && experiences.every((e) => e.name.trim().length > 0);
   // Post-Level-1: domain cards are managed via the level-up wizard — always allow Next.
   const isLockedDomainStep = Boolean(character && character.level > 1);
-  const canGoNext8 = isLockedDomainStep || selectedDomainCardIds.length === 2;
+  const canGoNext9 = isLockedDomainStep || selectedDomainCardIds.length === 2;
 
   // ── Steps 5 (weapons) and 6 (armor): skip when already saved ────────────
   // Once weapons/armor have been selected and persisted via a previous builder run,
@@ -340,8 +355,8 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
   );
 
   // Build the ordered list of active steps (skipping locked equipment steps).
-  const activeSteps = useMemo<Array<1|2|3|4|5|6|7|8|9>>(() => {
-    const all: Array<1|2|3|4|5|6|7|8|9> = [1,2,3,4,5,6,7,8,9];
+  const activeSteps = useMemo<Array<1|2|3|4|5|6|7|8|9|10>>(() => {
+    const all: Array<1|2|3|4|5|6|7|8|9|10> = [1,2,3,4,5,6,7,8,9,10];
     return all.filter((s) => {
       if (s === 5 && hasExistingWeapons) return false;
       if (s === 6 && hasExistingArmor) return false;
@@ -350,11 +365,11 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
   }, [hasExistingWeapons, hasExistingArmor]);
 
   function nextActiveStep(current: number): number {
-    const idx = activeSteps.indexOf(current as 1|2|3|4|5|6|7|8|9);
+    const idx = activeSteps.indexOf(current as 1|2|3|4|5|6|7|8|9|10);
     return idx !== -1 && idx < activeSteps.length - 1 ? activeSteps[idx + 1] : current;
   }
   function prevActiveStep(current: number): number {
-    const idx = activeSteps.indexOf(current as 1|2|3|4|5|6|7|8|9);
+    const idx = activeSteps.indexOf(current as 1|2|3|4|5|6|7|8|9|10);
     return idx > 0 ? activeSteps[idx - 1] : current;
   }
 
@@ -441,6 +456,8 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
           domainLoadout: selectedDomainCardIds,
           domainVault: selectedDomainCardIds,
         }),
+        // Save experiences — filter out any empty entries just in case.
+        experiences: experiences.filter((e) => e.name.trim()),
       } as Partial<Character>);
       
       // Redirect back to character sheet
@@ -504,14 +521,14 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                 Edit Character
               </h2>
               <p className="text-sm text-[#b9baa3]/60 mt-0.5">
-                {characterName || character.name} • Step {step} of 9
+                {characterName || character.name} • Step {step} of 10
               </p>
             </div>
             
             <button
               type="button"
               onClick={() => router.push(`/character/${characterId}`)}
-              className="h-11 w-11 flex items-center justify-center text-[#b9baa3]/40 hover:text-[#b9baa3] text-2xl leading-none transition-colors focus:outline-none focus:ring-2 focus:ring-[#577399] rounded-lg"
+              className="h-11 w-11 flex items-center justify-center text-parchment-600 hover:text-parchment-400 text-2xl leading-none transition-colors focus:outline-none focus:ring-2 focus:ring-[#577399] rounded-lg"
               aria-label="Close builder"
             >
               ×
@@ -525,10 +542,10 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
               role="progressbar"
               aria-valuenow={step}
               aria-valuemin={1}
-              aria-valuemax={9}
-              aria-label={`Step ${step} of 9`}
+              aria-valuemax={10}
+              aria-label={`Step ${step} of 10`}
             >
-              {Array.from({ length: 9 }, (_, i) => (
+              {Array.from({ length: 10 }, (_, i) => (
                 <div
                   key={i}
                   aria-hidden="true"
@@ -540,7 +557,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
               ))}
             </div>
             <p className="text-xs text-[#b9baa3]/60 mt-1">
-              Step {step} of 9
+              Step {step} of 10
             </p>
           </div>
           
@@ -554,7 +571,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                 {/* Left: class list — full width stacked on mobile, fixed sidebar on sm+ */}
                 <div className="w-full sm:w-64 lg:w-72 shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/40 flex flex-col max-h-[40vh] sm:max-h-none overflow-y-auto">
                   <div className="px-4 pt-3 pb-2 shrink-0 space-y-2">
-                    <p className="text-xs font-medium uppercase tracking-wider text-[#b9baa3]/50">
+                    <p className="text-xs font-medium uppercase tracking-wider text-parchment-500">
                       Choose a Class
                     </p>
                     <SourceFilter value={classSourceFilter} onChange={setClassSourceFilter} />
@@ -584,7 +601,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                           <SourceBadge source={c.source} size="xs" />
                         </p>
                         {c.subclasses.length > 0 && (
-                          <p className="text-sm italic text-[#b9baa3]/50 mt-0.5">
+                          <p className="text-sm text-parchment-500 mt-0.5">
                             {c.subclasses.map((s) => s.name).join(" · ")}
                           </p>
                         )}
@@ -599,7 +616,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                     <div className="flex h-full items-center justify-center">
                       <div className="text-center space-y-3">
                         <div className="text-4xl opacity-20" aria-hidden="true">⚔️</div>
-                        <p className="text-sm text-[#b9baa3]/40 italic">Select a class to see details</p>
+                        <p className="text-sm text-parchment-600">Select a class to see details</p>
                       </div>
                     </div>
                   ) : selectedClassData ? (
@@ -615,13 +632,13 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                       
                       <div className="flex gap-4 text-sm">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs uppercase tracking-wider text-[#b9baa3]/50">Evasion</span>
+                          <span className="text-xs uppercase tracking-wider text-parchment-500">Evasion</span>
                           <span className="rounded border border-slate-700 bg-slate-900 px-2.5 py-0.5 font-bold">
                             {selectedClassData.startingEvasion}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs uppercase tracking-wider text-[#b9baa3]/50">Hit Points</span>
+                          <span className="text-xs uppercase tracking-wider text-parchment-500">Hit Points</span>
                           <span className="rounded border border-slate-700 bg-slate-900 px-2.5 py-0.5 font-bold">
                             {selectedClassData.startingHitPoints}
                           </span>
@@ -718,7 +735,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                     
                     {selectedSubclass.foundationFeatures.length > 0 && (
                       <div>
-                        <p className="text-xs uppercase tracking-wider text-[#b9baa3]/50 mb-2">
+                        <p className="text-xs uppercase tracking-wider text-parchment-500 mb-2">
                           Foundation Features
                         </p>
                         <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 p-3 space-y-2">
@@ -769,7 +786,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                             flex-1 py-3 px-2 text-xs font-semibold uppercase tracking-wider transition-colors
                             ${isActive
                               ? "text-[#577399] border-b-2 border-[#577399]"
-                              : "text-[#b9baa3]/40 hover:text-[#b9baa3]/70 border-b-2 border-transparent"
+                              : "text-parchment-600 hover:text-parchment-400 border-b-2 border-transparent"
                             }
                           `}
                         >
@@ -812,7 +829,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                           {a.name}
                           <SourceBadge source={a.source} size="xs" />
                         </p>
-                        <p className="text-sm text-[#b9baa3]/50 truncate">
+                        <p className="text-sm text-parchment-500 truncate">
                           {a.traitName}{a.secondTraitName ? ` · ${a.secondTraitName}` : ""}
                         </p>
                       </button>
@@ -848,7 +865,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                     <div className="flex h-full items-center justify-center">
                       <div className="text-center space-y-3">
                         <div className="text-4xl opacity-20" aria-hidden="true">🌿</div>
-                        <p className="text-sm text-[#b9baa3]/40 italic">Select an ancestry to see details</p>
+                        <p className="text-sm text-parchment-600">Select an ancestry to see details</p>
                       </div>
                     </div>
                   )}
@@ -856,7 +873,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                     <div className="flex h-full items-center justify-center">
                       <div className="text-center space-y-3">
                         <div className="text-4xl opacity-20" aria-hidden="true">🏘</div>
-                        <p className="text-sm text-[#b9baa3]/40 italic">Select a community to see details</p>
+                        <p className="text-sm text-parchment-600">Select a community to see details</p>
                       </div>
                     </div>
                   )}
@@ -866,7 +883,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                       <div>
                         <h3 className="font-serif text-2xl font-bold text-[#f7f7ff]">{selectedAncestry.name}</h3>
                         {selectedAncestry.flavorText && (
-                          <MarkdownContent className="mt-2 text-base italic text-[#b9baa3]/60">
+                          <MarkdownContent className="mt-2 text-base text-parchment-500">
                             {selectedAncestry.flavorText}
                           </MarkdownContent>
                         )}
@@ -897,7 +914,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                       <div>
                         <h3 className="font-serif text-2xl font-bold text-[#f7f7ff]">{selectedCommunity.name}</h3>
                         {selectedCommunity.flavorText && (
-                          <MarkdownContent className="mt-2 text-base italic text-[#b9baa3]/60">
+                          <MarkdownContent className="mt-2 text-base text-parchment-500">
                             {selectedCommunity.flavorText}
                           </MarkdownContent>
                         )}
@@ -1035,8 +1052,86 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
               </div>
             )}
 
-            {/* Step 8: Domain Deck Cards */}
-            {step === 8 && selectedClassData && (
+            {/* Step 8: Create Your Experiences */}
+            {step === 8 && (
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 max-w-2xl mx-auto w-full min-h-0">
+                <div>
+                  <h3 className="font-serif text-2xl font-bold text-[#f7f7ff] mb-1">
+                    Create Your Experiences
+                  </h3>
+                  <p className="text-sm text-[#b9baa3]/70">
+                    Choose 2 experiences that reflect your character's background, skills, or training. Each starts at +2.
+                  </p>
+                </div>
+
+                <CollapsibleSRDDescription
+                  title="What are Experiences?"
+                  content={
+                    "**SRD Step 7:** Experiences represent your character's prior knowledge, training, or background. " +
+                    "When an experience is relevant to a dice roll, you can spend **1 Hope** to add your experience bonus to the result.\n\n" +
+                    "At character creation you choose **2 experiences**, each starting at **+2**. " +
+                    "You'll gain additional experiences at tier achievement levels (2, 5, and 8), and can increase existing experience bonuses through advancement.\n\n" +
+                    "Experiences are free-text — name them whatever fits your character. Here are some example categories:\n\n" +
+                    "**Backgrounds:** Sailor, Blacksmith, Diplomat, Hermit, Soldier, Scholar\n\n" +
+                    "**Characteristics:** Quick-witted, Eagle-eyed, Silver-tongued, Unshakeable\n\n" +
+                    "**Specialties:** Lockpicking, Herbalism, Tracking, Cartography\n\n" +
+                    "**Skills:** Athletics, Stealth, Persuasion, Arcana, Survival\n\n" +
+                    "**Phrases:** \"I Know a Guy\", \"Nothing Surprises Me\", \"Read the Room\""
+                  }
+                />
+
+                <div className="space-y-4">
+                  {experiences.map((exp, i) => (
+                    <div
+                      key={i}
+                      className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4 space-y-3"
+                    >
+                      <div className="flex items-center justify-between">
+                        <label
+                          htmlFor={`experience-name-${i}`}
+                          className="text-xs uppercase tracking-wider text-parchment-500 font-medium"
+                        >
+                          Experience {i + 1}
+                        </label>
+                        <span className="rounded border border-[#577399]/50 bg-[#577399]/10 px-2 py-0.5 text-xs font-semibold text-[#577399]">
+                          +{exp.bonus}
+                        </span>
+                      </div>
+                      <input
+                        id={`experience-name-${i}`}
+                        type="text"
+                        value={exp.name}
+                        onChange={(e) => {
+                          const updated = [...experiences];
+                          updated[i] = { ...updated[i], name: e.target.value };
+                          setExperiences(updated);
+                        }}
+                        placeholder={i === 0 ? 'e.g. "Sailor" or "Herbalism"' : 'e.g. "Quick-witted" or "I Know a Guy"'}
+                        maxLength={60}
+                        className="
+                          w-full rounded-lg border border-slate-700/60 bg-[#0a100d]
+                          px-4 py-2.5 text-base text-[#f7f7ff]
+                          placeholder:text-parchment-600
+                          focus:outline-none focus:ring-2 focus:ring-[#577399] focus:border-transparent
+                          transition-colors
+                        "
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="rounded-lg border border-[#daa520]/30 bg-[#daa520]/5 p-4">
+                  <p className="text-sm text-[#daa520]/90 font-medium mb-1">How Experiences Work</p>
+                  <p className="text-sm text-[#b9baa3]/70 leading-relaxed">
+                    When you make a roll where an experience is relevant, you may spend <strong className="text-[#f7f7ff]">1 Hope</strong> to
+                    add your experience bonus to the result. Your GM decides if the experience applies.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Step 9: Domain Deck Cards */}
+            {step === 9 && selectedClassData && (
               <div className="flex flex-1 min-h-0 flex-col">
                 <div className="px-4 sm:px-6 pt-4 sm:pt-5 pb-3 shrink-0 space-y-3">
                   <div>
@@ -1071,8 +1166,8 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
               </div>
             )}
 
-            {/* Step 9: Review */}
-            {step === 9 && (
+            {/* Step 10: Review */}
+            {step === 10 && (
               <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 min-h-0">
                 <div className="max-w-xl mx-auto space-y-6">
                   <h3 className="font-serif text-xl font-semibold text-[#f7f7ff]">
@@ -1084,7 +1179,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                     <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
                       <label
                         htmlFor="character-name-input"
-                        className="text-xs uppercase tracking-wider text-[#b9baa3]/50 font-medium mb-2 block"
+                        className="text-xs uppercase tracking-wider text-parchment-500 font-medium mb-2 block"
                       >
                         Character Name
                       </label>
@@ -1098,19 +1193,19 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                         className="
                           w-full rounded-lg border border-slate-700/60 bg-[#0a100d]
                           px-4 py-2.5 text-lg font-serif font-semibold text-[#f7f7ff]
-                          placeholder:text-[#b9baa3]/30
+                          placeholder:text-parchment-600
                           focus:outline-none focus:ring-2 focus:ring-[#577399] focus:border-transparent
                           transition-colors
                         "
                       />
-                      <p className="text-xs text-[#b9baa3]/30 mt-1.5">
+                      <p className="text-xs text-parchment-600 mt-1.5">
                         You can always rename your character later.
                       </p>
                     </div>
 
                     {/* Class */}
                     <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
-                      <p className="text-xs uppercase tracking-wider text-[#b9baa3]/50 font-medium mb-1">
+                      <p className="text-xs uppercase tracking-wider text-parchment-500 font-medium mb-1">
                         Class
                       </p>
                       <p className="text-lg font-semibold text-[#f7f7ff]">
@@ -1121,7 +1216,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                     {/* Subclass */}
                     {selectedSubclass && (
                       <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
-                        <p className="text-xs uppercase tracking-wider text-[#b9baa3]/50 font-medium mb-1">
+                        <p className="text-xs uppercase tracking-wider text-parchment-500 font-medium mb-1">
                           Subclass
                         </p>
                         <p className="text-lg font-semibold text-[#f7f7ff]">
@@ -1132,7 +1227,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                     
                     {/* Ancestry */}
                     <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
-                      <p className="text-xs uppercase tracking-wider text-[#b9baa3]/50 font-medium mb-1">
+                      <p className="text-xs uppercase tracking-wider text-parchment-500 font-medium mb-1">
                         Ancestry
                       </p>
                       <p className="text-lg font-semibold text-[#f7f7ff]">
@@ -1142,7 +1237,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                     
                     {/* Community */}
                     <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
-                      <p className="text-xs uppercase tracking-wider text-[#b9baa3]/50 font-medium mb-1">
+                      <p className="text-xs uppercase tracking-wider text-parchment-500 font-medium mb-1">
                         Community
                       </p>
                       <p className="text-lg font-semibold text-[#f7f7ff]">
@@ -1153,7 +1248,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                      {/* Traits */}
                     {Object.keys(traitBonuses).length > 0 && (
                        <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
-                         <p className="text-xs uppercase tracking-wider text-[#b9baa3]/50 font-medium mb-3">
+                         <p className="text-xs uppercase tracking-wider text-parchment-500 font-medium mb-3">
                            Trait Bonuses
                          </p>
                          <div className="space-y-1">
@@ -1177,28 +1272,28 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
 
                     {/* Weapons */}
                     <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
-                      <p className="text-xs uppercase tracking-wider text-[#b9baa3]/50 font-medium mb-3">
+                      <p className="text-xs uppercase tracking-wider text-parchment-500 font-medium mb-3">
                         Weapons
                       </p>
                       <div className="space-y-2">
                         <div>
-                          <span className="text-xs text-[#b9baa3]/50">Primary: </span>
+                          <span className="text-xs text-parchment-500">Primary: </span>
                           <span className="text-sm font-semibold text-[#f7f7ff]">
                             {primaryWeapon?.name ?? "Not selected"}
                           </span>
                           {primaryWeapon && (
-                            <span className="text-xs text-[#b9baa3]/50 ml-1 sm:ml-2 block sm:inline">
+                            <span className="text-xs text-parchment-500 ml-1 sm:ml-2 block sm:inline">
                               {primaryWeapon.damageDie} · {primaryWeapon.range} · {primaryWeapon.burden}
                             </span>
                           )}
                         </div>
                         <div>
-                          <span className="text-xs text-[#b9baa3]/50">Secondary: </span>
+                          <span className="text-xs text-parchment-500">Secondary: </span>
                           <span className="text-sm font-semibold text-[#f7f7ff]">
-                            {secondaryWeapon?.name ?? <span className="italic text-[#b9baa3]/40">None</span>}
+                            {secondaryWeapon?.name ?? <span className="text-parchment-600">None</span>}
                           </span>
                           {secondaryWeapon && (
-                            <span className="text-xs text-[#b9baa3]/50 ml-1 sm:ml-2 block sm:inline">
+                            <span className="text-xs text-parchment-500 ml-1 sm:ml-2 block sm:inline">
                               {secondaryWeapon.damageDie} · {secondaryWeapon.range}
                             </span>
                           )}
@@ -1211,11 +1306,11 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                       const armor = TIER1_ARMOR.find((a) => a.id === armorId);
                       return armor ? (
                         <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
-                          <p className="text-xs uppercase tracking-wider text-[#b9baa3]/50 font-medium mb-1">
+                          <p className="text-xs uppercase tracking-wider text-parchment-500 font-medium mb-1">
                             Armor
                           </p>
                           <p className="text-lg font-semibold text-[#f7f7ff]">{armor.name}</p>
-                          <p className="text-sm text-[#b9baa3]/50 mt-0.5">
+                          <p className="text-sm text-parchment-500 mt-0.5">
                             Score {armor.baseArmorScore} · Major {armor.baseMajorThreshold + 1}+ · Severe {armor.baseSevereThreshold + 1}+
                             {armor.featureType && ` · ${armor.featureType}`}
                           </p>
@@ -1225,7 +1320,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
 
                     {/* Starting Equipment */}
                     <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
-                      <p className="text-xs uppercase tracking-wider text-[#b9baa3]/50 font-medium mb-3">
+                      <p className="text-xs uppercase tracking-wider text-parchment-500 font-medium mb-3">
                         Starting Equipment
                       </p>
                       <div className="space-y-1.5">
@@ -1250,14 +1345,31 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                       </div>
                     </div>
 
+                     {/* Experiences */}
+                     {experiences.some((e) => e.name.trim()) && (
+                       <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
+                         <p className="text-xs uppercase tracking-wider text-parchment-500 font-medium mb-3">
+                           Experiences
+                         </p>
+                         <div className="space-y-1.5">
+                           {experiences.filter((e) => e.name.trim()).map((exp, i) => (
+                             <div key={i} className="flex items-center justify-between">
+                               <span className="text-sm text-[#f7f7ff]">{exp.name}</span>
+                               <span className="text-sm font-semibold text-[#577399]">+{exp.bonus}</span>
+                             </div>
+                           ))}
+                         </div>
+                       </div>
+                     )}
+
                      {/* Domain Cards */}
                      {(isLockedDomainStep || selectedDomainCardIds.length > 0) && (
                        <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
-                         <p className="text-xs uppercase tracking-wider text-[#b9baa3]/50 font-medium mb-3">
+                         <p className="text-xs uppercase tracking-wider text-parchment-500 font-medium mb-3">
                            Domain Cards {isLockedDomainStep ? "(managed via level-up)" : `(${selectedDomainCardIds.length}/2)`}
                          </p>
                          {isLockedDomainStep ? (
-                           <p className="text-sm text-[#b9baa3]/50 italic">
+                           <p className="text-sm text-parchment-500">
                              {(character?.domainVault ?? character?.domainLoadout ?? []).length} cards in vault — not modified here.
                            </p>
                          ) : (
@@ -1327,7 +1439,14 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                     : null,
                 },
                 {
-                  num: 8, name: "Domain Cards",
+                  num: 8, name: "Experiences",
+                  done: experiences.length >= 2 && experiences.every((e) => e.name.trim().length > 0), locked: false,
+                  summary: experiences.filter((e) => e.name.trim()).length > 0
+                    ? experiences.filter((e) => e.name.trim()).map((e) => e.name).join(" · ")
+                    : null,
+                },
+                {
+                  num: 9, name: "Domain Cards",
                   done: isLockedDomainStep || selectedDomainCardIds.length === 2, locked: false,
                   summary: isLockedDomainStep
                     ? "Via level-up wizard"
@@ -1336,14 +1455,14 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                       : null,
                 },
                 {
-                  num: 9, name: "Review & Save",
+                  num: 10, name: "Review & Save",
                   done: false, locked: false,
                   summary: null,
                 },
               ];
               return (
                 <div className="hidden md:flex flex-col w-44 shrink-0 border-l border-slate-700/40 overflow-y-auto py-3">
-                  <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-[#b9baa3]/30">
+                  <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-parchment-600">
                     Steps
                   </p>
                   {steps.map((s) => (
@@ -1351,7 +1470,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                       key={s.num}
                       type="button"
                       disabled={s.locked}
-                      onClick={() => !s.locked && setStep(s.num as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9)}
+                      onClick={() => !s.locked && setStep(s.num as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10)}
                       aria-current={step === s.num ? "step" : undefined}
                       className={`
                         w-full text-left px-3 py-2 transition-colors rounded-none
@@ -1364,7 +1483,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                       `}
                     >
                       <div className="flex items-center gap-1.5">
-                        <span className={`text-xs shrink-0 ${s.done || s.locked ? "text-[#577399]" : "text-[#b9baa3]/25"}`}>
+                        <span className={`text-xs shrink-0 ${s.done || s.locked ? "text-[#577399]" : "text-parchment-600"}`}>
                           {s.done || s.locked ? "✓" : `${s.num}.`}
                         </span>
                         <span className={`text-xs font-medium truncate ${step === s.num ? "text-[#f7f7ff]" : "text-[#b9baa3]/60"}`}>
@@ -1372,7 +1491,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                         </span>
                       </div>
                       {s.summary && (
-                        <p className="text-xs text-[#b9baa3]/35 truncate pl-4 mt-0.5 leading-tight">
+                        <p className="text-xs text-parchment-600 truncate pl-4 mt-0.5 leading-tight">
                           {s.summary}
                         </p>
                       )}
@@ -1390,7 +1509,7 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                  if (step === activeSteps[0]) {
                    router.push(`/character/${characterId}`);
                  } else {
-                   setStep(prevActiveStep(step) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9);
+                   setStep(prevActiveStep(step) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10);
                  }
                }}
                className="
@@ -1407,17 +1526,18 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                {step !== activeSteps[activeSteps.length - 1] && (
                  <button
                    type="button"
-                   onClick={() => setStep(nextActiveStep(step) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9)}
-                   disabled={
-                     (step === 1 && !canGoNext1) ||
-                     (step === 2 && !canGoNext2) ||
-                     (step === 3 && !canGoNext3) ||
-                     (step === 4 && !canGoNext4) ||
-                     (step === 5 && !canGoNext5) ||
-                     (step === 6 && !canGoNext6) ||
-                     (step === 7 && !canGoNext7) ||
-                     (step === 8 && !canGoNext8)
-                   }
+                    onClick={() => setStep(nextActiveStep(step) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10)}
+                    disabled={
+                      (step === 1 && !canGoNext1) ||
+                      (step === 2 && !canGoNext2) ||
+                      (step === 3 && !canGoNext3) ||
+                      (step === 4 && !canGoNext4) ||
+                      (step === 5 && !canGoNext5) ||
+                      (step === 6 && !canGoNext6) ||
+                      (step === 7 && !canGoNext7) ||
+                      (step === 8 && !canGoNext8) ||
+                      (step === 9 && !canGoNext9)
+                    }
                     className="
                        rounded-lg px-6 py-3 font-semibold text-base min-h-[44px]
                       bg-[#577399] text-[#f7f7ff]

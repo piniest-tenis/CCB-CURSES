@@ -106,7 +106,8 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
       });
   }, [isReady, isAuthenticated, setUser]);
 
-  const showCTA = usePatreonCTAVisible() && !isObs && !isAuthPage;
+  const isDashboard = pathname === "/dashboard";
+  const showCTA = usePatreonCTAVisible() && isDashboard;
 
   return (
     <>
@@ -114,7 +115,7 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
       <div className={showCTA ? "pb-12" : ""}>
         {children}
       </div>
-      {!isObs && !isAuthPage && <PatreonCTA />}
+      {isDashboard && <PatreonCTA />}
       {!isObs && (
         <LoadingInterstitial isVisible={!isReady} />
       )}

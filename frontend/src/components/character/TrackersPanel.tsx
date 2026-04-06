@@ -465,7 +465,7 @@ function DamageCalculatorSidebar({
               </span>
               <span className="text-parchment-500">Severe</span>
             </div>
-            <p className="text-sm sidebar-text-secondary italic">
+            <p className="text-sm sidebar-text-secondary">
               Damage ≥ {severe} = Severe · ≥ {major} = Major · &lt; {major} =
               Minor (SRD p. 20)
             </p>
@@ -602,7 +602,7 @@ function DamageCalculatorSidebar({
           )}
 
           {!validDamage && !damage && (
-            <p className="text-center text-sm sidebar-text-secondary italic">
+            <p className="text-center text-sm sidebar-text-secondary">
               Enter a damage amount above to see the result.
             </p>
           )}
@@ -729,7 +729,7 @@ function DamageThresholdBar({
 
           <span
             aria-hidden="true"
-            className="mx-2 text-steel-400/40 select-none font-light"
+            className="mx-2 text-steel-accessible/40 select-none font-light"
           >
             |
           </span>
@@ -754,7 +754,7 @@ function DamageThresholdBar({
 
           <span
             aria-hidden="true"
-            className="mx-2 text-steel-400/40 select-none font-light"
+            className="mx-2 text-steel-accessible/40 select-none font-light"
           >
             |
           </span>
@@ -974,7 +974,7 @@ function WeaponSidebar({ open, onClose, slot }: WeaponSidebarProps) {
           </div>
 
           {inventoryWeaponOptions.length === 0 ? (
-            <p className="text-sm text-[#b9baa3]/60 italic text-center pt-4">
+            <p className="text-sm text-parchment-500 text-center pt-4">
               No weapons found in inventory. Add weapons via the Equipment panel
               first.
             </p>
@@ -1030,7 +1030,7 @@ function WeaponSidebar({ open, onClose, slot }: WeaponSidebarProps) {
                           )}
                         </div>
                         {isSelected && (
-                          <span className="text-xs font-bold text-steel-400 uppercase tracking-wider mt-0.5 shrink-0">
+                          <span className="text-xs font-bold text-steel-accessible uppercase tracking-wider mt-0.5 shrink-0">
                             Equipped
                           </span>
                         )}
@@ -1199,7 +1199,7 @@ function WeaponCard({ slot, onRollQueued }: WeaponCardProps) {
       <div className="rounded-lg border border-steel-400/20 bg-slate-850 shadow-card overflow-hidden">
         {/* Slot label + roll buttons */}
         <div className="px-3 pt-2 pb-1 border-b border-steel-400/20 flex items-center justify-between gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-steel-400">
+          <span className="text-xs font-semibold uppercase tracking-wider text-steel-accessible">
             {slot === "primary" ? "Primary Weapon" : "Secondary Weapon"}
           </span>
           <div className="flex items-center gap-1">
@@ -1260,7 +1260,7 @@ function WeaponCard({ slot, onRollQueued }: WeaponCardProps) {
             </>
           ) : (
             <>
-              <p className="text-sm text-parchment-500 italic font-normal">
+              <p className="text-sm text-parchment-500 font-medium font-normal">
                 No weapon selected…
               </p>
               <p className="mt-1 text-xs text-parchment-500 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1426,7 +1426,7 @@ function ArmorSidebar({
           </div>
 
           {inventoryArmorOptions.length === 0 ? (
-            <p className="text-sm text-[#b9baa3]/60 italic text-center pt-4">
+            <p className="text-sm text-parchment-500 text-center pt-4">
               No armor found in your inventory. Add armor via the Equipment
               panel first.
             </p>
@@ -1473,7 +1473,7 @@ function ArmorSidebar({
                           )}
                         </div>
                         {isActive && (
-                          <span className="text-xs font-bold text-steel-400 uppercase tracking-wider mt-0.5 shrink-0">
+                          <span className="text-xs font-bold text-steel-accessible uppercase tracking-wider mt-0.5 shrink-0">
                             Active
                           </span>
                         )}
@@ -1534,7 +1534,7 @@ function ArmorCard() {
       <div className="rounded-lg border border-steel-400/20 bg-slate-850 shadow-card overflow-hidden">
         {/* Slot label */}
         <div className="px-3 pt-2 pb-1 border-b border-steel-400/20">
-          <span className="text-xs font-semibold uppercase tracking-wider text-steel-400">
+          <span className="text-xs font-semibold uppercase tracking-wider text-steel-accessible">
             Armor
           </span>
         </div>
@@ -1577,7 +1577,7 @@ function ArmorCard() {
             </>
           ) : (
             <>
-              <p className="text-sm text-parchment-500 italic font-normal">
+              <p className="text-sm text-parchment-500 font-medium font-normal">
                 No armor selected…
               </p>
               <p className="mt-1 text-xs text-parchment-500 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1685,7 +1685,7 @@ function HopeTrackerInner({
                    ${
                      filled
                        ? "bg-[#DAA520] border-[#DAA520] text-[#f7f7ff] shadow-lg"
-                       : "border-amber-400/30 bg-transparent text-steel-400/40"
+                       : "border-amber-400/30 bg-transparent text-steel-accessible/40"
                    }
                 `}
               >
@@ -1702,7 +1702,7 @@ function HopeTrackerInner({
           aria-label="Gain 1 Hope"
           className="
             h-9 w-9 rounded border border-steel-400/40 bg-slate-900
-            text-sm text-steel-400 hover:bg-steel-400/20 hover:text-[#f7f7ff]
+            text-sm text-steel-accessible hover:bg-steel-400/20 hover:text-[#f7f7ff]
             disabled:opacity-50 disabled:cursor-wait
             transition-colors flex items-center justify-center
             focus:outline-none focus:ring-2 focus:ring-steel-400
@@ -1790,7 +1790,7 @@ function IncrementControls({
         aria-label={ariaLabel ? `Increase ${ariaLabel}` : "Increase"}
         className="
           h-9 w-9 rounded border border-steel-400/40 bg-slate-900
-          text-xs text-steel-400 hover:bg-steel-400/20 hover:text-[#f7f7ff]
+          text-xs text-steel-accessible hover:bg-steel-400/20 hover:text-[#f7f7ff]
           disabled:opacity-25 disabled:cursor-not-allowed
           transition-colors flex items-center justify-center leading-none select-none
           focus:outline-none focus:ring-2 focus:ring-steel-400
@@ -1811,6 +1811,10 @@ function ExperiencesList() {
 
   const { experiences } = activeCharacter;
 
+  const addExperience = () => {
+    updateField("experiences", [...experiences, { name: "", bonus: 2 }]);
+  };
+
   const removeExperience = (index: number) => {
     updateField(
       "experiences",
@@ -1829,12 +1833,22 @@ function ExperiencesList() {
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-xs font-semibold uppercase tracking-wider text-parchment-400">
-        Experiences
-      </span>
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold uppercase tracking-wider text-parchment-400">
+          Experiences
+        </span>
+        <button
+          type="button"
+          onClick={addExperience}
+          aria-label="Add experience"
+          className="h-7 px-2 flex items-center gap-1 rounded text-xs font-medium text-[#577399] hover:bg-[#577399]/15 transition-colors focus:outline-none focus:ring-2 focus:ring-[#577399]"
+        >
+          <span aria-hidden="true">+</span> Add
+        </button>
+      </div>
 
       {experiences.length === 0 && (
-        <p className="text-sm text-parchment-500 italic">No experiences yet.</p>
+        <p className="text-sm text-parchment-500">No experiences yet.</p>
       )}
 
       {experiences.map((exp, i) => (
@@ -1867,7 +1881,7 @@ function ExperiencesList() {
             type="button"
             onClick={() => removeExperience(i)}
             aria-label={`Remove experience: ${exp.name || `#${i + 1}`}`}
-            className="h-9 w-9 flex items-center justify-center rounded text-steel-400/60 hover:text-[#fe5f55] hover:bg-[#fe5f55]/10 transition-colors text-xs leading-none focus:outline-none focus:ring-2 focus:ring-steel-400"
+            className="h-9 w-9 flex items-center justify-center rounded text-steel-accessible/60 hover:text-[#fe5f55] hover:bg-[#fe5f55]/10 transition-colors text-xs leading-none focus:outline-none focus:ring-2 focus:ring-steel-400"
           >
             ✕
           </button>
@@ -2107,7 +2121,7 @@ export function TrackersPanel({ onRollQueued }: TrackersPanelProps) {
                   Stress
                 </span>
                 <span
-                  className={`text-2xl font-bold tabular-nums leading-none ${stressDanger ? "text-steel-400" : "text-[#f7f7ff]"}`}
+                  className={`text-2xl font-bold tabular-nums leading-none ${stressDanger ? "text-steel-accessible" : "text-[#f7f7ff]"}`}
                 >
                   {stressMarked}/{stressMax}
                 </span>
@@ -2169,7 +2183,7 @@ export function TrackersPanel({ onRollQueued }: TrackersPanelProps) {
         })()}
 
         {/* Slot legend */}
-        <p className="text-[12px] text-parchment-600 italic">
+        <p className="text-[12px] text-parchment-500 font-medium">
           Filled circles = damage taken / slots used
         </p>
 
@@ -2347,7 +2361,7 @@ export function TrackersPanel({ onRollQueued }: TrackersPanelProps) {
                 className="h-12 w-12 rounded-lg border-2 border-steel-400/50 bg-slate-800 flex items-center justify-center shadow-inner"
                 aria-label={`Proficiency: ${activeCharacter.proficiency ?? 1}`}
               >
-                <span className="text-2xl font-bold text-steel-400 tabular-nums">
+                <span className="text-2xl font-bold text-steel-accessible tabular-nums">
                   {activeCharacter.proficiency ?? 1}
                 </span>
               </div>
@@ -2356,7 +2370,7 @@ export function TrackersPanel({ onRollQueued }: TrackersPanelProps) {
                   Proficiency
                 </span>
                 <p
-                  className="text-sm text-parchment-500 italic"
+                  className="text-sm text-parchment-500"
                   title="Proficiency increases at levels 2, 5, and 8 (SRD p. 22)"
                 >
                   Increases at levels 2, 5, 8

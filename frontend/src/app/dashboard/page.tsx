@@ -18,8 +18,6 @@
  */
 
 import React, { useState, useMemo } from "react";
-import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuthStore } from "@/store/authStore";
@@ -31,6 +29,7 @@ import {
 import { useCampaigns } from "@/hooks/useCampaigns";
 import type { CharacterSummary, CampaignSummary } from "@shared/types";
 
+import { AppHeader } from "@/components/AppHeader";
 import { CharacterCard } from "@/components/dashboard/CharacterCard";
 import {
   CharacterSearchSortBar,
@@ -123,7 +122,7 @@ function CreateCharacterModal({ onClose, defaultName }: CreateModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="text-[#b9baa3]/40 hover:text-[#b9baa3] text-2xl leading-none transition-colors ml-4 focus:outline-none focus:ring-2 focus:ring-[#577399] rounded"
+            className="text-parchment-600 hover:text-parchment-400 text-2xl leading-none transition-colors ml-4 focus:outline-none focus:ring-2 focus:ring-[#577399] rounded"
             aria-label="Close"
           >
             ×
@@ -131,7 +130,7 @@ function CreateCharacterModal({ onClose, defaultName }: CreateModalProps) {
         </div>
 
         <div className="px-6 py-6 space-y-4">
-          <p className="text-base text-[#b9baa3]/60 leading-relaxed">
+          <p className="text-base text-parchment-500 leading-relaxed">
             Ready to create a new character? You&apos;ll choose your class,
             heritage, equipment, and name in the builder.
           </p>
@@ -152,7 +151,7 @@ function CreateCharacterModal({ onClose, defaultName }: CreateModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-4 py-2.5 text-base font-medium border border-slate-700/60 text-[#b9baa3]/60 hover:border-slate-600 hover:text-[#b9baa3] transition-colors"
+            className="rounded-lg px-4 py-2.5 text-base font-medium border border-slate-700/60 text-parchment-500 hover:border-slate-600 hover:text-parchment-400 transition-colors"
           >
             Cancel
           </button>
@@ -257,56 +256,7 @@ export default function DashboardPage() {
   return (
     <div className="flex min-h-screen flex-col bg-[#0a100d] relative">
       {/* ── Top bar ─────────────────────────────────────────────────────── */}
-      <header
-        className="border-b border-slate-800/60 sticky top-0 z-10 backdrop-blur-sm"
-        style={{ backgroundColor: "rgba(10,16,13,0.90)" }}
-      >
-        <div className="mx-auto flex max-w-[1200px] items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-6">
-            <Link href="/dashboard" aria-label="Curses! — Dashboard">
-              <Image
-                src="/images/curses-isolated-logo.png"
-                alt="Curses!"
-                width={140}
-                height={40}
-                className="object-contain"
-                priority
-              />
-            </Link>
-            <nav aria-label="Main navigation">
-              <Link
-                href="/campaigns"
-                className="
-                  rounded-lg border border-[#577399]/40 bg-[#577399]/10
-                  px-3 py-1.5 text-sm font-semibold text-[#577399]
-                  hover:bg-[#577399]/20 hover:border-[#577399]
-                  transition-colors
-                  focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2 focus:ring-offset-slate-900
-                "
-              >
-                Campaigns
-              </Link>
-            </nav>
-          </div>
-
-          {user && (
-            <div className="flex items-center gap-3">
-              <span className="hidden sm:block text-sm text-[#b9baa3]/50 truncate max-w-[160px]">
-                {user.displayName || user.email}
-              </span>
-              <button
-                type="button"
-                onClick={() =>
-                  signOut().then(() => router.replace("/auth/login"))
-                }
-                className="rounded px-2.5 py-1 text-xs font-medium text-[#b9baa3]/50 border border-slate-700/60 hover:text-[#f7f7ff] hover:border-slate-600 transition-colors"
-              >
-                Sign out
-              </button>
-            </div>
-          )}
-        </div>
-      </header>
+      <AppHeader />
 
       {/* ── Page body ───────────────────────────────────────────────────── */}
       <div
@@ -331,7 +281,7 @@ export default function DashboardPage() {
                     Your Characters
                   </h1>
                   {!isLoading && (
-                    <p className="mt-1 text-sm text-[#b9baa3]/40">
+                    <p className="mt-1 text-sm text-parchment-600">
                       {hasUnlimitedCharacters
                         ? `${characterCount} character${characterCount !== 1 ? "s" : ""}`
                         : `${characterCount} / ${FREE_CHARACTER_LIMIT} characters`}
@@ -341,7 +291,7 @@ export default function DashboardPage() {
                 {/* Desktop CTA */}
                 {atCharacterLimit ? (
                   <div className="hidden sm:flex flex-col items-end gap-1.5 shrink-0">
-                    <span className="text-xs text-[#b9baa3]/40">
+                    <span className="text-xs text-parchment-600">
                       Character limit reached
                     </span>
                     <button
@@ -429,7 +379,7 @@ export default function DashboardPage() {
                     <p className="font-serif text-xl text-[#f7f7ff]/70">
                       No characters yet
                     </p>
-                    <p className="text-base text-[#b9baa3]/40 max-w-xs mx-auto leading-relaxed">
+                    <p className="text-base text-parchment-600 max-w-xs mx-auto leading-relaxed">
                       Create your first Daggerheart character and begin your
                       adventure.
                     </p>
@@ -457,7 +407,7 @@ export default function DashboardPage() {
                 characterCount > 0 &&
                 filteredAndSorted.length === 0 && (
                   <div className="rounded-xl border border-slate-700/40 bg-slate-900/40 p-8 text-center space-y-3">
-                    <p className="text-[#b9baa3]/50">
+                    <p className="text-parchment-500">
                       No characters matching &ldquo;{searchSort.query}&rdquo;
                     </p>
                     <button

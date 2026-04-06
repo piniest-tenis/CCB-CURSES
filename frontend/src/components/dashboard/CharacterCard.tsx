@@ -104,12 +104,12 @@ export function CharacterCard({
             {character.name}
           </h3>
           {subtitle && (
-            <p className="text-xs text-[#b9baa3]/70 truncate">{subtitle}</p>
+            <p className="text-xs text-parchment-500 truncate">{subtitle}</p>
           )}
           {meta && (
-            <p className="text-xs text-[#b9baa3]/40 mt-0.5 truncate">{meta}</p>
+            <p className="text-xs text-parchment-600 mt-0.5 truncate">{meta}</p>
           )}
-          <p className="text-xs text-[#b9baa3]/30 mt-0.5">
+          <p className="text-xs text-parchment-600 mt-0.5">
             {relativeDate(character.updatedAt)}
           </p>
         </div>
@@ -163,7 +163,7 @@ export function CharacterCard({
                 aria-label="Cancel delete"
                 className="
                   rounded-lg px-2 py-2 text-xs
-                  bg-slate-800 text-[#b9baa3]/60 hover:bg-slate-700
+                  bg-slate-800 text-parchment-500 hover:bg-slate-700
                   transition-colors
                   focus:outline-none focus:ring-2 focus:ring-slate-500
                 "
@@ -176,7 +176,7 @@ export function CharacterCard({
               onClick={() => setConfirmDelete(true)}
               className="
                 rounded-lg px-3 py-2 text-xs
-                border border-slate-700 text-[#b9baa3]/40
+                border border-slate-700 text-parchment-600
                 hover:border-[#fe5f55]/50 hover:text-[#fe5f55]/70
                 transition-colors
                 focus:outline-none focus:ring-2 focus:ring-[#fe5f55]/50

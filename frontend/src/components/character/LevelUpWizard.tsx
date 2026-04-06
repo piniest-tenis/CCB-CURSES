@@ -965,25 +965,25 @@ function LevelUpCardDetail({
             <span className="text-xs uppercase tracking-wider text-parchment-500">
               {card.domain}
             </span>
-            <span className="text-parchment-700" aria-hidden="true">·</span>
+            <span className="text-parchment-600" aria-hidden="true">·</span>
             <span className="text-xs uppercase tracking-wider text-parchment-500">
               Level {card.level}
             </span>
             {card.isGrimoire && (
               <>
-                <span className="text-parchment-700" aria-hidden="true">·</span>
+                <span className="text-parchment-600" aria-hidden="true">·</span>
                 <span className="text-xs uppercase tracking-wider text-[#daa520]">Grimoire</span>
               </>
             )}
             {card.isCursed && (
               <>
-                <span className="text-parchment-700" aria-hidden="true">·</span>
+                <span className="text-parchment-600" aria-hidden="true">·</span>
                 <span className="text-xs uppercase tracking-wider text-[#fe5f55]">Cursed</span>
               </>
             )}
             {card.isLinkedCurse && (
               <>
-                <span className="text-parchment-700" aria-hidden="true">·</span>
+                <span className="text-parchment-600" aria-hidden="true">·</span>
                 <span className="text-xs uppercase tracking-wider text-[#fe5f55]">Linked Curse</span>
               </>
             )}
@@ -1124,7 +1124,7 @@ function LevelUpCardRow({
           </div>
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-xs text-parchment-500">Lvl {card.level}</span>
-            <span className="text-parchment-700 text-xs" aria-hidden="true">·</span>
+            <span className="text-parchment-600 text-xs" aria-hidden="true">·</span>
             <span className="text-xs text-parchment-500 truncate">
               {truncateCardText(card.isGrimoire
                 ? (card.grimoire[0]?.description ?? card.description)
@@ -1244,7 +1244,7 @@ function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardI
         <h3 className="text-sm font-semibold text-parchment-200">
           Acquire Domain Card
         </h3>
-        <p className="text-sm text-parchment-600 italic">
+        <p className="text-sm text-parchment-500">
           No domains assigned. This character&apos;s class may not have domains configured.
         </p>
       </div>
@@ -1323,7 +1323,7 @@ function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardI
           <span className="text-sm text-parchment-500">Loading domain cards...</span>
         </div>
       ) : availableCards.length === 0 ? (
-        <p className="text-sm text-parchment-600 italic">
+        <p className="text-sm text-parchment-500">
           No new cards available at this level. You may proceed without selecting a card.
         </p>
       ) : (
@@ -1603,26 +1603,32 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
                         <span className="text-[#b9baa3]">Proficiency (Tier Achievement)</span>
                       </li>
                       <li className="flex flex-col gap-1 pt-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[#577399] text-xs font-bold">+1</span>
-                          <span className="text-[#b9baa3]">New Experience at +2 (Tier Achievement)</span>
+                        <div className="rounded-lg border border-[#daa520]/30 bg-[#daa520]/5 p-3 mt-1 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[#daa520] text-xs font-bold">★</span>
+                            <span className="text-sm font-semibold text-[#f7f7ff]">New Experience at +2</span>
+                            <span className="text-xs text-parchment-500">(Tier Achievement)</span>
+                          </div>
+                          <p className="text-xs text-[#b9baa3]/70 leading-relaxed">
+                            Name a new experience that reflects your character's growth. Spend 1 Hope to add its bonus to a relevant roll.
+                          </p>
+                          <input
+                            type="text"
+                            value={tierAchievementExperienceName}
+                            onChange={(e) => setTierAchievementExperienceName(e.target.value)}
+                            placeholder='e.g. "Battle-hardened" or "Arcane Scholar"'
+                            maxLength={60}
+                            aria-label="Name for new Tier Achievement experience"
+                            className="
+                              w-full rounded-lg bg-slate-900 px-3 py-2 text-sm text-parchment-200
+                              border border-[#daa520]/30 focus:outline-none focus:ring-2 focus:ring-[#daa520]/50 focus:border-[#daa520]/50
+                              placeholder:text-parchment-600
+                            "
+                          />
+                          <p className="text-xs text-parchment-500">
+                            Leave blank to name it later from your character sheet.
+                          </p>
                         </div>
-                        <input
-                          type="text"
-                          value={tierAchievementExperienceName}
-                          onChange={(e) => setTierAchievementExperienceName(e.target.value)}
-                          placeholder="Name your new experience (optional)"
-                          maxLength={60}
-                          aria-label="Name for new Tier Achievement experience"
-                          className="
-                            mt-1 w-full rounded bg-slate-900 px-2 py-1.5 text-sm text-parchment-200
-                            border border-[#577399]/40 focus:outline-none focus:ring-1 focus:ring-[#577399]
-                            placeholder:text-parchment-700
-                          "
-                        />
-                        <p className="text-xs text-parchment-600 italic">
-                          Leave blank to name it later via character edit.
-                        </p>
                       </li>
                     </>
                   )}
@@ -1644,7 +1650,7 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
                       . These stats keep their bonuses but are no longer marked, allowing them to be chosen again in future tiers.
                     </p>
                   ) : (
-                    <p className="text-sm text-parchment-500 italic">
+                    <p className="text-sm text-parchment-500">
                       No traits are currently marked. This tier achievement will have no effect on traits.
                     </p>
                   )}
@@ -1652,7 +1658,7 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
               )}
 
               {/* Domain card mandatory notice */}
-              <div className="mt-2 text-sm text-parchment-500 italic">
+              <div className="mt-2 text-sm text-parchment-500">
                 You will be required to select a domain card in step 3.
               </div>
             </div>
@@ -1839,7 +1845,7 @@ function ConfirmStep({
               +1 Experience at +2:{" "}
               {tierAchievementExperienceName.trim()
                 ? <span className="font-semibold text-[#f7f7ff]">&ldquo;{tierAchievementExperienceName.trim()}&rdquo;</span>
-                : <span className="italic text-parchment-600">unnamed (fill in later)</span>
+                : <span className="font-medium text-parchment-500">unnamed (fill in later)</span>
               }
             </p>
           </div>
@@ -1857,7 +1863,7 @@ function ConfirmStep({
             Advancements ({slotsUsed}/2 slots)
           </p>
           {advancements.length === 0 ? (
-            <p className="text-sm text-parchment-600 italic">None selected</p>
+            <p className="text-sm text-parchment-500">None selected</p>
           ) : (
             <ul className="space-y-1">
               {advancements.map((adv, i) => {
@@ -1879,7 +1885,7 @@ function ConfirmStep({
             New Domain Card{selectedDomainCardIds.length > 1 ? "s" : ""}
           </p>
           {selectedDomainCardIds.length === 0 ? (
-            <p className="text-sm text-parchment-500 italic">None (no cards available)</p>
+            <p className="text-sm text-parchment-500">None (no cards available)</p>
           ) : (
             <ul className="space-y-0.5">
               {selectedDomainCardIds.map((id, i) => (

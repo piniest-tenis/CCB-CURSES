@@ -26,7 +26,7 @@ function getActiveClasses(value: SourceFilterValue): string {
     case "all":
       return "bg-slate-700 text-slate-100 shadow-sm";
     case "srd":
-      return "bg-steel-400/20 text-steel-400 shadow-sm";
+      return "bg-steel-400/20 text-steel-accessible shadow-sm";
     case "homebrew":
       return "bg-coral-400/20 text-coral-400 shadow-sm";
   }
@@ -76,7 +76,7 @@ export function SourceFilter({
             className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
               isActive
                 ? getActiveClasses(seg.value)
-                : "text-slate-400 hover:text-slate-300"
+                : "text-parchment-500 hover:text-parchment-400"
             }`}
           >
             {seg.label}

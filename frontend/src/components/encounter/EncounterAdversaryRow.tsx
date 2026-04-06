@@ -110,7 +110,7 @@ export function EncounterAdversaryRow({
                   <span className="ml-1 text-[#DAA520]">{instance.label}</span>
                 )}
               </h3>
-              <span className="text-[11px] text-[#b9baa3]/50">
+              <span className="text-[11px] text-parchment-500">
                 {tier != null && `T${tier} · `}
                 {adversaryType && `${adversaryType} · `}
                 Diff {instance.difficulty}
@@ -121,9 +121,9 @@ export function EncounterAdversaryRow({
             <div className="mt-2 space-y-1.5">
               {/* HP */}
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#fe5f55]/70 w-10 shrink-0">
-                  HP
-                </span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#fe5f55] w-10 shrink-0">
+                   HP
+                 </span>
                 <div
                   className="flex-1 flex items-center gap-0.5"
                   role="group"
@@ -163,9 +163,9 @@ export function EncounterAdversaryRow({
 
               {/* Stress */}
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#577399]/70 w-10 shrink-0">
-                  Stress
-                </span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-steel-accessible w-10 shrink-0">
+                   Stress
+                 </span>
                 <div
                   className="flex-1 flex items-center gap-0.5"
                   role="group"
@@ -206,7 +206,7 @@ export function EncounterAdversaryRow({
 
             {/* Thresholds — inline, color-coded */}
             <div className="mt-1.5 flex items-center gap-2 text-[11px]">
-              <span className="text-[#b9baa3]/40 uppercase tracking-wider font-semibold">
+              <span className="text-parchment-600 uppercase tracking-wider font-semibold">
                 Thresholds
               </span>
               {instance.damageThresholds.major !== null ? (
@@ -214,13 +214,13 @@ export function EncounterAdversaryRow({
                   <span className="text-[#DAA520] font-medium">
                     {instance.damageThresholds.major}
                   </span>
-                  <span className="text-[#b9baa3]/20">/</span>
+                  <span className="text-parchment-600">/</span>
                   <span className="text-[#fe5f55] font-medium">
                     {instance.damageThresholds.severe}
                   </span>
                 </>
               ) : (
-                <span className="text-[#b9baa3]/40 italic">None (Minion)</span>
+                <span className="text-parchment-600">None (Minion)</span>
               )}
             </div>
           </div>
@@ -250,7 +250,7 @@ export function EncounterAdversaryRow({
             className="
               inline-flex items-center gap-1.5 rounded-lg border
               px-2.5 py-1.5 text-xs font-semibold transition-all duration-150
-              border-[#fe5f55]/30 bg-[#fe5f55]/5 text-[#fe5f55]/70
+              border-[#fe5f55]/30 bg-[#fe5f55]/5 text-[#fe5f55]
               hover:bg-[#fe5f55]/10 hover:border-[#fe5f55]/50 hover:text-[#fe5f55]
               focus:outline-none focus:ring-2 focus:ring-[#fe5f55]
             "
@@ -263,7 +263,7 @@ export function EncounterAdversaryRow({
 
           {/* Quick damage buttons */}
           <div className="flex items-center gap-1 border-l border-slate-800/60 pl-2 ml-1">
-            <span className="text-[10px] text-[#b9baa3]/40 uppercase tracking-wider mr-1">
+            <span className="text-[11px] text-parchment-600 uppercase tracking-wider mr-1">
               Mark
             </span>
             <button
@@ -330,7 +330,7 @@ export function EncounterAdversaryRow({
               title="Mark as defeated"
               className="
                 rounded-lg px-2 py-1 text-xs
-                text-[#fe5f55]/50 hover:text-[#fe5f55] hover:bg-[#fe5f55]/10
+                text-[#fe5f55]/70 hover:text-[#fe5f55] hover:bg-[#fe5f55]/10
                 transition-colors
                 focus:outline-none focus:ring-1 focus:ring-[#fe5f55]
               "
@@ -351,7 +351,7 @@ export function EncounterAdversaryRow({
               animate-slide-in-left
             "
           >
-            <span className="text-[11px] text-[#b9baa3]/50 uppercase tracking-wider shrink-0">
+            <span className="text-[11px] text-parchment-500 uppercase tracking-wider shrink-0">
               {lastRoll.label.includes("Attack") ? "Atk" : "Dmg"}
             </span>
             <span
@@ -367,7 +367,7 @@ export function EncounterAdversaryRow({
                 Crit
               </span>
             )}
-            <span className="text-[11px] text-[#b9baa3]/50 font-mono">
+            <span className="text-[11px] text-parchment-500 font-mono">
               ({lastRoll.diceValues.join(" + ")}
               {lastRoll.modifier !== 0 &&
                 ` ${lastRoll.modifier > 0 ? "+" : ""}${lastRoll.modifier}`}
@@ -377,7 +377,7 @@ export function EncounterAdversaryRow({
               type="button"
               onClick={() => setLastRoll(null)}
               aria-label="Dismiss roll result"
-              className="ml-auto text-[#b9baa3]/30 hover:text-[#b9baa3] transition-colors"
+              className="ml-auto text-parchment-600 hover:text-[#b9baa3] transition-colors"
             >
               ✕
             </button>

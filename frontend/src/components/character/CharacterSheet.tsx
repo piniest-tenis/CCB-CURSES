@@ -782,7 +782,7 @@ function SheetHeader({
             viewBox="0 0 20 20"
             fill="currentColor"
             className={[
-              "w-3.5 h-3.5 shrink-0 text-steel-400 transition-transform duration-150",
+              "w-3.5 h-3.5 shrink-0 text-steel-accessible transition-transform duration-150",
               diceColorsOpen ? "rotate-90" : "",
             ].join(" ")}
           >
@@ -895,9 +895,9 @@ function SheetHeader({
                 aria-hidden="true"
                 inert
               >
-                <p className="text-xs text-[#b9baa3]/40 mb-2">
+                <p className="text-xs text-parchment-600 mb-2">
                   Overrides your{" "}
-                  <span className="text-steel-400/70">default dice colors</span>{" "}
+                  <span className="text-steel-accessible">default dice colors</span>{" "}
                   for this character only. Changes save automatically.
                 </p>
                 <DiceColorEditor
@@ -1107,7 +1107,7 @@ function FeaturesPanel({
       {(classData.classFeatures?.length ?? 0) > 0 && (
         <div className="space-y-2" data-field-key="features.class">
           {classData.classFeatures.length > 1 && (
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-steel-400">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-steel-accessible">
               Class Features
             </h3>
           )}
@@ -1186,7 +1186,7 @@ function FeaturesPanel({
       {/* Subclass features */}
       {activeSubclass && (
         <div className="space-y-2" data-field-key="features.subclass">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-steel-400">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-steel-accessible">
             {activeSubclass.name} — Subclass Features
           </h3>
 
@@ -1288,7 +1288,7 @@ function FeaturesPanel({
       {multiclassData && (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-steel-400">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-steel-accessible">
               {multiclassData.name} — Multiclass Features
             </h3>
             <span className="rounded bg-steel-400/20 px-1.5 text-xs font-bold text-[#f7f7ff]">
@@ -1300,7 +1300,7 @@ function FeaturesPanel({
           {(multiclassData.classFeatures?.length ?? 0) > 0 && (
             <div className="space-y-2">
               {multiclassData.classFeatures.length > 1 && (
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-steel-400">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-steel-accessible">
                   Class Features
                 </h4>
               )}
@@ -1414,7 +1414,7 @@ function SaveStatus({ isDirty, isSaving }: SaveStatusProps) {
   }
   if (isDirty) {
     return (
-      <span role="status" aria-live="polite" className="text-xs text-steel-400">
+      <span role="status" aria-live="polite" className="text-xs text-steel-accessible">
         Unsaved changes
       </span>
     );
@@ -1686,7 +1686,7 @@ function CharacterSheetContent({
             "
           >
             {activeCharacter.notes ?? (
-              <span className="text-[#b9baa3]/50">
+              <span className="text-parchment-500">
                 Free-form notes, backstory, session reminders…
               </span>
             )}

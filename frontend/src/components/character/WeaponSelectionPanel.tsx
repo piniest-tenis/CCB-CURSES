@@ -161,15 +161,15 @@ export function WeaponSelectionPanel({
               className={`
                 flex-1 min-h-[44px] py-3 px-3 text-xs font-semibold uppercase tracking-wider transition-colors
                 ${activeSlot === slot
-                  ? "text-[#577399] border-b-2 border-[#577399]"
-                  : "text-[#b9baa3]/40 hover:text-[#b9baa3]/70 border-b-2 border-transparent"
+                  ? "text-steel-accessible border-b-2 border-[#577399]"
+                  : "text-parchment-600 hover:text-parchment-500 border-b-2 border-transparent"
                 }
                 ${disabled ? "opacity-50 cursor-not-allowed" : ""}
               `}
             >
               {slot === "primary" ? "Primary" : "Secondary"}
-              {weapon && <span className="ml-1.5 text-[#577399]">✓</span>}
-              {disabled && <span className="ml-1 text-[#b9baa3]/30 text-xs normal-case font-normal hidden sm:inline" aria-hidden="true">(2H)</span>}
+              {weapon && <span className="ml-1.5 text-steel-accessible">✓</span>}
+              {disabled && <span className="ml-1 text-parchment-600 text-xs normal-case font-normal hidden sm:inline" aria-hidden="true">(2H)</span>}
             </button>
           );
         })}
@@ -188,12 +188,12 @@ export function WeaponSelectionPanel({
           placeholder={`Filter ${categoryForSlot.toLowerCase()} weapons…`}
           className="
             w-full rounded px-3 py-2 bg-slate-900 border border-slate-700
-            text-base sm:text-sm text-[#f7f7ff] placeholder-[#b9baa3]/30
+            text-base sm:text-sm text-[#f7f7ff] placeholder-parchment-600
             focus:outline-none focus:ring-2 focus:ring-[#577399] focus:border-transparent
             transition-colors
           "
         />
-        <p className="text-xs text-[#b9baa3]/30 mt-1.5" aria-hidden="true">
+        <p className="text-xs text-parchment-600 mt-1.5" aria-hidden="true">
           Filter by name, trait, burden, range, damage type, or feature
         </p>
       </div>
@@ -202,7 +202,7 @@ export function WeaponSelectionPanel({
       <div className="flex-1 overflow-y-auto" ref={listRef}>
         {sorted.length === 0 ? (
           <div className="flex items-center justify-center h-32">
-            <p className="text-sm text-[#b9baa3]/40 italic">No weapons match your filter</p>
+            <p className="text-sm text-parchment-600">No weapons match your filter</p>
           </div>
         ) : (
           sorted.map((weapon) => {
@@ -251,16 +251,16 @@ export function WeaponSelectionPanel({
                     )}
                   </div>
                   <div className="flex flex-wrap gap-2 mt-1">
-                    <span className="text-xs text-[#b9baa3]/60">{weapon.trait}</span>
-                    <span className="text-xs text-[#b9baa3]/40">·</span>
-                    <span className="text-xs text-[#b9baa3]/60">{weapon.burden}</span>
-                    <span className="text-xs text-[#b9baa3]/40">·</span>
-                    <span className="text-xs text-[#b9baa3]/60">{weapon.range}</span>
-                    <span className="text-xs text-[#b9baa3]/40">·</span>
+                    <span className="text-xs text-parchment-500">{weapon.trait}</span>
+                    <span className="text-xs text-parchment-600">·</span>
+                    <span className="text-xs text-parchment-500">{weapon.burden}</span>
+                    <span className="text-xs text-parchment-600">·</span>
+                    <span className="text-xs text-parchment-500">{weapon.range}</span>
+                    <span className="text-xs text-parchment-600">·</span>
                     <span className="text-xs font-mono text-[#b9baa3]/80">{weapon.damageDie}</span>
                   </div>
                   {weapon.feature && (
-                    <p className="text-xs text-[#b9baa3]/50 mt-1 italic truncate">{weapon.feature}</p>
+                    <p className="text-xs text-parchment-500 mt-1 truncate">{weapon.feature}</p>
                   )}
                 </div>
 
@@ -272,7 +272,7 @@ export function WeaponSelectionPanel({
                   className="
                     self-stretch shrink-0 flex items-center justify-center
                     pl-3 pr-1 -mr-4 border-l border-slate-700/40
-                    text-[#b9baa3]/30 hover:text-[#b9baa3]/70
+                    text-parchment-600 hover:text-parchment-500
                     transition-colors min-w-[44px]
                   "
                 >
@@ -289,16 +289,16 @@ export function WeaponSelectionPanel({
         <div className="shrink-0 border-t border-slate-700/30 px-4 py-3 space-y-1">
           {primaryWeapon && (
             <div className="flex items-center gap-2 text-xs min-w-0">
-              <span className="text-[#b9baa3]/50 w-14 shrink-0">Primary:</span>
+              <span className="text-parchment-500 w-14 shrink-0">Primary:</span>
               <span className="text-[#f7f7ff] font-medium truncate">{primaryWeapon.name}</span>
-              <span className="text-[#b9baa3]/40 shrink-0 whitespace-nowrap ml-auto">{primaryWeapon.damageDie} · {primaryWeapon.range}</span>
+              <span className="text-parchment-600 shrink-0 whitespace-nowrap ml-auto">{primaryWeapon.damageDie} · {primaryWeapon.range}</span>
             </div>
           )}
           {secondaryWeapon && (
             <div className="flex items-center gap-2 text-xs min-w-0">
-              <span className="text-[#b9baa3]/50 w-14 shrink-0">Secondary:</span>
+              <span className="text-parchment-500 w-14 shrink-0">Secondary:</span>
               <span className="text-[#f7f7ff] font-medium truncate">{secondaryWeapon.name}</span>
-              <span className="text-[#b9baa3]/40 shrink-0 whitespace-nowrap ml-auto">{secondaryWeapon.damageDie} · {secondaryWeapon.range}</span>
+              <span className="text-parchment-600 shrink-0 whitespace-nowrap ml-auto">{secondaryWeapon.damageDie} · {secondaryWeapon.range}</span>
             </div>
           )}
         </div>
@@ -345,7 +345,7 @@ function WeaponDrillDown({ weapon, isSuggested, onBack }: WeaponDrillDownProps) 
               </span>
             )}
           </div>
-          <p className="text-xs text-[#b9baa3]/50">
+          <p className="text-xs text-parchment-500">
             Tier {weapon.tier} {weapon.category} Weapon · SRD page {weapon.srdPage}
           </p>
         </div>
@@ -369,13 +369,13 @@ function WeaponDrillDown({ weapon, isSuggested, onBack }: WeaponDrillDownProps) 
         {/* Description */}
         {weapon.description && (
           <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3">
-            <p className="text-xs font-semibold uppercase text-[#b9baa3]/50 mb-1">Notes</p>
-            <p className="text-base text-[#b9baa3]/70">{weapon.description}</p>
+            <p className="text-xs font-semibold uppercase text-parchment-500 mb-1">Notes</p>
+            <p className="text-base text-parchment-500">{weapon.description}</p>
           </div>
         )}
 
         {/* SRD citation */}
-        <p className="text-xs text-[#b9baa3]/30 italic">
+        <p className="text-xs text-parchment-600">
           Source: Daggerheart SRD, page {weapon.srdPage}
         </p>
       </div>
@@ -386,7 +386,7 @@ function WeaponDrillDown({ weapon, isSuggested, onBack }: WeaponDrillDownProps) 
 function StatBlock({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 px-3 py-2">
-      <p className="text-xs uppercase tracking-wider text-[#b9baa3]/50 mb-0.5">{label}</p>
+      <p className="text-xs uppercase tracking-wider text-parchment-500 mb-0.5">{label}</p>
       <p className="text-sm font-semibold text-[#f7f7ff]">{value}</p>
     </div>
   );

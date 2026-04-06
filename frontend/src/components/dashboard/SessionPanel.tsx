@@ -104,13 +104,13 @@ export function SessionPanel({ campaign }: SessionPanelProps) {
 
   return (
     <div className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-5 shadow-card-fantasy space-y-4">
-      <p className="text-xs font-semibold uppercase tracking-widest text-[#b9baa3]/50">
+      <p className="text-xs font-semibold uppercase tracking-widest text-parchment-500">
         Session
       </p>
 
       {/* Next session */}
       <div>
-        <p className="text-xs text-[#b9baa3]/50 mb-1">Next session</p>
+        <p className="text-xs text-parchment-500 mb-1">Next session</p>
         {campaign ? (
           nextDate ? (
             <time
@@ -120,28 +120,28 @@ export function SessionPanel({ campaign }: SessionPanelProps) {
               {nextDateLabel}
             </time>
           ) : (
-            <p className="text-sm text-[#b9baa3]/40 italic">
+            <p className="text-sm font-medium text-parchment-500">
               No schedule set.{" "}
               <Link
                 href={`/campaigns/${campaign.campaignId}/settings`}
-                className="text-[#577399]/70 hover:text-[#577399] underline-offset-2 hover:underline transition-colors"
+                className="text-steel-accessible hover:text-[#f7f7ff] underline-offset-2 hover:underline transition-colors"
               >
                 Add one →
               </Link>
             </p>
           )
         ) : (
-          <p className="text-sm text-[#b9baa3]/30 italic">Join a campaign to see sessions.</p>
+          <p className="text-sm font-medium text-parchment-600">Join a campaign to see sessions.</p>
         )}
       </div>
 
       {/* Last session / notes placeholder */}
       <div className="border-t border-slate-700/40 pt-4">
-        <p className="text-xs text-[#b9baa3]/50 mb-1">Last session recap</p>
-        <p className="text-sm text-[#b9baa3]/30 italic leading-relaxed">
+        <p className="text-xs text-parchment-500 mb-1">Last session recap</p>
+        <p className="text-sm text-parchment-600 leading-relaxed">
           No session notes yet.
         </p>
-        <p className="text-xs text-[#b9baa3]/25 mt-1">
+        <p className="text-xs text-parchment-600 mt-1">
           Session recaps will appear here after each session.
         </p>
         {/* TODO: Replace with SessionNote[] from GET /campaigns/:id/sessions when available */}

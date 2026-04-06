@@ -84,7 +84,7 @@ function EnvironmentPicker({ onLoad, onDismiss }: {
           type="button"
           onClick={onDismiss}
           aria-label="Cancel environment selection"
-          className="text-[#b9baa3]/30 hover:text-[#b9baa3] transition-colors text-xs"
+          className="text-parchment-600 hover:text-parchment-400 transition-colors text-xs"
         >
           ✕
         </button>
@@ -101,12 +101,12 @@ function EnvironmentPicker({ onLoad, onDismiss }: {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full rounded-lg border border-slate-700/40 bg-slate-900/60
-                px-3 py-1.5 text-xs text-[#f7f7ff] placeholder:text-[#b9baa3]/30
+                px-3 py-1.5 text-xs text-[#f7f7ff] placeholder:text-parchment-600
                 focus:outline-none focus:ring-2 focus:ring-[#577399]"
             />
           )}
           {filtered.length === 0 ? (
-            <p className="text-xs text-[#b9baa3]/40 italic py-2 text-center">
+            <p className="text-xs text-parchment-600 py-2 text-center">
               No environments found.
             </p>
           ) : (
@@ -124,7 +124,7 @@ function EnvironmentPicker({ onLoad, onDismiss }: {
                   <TierBadge tier={env.tier} />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-[#f7f7ff] truncate">{env.name}</p>
-                    <p className="text-[11px] text-[#b9baa3]/40">{env.type} · DC {env.difficulty}</p>
+                    <p className="text-[11px] text-parchment-600">{env.type} · DC {env.difficulty}</p>
                   </div>
                   <span className="text-[11px] text-[#577399]/60 shrink-0">Load →</span>
                 </button>
@@ -224,12 +224,12 @@ function FeatureCard({
             </span>
           )}
           {hasRoll && (
-            <span className="shrink-0 text-[10px] font-medium text-slate-400/50 italic">
+            <span className="shrink-0 text-[11px] font-medium text-parchment-600">
               roll required
             </span>
           )}
         </div>
-        <span className={`shrink-0 text-[11px] transition-transform duration-150 text-[#b9baa3]/30 ${
+        <span className={`shrink-0 text-[11px] transition-transform duration-150 text-parchment-600 ${
           expanded ? "rotate-180" : ""
         }`} aria-hidden="true">▾</span>
       </button>
@@ -242,7 +242,7 @@ function FeatureCard({
 
           {/* Flavor / lore text */}
           {feature.flavorText && (
-            <p className="text-xs text-[#b9baa3]/40 italic leading-relaxed border-l-2
+            <p className="text-xs text-parchment-600 leading-relaxed border-l-2
               border-[#577399]/20 pl-2">
               {feature.flavorText}
             </p>
@@ -250,7 +250,7 @@ function FeatureCard({
 
           {/* Roll spec preview */}
           {feature.rollSpec && (
-            <div className="flex items-center gap-2 text-[11px] text-[#b9baa3]/40">
+            <div className="flex items-center gap-2 text-[11px] text-parchment-600">
               <span className="font-mono bg-slate-800/60 px-1.5 py-0.5 rounded">
                 {feature.rollSpec.dice.map((d) => d.size).join(" + ")}
               </span>
@@ -285,12 +285,12 @@ function FeatureCard({
                   {showTargetPicker && (
                     <div className="w-full rounded-lg border border-slate-700/40
                       bg-slate-900/60 p-2 space-y-1">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider
-                        text-[#b9baa3]/40 mb-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider
+                        text-parchment-600 mb-1">
                         Choose target
                       </p>
                       {partyCharacters.length === 0 ? (
-                        <p className="text-xs text-[#b9baa3]/30 italic py-1">
+                        <p className="text-xs text-parchment-600 py-1">
                           No players in campaign.
                         </p>
                       ) : (
@@ -320,7 +320,7 @@ function FeatureCard({
                                 {isSent ? "✓" : "→"}
                               </span>
                               <span className="flex-1 truncate">{char.name}</span>
-                              <span className="text-[11px] text-[#b9baa3]/30 shrink-0">
+                              <span className="text-[11px] text-parchment-600 shrink-0">
                                 {char.className} {char.level}
                               </span>
                             </button>
@@ -413,10 +413,10 @@ function ActiveEnvironmentBanner({
             <p className="text-xs font-semibold text-[#577399] uppercase tracking-wider truncate">
               Scene: {env.name}
             </p>
-            <p className="text-[11px] text-[#b9baa3]/50">
+            <p className="text-[11px] text-parchment-500">
               {env.type} · DC {env.difficulty}
               {env.tone.length > 0 && (
-                <span className="text-[#b9baa3]/30"> · {env.tone.join(", ")}</span>
+                <span className="text-parchment-600"> · {env.tone.join(", ")}</span>
               )}
             </p>
           </div>
@@ -425,19 +425,19 @@ function ActiveEnvironmentBanner({
           type="button"
           onClick={onClear}
           aria-label="Remove environment from encounter"
-          className="shrink-0 text-[#b9baa3]/30 hover:text-[#fe5f55] transition-colors text-xs"
+          className="shrink-0 text-parchment-600 hover:text-[#fe5f55] transition-colors text-xs"
         >
           ✕
         </button>
       </div>
 
       {/* ── Description ── */}
-      <p className="text-xs text-[#b9baa3]/60 leading-relaxed">{env.description}</p>
+      <p className="text-xs text-parchment-500 leading-relaxed">{env.description}</p>
 
       {/* ── Passive features ── */}
       {passiveFeatures.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-[#577399]/50">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-steel-accessible">
             Passive Effects
           </p>
           {passiveFeatures.map((f) => (
@@ -455,7 +455,7 @@ function ActiveEnvironmentBanner({
       {/* ── Active features ── */}
       {activeFeatures.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-[#fe5f55]/50">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-[#fe5f55]/70">
             Activated Effects
           </p>
           {activeFeatures.map((f) => (
@@ -473,7 +473,7 @@ function ActiveEnvironmentBanner({
       {/* ── Suggested adversary chips ── */}
       {suggested.length > 0 && (
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-[#b9baa3]/40 mb-1.5">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-parchment-600 mb-1.5">
             Suggested Adversaries
           </p>
           <div className="flex flex-wrap gap-1.5">
@@ -558,7 +558,7 @@ export function EncounterConsole({
     return (
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-serif-sc text-sm font-semibold tracking-widest text-[#577399]">
+          <h2 className="font-serif-sc text-sm font-semibold tracking-widest text-steel-accessible">
             Encounter
           </h2>
         </div>
@@ -568,8 +568,8 @@ export function EncounterConsole({
           style={{ background: "rgba(254,95,85,0.02)" }}
         >
           <div aria-hidden="true" className="text-4xl opacity-20">⚔️</div>
-          <p className="font-serif text-lg text-[#f7f7ff]/60">No active encounter</p>
-          <p className="text-sm text-[#b9baa3]/40 max-w-xs">
+          <p className="font-serif text-lg text-parchment-500">No active encounter</p>
+          <p className="text-sm text-parchment-600 max-w-xs">
             Start an encounter by adding adversaries from your catalog.
           </p>
           <div className="flex gap-3">
@@ -577,18 +577,18 @@ export function EncounterConsole({
               type="button"
               onClick={() => createEncounter(campaignId)}
               className="rounded-lg border border-[#577399]/40 bg-[#577399]/10
-                px-4 py-2 text-sm font-semibold text-[#577399]
-                hover:bg-[#577399]/20 hover:border-[#577399] hover:text-[#f7f7ff]
-                transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[#577399]"
-            >
-              New Encounter
-            </button>
+              px-4 py-2 text-sm font-semibold text-steel-accessible
+              hover:bg-[#577399]/20 hover:border-[#577399] hover:text-[#f7f7ff]
+              transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[#577399]"
+          >
+            New Encounter
+          </button>
             {onOpenCatalog && (
               <button
                 type="button"
                 onClick={handleOpenCatalog}
                 className="rounded-lg border border-slate-700/60 bg-transparent
-                  px-4 py-2 text-sm font-medium text-[#b9baa3]/60
+                  px-4 py-2 text-sm font-medium text-parchment-500
                   hover:border-slate-600 hover:text-[#b9baa3] transition-colors"
               >
                 Browse Adversaries →
@@ -605,7 +605,7 @@ export function EncounterConsole({
     return (
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-serif-sc text-sm font-semibold tracking-widest text-[#577399]">
+          <h2 className="font-serif-sc text-sm font-semibold tracking-widest text-steel-accessible">
             Encounter
           </h2>
         </div>
@@ -615,10 +615,10 @@ export function EncounterConsole({
           style={{ background: "rgba(87,115,153,0.03)" }}
         >
           <div aria-hidden="true" className="text-4xl opacity-30">🏁</div>
-          <p className="font-serif text-lg text-[#f7f7ff]/60">
+          <p className="font-serif text-lg text-parchment-500">
             &ldquo;{encounter.name}&rdquo; — Complete
           </p>
-          <p className="text-sm text-[#b9baa3]/40">
+          <p className="text-sm text-parchment-600">
             {encounter.round} rounds · {encounter.adversaries.length} adversaries ·{" "}
             {encounter.adversaries.filter((a) => a.isDefeated).length} defeated
           </p>
@@ -626,7 +626,7 @@ export function EncounterConsole({
             type="button"
             onClick={() => clearEncounter()}
             className="rounded-lg border border-[#577399]/40 bg-[#577399]/10
-              px-4 py-2 text-sm font-semibold text-[#577399]
+              px-4 py-2 text-sm font-semibold text-steel-accessible
               hover:bg-[#577399]/20 hover:border-[#577399] hover:text-[#f7f7ff]
               transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[#577399]"
           >
@@ -642,7 +642,7 @@ export function EncounterConsole({
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-serif-sc text-sm font-semibold tracking-widest text-[#577399]">
+        <h2 className="font-serif-sc text-sm font-semibold tracking-widest text-steel-accessible">
           Encounter
         </h2>
       </div>
@@ -675,7 +675,7 @@ export function EncounterConsole({
             aria-expanded={showEnvPicker}
             className="inline-flex items-center gap-1.5 rounded-full
               border border-slate-700/40 bg-transparent
-              px-3 py-1 text-xs font-medium text-[#b9baa3]/50
+              px-3 py-1 text-xs font-medium text-parchment-500
               hover:border-[#577399]/40 hover:text-[#577399]
               transition-colors focus:outline-none focus:ring-2 focus:ring-[#577399]"
           >
@@ -696,7 +696,7 @@ export function EncounterConsole({
       {/* ── Active adversary rows ── */}
       {activeAdversaries.length === 0 && (
         <div className="rounded-xl border border-dashed border-slate-700/40 bg-slate-950/20 p-6 text-center">
-          <p className="text-sm text-[#b9baa3]/40">
+          <p className="text-sm text-parchment-600">
             No adversaries in this encounter yet. Use quick-add below or browse the catalog.
           </p>
         </div>

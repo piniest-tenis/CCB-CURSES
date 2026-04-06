@@ -103,7 +103,7 @@ function SortHeader({
       className={`
         flex items-center gap-1 text-xs font-semibold uppercase tracking-wider
         transition-colors select-none
-        ${active ? "text-[#daa520]" : "text-[#b9baa3]/40 hover:text-[#b9baa3]/70"}
+        ${active ? "text-[#daa520]" : "text-parchment-600 hover:text-parchment-500"}
       `}
     >
       {label}
@@ -165,7 +165,7 @@ function ShareButton({ characterId }: { characterId: string }) {
           ? "border-green-700/60 bg-green-900/20 text-green-400"
           : state === "error"
           ? "border-red-700/60 bg-red-900/20 text-red-400"
-          : "border-slate-700/60 bg-transparent text-[#b9baa3]/40 hover:border-[#577399]/60 hover:text-[#577399]",
+          : "border-slate-700/60 bg-transparent text-parchment-600 hover:border-[#577399]/60 hover:text-[#577399]",
       ].join(" ")}
     >
       {state === "loading" ? (
@@ -272,12 +272,12 @@ function AddToCampaignModal({ character, onClose, onSuccess }: AddToCampaignModa
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700/40">
           <div>
             <h2 className="font-serif text-lg font-semibold text-[#f7f7ff]">Campaign Assignment</h2>
-            <p className="text-xs text-[#b9baa3]/50 mt-0.5 truncate max-w-xs">{character.name}</p>
+            <p className="text-xs text-parchment-500 mt-0.5 truncate max-w-xs">{character.name}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-[#b9baa3]/40 hover:text-[#b9baa3] transition-colors p-1"
+            className="text-parchment-600 hover:text-[#b9baa3] transition-colors p-1"
             aria-label="Close"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
@@ -291,7 +291,7 @@ function AddToCampaignModal({ character, onClose, onSuccess }: AddToCampaignModa
           {/* Current campaign */}
           {character.campaignId && (
             <div className="rounded-lg border border-slate-700/40 bg-slate-900/40 px-3 py-3">
-              <p className="text-xs text-[#b9baa3]/50 uppercase tracking-wider mb-1">Currently in</p>
+              <p className="text-xs text-parchment-500 uppercase tracking-wider mb-1">Currently in</p>
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm text-[#f7f7ff] font-medium truncate">
                   {currentCampaign?.name ?? character.campaignId}
@@ -310,16 +310,16 @@ function AddToCampaignModal({ character, onClose, onSuccess }: AddToCampaignModa
 
           {/* Campaign selector */}
           <div>
-            <label className="block text-xs text-[#b9baa3]/50 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs text-parchment-500 uppercase tracking-wider mb-1.5">
               {character.campaignId ? "Move to campaign" : "Add to campaign"}
             </label>
             {campaignsLoading ? (
-              <div className="flex items-center gap-2 py-2 text-sm text-[#b9baa3]/40">
+              <div className="flex items-center gap-2 py-2 text-sm text-parchment-600">
                 <div className="h-4 w-4 animate-spin rounded-full border border-[#577399] border-t-transparent" />
                 Loading campaigns…
               </div>
             ) : !campaigns || campaigns.length === 0 ? (
-              <p className="text-sm text-[#b9baa3]/40 italic">No campaigns found.</p>
+              <p className="text-sm text-parchment-600">No campaigns found.</p>
             ) : (
               <select
                 value={selectedCampaignId}
@@ -351,7 +351,7 @@ function AddToCampaignModal({ character, onClose, onSuccess }: AddToCampaignModa
             type="button"
             onClick={onClose}
             disabled={isBusy}
-            className="px-3 py-1.5 text-sm text-[#b9baa3]/60 hover:text-[#b9baa3] border border-slate-700/40 hover:border-slate-600 rounded transition-colors disabled:opacity-40"
+            className="px-3 py-1.5 text-sm text-parchment-500 hover:text-[#b9baa3] border border-slate-700/40 hover:border-slate-600 rounded transition-colors disabled:opacity-40"
           >
             Cancel
           </button>
@@ -359,7 +359,7 @@ function AddToCampaignModal({ character, onClose, onSuccess }: AddToCampaignModa
             type="button"
             onClick={handleAdd}
             disabled={!selectedCampaignId || isBusy || selectedCampaignId === character.campaignId}
-            className="px-3 py-1.5 text-sm font-medium bg-[#577399]/20 hover:bg-[#577399]/30 text-[#577399] border border-[#577399]/40 hover:border-[#577399]/60 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-3 py-1.5 text-sm font-medium bg-[#577399]/20 hover:bg-[#577399]/30 text-steel-accessible border border-[#577399]/40 hover:border-[#577399]/60 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {addMutation.isPending ? "Saving…" : character.campaignId ? "Move" : "Add"}
           </button>
@@ -402,7 +402,7 @@ function CampaignCell({
           "focus:outline-none focus:ring-2 focus:ring-[#577399]",
           character.campaignId
             ? "border-[#daa520]/30 bg-[#daa520]/10 text-[#daa520]/80 hover:border-[#daa520]/60 hover:text-[#daa520]"
-            : "border-slate-700/40 text-[#b9baa3]/30 hover:border-[#577399]/40 hover:text-[#577399]/60",
+            : "border-slate-700/40 text-parchment-600 hover:border-[#577399]/40 hover:text-steel-accessible",
         ].join(" ")}
       >
         {character.campaignId ? (
@@ -545,7 +545,7 @@ export default function AdminCharactersPage() {
       <div className="flex min-h-screen items-center justify-center bg-[#0a100d]">
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#577399] border-t-transparent" />
-          <p className="text-xs text-[#b9baa3]/30 font-mono">refreshing session…</p>
+          <p className="text-xs text-parchment-600 font-mono">refreshing session…</p>
         </div>
       </div>
     );
@@ -554,7 +554,7 @@ export default function AdminCharactersPage() {
   if (isReady && !isAdmin) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a100d]">
-        <p className="text-[#b9baa3]/50 text-sm">Access denied.</p>
+        <p className="text-parchment-500 text-sm">Access denied.</p>
       </div>
     );
   }
@@ -585,13 +585,13 @@ export default function AdminCharactersPage() {
           <div className="flex items-center gap-3">
             <Link
               href="/dashboard"
-              className="text-xs text-[#b9baa3]/50 hover:text-[#b9baa3] transition-colors"
+              className="text-xs text-parchment-500 hover:text-[#b9baa3] transition-colors"
             >
               ← Dashboard
             </Link>
             {user && (
               <>
-                <span className="text-sm text-[#b9baa3]/40">
+                <span className="text-sm text-parchment-600">
                   {user.displayName || user.email}
                 </span>
                 <button
@@ -599,7 +599,7 @@ export default function AdminCharactersPage() {
                   onClick={() =>
                     signOut().then(() => router.replace("/auth/login"))
                   }
-                  className="rounded px-2.5 py-1 text-xs font-medium text-[#b9baa3]/50 border border-slate-700/60 hover:text-[#f7f7ff] hover:border-slate-600 transition-colors"
+                  className="rounded px-2.5 py-1 text-xs font-medium text-parchment-500 border border-slate-700/60 hover:text-[#f7f7ff] hover:border-slate-600 transition-colors"
                 >
                   Sign out
                 </button>
@@ -616,7 +616,7 @@ export default function AdminCharactersPage() {
             <h1 className="font-serif text-3xl font-semibold text-[#f7f7ff]">
               All Characters
             </h1>
-            <p className="mt-1 text-sm text-[#b9baa3]/40">
+            <p className="mt-1 text-sm text-parchment-600">
               {isLoading
                 ? "Loading…"
                 : `${displayed.length} of ${data?.characters.length ?? 0} character${(data?.characters.length ?? 0) !== 1 ? "s" : ""}`}
@@ -625,7 +625,7 @@ export default function AdminCharactersPage() {
           <button
             type="button"
             onClick={() => refetch()}
-            className="text-xs text-[#b9baa3]/40 hover:text-[#b9baa3] transition-colors self-start sm:self-auto"
+            className="text-xs text-parchment-600 hover:text-[#b9baa3] transition-colors self-start sm:self-auto"
           >
             ↺ Refresh
           </button>
@@ -640,7 +640,7 @@ export default function AdminCharactersPage() {
             onChange={(e) => setFilter(e.target.value)}
             className="
               w-full sm:w-80 rounded-lg border border-slate-700/60 bg-slate-900/60
-              px-3 py-2 text-sm text-[#f7f7ff] placeholder:text-[#b9baa3]/30
+              px-3 py-2 text-sm text-[#f7f7ff] placeholder:text-parchment-600
               focus:outline-none focus:border-[#577399]/60
               transition-colors
             "
@@ -711,20 +711,20 @@ export default function AdminCharactersPage() {
                 dir={sortDir}
                 onSort={handleSort}
               />
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#b9baa3]/40 select-none">
+              <span className="text-xs font-semibold uppercase tracking-wider text-parchment-600 select-none">
                 Lvl
               </span>
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#b9baa3]/40 select-none">
+              <span className="text-xs font-semibold uppercase tracking-wider text-parchment-600 select-none">
                 Campaign
               </span>
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#b9baa3]/40 select-none">
+              <span className="text-xs font-semibold uppercase tracking-wider text-parchment-600 select-none">
                 Share
               </span>
             </div>
 
             {/* Rows */}
             {displayed.length === 0 ? (
-              <div className="py-16 text-center text-sm text-[#b9baa3]/30">
+              <div className="py-16 text-center text-sm text-parchment-600">
                 {filter ? "No characters match that filter." : "No characters found."}
               </div>
             ) : (
@@ -747,23 +747,23 @@ export default function AdminCharactersPage() {
                       <span className="text-sm font-medium text-[#f7f7ff] truncate group-hover:text-[#daa520] transition-colors">
                         {c.name}
                       </span>
-                      <span className="text-sm text-[#b9baa3]/70 truncate">
+                      <span className="text-sm text-parchment-500 truncate">
                         {c.className}
                       </span>
-                      <span className="text-sm text-[#b9baa3]/50 truncate">
+                      <span className="text-sm text-parchment-500 truncate">
                         {c.ancestryId
                           ? c.ancestryId
                               .replace(/-/g, " ")
                               .replace(/\b\w/g, (ch) => ch.toUpperCase())
-                          : <span className="text-[#b9baa3]/25 italic">—</span>}
+                          : <span className="text-parchment-600">—</span>}
                       </span>
-                      <span className="text-sm text-[#b9baa3]/50 truncate">
+                      <span className="text-sm text-parchment-500 truncate">
                         {c.ownerName}
                       </span>
-                      <span className="text-xs text-[#b9baa3]/40 whitespace-nowrap">
+                      <span className="text-xs text-parchment-600 whitespace-nowrap">
                         {formatDate(c.createdAt)}
                       </span>
-                      <span className="text-xs font-semibold text-[#577399] text-right">
+                      <span className="text-xs font-semibold text-steel-accessible text-right">
                         {c.level}
                       </span>
                     </Link>

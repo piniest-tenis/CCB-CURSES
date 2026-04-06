@@ -102,11 +102,11 @@ export function ArmorSelectionPanel({
     <div className="flex flex-col h-full">
       {/* Suggested armor banner */}
       <div className="shrink-0 px-4 py-2.5 border-b border-slate-700/30 bg-[#577399]/5">
-        <p className="text-xs text-[#b9baa3]/60">
-          <span className="text-[#577399] font-medium">Suggested for your class</span>
+        <p className="text-xs text-parchment-500">
+          <span className="text-steel-accessible font-medium">Suggested for your class</span>
           {suggestedNames
             ? <>{": "}<span className="text-[#f7f7ff] font-medium">{suggestedNames}</span></>
-            : <span className="text-[#b9baa3]/40"> — no recommendation defined</span>
+            : <span className="text-parchment-600"> — no recommendation defined</span>
           }
         </p>
       </div>
@@ -122,12 +122,12 @@ export function ArmorSelectionPanel({
           placeholder="Filter armor…"
           className="
             w-full rounded px-3 py-2 bg-slate-900 border border-slate-700
-            text-base sm:text-sm text-[#f7f7ff] placeholder-[#b9baa3]/30
+            text-base sm:text-sm text-[#f7f7ff] placeholder-parchment-600
             focus:outline-none focus:ring-2 focus:ring-[#577399] focus:border-transparent
             transition-colors
           "
         />
-        <p className="text-xs text-[#b9baa3]/30 mt-1.5" aria-hidden="true">
+        <p className="text-xs text-parchment-600 mt-1.5" aria-hidden="true">
           Filter by name, feature, or armor score
         </p>
       </div>
@@ -136,7 +136,7 @@ export function ArmorSelectionPanel({
       <div className="flex-1 overflow-y-auto" ref={listRef}>
         {sorted.length === 0 ? (
           <div className="flex items-center justify-center h-32">
-            <p className="text-sm text-[#b9baa3]/40 italic">No armor matches your filter</p>
+            <p className="text-sm text-parchment-600">No armor matches your filter</p>
           </div>
         ) : (
           sorted.map((armor) => {
@@ -180,16 +180,16 @@ export function ArmorSelectionPanel({
                     )}
                   </div>
                   <div className="flex flex-wrap gap-2 mt-1">
-                    <span className="text-xs text-[#b9baa3]/60">Armor Score {armor.baseArmorScore}</span>
-                    <span className="text-xs text-[#b9baa3]/40">·</span>
-                    <span className="text-xs text-[#b9baa3]/60">Major {armor.baseMajorThreshold}</span>
-                    <span className="text-xs text-[#b9baa3]/40">·</span>
-                    <span className="text-xs text-[#b9baa3]/60">Severe {armor.baseSevereThreshold}</span>
+                    <span className="text-xs text-parchment-500">Armor Score {armor.baseArmorScore}</span>
+                    <span className="text-xs text-parchment-600">·</span>
+                    <span className="text-xs text-parchment-500">Major {armor.baseMajorThreshold}</span>
+                    <span className="text-xs text-parchment-600">·</span>
+                    <span className="text-xs text-parchment-500">Severe {armor.baseSevereThreshold}</span>
                   </div>
                   {armor.feature ? (
-                    <p className="text-xs text-[#b9baa3]/50 mt-1 italic truncate">{armor.feature}</p>
+                    <p className="text-xs text-parchment-500 mt-1 truncate">{armor.feature}</p>
                   ) : (
-                    <p className="text-xs text-[#b9baa3]/30 mt-1 italic">No feature</p>
+                    <p className="text-xs text-parchment-600 mt-1">No feature</p>
                   )}
                 </div>
 
@@ -201,7 +201,7 @@ export function ArmorSelectionPanel({
                   className="
                     self-stretch shrink-0 flex items-center justify-center
                     pl-3 pr-1 -mr-4 border-l border-slate-700/40
-                    text-[#b9baa3]/30 hover:text-[#b9baa3]/70
+                    text-parchment-600 hover:text-parchment-500
                     transition-colors min-w-[44px]
                   "
                 >
@@ -217,9 +217,9 @@ export function ArmorSelectionPanel({
       {selectedArmor && (
         <div className="shrink-0 border-t border-slate-700/30 px-4 py-3">
           <div className="flex items-center gap-2 text-xs min-w-0">
-            <span className="text-[#b9baa3]/50 w-14 shrink-0">Armor:</span>
+            <span className="text-parchment-500 w-14 shrink-0">Armor:</span>
             <span className="text-[#f7f7ff] font-medium truncate">{selectedArmor.name}</span>
-            <span className="text-[#b9baa3]/40 shrink-0 whitespace-nowrap ml-auto">Score {selectedArmor.baseArmorScore}</span>
+            <span className="text-parchment-600 shrink-0 whitespace-nowrap ml-auto">Score {selectedArmor.baseArmorScore}</span>
           </div>
         </div>
       )}
@@ -260,7 +260,7 @@ function ArmorDrillDown({ armor, isSuggested, onBack }: ArmorDrillDownProps) {
               </span>
             )}
           </div>
-          <p className="text-xs text-[#b9baa3]/50">
+          <p className="text-xs text-parchment-500">
             Tier {armor.tier} Armor · SRD page {armor.srdPage}
           </p>
         </div>
@@ -280,15 +280,15 @@ function ArmorDrillDown({ armor, isSuggested, onBack }: ArmorDrillDownProps) {
           </div>
         ) : (
           <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3">
-            <p className="text-xs font-semibold uppercase text-[#b9baa3]/50 mb-1">Feature</p>
-            <p className="text-sm text-[#b9baa3]/60 italic">No feature</p>
+            <p className="text-xs font-semibold uppercase text-parchment-500 mb-1">Feature</p>
+            <p className="text-sm text-parchment-500">No feature</p>
           </div>
         )}
 
         {/* Threshold note */}
         <div className="rounded-lg border border-slate-700/40 bg-slate-900/40 px-4 py-3">
-          <p className="text-xs font-semibold uppercase text-[#b9baa3]/50 mb-2">At Level 1</p>
-          <div className="space-y-1 text-xs text-[#b9baa3]/70">
+          <p className="text-xs font-semibold uppercase text-parchment-500 mb-2">At Level 1</p>
+          <div className="space-y-1 text-xs text-parchment-500">
             <p>Major threshold: <span className="text-[#f7f7ff] font-medium">{armor.baseMajorThreshold + 1}+</span> (base {armor.baseMajorThreshold} + level 1)</p>
             <p>Severe threshold: <span className="text-[#f7f7ff] font-medium">{armor.baseSevereThreshold + 1}+</span> (base {armor.baseSevereThreshold} + level 1)</p>
           </div>
@@ -297,13 +297,13 @@ function ArmorDrillDown({ armor, isSuggested, onBack }: ArmorDrillDownProps) {
         {/* Description */}
         {armor.description && (
           <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3">
-            <p className="text-xs font-semibold uppercase text-[#b9baa3]/50 mb-1">Notes</p>
-            <p className="text-base text-[#b9baa3]/70">{armor.description}</p>
+            <p className="text-xs font-semibold uppercase text-parchment-500 mb-1">Notes</p>
+            <p className="text-base text-parchment-500">{armor.description}</p>
           </div>
         )}
 
         {/* SRD citation */}
-        <p className="text-xs text-[#b9baa3]/30 italic">
+        <p className="text-xs text-parchment-600">
           Source: Daggerheart SRD, page {armor.srdPage}
         </p>
       </div>
@@ -314,7 +314,7 @@ function ArmorDrillDown({ armor, isSuggested, onBack }: ArmorDrillDownProps) {
 function StatBlock({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 px-3 py-2">
-      <p className="text-xs uppercase tracking-wider text-[#b9baa3]/50 mb-0.5">{label}</p>
+      <p className="text-xs uppercase tracking-wider text-parchment-500 mb-0.5">{label}</p>
       <p className="text-sm font-semibold text-[#f7f7ff]">{value}</p>
     </div>
   );

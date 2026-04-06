@@ -496,7 +496,7 @@ function GoldTracker({ gold, onChange }: GoldTrackerProps) {
               : "border-[#577399]/30 bg-transparent hover:border-[#577399]",
           ].join(" ")}
         />
-        <p className="text-xs text-[#b9baa3]/60 italic">
+        <p className="text-xs text-parchment-500">
           10 handfuls = 1 bag · 10 bags = 1 chest (SRD)
         </p>
       </div>
@@ -621,7 +621,7 @@ function AddEquipmentSidebar({
             placeholder="Search equipment…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-[#577399]/35 bg-[#f7f7ff] px-3 py-2 text-sm text-[#0a100d] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#577399]"
+            className="w-full rounded-lg border border-[#577399]/35 bg-[#f7f7ff] px-3 py-2 text-sm text-[#0a100d] placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#577399]"
             aria-label="Search equipment"
           />
           {/* Category filter pills */}
@@ -713,7 +713,7 @@ function AddEquipmentSidebar({
             </div>
           ))}
           {Object.keys(groupedItems).length === 0 && (
-            <p className="text-center text-sm text-[#b9baa3] italic pt-8">
+            <p className="text-center text-sm text-parchment-500 pt-8">
               No equipment matches your search.
             </p>
           )}
@@ -818,7 +818,7 @@ export function EquipmentPanel({
           </div>
 
           {inventory.length === 0 ? (
-            <p className="text-xs text-[#b9baa3]/60 italic">
+            <p className="text-xs text-parchment-500">
               No equipment yet. Click &ldquo;+ Add Equipment&rdquo; to browse
               the SRD catalog.
             </p>

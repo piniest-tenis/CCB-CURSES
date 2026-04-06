@@ -58,16 +58,16 @@ function CardDetail({
         {/* Header */}
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs uppercase tracking-wider text-[#b9baa3]/40">
+            <span className="text-xs uppercase tracking-wider text-parchment-600">
               {card.domain}
             </span>
-            <span className="text-[#b9baa3]/20">·</span>
-            <span className="text-xs uppercase tracking-wider text-[#b9baa3]/40">
+            <span className="text-parchment-600">·</span>
+            <span className="text-xs uppercase tracking-wider text-parchment-600">
               Level {card.level}
             </span>
             {card.isGrimoire && (
               <>
-                <span className="text-[#b9baa3]/20">·</span>
+                <span className="text-parchment-600">·</span>
                 <span className="text-xs uppercase tracking-wider text-[#daa520]/60">Grimoire</span>
               </>
             )}
@@ -78,7 +78,7 @@ function CardDetail({
         {/* Recall cost */}
         <div className="flex gap-4 text-sm">
           <div className="flex items-center gap-2">
-            <span className="text-xs uppercase tracking-wider text-[#b9baa3]/40">Recall Cost</span>
+            <span className="text-xs uppercase tracking-wider text-parchment-600">Recall Cost</span>
             <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 font-bold text-[#f7f7ff]">
               {typeof card.level === "number" ? card.level : "—"}⚡
             </span>
@@ -92,14 +92,14 @@ function CardDetail({
               {card.grimoire.map((ability, i) => (
                 <div key={i}>
                   <p className="text-sm font-semibold text-[#f7f7ff] mb-1">{ability.name}</p>
-                  <MarkdownContent className="text-base text-[#b9baa3]/75">
+                  <MarkdownContent className="text-base text-parchment-500">
                     {ability.description}
                   </MarkdownContent>
                 </div>
               ))}
             </div>
           ) : (
-            <MarkdownContent className="text-base text-[#b9baa3]/75">
+            <MarkdownContent className="text-base text-parchment-500">
               {card.description}
             </MarkdownContent>
           )}
@@ -107,8 +107,8 @@ function CardDetail({
 
         {card.isCursed && card.curseText && (
           <div className="rounded-lg border border-[#fe5f55]/30 bg-[#fe5f55]/5 px-4 py-3">
-            <p className="text-xs uppercase tracking-wider text-[#fe5f55]/60 mb-1">Curse</p>
-            <MarkdownContent className="text-base text-[#b9baa3]/70">
+            <p className="text-xs uppercase tracking-wider text-[#fe5f55]/70 mb-1">Curse</p>
+            <MarkdownContent className="text-base text-parchment-500">
               {card.curseText}
             </MarkdownContent>
           </div>
@@ -125,7 +125,7 @@ function CardDetail({
               ? "bg-[#577399]/20 border-2 border-[#577399] text-[#577399] hover:bg-[#577399]/30"
               : canSelect
                 ? "bg-[#577399] text-white hover:bg-[#577399]/80"
-                : "bg-slate-800/50 border border-slate-700/40 text-[#b9baa3]/30 cursor-not-allowed"
+                : "bg-slate-800/50 border border-slate-700/40 text-parchment-600 cursor-not-allowed"
             }
           `}
         >
@@ -187,12 +187,12 @@ function CardRow({
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-[#f7f7ff] truncate">{card.name}</span>
             <SourceBadge source={card.source} size="sm" />
-            <span className="text-xs text-[#b9baa3]/40 shrink-0">{card.domain}</span>
+            <span className="text-xs text-parchment-600 shrink-0">{card.domain}</span>
           </div>
           <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-xs text-[#b9baa3]/40">Lvl {card.level}</span>
-            <span className="text-[#b9baa3]/20 text-xs">·</span>
-            <span className="text-xs text-[#b9baa3]/50 truncate">
+            <span className="text-xs text-parchment-600">Lvl {card.level}</span>
+            <span className="text-parchment-600 text-xs">·</span>
+            <span className="text-xs text-parchment-500 truncate">
               {truncate(card.isGrimoire
                 ? (card.grimoire[0]?.description ?? card.description)
                 : card.description)}
@@ -209,7 +209,7 @@ function CardRow({
         className="
           self-stretch shrink-0 flex items-center justify-center
           pl-3 pr-2 border-l border-slate-700/40 rounded-r-lg
-          text-[#b9baa3]/30 hover:text-[#b9baa3]/70
+          text-parchment-600 hover:text-parchment-500
           transition-colors min-w-[44px]
         "
       >
@@ -324,7 +324,7 @@ export function DomainCardSelectionPanel({
   if (isError || allCards.length === 0) {
     return (
       <div className="flex h-full items-center justify-center px-6">
-        <p className="text-sm text-[#b9baa3]/40 italic text-center">
+        <p className="text-sm text-parchment-600 text-center">
           {isError
             ? "Could not load domain cards. Please check your connection."
             : "No Level 1 cards found for these domains."}
@@ -344,11 +344,11 @@ export function DomainCardSelectionPanel({
         {/* Header */}
         <div className="shrink-0 px-4 py-3 border-b border-slate-700/30 space-y-2">
           <div className="flex items-start gap-3">
-            <p className="text-xs text-[#b9baa3]/50 flex-1 min-w-0">
+            <p className="text-xs text-parchment-500 flex-1 min-w-0">
               Domain cards are managed via the{" "}
               <strong className="text-[#f7f7ff]">Level Up</strong> wizard.
               {classDomains.length > 0 && (
-                <span className="ml-1 text-[#577399]">
+                <span className="ml-1 text-steel-accessible">
                   ({classDomains.join(" & ")})
                 </span>
               )}
@@ -365,7 +365,7 @@ export function DomainCardSelectionPanel({
           {/* Acquired / current-level cards */}
           {acquiredCards.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-wider text-[#b9baa3]/30 px-1">
+              <p className="text-xs uppercase tracking-wider text-parchment-600 px-1">
                 Levels 1–{characterLevel} (acquired)
               </p>
               {acquiredCards.map((card) => {
@@ -388,7 +388,7 @@ export function DomainCardSelectionPanel({
           {/* Future cards — greyed, drill-able but not selectable */}
           {futureCards.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-wider text-[#b9baa3]/30 px-1">
+              <p className="text-xs uppercase tracking-wider text-parchment-600 px-1">
                 Future levels
               </p>
               {futureCards.map((card) => (
@@ -418,10 +418,10 @@ export function DomainCardSelectionPanel({
       {/* Selection counter + source filter */}
       <div className="shrink-0 px-4 py-3 border-b border-slate-700/30 space-y-2">
         <div className="flex items-start gap-3">
-          <p className="text-xs text-[#b9baa3]/50 flex-1 min-w-0">
-            Select exactly <strong className="text-[#f7f7ff]">2</strong> cards from your class domains
-            {classDomains.length > 0 && (
-              <span className="ml-1 text-[#577399]">
+            <p className="text-xs text-parchment-500 flex-1 min-w-0">
+              Select exactly <strong className="text-[#f7f7ff]">2</strong> cards from your class domains
+              {classDomains.length > 0 && (
+                <span className="ml-1 text-steel-accessible">
                 ({classDomains.join(" & ")})
               </span>
             )}
@@ -429,7 +429,7 @@ export function DomainCardSelectionPanel({
           <span
             className={`
               text-sm font-bold px-2 py-0.5 rounded shrink-0
-              ${selectionCount === 2 ? "text-[#4ade80]" : "text-[#b9baa3]/50"}
+              ${selectionCount === 2 ? "text-[#4ade80]" : "text-parchment-500"}
             `}
           >
             {selectionCount}/2

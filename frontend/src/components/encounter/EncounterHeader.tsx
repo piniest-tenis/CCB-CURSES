@@ -144,13 +144,13 @@ export function EncounterHeader({
               )}
               {statusLabel}
             </span>
-            <span className="text-xs text-[#b9baa3]/50">
+            <span className="text-xs text-parchment-500">
               {activeCount} active
               {defeatedCount > 0 && ` · ${defeatedCount} defeated`}
             </span>
           </div>
           {statusSubline && (
-            <p className="text-[11px] text-[#b9baa3]/40 mt-0.5 leading-relaxed">
+            <p className="text-[11px] text-parchment-600 mt-0.5 leading-relaxed">
               {statusSubline}
             </p>
           )}
@@ -160,7 +160,7 @@ export function EncounterHeader({
       {/* Center: Round counter */}
       <div className="flex items-center gap-3">
         <div className="flex flex-col items-center">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-[#b9baa3]/50">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-parchment-500">
             Round
           </span>
           <span
@@ -216,7 +216,7 @@ export function EncounterHeader({
               onClick={() => setEndConfirming(false)}
               className="
                 rounded-lg border border-slate-700/40 bg-slate-800/40
-                px-3 py-2 text-xs font-semibold text-[#b9baa3]/60
+                px-3 py-2 text-xs font-semibold text-parchment-500
                 hover:text-[#b9baa3] hover:border-slate-600
                 transition-colors
                 focus:outline-none focus:ring-2 focus:ring-slate-500

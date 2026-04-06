@@ -11,6 +11,7 @@ import Link from "next/link";
  *
  * WCAG AA compliant:
  *   - All text ≥ 4.5:1 contrast against #0a100d
+ *   - text-parchment-500 = 8.76:1 on #0a100d (passes AAA)
  *   - Minimum 14px (text-sm) font size for legal links
  *   - Touch targets ≥ 44px via py-2 padding
  *   - Focus-visible rings on all interactive elements
@@ -30,7 +31,7 @@ export function Footer() {
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Get Support, Chat with Cast, and More on Discord (opens in new tab)"
-            className={`py-2 text-sm text-[#b9baa3]/70 hover:text-[#b9baa3]/90 transition-colors ${focusRing}`}
+            className={`py-2 text-sm text-parchment-500 hover:text-parchment-400 transition-colors ${focusRing}`}
           >
             Get Support, Chat with Cast, and More on Discord
             <span className="sr-only"> (opens in new tab)</span>
@@ -53,28 +54,28 @@ export function Footer() {
           </a>
         </div>
         {/* Bottom row: legal links + copyright */}
-        <div className="flex items-center justify-between text-sm text-[#b9baa3]/70">
+        <div className="flex items-center justify-between text-sm text-parchment-500">
           <nav aria-label="Legal" className="flex gap-6">
             <Link
               href="/terms"
-              className={`py-2 hover:text-[#b9baa3]/90 transition-colors ${focusRing}`}
+              className={`py-2 hover:text-parchment-400 transition-colors ${focusRing}`}
             >
               Terms of Service
             </Link>
             <Link
               href="/privacy"
-              className={`py-2 hover:text-[#b9baa3]/90 transition-colors ${focusRing}`}
+              className={`py-2 hover:text-parchment-400 transition-colors ${focusRing}`}
             >
               Privacy Policy
             </Link>
             <Link
               href="/conduct"
-              className={`py-2 hover:text-[#b9baa3]/90 transition-colors ${focusRing}`}
+              className={`py-2 hover:text-parchment-400 transition-colors ${focusRing}`}
             >
               Code of Conduct
             </Link>
           </nav>
-          <small className="text-[#b9baa3]/70">
+          <small className="text-parchment-500">
             &copy; {new Date().getFullYear()} Man in Jumpsuit Productions
           </small>
         </div>

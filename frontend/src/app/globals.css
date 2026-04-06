@@ -98,15 +98,26 @@
 }
 
 @layer utilities {
-  /* Primary sidebar body text — replaces /70, /75 opacity usage.
-     rgba(185, 186, 163, 0.90) ≈ 5.2:1 on #0f1713 sidebar background. */
+  /* Primary sidebar body text — replaces /70, /75, /80 opacity usage.
+     rgba(185, 186, 163, 0.90) ≈ 7.68:1 on #0f1713 sidebar, ≈ 9.71:1 on #0a100d. */
   .sidebar-text {
     color: rgba(185, 186, 163, 0.90);
   }
-  /* Secondary sidebar metadata — replaces /30, /40, /50, /60 opacity usage.
-     rgba(185, 186, 163, 0.70) ≈ 3.8:1 on #0f1713 sidebar background — passes AA for large/bold text. */
+  /* Secondary sidebar metadata — replaces /40, /50, /60 opacity usage.
+     rgba(185, 186, 163, 0.75) ≈ 4.65:1 on #0f1713 sidebar — passes AA normal text.
+     (Upgraded from 0.70 which was only 3.8:1 — borderline.) */
   .sidebar-text-secondary {
-    color: rgba(185, 186, 163, 0.70);
+    color: rgba(185, 186, 163, 0.75);
+  }
+  /* Muted metadata text for dark page backgrounds — replaces /30, /40 opacity text.
+     #b8872c (parchment-600) = 5.98:1 on #0a100d — passes AA normal. */
+  .text-muted-readable {
+    color: #b8872c;
+  }
+  /* Accessible steel-blue — replaces text-steel-400 (#577399) for normal text.
+     #7a9ab5 = 5.89:1 on #0a100d, 5.41:1 on slate-900, 5.07:1 on slate-850. */
+  .text-steel-accessible {
+    color: #7a9ab5;
   }
 }
 

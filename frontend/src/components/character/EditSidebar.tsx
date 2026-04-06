@@ -284,7 +284,7 @@ function EditSidebar({ characterId }: EditSidebarProps) {
       >
         <div className="flex items-center justify-between border-b border-[#577399]/25 px-4 py-4 sm:px-5">
           <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-[#b9baa3]/70">
+            <p className="text-xs uppercase tracking-[0.24em] text-parchment-500">
               Field editor
             </p>
             <h2
@@ -315,11 +315,11 @@ function EditSidebar({ characterId }: EditSidebarProps) {
           )}
 
           <section className="space-y-2 rounded-xl border border-[#577399]/20 bg-[#b9baa3]/[0.06] p-4">
-            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-[#b9baa3]/70">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-parchment-500">
               SRD guidance
             </h3>
             {isRuleLoading && activeField?.helpRuleId ? (
-              <p className="text-sm text-[#b9baa3]/70">Loading rules text…</p>
+              <p className="text-sm text-parchment-500">Loading rules text…</p>
             ) : helpText ? (
               <p
                 id={descriptionId}
@@ -328,7 +328,7 @@ function EditSidebar({ characterId }: EditSidebarProps) {
                 {helpText}
               </p>
             ) : (
-              <p className="text-sm text-[#b9baa3]/70">
+              <p className="text-sm text-parchment-500">
                 No SRD explanation is available for this field.
               </p>
             )}
@@ -338,7 +338,7 @@ function EditSidebar({ characterId }: EditSidebarProps) {
             <div className="space-y-2">
               <label
                 htmlFor="edit-sidebar-input"
-                className="text-xs font-semibold uppercase tracking-[0.2em] text-[#b9baa3]/75"
+                className="text-xs font-semibold uppercase tracking-[0.2em] text-parchment-500"
               >
                 {activeField.label}
               </label>

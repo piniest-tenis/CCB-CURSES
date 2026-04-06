@@ -128,7 +128,7 @@ export function ProfileCard({ user, onSignOut }: ProfileCardProps) {
 
   return (
     <div className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-5 shadow-card-fantasy">
-      <p className="text-xs font-semibold uppercase tracking-widest text-[#b9baa3]/50 mb-4">
+      <p className="text-xs font-semibold uppercase tracking-widest text-parchment-500 mb-4">
         Your Profile
       </p>
 
@@ -198,7 +198,7 @@ export function ProfileCard({ user, onSignOut }: ProfileCardProps) {
             </p>
           )}
           {nameSaveState === "idle" && (
-            <p className="text-xs text-[#b9baa3]/50 truncate">{user.email}</p>
+            <p className="text-xs text-parchment-500 truncate">{user.email}</p>
           )}
         </div>
       </div>
@@ -226,11 +226,11 @@ export function ProfileCard({ user, onSignOut }: ProfileCardProps) {
 
           {/* Two-line label */}
           <div className="flex-1 min-w-0">
-            <span className="text-xs uppercase tracking-widest text-[#b9baa3]/70 font-medium group-hover:text-[#f7f7ff] transition-colors">
+            <span className="text-xs uppercase tracking-widest text-parchment-500 font-medium group-hover:text-[#f7f7ff] transition-colors">
               Default Dice Colors
             </span>
             {!diceColorsOpen && (
-              <p className="text-[11px] text-[#b9baa3]/35 mt-0.5 leading-tight">
+              <p className="text-[11px] text-parchment-600 mt-0.5 leading-tight">
                 Applies to all characters · tap to customize
               </p>
             )}
@@ -299,7 +299,7 @@ export function ProfileCard({ user, onSignOut }: ProfileCardProps) {
                 </a>
               </div>
               <div className="pointer-events-none select-none opacity-50" aria-hidden="true" inert>
-                <p className="text-xs text-[#b9baa3]/40 mb-2">
+                <p className="text-xs text-parchment-600 mb-2">
                   Set default dice colors for all your characters. Individual characters can override these.
                 </p>
                 <DiceColorEditor
@@ -369,7 +369,7 @@ export function ProfileCard({ user, onSignOut }: ProfileCardProps) {
             rel="noopener noreferrer"
             className="
               block w-full rounded-lg px-3 py-2 text-xs font-medium text-center
-              border border-slate-700/30 text-[#b9baa3]/40
+              border border-slate-700/30 text-parchment-600
               hover:border-[#f96854]/40 hover:text-[#f96854]/70
               transition-colors
               focus:outline-none focus:ring-2 focus:ring-[#f96854]/40 focus:ring-offset-2 focus:ring-offset-slate-900
@@ -383,7 +383,7 @@ export function ProfileCard({ user, onSignOut }: ProfileCardProps) {
           onClick={onSignOut}
           className="
             w-full rounded-lg px-3 py-2 text-xs font-medium
-            border border-slate-700/30 text-[#b9baa3]/40
+            border border-slate-700/30 text-parchment-600
             hover:border-red-900/60 hover:text-red-400/70
             transition-colors
             focus:outline-none focus:ring-2 focus:ring-red-900/60 focus:ring-offset-2 focus:ring-offset-slate-900

@@ -21,6 +21,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { TraitBonuses } from "@/components/character/TraitAssignmentPanel";
 import type { StartingEquipmentSelections } from "@/components/character/StartingEquipmentPanel";
+import type { Experience } from "@shared/types";
 
 // ─── Persisted Shape ─────────────────────────────────────────────────────────
 
@@ -36,6 +37,7 @@ export interface BuilderDraft {
   armorId: string | null;
   equipmentSelections: StartingEquipmentSelections;
   selectedDomainCardIds: string[];
+  experiences?: Experience[];
   heritageTab: "ancestry" | "community";
   characterName?: string;
 }

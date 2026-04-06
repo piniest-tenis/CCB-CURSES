@@ -36,7 +36,7 @@ export default function RootLayout({
       <head>
         <link rel="stylesheet" href="https://use.typekit.net/zko4lko.css" />
       </head>
-      <body className="min-h-screen bg-slate-950 text-parchment-200 antialiased font-sans">
+      <body className="min-h-screen bg-background text-foreground antialiased font-sans">
         <Providers>{children}</Providers>
       </body>
     </html>

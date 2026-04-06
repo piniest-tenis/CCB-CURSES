@@ -124,21 +124,21 @@ export function PatreonCTA() {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Slim bar — compact, single-line layout */}
-      <div className="bg-gradient-to-r from-[#f96854] via-[#ff6b4a] to-[#f96854] px-4 py-2 shadow-[0_-2px_12px_rgba(249,104,84,0.3)]">
+      {/* Slim bar — dark theme with goldenrod accents for WCAG AA+ compliance */}
+      <div className="bg-[#0f172a]/95 border-t border-[#DAA520]/30 px-4 py-2 shadow-[0_-2px_12px_rgba(0,0,0,0.4)] backdrop-blur-sm">
         <div className="mx-auto max-w-4xl flex items-center justify-center gap-3">
           {/* Patreon icon — small */}
           <svg
             viewBox="0 0 24 24"
             fill="currentColor"
-            className="h-4 w-4 shrink-0 text-white/90"
+            className="h-4 w-4 shrink-0 text-[#DAA520]"
             aria-hidden="true"
           >
             <path d="M14.82 2.41c3.96 0 7.18 3.24 7.18 7.21 0 3.96-3.22 7.18-7.18 7.18-3.97 0-7.21-3.22-7.21-7.18 0-3.97 3.24-7.21 7.21-7.21M2 21.6h3.5V2.41H2V21.6z" />
           </svg>
 
           {/* CTA text — compact */}
-          <p className="text-white/95 font-medium text-sm leading-tight">
+          <p className="text-[#DAA520] font-medium text-sm leading-tight">
             Unlock leveling up &amp; unlimited characters by joining our{" "}
             <span className="font-bold">FREE</span> Patreon
           </p>
@@ -148,23 +148,23 @@ export function PatreonCTA() {
             type="button"
             onClick={handleClick}
             disabled={isLinking}
-            className="shrink-0 rounded-md bg-white/95 px-3.5 py-1 text-[#f96854] font-bold text-xs shadow-sm hover:bg-white transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-1 focus:ring-offset-[#f96854] disabled:opacity-60 disabled:cursor-wait"
+            aria-label="Join our free Patreon to unlock features"
+            className="shrink-0 rounded-md bg-[#DAA520] px-3.5 py-1 text-[#0a100d] font-bold text-xs shadow-sm hover:bg-[#e8b830] transition-colors focus:outline-none focus:ring-2 focus:ring-[#DAA520] focus:ring-offset-1 focus:ring-offset-[#0f172a] disabled:opacity-60 disabled:cursor-wait"
           >
             {isLinking ? "Connecting…" : "Join Now"}
           </button>
 
-          {/* Dismiss button — desktop only (sm+) */}
+          {/* Dismiss button — visible on all screen sizes for keyboard accessibility */}
           <button
             type="button"
             onClick={() => dismiss()}
             aria-label="Dismiss Patreon banner"
             className="
-              hidden sm:flex
-              shrink-0 ml-1 items-center justify-center
+              shrink-0 ml-1 flex items-center justify-center
               h-6 w-6 rounded-full
-              text-white/70 hover:text-white hover:bg-white/15
+              text-[#DAA520]/70 hover:text-[#DAA520] hover:bg-[#DAA520]/15
               transition-colors
-              focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-1 focus:ring-offset-[#f96854]
+              focus:outline-none focus:ring-2 focus:ring-[#DAA520] focus:ring-offset-1 focus:ring-offset-[#0f172a]
             "
           >
             <svg

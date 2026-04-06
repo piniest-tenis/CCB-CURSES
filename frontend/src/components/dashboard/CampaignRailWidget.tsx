@@ -24,19 +24,19 @@ export function CampaignRailWidget({ campaigns }: CampaignRailWidgetProps) {
   return (
     <div className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-5 shadow-card-fantasy">
       <div className="flex items-center justify-between mb-4">
-        <p className="text-xs font-semibold uppercase tracking-widest text-[#b9baa3]/50">
+        <p className="text-xs font-semibold uppercase tracking-widest text-parchment-500">
           Campaigns
         </p>
         <Link
           href="/campaigns"
-          className="text-xs text-[#577399]/60 hover:text-[#577399] transition-colors"
+          className="text-xs text-steel-accessible hover:text-[#f7f7ff] transition-colors"
         >
           All →
         </Link>
       </div>
 
       {top.length === 0 ? (
-        <p className="text-sm text-[#b9baa3]/30 italic">No campaigns yet.</p>
+        <p className="text-sm font-medium text-parchment-600">No campaigns yet.</p>
       ) : (
         <div className="space-y-3">
           {top.map((c) => (
@@ -48,14 +48,14 @@ export function CampaignRailWidget({ campaigns }: CampaignRailWidgetProps) {
                 >
                   {c.name}
                 </Link>
-                <p className="text-xs text-[#b9baa3]/40 mt-0.5">
+                <p className="text-xs text-parchment-600 mt-0.5">
                   {c.memberCount} member{c.memberCount !== 1 ? "s" : ""}
                   {c.callerRole && (
                     <span className={[
                       "ml-1.5 rounded px-1 py-px text-[11px] font-semibold",
                       c.callerRole === "gm"
                         ? "bg-gold-900/40 text-gold-400"
-                        : "bg-[#577399]/10 text-[#577399]/70",
+                        : "bg-[#577399]/10 text-steel-accessible",
                     ].join(" ")}>
                       {c.callerRole === "gm" ? "GM" : "Player"}
                     </span>
@@ -64,7 +64,7 @@ export function CampaignRailWidget({ campaigns }: CampaignRailWidgetProps) {
               </div>
               <Link
                 href={`/campaigns/${c.campaignId}`}
-                className="shrink-0 text-xs text-[#577399]/50 hover:text-[#577399] transition-colors whitespace-nowrap"
+                className="shrink-0 text-xs text-steel-accessible hover:text-[#f7f7ff] transition-colors whitespace-nowrap"
                 aria-label={`View campaign ${c.name}`}
               >
                 View →
@@ -79,8 +79,8 @@ export function CampaignRailWidget({ campaigns }: CampaignRailWidgetProps) {
         className="
           mt-4 flex items-center justify-center gap-1.5
           rounded-lg border border-[#577399]/30 bg-transparent
-          py-2 text-xs font-medium text-[#577399]/60
-          hover:border-[#577399]/60 hover:text-[#577399]
+          py-2 text-xs font-medium text-steel-accessible
+          hover:border-[#577399]/60 hover:text-[#f7f7ff]
           transition-colors
           focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2 focus:ring-offset-slate-900
         "

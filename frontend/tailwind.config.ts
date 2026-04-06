@@ -135,8 +135,8 @@ const config: Config = {
         serif:   ['"double-pica"', "Georgia", "Cambria", "serif"],
         // double-pica-sc — true small-caps variant for section headings
         "serif-sc": ['"double-pica-sc"', '"double-pica"', "Georgia", "Cambria", "serif"],
-        // ibarra-real-nova — default body/UI font (Adobe Typekit)
-        sans:    ['"ibarra-real-nova"', "Inter", "system-ui", "sans-serif"],
+        // sofia-pro-narrow — body/UI font (Adobe Typekit) — condensed sans-serif
+        sans:    ['"sofia-pro-narrow"', '"Sofia Pro Narrow"', "Inter", "system-ui", "sans-serif"],
         // jetsam-collection-basilea — attention-getting display font (Adobe Typekit)
         display: ['"jetsam-collection-basilea"', '"double-pica"', "Georgia", "serif"],
         mono:    ['"JetBrains Mono"', '"Fira Code"', "monospace"],
@@ -145,6 +145,7 @@ const config: Config = {
         card:      "0 2px 8px rgba(0,0,0,0.55), 0 0 0 1px rgba(74,10,20,0.35)",
         sheet:     "0 4px 24px rgba(0,0,0,0.7), 0 0 0 1px rgba(74,10,20,0.25)",
         "glow-gold": "0 0 14px rgba(212,169,74,0.45), 0 0 4px rgba(212,169,74,0.25)",
+        "glow-coral": "0 0 14px rgba(249,104,84,0.45), 0 0 4px rgba(249,104,84,0.25)",
         // Legacy aliases kept for compat with older components
         "card-fantasy":       "0 2px 8px rgba(0,0,0,0.6), 0 0 0 1px rgba(157,35,71,0.3)",
         "card-fantasy-hover": "0 4px 16px rgba(0,0,0,0.8), 0 0 0 1px rgba(202,138,4,0.5)",
@@ -155,6 +156,8 @@ const config: Config = {
           "radial-gradient(ellipse at top, #1a1024 0%, #0f1219 60%)",
         "card-glow":
           "linear-gradient(135deg, rgba(157,35,71,0.15) 0%, transparent 60%)",
+        "card-glow-coral":
+          "linear-gradient(135deg, rgba(249,104,84,0.15) 0%, transparent 60%)",
       },
       borderRadius: {
         lg: "0.75rem",
@@ -174,11 +177,16 @@ const config: Config = {
           "0%, 100%": { color: "rgba(218,165,32,0.45)", textShadow: "0 0 0px rgba(218,165,32,0)" },
           "50%":      { color: "rgba(218,165,32,0.9)",  textShadow: "0 0 8px rgba(218,165,32,0.6), 0 0 2px rgba(218,165,32,0.4)" },
         },
+        "coral-pulse": {
+          "0%, 100%": { boxShadow: "0 0 0px rgba(249,104,84,0)" },
+          "50%":      { boxShadow: "0 0 12px rgba(249,104,84,0.4), 0 0 4px rgba(249,104,84,0.2)" },
+        },
       },
       animation: {
         "fade-in":              "fade-in 0.2s ease-out",
         shimmer:                "shimmer 1.5s infinite",
         "pulse-glow-goldenrod": "pulse-glow-goldenrod 2.4s ease-in-out infinite",
+        "coral-pulse":          "coral-pulse 2.4s ease-in-out infinite",
       },
     },
   },

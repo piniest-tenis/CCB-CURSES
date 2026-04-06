@@ -88,19 +88,19 @@ export function PatreonSaveGate({ children, className = "" }: PatreonSaveGatePro
       {/* Inline banner — sits in normal flow at the top of the gated section */}
       <div
         role="status"
-        className="flex items-center gap-2 rounded-lg border border-[#f96854]/25 bg-[#f96854]/8 px-3 py-2 mb-2"
+        className="flex items-center gap-2 rounded-lg border border-[#DAA520]/25 bg-[#DAA520]/8 px-3 py-2 mb-2"
       >
-        <LockIcon className="text-[#f96854]/70" />
+        <LockIcon className="text-[#DAA520]/70" />
         <p className="flex-1 text-xs text-[#b9baa3]/80 leading-snug">
           Join our{" "}
-          <span className="font-semibold text-[#f96854]">free Patreon</span>{" "}
+          <span className="font-semibold text-[#DAA520]">free Patreon</span>{" "}
           to unlock this feature.
         </p>
         <button
           type="button"
           onClick={startOAuth}
           disabled={isLinking}
-          className="shrink-0 rounded-md bg-[#f96854] px-3 py-1 text-xs font-semibold text-white hover:bg-[#ff8a75] transition-colors focus:outline-none focus:ring-2 focus:ring-[#f96854] focus:ring-offset-1 focus:ring-offset-slate-900 disabled:opacity-60 disabled:cursor-wait"
+          className="shrink-0 rounded-md border border-[#DAA520]/50 bg-[#DAA520]/15 px-3 py-1 text-xs font-semibold text-[#DAA520] hover:bg-[#DAA520]/25 hover:border-[#DAA520] transition-colors focus:outline-none focus:ring-2 focus:ring-[#DAA520] focus:ring-offset-1 focus:ring-offset-slate-900 disabled:opacity-60 disabled:cursor-wait"
         >
           {isLinking ? "Linking…" : "Link Patreon"}
         </button>

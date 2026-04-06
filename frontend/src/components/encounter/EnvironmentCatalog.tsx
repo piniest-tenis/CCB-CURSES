@@ -43,7 +43,7 @@ function FeatureRow({ feature }: { feature: EnvironmentFeature }) {
         </span>
         <div>
           <p className="text-xs font-semibold text-[#f7f7ff]">{feature.name}</p>
-          <p className="mt-0.5 text-xs text-[#b9baa3]/70 leading-relaxed">
+          <p className="mt-0.5 text-xs text-parchment-500 leading-relaxed">
             {feature.description}
           </p>
         </div>
@@ -110,11 +110,11 @@ function EnvironmentCard({
             {environment.name}
           </h3>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <span className="rounded px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider bg-slate-800 text-[#b9baa3]/60">
+            <span className="rounded px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider bg-slate-800 text-parchment-500">
               {environment.type}
             </span>
             {environment.tone.map((t) => (
-              <span key={t} className="text-[11px] italic text-[#b9baa3]/40">
+              <span key={t} className="text-[11px] text-parchment-600">
                 {t}
               </span>
             ))}
@@ -122,7 +122,7 @@ function EnvironmentCard({
         </div>
 
         <div className="flex flex-col items-end gap-1 shrink-0">
-          <span className="text-[11px] text-[#b9baa3]/40">
+          <span className="text-[11px] text-parchment-600">
             DC {environment.difficulty}
           </span>
           {isLoaded && (
@@ -134,7 +134,7 @@ function EnvironmentCard({
       </div>
 
       {/* Description */}
-      <p className="px-4 pb-2 text-sm text-[#b9baa3]/70 leading-relaxed line-clamp-2">
+      <p className="px-4 pb-2 text-sm text-parchment-500 leading-relaxed line-clamp-2">
         {environment.description}
       </p>
 
@@ -149,7 +149,7 @@ function EnvironmentCard({
             onClick={() => setExpanded((v) => !v)}
             aria-expanded={expanded}
             className="
-              flex items-center gap-1.5 text-xs font-semibold text-[#577399]
+              flex items-center gap-1.5 text-xs font-semibold text-steel-accessible
               hover:text-[#f7f7ff] transition-colors
             "
           >
@@ -180,11 +180,11 @@ function EnvironmentCard({
       {suggestedAdversaries.length > 0 && (
         <div className="px-4 pt-3">
           <div className="flex items-center gap-2 mb-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#b9baa3]/50">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-parchment-500">
               Potential Adversaries
             </p>
             {onAddAdversary && (
-              <span className="text-[10px] italic text-[#b9baa3]/30">
+              <span className="text-[11px] text-parchment-600">
                 Tap to add to encounter
               </span>
             )}
@@ -209,7 +209,7 @@ function EnvironmentCard({
                       ? "border-emerald-700/60 bg-emerald-900/20 text-emerald-400"
                       : onAddAdversary
                         ? "border-slate-700/60 bg-slate-800/60 text-[#b9baa3] hover:border-[#577399]/60 hover:bg-[#577399]/10 hover:text-[#f7f7ff]"
-                        : "border-slate-800/40 bg-slate-900/30 text-[#b9baa3]/30 cursor-default"}
+                        : "border-slate-800/40 bg-slate-900/30 text-parchment-600 cursor-default"}
                   `}
                 >
                   {added ? (
@@ -239,7 +239,7 @@ function EnvironmentCard({
                 <span
                   key={name}
                   title="Not yet in the adversary catalog"
-                  className="rounded-full border border-slate-800/40 bg-slate-900/30 px-2.5 py-1 text-xs text-[#b9baa3]/30 italic"
+                  className="rounded-full border border-slate-800/40 bg-slate-900/30 px-2.5 py-1 text-xs text-parchment-600"
                 >
                   {name}
                 </span>
@@ -280,7 +280,7 @@ function EnvironmentCard({
             Load into Encounter
           </button>
         )}
-        <span className="text-[11px] text-[#b9baa3]/30">
+        <span className="text-[11px] text-parchment-600">
           {environment.potentialAdversaryNames.length} suggested adversar
           {environment.potentialAdversaryNames.length !== 1 ? "ies" : "y"}
         </span>
@@ -368,13 +368,13 @@ export function EnvironmentCatalog({
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-serif-sc text-sm font-semibold tracking-widest text-[#577399]">
+        <h2 className="font-serif-sc text-sm font-semibold tracking-widest text-steel-accessible">
           Environments
         </h2>
         {activeEnvironment && (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-[#b9baa3]/50">In encounter:</span>
-            <span className="text-xs font-semibold text-[#577399]">
+            <span className="text-xs text-parchment-500">In encounter:</span>
+            <span className="text-xs font-semibold text-steel-accessible">
               {activeEnvironment.name}
             </span>
             <button
@@ -382,7 +382,7 @@ export function EnvironmentCatalog({
               onClick={clearEnvironment}
               aria-label="Remove environment from encounter"
               className="
-                rounded p-0.5 text-[#b9baa3]/30
+                rounded p-0.5 text-parchment-600
                 hover:text-[#fe5f55] transition-colors text-xs
               "
             >
@@ -401,7 +401,7 @@ export function EnvironmentCatalog({
           onChange={(e) => setSearch(e.target.value)}
           className="
             w-full rounded-lg border border-slate-700/40 bg-slate-900/60
-            px-3 py-2 text-sm text-[#f7f7ff] placeholder:text-[#b9baa3]/30
+            px-3 py-2 text-sm text-[#f7f7ff] placeholder:text-parchment-600
             focus:outline-none focus:ring-2 focus:ring-[#577399]
           "
         />
@@ -419,10 +419,10 @@ export function EnvironmentCatalog({
           style={{ background: "rgba(87,115,153,0.03)" }}
         >
           <div aria-hidden="true" className="text-4xl opacity-20">🌲</div>
-          <p className="font-serif text-lg text-[#f7f7ff]/60">
+          <p className="font-serif text-lg text-parchment-500">
             {environments.length === 0 ? "No environments yet" : "No matches"}
           </p>
-          <p className="text-sm text-[#b9baa3]/40 max-w-xs">
+          <p className="text-sm text-parchment-600 max-w-xs">
             {environments.length === 0
               ? "Environments will appear here once added."
               : "Try a different search term."}
