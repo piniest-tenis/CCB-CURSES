@@ -32,7 +32,7 @@ export function SourceBadge({
         aria-hidden="true"
         title="Homebrew"
       >
-        <span className="sr-only">Homebrew</span>
+        <span className="sr-only">Curses!</span>
       </span>
     );
   }
@@ -42,8 +42,11 @@ export function SourceBadge({
       <span
         className={`inline-flex items-center gap-1.5 rounded-md border border-coral-400/30 bg-coral-400/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-coral-400 ${className}`}
       >
-        <span className="inline-block h-1.5 w-1.5 rounded-full bg-coral-400" aria-hidden="true" />
-        Homebrew
+        <span
+          className="inline-block h-1.5 w-1.5 rounded-full bg-coral-400"
+          aria-hidden="true"
+        />
+        Curses!
       </span>
     );
   }
@@ -53,7 +56,7 @@ export function SourceBadge({
     <span
       className={`inline-flex items-center gap-1 rounded border border-coral-400/30 bg-coral-400/10 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-coral-400 ${className}`}
     >
-      Homebrew
+      Curses!
     </span>
   );
 }

@@ -1,6 +1,13 @@
 "use client";
 
-import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useCharacterStore } from "@/store/characterStore";
 import { useUpdateCharacter } from "@/hooks/useCharacter";
 import { useRule } from "@/hooks/useGameData";
@@ -32,14 +39,20 @@ interface EditSidebarProviderProps {
   children: React.ReactNode;
 }
 
-export function EditSidebarProvider({ characterId, children }: EditSidebarProviderProps) {
+export function EditSidebarProvider({
+  characterId,
+  children,
+}: EditSidebarProviderProps) {
   const [activeField, setActiveField] = useState<EditField | null>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
 
-  const openField = useCallback((field: EditField, triggerElement?: HTMLElement) => {
-    triggerRef.current = triggerElement ?? null;
-    setActiveField(field);
-  }, []);
+  const openField = useCallback(
+    (field: EditField, triggerElement?: HTMLElement) => {
+      triggerRef.current = triggerElement ?? null;
+      setActiveField(field);
+    },
+    [],
+  );
 
   const closeField = useCallback(() => {
     setActiveField(null);
@@ -102,11 +115,15 @@ function EditSidebar({ characterId }: EditSidebarProps) {
   const { activeField, closeField } = useEditSidebar();
   const { activeCharacter, updateField } = useCharacterStore();
   const updateMutation = useUpdateCharacter(characterId);
-  const { data: fieldRule, isLoading: isRuleLoading } = useRule(activeField?.helpRuleId);
+  const { data: fieldRule, isLoading: isRuleLoading } = useRule(
+    activeField?.helpRuleId,
+  );
 
   const [localValue, setLocalValue] = useState("");
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveState, setSaveState] = useState<"idle" | "typing" | "saving" | "saved">("idle");
+  const [saveState, setSaveState] = useState<
+    "idle" | "typing" | "saving" | "saved"
+  >("idle");
 
   const headingId = useId();
   const descriptionId = useId();
@@ -145,13 +162,14 @@ function EditSidebar({ characterId }: EditSidebarProps) {
   useEffect(() => {
     if (!isOpen || !panelRef.current) return;
     const panel = panelRef.current;
-    const selector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    const selector =
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
     const handleTab = (e: KeyboardEvent) => {
       if (e.key !== "Tab") return;
-      const focusable = Array.from(panel.querySelectorAll<HTMLElement>(selector)).filter(
-        (el) => !el.hasAttribute("disabled")
-      );
+      const focusable = Array.from(
+        panel.querySelectorAll<HTMLElement>(selector),
+      ).filter((el) => !el.hasAttribute("disabled"));
       if (focusable.length === 0) return;
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
@@ -199,7 +217,7 @@ function EditSidebar({ characterId }: EditSidebarProps) {
         setSaveState("idle");
       }
     },
-    [updateMutation]
+    [updateMutation],
   );
 
   const handleChange = useCallback(
@@ -225,15 +243,18 @@ function EditSidebar({ characterId }: EditSidebarProps) {
         void persistFieldValue(activeField, raw);
       }, 700);
     },
-    [activeField, persistFieldValue, updateField]
+    [activeField, persistFieldValue, updateField],
   );
 
   const helpText = useMemo(
     () => (activeField ? getFieldSrdHelpText(activeField, fieldRule) : null),
-    [activeField, fieldRule]
+    [activeField, fieldRule],
   );
 
-  const describedBy = [helpText ? descriptionId : null, activeField?.note ? noteId : null]
+  const describedBy = [
+    helpText ? descriptionId : null,
+    activeField?.note ? noteId : null,
+  ]
     .filter(Boolean)
     .join(" ");
 
@@ -255,7 +276,7 @@ function EditSidebar({ characterId }: EditSidebarProps) {
         aria-hidden={!isOpen}
         inert={!isOpen ? ("" as unknown as boolean) : undefined}
         className={[
-          "fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-[28rem] flex-col",
+          "fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-[28rem] flex-col py-12",
           "border-l border-[#577399]/35 bg-[#0f1713] shadow-2xl",
           "transition-transform duration-300 ease-in-out",
           isOpen ? "translate-x-0" : "translate-x-full",
@@ -263,8 +284,13 @@ function EditSidebar({ characterId }: EditSidebarProps) {
       >
         <div className="flex items-center justify-between border-b border-[#577399]/25 px-4 py-4 sm:px-5">
           <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-[#b9baa3]/70">Field editor</p>
-            <h2 id={headingId} className="font-serif text-lg font-semibold text-[#f7f7ff]">
+            <p className="text-xs uppercase tracking-[0.24em] text-[#b9baa3]/70">
+              Field editor
+            </p>
+            <h2
+              id={headingId}
+              className="font-serif text-lg font-semibold text-[#f7f7ff]"
+            >
               {activeField?.label ?? "Edit"}
             </h2>
           </div>
@@ -280,7 +306,10 @@ function EditSidebar({ characterId }: EditSidebarProps) {
 
         <div className="flex-1 space-y-5 overflow-y-auto px-4 py-5 sm:px-5">
           {activeField?.note && (
-            <div id={noteId} className="rounded-xl border border-[#577399]/20 bg-[#577399]/8 px-4 py-3 text-sm text-[#b9baa3]">
+            <div
+              id={noteId}
+              className="rounded-xl border border-[#577399]/20 bg-[#577399]/8 px-4 py-3 text-sm text-[#b9baa3]"
+            >
               {activeField.note}
             </div>
           )}
@@ -292,11 +321,16 @@ function EditSidebar({ characterId }: EditSidebarProps) {
             {isRuleLoading && activeField?.helpRuleId ? (
               <p className="text-sm text-[#b9baa3]/70">Loading rules text…</p>
             ) : helpText ? (
-              <p id={descriptionId} className="text-base leading-relaxed text-[#f7f7ff] whitespace-pre-wrap">
+              <p
+                id={descriptionId}
+                className="text-base leading-relaxed text-[#f7f7ff] whitespace-pre-wrap"
+              >
                 {helpText}
               </p>
             ) : (
-              <p className="text-sm text-[#b9baa3]/70">No SRD explanation is available for this field.</p>
+              <p className="text-sm text-[#b9baa3]/70">
+                No SRD explanation is available for this field.
+              </p>
             )}
           </section>
 
@@ -337,7 +371,9 @@ function EditSidebar({ characterId }: EditSidebarProps) {
 
               <div className="min-h-[1.25rem] text-xs">
                 {saveError ? (
-                  <p role="alert" className="text-[#fe5f55]">{saveError}</p>
+                  <p role="alert" className="text-[#fe5f55]">
+                    {saveError}
+                  </p>
                 ) : saveState === "saving" ? (
                   <span className="text-[#b9baa3]">Saving…</span>
                 ) : saveState === "saved" ? (

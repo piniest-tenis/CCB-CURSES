@@ -21,7 +21,15 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useDiceStore } from "@/store/diceStore";
 import { DiceRoller } from "./DiceRoller";
-import type { RollResult, ActionOutcome, DieSize, DieSpec, RollRequest, RollBonus, DieRole } from "@/types/dice";
+import type {
+  RollResult,
+  ActionOutcome,
+  DieSize,
+  DieSpec,
+  RollRequest,
+  RollBonus,
+  DieRole,
+} from "@/types/dice";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -29,9 +37,9 @@ const ALL_SIZES: DieSize[] = ["d4", "d6", "d8", "d10", "d12", "d20"];
 
 // Maps die size to public image path (no d20 clean image available)
 const DIE_IMAGE: Partial<Record<DieSize, string>> = {
-  d4:  "/images/dice/d4-clean.png",
-  d6:  "/images/dice/d6-clean.png",
-  d8:  "/images/dice/d8-clean.png",
+  d4: "/images/dice/d4-clean.png",
+  d6: "/images/dice/d6-clean.png",
+  d8: "/images/dice/d8-clean.png",
   d10: "/images/dice/d10-clean.png",
   d12: "/images/dice/d12-clean.png",
 };
@@ -82,14 +90,19 @@ function DieImageButton({
           active
             ? "border-[#577399] bg-[#577399]/20"
             : "border-[#577399]/25 bg-slate-900/60 hover:border-[#577399]/60 hover:bg-[#577399]/10",
-          disabled || count >= 9 ? "opacity-30 cursor-not-allowed" : "cursor-pointer",
+          disabled || count >= 9
+            ? "opacity-30 cursor-not-allowed"
+            : "cursor-pointer",
         ].join(" ")}
       >
         {imgSrc ? (
           <img
             src={imgSrc}
             alt={size}
-            className={["h-8 w-8 object-contain select-none", active ? "opacity-100" : "opacity-60"].join(" ")}
+            className={[
+              "h-8 w-8 object-contain select-none",
+              active ? "opacity-100" : "opacity-60",
+            ].join(" ")}
             draggable={false}
           />
         ) : (
@@ -135,7 +148,14 @@ function StagingPanel({
 }) {
   // Build initial counts from the request's dice pool
   const initialCounts = (): Record<DieSize, number> => {
-    const c: Record<DieSize, number> = { d4: 0, d6: 0, d8: 0, d10: 0, d12: 0, d20: 0 };
+    const c: Record<DieSize, number> = {
+      d4: 0,
+      d6: 0,
+      d8: 0,
+      d10: 0,
+      d12: 0,
+      d20: 0,
+    };
     for (const d of request.dice) {
       c[d.size] = (c[d.size] ?? 0) + 1;
     }
@@ -143,7 +163,12 @@ function StagingPanel({
   };
 
   const [extraCounts, setExtraCounts] = useState<Record<DieSize, number>>({
-    d4: 0, d6: 0, d8: 0, d10: 0, d12: 0, d20: 0,
+    d4: 0,
+    d6: 0,
+    d8: 0,
+    d10: 0,
+    d12: 0,
+    d20: 0,
   });
   const [baseCounts] = useState<Record<DieSize, number>>(initialCounts);
 
@@ -164,7 +189,7 @@ function StagingPanel({
   // Bonus toggles — one boolean per bonus in request.bonuses
   const bonuses: RollBonus[] = request.bonuses ?? [];
   const [activeBonuses, setActiveBonuses] = useState<boolean[]>(() =>
-    bonuses.map(() => false)
+    bonuses.map(() => false),
   );
 
   const toggleBonus = (i: number) => {
@@ -176,17 +201,26 @@ function StagingPanel({
       ...prev,
       [size]: Math.max(
         -(baseCounts[size] ?? 0), // can remove base dice too (down to 0 total)
-        Math.min(9, (prev[size] ?? 0) + delta)
+        Math.min(9, (prev[size] ?? 0) + delta),
       ),
     }));
   };
 
-  const totalCounts = (size: DieSize) => Math.max(0, (baseCounts[size] ?? 0) + (extraCounts[size] ?? 0));
-  const totalDice = ALL_SIZES.reduce((s, sz) => s + totalCounts(sz), 0) + (advantage || disadvantage ? 1 : 0)
-    + activeBonuses.reduce((s, on, i) => s + (on ? (bonuses[i]?.extraDice?.length ?? 0) : 0), 0);
+  const totalCounts = (size: DieSize) =>
+    Math.max(0, (baseCounts[size] ?? 0) + (extraCounts[size] ?? 0));
+  const totalDice =
+    ALL_SIZES.reduce((s, sz) => s + totalCounts(sz), 0) +
+    (advantage || disadvantage ? 1 : 0) +
+    activeBonuses.reduce(
+      (s, on, i) => s + (on ? (bonuses[i]?.extraDice?.length ?? 0) : 0),
+      0,
+    );
 
   // Compute the active bonus sum
-  const bonusTotal = bonuses.reduce((sum, b, i) => sum + (activeBonuses[i] ? b.value : 0), 0);
+  const bonusTotal = bonuses.reduce(
+    (sum, b, i) => sum + (activeBonuses[i] ? b.value : 0),
+    0,
+  );
   const mod = (request.modifier ?? 0) + bonusTotal;
 
   const handleRoll = () => {
@@ -280,7 +314,11 @@ function StagingPanel({
             role="switch"
             aria-checked={advantage}
             onClick={toggleAdvantage}
-            aria-label={advantage ? "Advantage active — adds d6 to roll" : "Add advantage die (d6)"}
+            aria-label={
+              advantage
+                ? "Advantage active — adds d6 to roll"
+                : "Add advantage die (d6)"
+            }
             className={[
               "flex flex-1 items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-all duration-150",
               "focus:outline-none focus:ring-2 focus:ring-[#577399]",
@@ -293,13 +331,18 @@ function StagingPanel({
               <img
                 src={DIE_IMAGE["d6"]}
                 alt="d6"
-                className={["h-5 w-5 object-contain select-none shrink-0", advantage ? "opacity-100" : "opacity-50"].join(" ")}
+                className={[
+                  "h-5 w-5 object-contain select-none shrink-0",
+                  advantage ? "opacity-100" : "opacity-50",
+                ].join(" ")}
                 draggable={false}
               />
             ) : (
               <span className="text-xs font-bold shrink-0">d6</span>
             )}
-            <span className="flex-1 text-left font-medium text-xs">Advantage</span>
+            <span className="flex-1 text-left font-medium text-xs">
+              Advantage
+            </span>
             {advantage && (
               <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#577399] px-1 text-[10px] font-bold text-white leading-none shrink-0">
                 +d6
@@ -313,7 +356,11 @@ function StagingPanel({
             role="switch"
             aria-checked={disadvantage}
             onClick={toggleDisadvantage}
-            aria-label={disadvantage ? "Disadvantage active — subtracts d6 from roll" : "Add disadvantage die (−d6)"}
+            aria-label={
+              disadvantage
+                ? "Disadvantage active — subtracts d6 from roll"
+                : "Add disadvantage die (−d6)"
+            }
             className={[
               "flex flex-1 items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-all duration-150",
               "focus:outline-none focus:ring-2 focus:ring-[#577399]",
@@ -326,13 +373,18 @@ function StagingPanel({
               <img
                 src={DIE_IMAGE["d6"]}
                 alt="d6"
-                className={["h-5 w-5 object-contain select-none shrink-0 opacity-50", disadvantage ? "opacity-70" : ""].join(" ")}
+                className={[
+                  "h-5 w-5 object-contain select-none shrink-0 opacity-50",
+                  disadvantage ? "opacity-70" : "",
+                ].join(" ")}
                 draggable={false}
               />
             ) : (
               <span className="text-xs font-bold shrink-0">d6</span>
             )}
-            <span className="flex-1 text-left font-medium text-xs">Disadvantage</span>
+            <span className="flex-1 text-left font-medium text-xs">
+              Disadvantage
+            </span>
             {disadvantage && (
               <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#fe5f55]/70 px-1 text-[10px] font-bold text-white leading-none shrink-0">
                 −d6
@@ -358,14 +410,30 @@ function StagingPanel({
                 : "border-[#577399]/25 bg-transparent text-[#b9baa3] hover:border-[#577399]/50 hover:text-[#f7f7ff]",
             ].join(" ")}
           >
-            <span className="text-[11px] shrink-0" aria-hidden="true">✦</span>
-            <span className="flex-1 text-left font-medium text-xs">{bonus.label}</span>
+            <span className="text-[11px] shrink-0" aria-hidden="true">
+              ✦
+            </span>
+            <span className="flex-1 text-left font-medium text-xs">
+              {bonus.label}
+            </span>
             {bonus.cost && (
-              <span className={["text-[10px] shrink-0 rounded px-1 py-0.5 border", activeBonuses[i] ? "border-[#DAA520]/40 text-[#DAA520]" : "border-[#577399]/20 text-[#b9baa3]/60"].join(" ")}>
+              <span
+                className={[
+                  "text-[10px] shrink-0 rounded px-1 py-0.5 border",
+                  activeBonuses[i]
+                    ? "border-[#DAA520]/40 text-[#DAA520]"
+                    : "border-[#577399]/20 text-[#b9baa3]/60",
+                ].join(" ")}
+              >
                 {bonus.cost}
               </span>
             )}
-            <span className={["text-xs font-bold shrink-0", activeBonuses[i] ? "text-[#DAA520]" : "text-[#b9baa3]"].join(" ")}>
+            <span
+              className={[
+                "text-xs font-bold shrink-0",
+                activeBonuses[i] ? "text-[#DAA520]" : "text-[#b9baa3]",
+              ].join(" ")}
+            >
               {bonus.extraDice?.length
                 ? `+${bonus.extraDice.length}${bonus.extraDice[0]?.size ?? ""}${bonus.value !== 0 ? (bonus.value > 0 ? `+${bonus.value}` : `${bonus.value}`) : ""}`
                 : `${bonus.value > 0 ? "+" : ""}${bonus.value}`}
@@ -377,16 +445,31 @@ function StagingPanel({
       {/* Modifier row — only show if non-zero */}
       {baseMod !== 0 && bonusTotal === 0 && (
         <p className="text-center text-xs text-[#b9baa3]">
-          Modifier: <span className="font-bold text-[#f7f7ff]">{baseMod > 0 ? "+" : ""}{baseMod}</span>
+          Modifier:{" "}
+          <span className="font-bold text-[#f7f7ff]">
+            {baseMod > 0 ? "+" : ""}
+            {baseMod}
+          </span>
         </p>
       )}
       {bonusTotal !== 0 && (
         <p className="text-center text-xs text-[#b9baa3]">
-          Modifier: <span className="font-bold text-[#f7f7ff]">{baseMod > 0 ? "+" : ""}{baseMod}</span>
+          Modifier:{" "}
+          <span className="font-bold text-[#f7f7ff]">
+            {baseMod > 0 ? "+" : ""}
+            {baseMod}
+          </span>
           {bonusTotal !== 0 && (
-            <span className="text-[#DAA520]"> {bonusTotal > 0 ? "+" : ""}{bonusTotal} bonus</span>
-          )}
-          {" "}<span className="font-bold text-[#f7f7ff]">= {mod > 0 ? "+" : ""}{mod}</span>
+            <span className="text-[#DAA520]">
+              {" "}
+              {bonusTotal > 0 ? "+" : ""}
+              {bonusTotal} bonus
+            </span>
+          )}{" "}
+          <span className="font-bold text-[#f7f7ff]">
+            = {mod > 0 ? "+" : ""}
+            {mod}
+          </span>
         </p>
       )}
       {disadvantage && (
@@ -446,7 +529,9 @@ function ResultPanel({ result }: { result: RollResult }) {
               : "bg-slate-900/60",
           ].join(" ")}
         >
-          <p className={`text-2xl font-bold font-serif ${OUTCOME_COLOR[outcome]}`}>
+          <p
+            className={`text-2xl font-bold font-serif ${OUTCOME_COLOR[outcome]}`}
+          >
             {OUTCOME_LABEL[outcome]}
           </p>
           {outcome === "critical" && (
@@ -464,7 +549,11 @@ function ResultPanel({ result }: { result: RollResult }) {
             <div className="flex flex-col items-center gap-0.5">
               <span
                 className="rounded-full h-10 w-10 flex items-center justify-center text-lg font-bold border-2"
-                style={{ background: "#DAA520", borderColor: "#DAA520", color: "#36454F" }}
+                style={{
+                  background: "#DAA520",
+                  borderColor: "#DAA520",
+                  color: "#36454F",
+                }}
                 aria-label={`Hope die: ${hopeValue}`}
               >
                 {hopeValue}
@@ -478,7 +567,11 @@ function ResultPanel({ result }: { result: RollResult }) {
             <div className="flex flex-col items-center gap-0.5">
               <span
                 className="rounded-full h-10 w-10 flex items-center justify-center text-lg font-bold border-2"
-                style={{ background: "#36454F", borderColor: "#36454F", color: "#DAA520" }}
+                style={{
+                  background: "#36454F",
+                  borderColor: "#36454F",
+                  color: "#DAA520",
+                }}
                 aria-label={`Fear die: ${fearValue}`}
               >
                 {fearValue}
@@ -520,7 +613,9 @@ function ResultPanel({ result }: { result: RollResult }) {
                 >
                   {isDisadv ? `-${d.value}` : d.value}
                 </span>
-                <span className="text-[10px] text-[#b9baa3]">{isDisadv ? `−${d.size}` : d.size}</span>
+                <span className="text-[10px] text-[#b9baa3]">
+                  {isDisadv ? `−${d.size}` : d.size}
+                </span>
               </div>
             );
           })}
@@ -535,7 +630,8 @@ function ResultPanel({ result }: { result: RollResult }) {
         </p>
         {mod !== 0 && (
           <p className="text-xs text-[#b9baa3] mt-1">
-            Dice {total - mod} {mod > 0 ? "+" : ""}{mod} modifier
+            Dice {total - mod} {mod > 0 ? "+" : ""}
+            {mod} modifier
           </p>
         )}
         {request.difficulty !== undefined && !outcome && (
@@ -580,13 +676,20 @@ interface DiceRollerPanelProps {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function DiceRollerPanel({ open, onClose, colorOverrides }: DiceRollerPanelProps) {
-  const { isRolling, lastResult, stagedRequest, requestRoll, clearStagedRoll } = useDiceStore();
+export function DiceRollerPanel({
+  open,
+  onClose,
+  colorOverrides,
+}: DiceRollerPanelProps) {
+  const { isRolling, lastResult, stagedRequest, requestRoll, clearStagedRoll } =
+    useDiceStore();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const panelRef       = useRef<HTMLDivElement>(null);
-  const headingId      = React.useId();
+  const panelRef = useRef<HTMLDivElement>(null);
+  const headingId = React.useId();
 
-  const [phase, setPhase] = useState<"staging" | "rolling" | "result">("staging");
+  const [phase, setPhase] = useState<"staging" | "rolling" | "result">(
+    "staging",
+  );
 
   // Reset to staging whenever the panel opens fresh with a new staged request
   useEffect(() => {
@@ -629,16 +732,18 @@ export function DiceRollerPanel({ open, onClose, colorOverrides }: DiceRollerPan
     const selector = 'button, [tabindex]:not([tabindex="-1"])';
     const handleTab = (e: KeyboardEvent) => {
       if (e.key !== "Tab") return;
-      const focusable = Array.from(panel.querySelectorAll<HTMLElement>(selector)).filter(
-        (el) => !el.hasAttribute("disabled")
-      );
+      const focusable = Array.from(
+        panel.querySelectorAll<HTMLElement>(selector),
+      ).filter((el) => !el.hasAttribute("disabled"));
       if (!focusable.length) return;
       const first = focusable[0];
-      const last  = focusable[focusable.length - 1];
+      const last = focusable[focusable.length - 1];
       if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault(); last.focus();
+        e.preventDefault();
+        last.focus();
       } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault(); first.focus();
+        e.preventDefault();
+        first.focus();
       }
     };
     panel.addEventListener("keydown", handleTab);
@@ -665,9 +770,11 @@ export function DiceRollerPanel({ open, onClose, colorOverrides }: DiceRollerPan
 
   // Header title changes per phase
   const headingText =
-    phase === "staging" ? (stagedRequest?.label ?? "Roll Dice") :
-    phase === "rolling" ? "Rolling..." :
-    "Result";
+    phase === "staging"
+      ? (stagedRequest?.label ?? "Roll Dice")
+      : phase === "rolling"
+        ? "Rolling..."
+        : "Result";
 
   return (
     <>
@@ -675,7 +782,9 @@ export function DiceRollerPanel({ open, onClose, colorOverrides }: DiceRollerPan
       {open && (
         <div
           aria-hidden="true"
-          onClick={() => { if (!isRolling) handleClose(); }}
+          onClick={() => {
+            if (!isRolling) handleClose();
+          }}
           className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300"
         />
       )}
@@ -689,7 +798,7 @@ export function DiceRollerPanel({ open, onClose, colorOverrides }: DiceRollerPan
         aria-hidden={!open}
         inert={!open ? ("" as unknown as boolean) : undefined}
         className={[
-          "fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-[28rem] flex-col",
+          "fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-[28rem] flex-col py-12",
           "border-l border-[#577399]/35 bg-[#0f1713] shadow-2xl",
           "transition-transform duration-300 ease-in-out",
           open ? "translate-x-0" : "translate-x-full",
@@ -698,7 +807,9 @@ export function DiceRollerPanel({ open, onClose, colorOverrides }: DiceRollerPan
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[#577399]/25 px-4 py-4 sm:px-5">
           <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-[#b9baa3]/70">Dice Roller</p>
+            <p className="text-xs uppercase tracking-[0.24em] text-[#b9baa3]/70">
+              Dice Roller
+            </p>
             <h2
               id={headingId}
               className="font-serif text-lg font-semibold text-[#f7f7ff]"
@@ -751,13 +862,20 @@ export function DiceRollerPanel({ open, onClose, colorOverrides }: DiceRollerPan
               glowClass,
             ].join(" ")}
           >
-            <DiceRoller height={300} transparent={false} colorOverrides={colorOverrides} />
+            <DiceRoller
+              height={300}
+              transparent={false}
+              colorOverrides={colorOverrides}
+            />
           </div>
 
           {/* Rolling indicator */}
           {phase === "rolling" && (
             <div className="flex flex-col items-center gap-2 py-6 px-5">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#577399] border-t-transparent" aria-hidden="true" />
+              <div
+                className="h-6 w-6 animate-spin rounded-full border-2 border-[#577399] border-t-transparent"
+                aria-hidden="true"
+              />
               <p className="text-sm text-[#b9baa3] animate-pulse">Rolling...</p>
             </div>
           )}
