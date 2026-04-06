@@ -23,7 +23,7 @@
  * After saving, redirects back to character sheet.
  */
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useCharacter, useUpdateCharacter } from "@/hooks/useCharacter";
 import { useClass, useClasses, useAncestries, useCommunities, useDomainCard } from "@/hooks/useGameData";
@@ -35,6 +35,7 @@ import { SourceFilter, type SourceFilterValue } from "@/components/SourceFilter"
 import { TraitAssignmentPanel, type TraitBonuses } from "@/components/character/TraitAssignmentPanel";
 import { WeaponSelectionPanel } from "@/components/character/WeaponSelectionPanel";
 import { ArmorSelectionPanel } from "@/components/character/ArmorSelectionPanel";
+import { SelectionTile } from "@/components/character/SelectionTile";
 import { StartingEquipmentPanel, type StartingEquipmentSelections } from "@/components/character/StartingEquipmentPanel";
 import { DomainCardSelectionPanel } from "@/components/character/DomainCardSelectionPanel";
 import { ALL_TIER1_WEAPONS, TIER1_ARMOR, UNIVERSAL_STARTING_ITEMS, STARTING_GOLD } from "@/lib/srdEquipment";
@@ -216,6 +217,20 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
   const [classSourceFilter, setClassSourceFilter] = useState<SourceFilterValue>("all");
   const [heritageSourceFilter, setHeritageSourceFilter] = useState<SourceFilterValue>("all");
 
+  // Accordion expand state for Steps 1, 3 & 4
+  const [expandedClassId, setExpandedClassId] = useState<string | null>(null);
+  const [expandedAncestryId, setExpandedAncestryId] = useState<string | null>(null);
+  const [expandedCommunityId, setExpandedCommunityId] = useState<string | null>(null);
+  const handleToggleClass = useCallback((id: string) => {
+    setExpandedClassId((prev) => (prev === id ? null : id));
+  }, []);
+  const handleToggleAncestry = useCallback((id: string) => {
+    setExpandedAncestryId((prev) => (prev === id ? null : id));
+  }, []);
+  const handleToggleCommunity = useCallback((id: string) => {
+    setExpandedCommunityId((prev) => (prev === id ? null : id));
+  }, []);
+
   // ── Persist builder state to sessionStorage on every change ─────────────
   const builderDraft = useMemo(
     () => ({
@@ -312,30 +327,24 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
   const selectedCommunity: CommunityData | undefined =
     communitiesData?.communities.find((c) => c.communityId === communityId);
 
-  // ── Scroll-into-view refs for Step 1 (class list), Step 3 (ancestry list), Step 4 (community list) ──
-  const classListRef = useRef<HTMLDivElement>(null);
-  const ancestryListRef = useRef<HTMLDivElement>(null);
-  const communityListRef = useRef<HTMLDivElement>(null);
+  // ── Scroll-into-view refs (no longer needed for Steps 3/4 — SelectionTile handles auto-scroll) ──
 
-  // When entering Step 1 with a pre-selected class, scroll it into view.
+  // When entering Step 1 with a pre-selected class, pre-expand it.
   useEffect(() => {
-    if (step !== 1 || !classId || !classListRef.current) return;
-    const el = classListRef.current.querySelector<HTMLElement>("[data-selected='true']");
-    if (el) el.scrollIntoView({ block: "nearest", behavior: "instant" });
+    if (step !== 1 || !classId) return;
+    setExpandedClassId(classId);
   }, [step, classId]);
 
-  // When entering Step 3 with a pre-selected ancestry, scroll it into view.
+  // When entering Step 3 with a pre-selected ancestry, pre-expand it.
   useEffect(() => {
-    if (step !== 3 || !ancestryId || !ancestryListRef.current) return;
-    const el = ancestryListRef.current.querySelector<HTMLElement>("[data-selected='true']");
-    if (el) el.scrollIntoView({ block: "nearest", behavior: "instant" });
+    if (step !== 3 || !ancestryId) return;
+    setExpandedAncestryId(ancestryId);
   }, [step, ancestryId]);
 
-  // When entering Step 4 with a pre-selected community, scroll it into view.
+  // When entering Step 4 with a pre-selected community, pre-expand it.
   useEffect(() => {
-    if (step !== 4 || !communityId || !communityListRef.current) return;
-    const el = communityListRef.current.querySelector<HTMLElement>("[data-selected='true']");
-    if (el) el.scrollIntoView({ block: "nearest", behavior: "instant" });
+    if (step !== 4 || !communityId) return;
+    setExpandedCommunityId(communityId);
   }, [step, communityId]);
   
   // Validators
@@ -575,117 +584,117 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
             <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0">
              {/* Step 1: Choose Class */}
             {step === 1 && (
-              <div className="flex flex-col sm:flex-row sm:h-full">
-                {/* Left: class list — full width stacked on mobile, fixed sidebar on sm+ */}
-                <div className="w-full sm:w-64 lg:w-72 shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/40 flex flex-col max-h-[40vh] sm:max-h-none overflow-y-auto">
-                  <div className="px-4 pt-3 pb-2 shrink-0 space-y-2">
-                    <p className="text-xs font-medium uppercase tracking-wider text-parchment-500">
-                      Choose a Class
-                    </p>
-                    <SourceFilter value={classSourceFilter} onChange={setClassSourceFilter} />
+              <div className="flex flex-col h-full">
+                {/* Header + source filter */}
+                <div className="px-4 sm:px-6 pt-4 sm:pt-5 pb-3 shrink-0 space-y-3">
+                  <div>
+                    <h3 className="font-serif text-xl font-semibold text-[#f7f7ff]">Choose a Class</h3>
+                    <p className="text-sm text-[#b9baa3]/60 mt-0.5">Your class determines your core abilities and combat role.</p>
                   </div>
-                 <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0" ref={classListRef}>
-                    {[...(classesData?.classes ?? [])]
-                      .filter((c) => classSourceFilter === "all" || c.source === classSourceFilter)
-                      .sort((a, b) => a.name.localeCompare(b.name)).map((c) => (
-                       <button
-                         key={c.classId}
-                         type="button"
-                         data-selected={classId === c.classId ? "true" : undefined}
-                         onClick={() => {
+                  <CollapsibleSRDDescription
+                    title="What are Classes?"
+                    content="Classes are role-based archetypes that determine which class features and domain cards a PC gains access to throughout play."
+                  />
+                  <SourceFilter value={classSourceFilter} onChange={setClassSourceFilter} />
+                </div>
+
+                {/* Class list — accordion tiles */}
+                <div className="flex-1 overflow-y-auto border-t border-slate-700/30">
+                  {[...(classesData?.classes ?? [])]
+                    .filter((c) => classSourceFilter === "all" || c.source === classSourceFilter)
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map((c) => (
+                      <SelectionTile
+                        key={c.classId}
+                        id={`class-${c.classId}`}
+                        isSelected={classId === c.classId}
+                        isExpanded={expandedClassId === c.classId}
+                        onToggleExpand={() => handleToggleClass(c.classId)}
+                        onSelect={() => {
                           setClassId(c.classId);
                           setSubclassId(""); // Reset subclass when changing class
                         }}
-                        className={`
-                          w-full text-left px-4 py-3 transition-colors
-                          ${classId === c.classId
-                            ? "bg-[#577399]/20 border-l-2 border-[#577399]"
-                            : "border-l-2 border-transparent hover:bg-slate-800/60"
-                          }
-                        `}
+                        name={c.name}
+                        subtitle={c.subclasses.map((s) => s.name).join(" · ")}
+                        badges={<SourceBadge source={c.source} size="xs" />}
+                        selectLabel="Select"
+                        selectedLabel="Selected"
                       >
-                        <p className="text-sm font-semibold text-[#f7f7ff] flex items-center gap-1.5">
-                          {c.name}
-                          <SourceBadge source={c.source} size="xs" />
-                        </p>
-                        {c.subclasses.length > 0 && (
-                          <p className="text-sm text-parchment-500 mt-0.5">
-                            {c.subclasses.map((s) => s.name).join(" · ")}
-                          </p>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                
-                {/* Right: preview */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 min-h-[120px]">
-                  {!classId ? (
-                    <div className="flex h-full items-center justify-center">
-                      <div className="text-center space-y-3">
-                        <div className="text-4xl opacity-20" aria-hidden="true">⚔️</div>
-                        <p className="text-sm text-parchment-600">Select a class to see details</p>
-                      </div>
-                    </div>
-                  ) : selectedClassData ? (
-                    <>
-                      <CollapsibleSRDDescription
-                        title="What are Classes?"
-                        content="Classes are role-based archetypes that determine which class features and domain cards a PC gains access to throughout play."
-                      />
-                      
-                      <div>
-                        <h3 className="font-serif text-2xl font-bold text-[#f7f7ff]">{selectedClassData.name}</h3>
-                      </div>
-                      
-                      <div className="flex gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs uppercase tracking-wider text-parchment-500">Evasion</span>
-                          <span className="rounded border border-slate-700 bg-slate-900 px-2.5 py-0.5 font-bold">
-                            {selectedClassData.startingEvasion}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs uppercase tracking-wider text-parchment-500">Hit Points</span>
-                          <span className="rounded border border-slate-700 bg-slate-900 px-2.5 py-0.5 font-bold">
-                            {selectedClassData.startingHitPoints}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {selectedClassData.domains.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {selectedClassData.domains.map((d) => (
-                            <span
-                              key={d}
-                              className="rounded border border-[#577399]/50 bg-[#577399]/10 px-2.5 py-0.5 text-sm text-[#577399]"
-                            >
-                              {d}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      
-                      {(selectedClassData.classFeatures?.length ?? 0) > 0 && (
-                        <div>
-                          <h4 className="font-semibold text-[#f7f7ff] mb-2">Class Feature{selectedClassData.classFeatures.length > 1 ? "s" : ""}</h4>
-                          <div className="space-y-2">
-                            {selectedClassData.classFeatures.map((feature) => (
-                              <div key={feature.name} className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3">
-                                <p className="text-sm font-semibold text-[#f7f7ff] mb-1">{feature.name}</p>
-                                <MarkdownContent className="text-base text-[#b9baa3]/70">
-                                  {[
-                                    feature.description,
-                                    ...feature.options.map((o) => `- ${o}`),
-                                  ].filter(Boolean).join("\n\n")}
-                                </MarkdownContent>
-                              </div>
-                            ))}
+                        {/* Expanded detail content */}
+                        <div className="space-y-4">
+                          {/* Stats row */}
+                          <div className="flex gap-4 text-sm">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs uppercase tracking-wider text-parchment-500">Evasion</span>
+                              <span className="rounded border border-slate-700 bg-slate-900 px-2.5 py-0.5 font-bold text-[#f7f7ff]">
+                                {c.startingEvasion}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs uppercase tracking-wider text-parchment-500">Hit Points</span>
+                              <span className="rounded border border-slate-700 bg-slate-900 px-2.5 py-0.5 font-bold text-[#f7f7ff]">
+                                {c.startingHitPoints}
+                              </span>
+                            </div>
                           </div>
+
+                          {/* Domains */}
+                          {c.domains.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {c.domains.map((d) => (
+                                <span
+                                  key={d}
+                                  className="rounded border border-[#577399]/50 bg-[#577399]/10 px-2.5 py-0.5 text-sm text-[#577399]"
+                                >
+                                  {d}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Subclasses summary */}
+                          {c.subclasses.length > 0 && (
+                            <div>
+                              <p className="text-xs font-semibold uppercase text-parchment-500 mb-2">Subclasses</p>
+                              <div className="space-y-2">
+                                {c.subclasses.map((s) => (
+                                  <div key={s.subclassId} className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3">
+                                    <p className="text-sm font-semibold text-[#f7f7ff]">{s.name}</p>
+                                    {s.description && (
+                                      <MarkdownContent className="text-base text-[#b9baa3]/70 mt-1">
+                                        {s.description}
+                                      </MarkdownContent>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Full class features — only available when this class is selected (full data loaded) */}
+                          {classId === c.classId && selectedClassData && (selectedClassData.classFeatures?.length ?? 0) > 0 && (
+                            <div>
+                              <p className="text-xs font-semibold uppercase text-parchment-500 mb-2">
+                                Class Feature{selectedClassData.classFeatures.length > 1 ? "s" : ""}
+                              </p>
+                              <div className="space-y-2">
+                                {selectedClassData.classFeatures.map((feature) => (
+                                  <div key={feature.name} className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3">
+                                    <p className="text-sm font-semibold text-[#f7f7ff] mb-1">{feature.name}</p>
+                                    <MarkdownContent className="text-base text-[#b9baa3]/70">
+                                      {[
+                                        feature.description,
+                                        ...feature.options.map((o) => `- ${o}`),
+                                      ].filter(Boolean).join("\n\n")}
+                                    </MarkdownContent>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </>
-                  ) : null}
+                      </SelectionTile>
+                    ))}
                 </div>
               </div>
             )}
@@ -774,156 +783,121 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
             
             {/* Step 3: Choose Ancestry */}
             {step === 3 && (
-              <div className="flex flex-col sm:flex-row sm:h-full">
-                {/* Left pane: ancestry list — full width stacked on mobile, fixed sidebar on sm+ */}
-                <div className="w-full sm:w-64 lg:w-72 shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/40 flex flex-col max-h-[40vh] sm:max-h-none overflow-y-auto">
-                  <div className="px-4 pt-3 pb-2 shrink-0 space-y-2">
-                    <p className="text-xs font-medium uppercase tracking-wider text-parchment-500">
-                      Choose an Ancestry
-                    </p>
-                    <SourceFilter value={heritageSourceFilter} onChange={setHeritageSourceFilter} />
+              <div className="flex flex-col h-full">
+                {/* Header + source filter */}
+                <div className="px-4 sm:px-6 pt-4 sm:pt-5 pb-3 shrink-0 space-y-3">
+                  <div>
+                    <h3 className="font-serif text-xl font-semibold text-[#f7f7ff]">Choose an Ancestry</h3>
+                    <p className="text-sm text-[#b9baa3]/60 mt-0.5">Your ancestry determines innate traits and abilities.</p>
                   </div>
-                  <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0" ref={ancestryListRef}>
-                    {ancestriesData?.ancestries
-                      .filter((a) => heritageSourceFilter === "all" || a.source === heritageSourceFilter)
-                      .map((a) => (
-                       <button
-                         key={a.ancestryId}
-                         type="button"
-                         data-selected={ancestryId === a.ancestryId ? "true" : undefined}
-                         onClick={() => setAncestryId(a.ancestryId)}
-                        className={`
-                          w-full text-left px-4 py-3 transition-colors
-                          ${ancestryId === a.ancestryId
-                            ? "bg-[#577399]/20 border-l-2 border-[#577399]"
-                            : "border-l-2 border-transparent hover:bg-slate-800/60"
-                          }
-                        `}
-                      >
-                        <p className="text-sm font-semibold text-[#f7f7ff] flex items-center gap-1.5">
-                          {a.name}
-                          <SourceBadge source={a.source} size="xs" />
-                        </p>
-                        <p className="text-sm text-parchment-500 truncate">
-                          {a.traitName}{a.secondTraitName ? ` · ${a.secondTraitName}` : ""}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
+                  <CollapsibleSRDDescription
+                    title="What are Ancestries?"
+                    content="Ancestries are the species or lineage of your character. Each ancestry grants one or two unique traits that represent innate abilities."
+                  />
+                  <SourceFilter value={heritageSourceFilter} onChange={setHeritageSourceFilter} />
                 </div>
-                
-                {/* Right pane: ancestry detail */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 min-h-[120px]">
-                  {!ancestryId && (
-                    <div className="flex h-full items-center justify-center">
-                      <div className="text-center space-y-3">
-                        <div className="text-4xl opacity-20" aria-hidden="true">🌿</div>
-                        <p className="text-sm text-parchment-600">Select an ancestry to see details</p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {selectedAncestry && (
-                    <div className="space-y-4">
-                      <div>
-                        <h3 className="font-serif text-2xl font-bold text-[#f7f7ff]">{selectedAncestry.name}</h3>
-                        {selectedAncestry.flavorText && (
-                          <MarkdownContent className="mt-2 text-base text-parchment-500">
-                            {selectedAncestry.flavorText}
-                          </MarkdownContent>
-                        )}
-                      </div>
-                      <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3 space-y-2">
-                        <p className="text-xs font-semibold uppercase text-[#577399]">Primary Trait</p>
-                        <p className="text-sm font-semibold text-[#f7f7ff]">{selectedAncestry.traitName}</p>
-                        <MarkdownContent className="text-base text-[#b9baa3]/70">
-                          {selectedAncestry.traitDescription}
-                        </MarkdownContent>
-                      </div>
-                      {selectedAncestry.secondTraitName && (
-                        <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3 space-y-2">
-                          <p className="text-xs font-semibold uppercase text-[#577399]">Secondary Trait</p>
-                          <p className="text-sm font-semibold text-[#f7f7ff]">{selectedAncestry.secondTraitName}</p>
-                          {selectedAncestry.secondTraitDescription && (
-                            <MarkdownContent className="text-base text-[#b9baa3]/70">
-                              {selectedAncestry.secondTraitDescription}
+
+                {/* Ancestry list — accordion tiles */}
+                <div className="flex-1 overflow-y-auto border-t border-slate-700/30">
+                  {ancestriesData?.ancestries
+                    .filter((a) => heritageSourceFilter === "all" || a.source === heritageSourceFilter)
+                    .map((a) => (
+                      <SelectionTile
+                        key={a.ancestryId}
+                        id={`ancestry-${a.ancestryId}`}
+                        isSelected={ancestryId === a.ancestryId}
+                        isExpanded={expandedAncestryId === a.ancestryId}
+                        onToggleExpand={() => handleToggleAncestry(a.ancestryId)}
+                        onSelect={() => setAncestryId(a.ancestryId)}
+                        name={a.name}
+                        subtitle={a.traitName + (a.secondTraitName ? ` · ${a.secondTraitName}` : "")}
+                        badges={<SourceBadge source={a.source} size="xs" />}
+                        selectLabel="Select"
+                        selectedLabel="Selected"
+                      >
+                        {/* Expanded detail content */}
+                        <div className="space-y-4">
+                          {a.flavorText && (
+                            <MarkdownContent className="text-base text-parchment-500">
+                              {a.flavorText}
                             </MarkdownContent>
                           )}
+                          <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3 space-y-2">
+                            <p className="text-xs font-semibold uppercase text-[#577399]">Primary Trait</p>
+                            <p className="text-sm font-semibold text-[#f7f7ff]">{a.traitName}</p>
+                            <MarkdownContent className="text-base text-[#b9baa3]/70">
+                              {a.traitDescription}
+                            </MarkdownContent>
+                          </div>
+                          {a.secondTraitName && (
+                            <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3 space-y-2">
+                              <p className="text-xs font-semibold uppercase text-[#577399]">Secondary Trait</p>
+                              <p className="text-sm font-semibold text-[#f7f7ff]">{a.secondTraitName}</p>
+                              {a.secondTraitDescription && (
+                                <MarkdownContent className="text-base text-[#b9baa3]/70">
+                                  {a.secondTraitDescription}
+                                </MarkdownContent>
+                              )}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  )}
+                      </SelectionTile>
+                    ))}
                 </div>
               </div>
             )}
             
             {/* Step 4: Choose Community */}
             {step === 4 && (
-              <div className="flex flex-col sm:flex-row sm:h-full">
-                {/* Left pane: community list — full width stacked on mobile, fixed sidebar on sm+ */}
-                <div className="w-full sm:w-64 lg:w-72 shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/40 flex flex-col max-h-[40vh] sm:max-h-none overflow-y-auto">
-                  <div className="px-4 pt-3 pb-2 shrink-0 space-y-2">
-                    <p className="text-xs font-medium uppercase tracking-wider text-parchment-500">
-                      Choose a Community
-                    </p>
-                    <SourceFilter value={heritageSourceFilter} onChange={setHeritageSourceFilter} />
+              <div className="flex flex-col h-full">
+                {/* Header + source filter */}
+                <div className="px-4 sm:px-6 pt-4 sm:pt-5 pb-3 shrink-0 space-y-3">
+                  <div>
+                    <h3 className="font-serif text-xl font-semibold text-[#f7f7ff]">Choose a Community</h3>
+                    <p className="text-sm text-[#b9baa3]/60 mt-0.5">Your community reflects the culture you were raised in.</p>
                   </div>
-                  <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0" ref={communityListRef}>
-                    {communitiesData?.communities
-                      .filter((c) => heritageSourceFilter === "all" || c.source === heritageSourceFilter)
-                      .map((c) => (
-                       <button
-                         key={c.communityId}
-                         type="button"
-                         data-selected={communityId === c.communityId ? "true" : undefined}
-                         onClick={() => setCommunityId(c.communityId)}
-                        className={`
-                          w-full text-left px-4 py-3 transition-colors
-                          ${communityId === c.communityId
-                            ? "bg-[#577399]/20 border-l-2 border-[#577399]"
-                            : "border-l-2 border-transparent hover:bg-slate-800/60"
-                          }
-                        `}
-                      >
-                        <p className="text-sm font-semibold text-[#f7f7ff] flex items-center gap-1.5">
-                          {c.name}
-                          <SourceBadge source={c.source} size="xs" />
-                        </p>
-                      </button>
-                    ))}
-                  </div>
+                  <CollapsibleSRDDescription
+                    title="What are Communities?"
+                    content="Communities represent the cultural group or society your character grew up in. Each community grants a unique trait that reflects that culture's values and practices."
+                  />
+                  <SourceFilter value={heritageSourceFilter} onChange={setHeritageSourceFilter} />
                 </div>
-                
-                {/* Right pane: community detail */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 min-h-[120px]">
-                  {!communityId && (
-                    <div className="flex h-full items-center justify-center">
-                      <div className="text-center space-y-3">
-                        <div className="text-4xl opacity-20" aria-hidden="true">🏘</div>
-                        <p className="text-sm text-parchment-600">Select a community to see details</p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {selectedCommunity && (
-                    <div className="space-y-4">
-                      <div>
-                        <h3 className="font-serif text-2xl font-bold text-[#f7f7ff]">{selectedCommunity.name}</h3>
-                        {selectedCommunity.flavorText && (
-                          <MarkdownContent className="mt-2 text-base text-parchment-500">
-                            {selectedCommunity.flavorText}
-                          </MarkdownContent>
-                        )}
-                      </div>
-                      <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3 space-y-2">
-                        <p className="text-xs font-semibold uppercase text-[#577399]">Trait</p>
-                        <p className="text-sm font-semibold text-[#f7f7ff]">{selectedCommunity.traitName}</p>
-                        <MarkdownContent className="text-base text-[#b9baa3]/70">
-                          {selectedCommunity.traitDescription}
-                        </MarkdownContent>
-                      </div>
-                    </div>
-                  )}
+
+                {/* Community list — accordion tiles */}
+                <div className="flex-1 overflow-y-auto border-t border-slate-700/30">
+                  {communitiesData?.communities
+                    .filter((c) => heritageSourceFilter === "all" || c.source === heritageSourceFilter)
+                    .map((c) => (
+                      <SelectionTile
+                        key={c.communityId}
+                        id={`community-${c.communityId}`}
+                        isSelected={communityId === c.communityId}
+                        isExpanded={expandedCommunityId === c.communityId}
+                        onToggleExpand={() => handleToggleCommunity(c.communityId)}
+                        onSelect={() => setCommunityId(c.communityId)}
+                        name={c.name}
+                        subtitle={c.traitName}
+                        badges={<SourceBadge source={c.source} size="xs" />}
+                        selectLabel="Select"
+                        selectedLabel="Selected"
+                      >
+                        {/* Expanded detail content */}
+                        <div className="space-y-4">
+                          {c.flavorText && (
+                            <MarkdownContent className="text-base text-parchment-500">
+                              {c.flavorText}
+                            </MarkdownContent>
+                          )}
+                          <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3 space-y-2">
+                            <p className="text-xs font-semibold uppercase text-[#577399]">Trait</p>
+                            <p className="text-sm font-semibold text-[#f7f7ff]">{c.traitName}</p>
+                            <MarkdownContent className="text-base text-[#b9baa3]/70">
+                              {c.traitDescription}
+                            </MarkdownContent>
+                          </div>
+                        </div>
+                      </SelectionTile>
+                    ))}
                 </div>
               </div>
             )}

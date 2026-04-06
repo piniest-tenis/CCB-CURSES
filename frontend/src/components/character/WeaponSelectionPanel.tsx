@@ -3,25 +3,26 @@
 /**
  * src/components/character/WeaponSelectionPanel.tsx
  *
- * Step 3 of the character builder: Choose Starting Weapons.
+ * Step 6 of the character builder: Choose Starting Weapons.
  *
  * Features:
  * - Two weapon slots: Primary and Secondary
  * - Filterable list (by name, trait, burden, damage type, range, feature)
  * - "Suggested" badge on weapons that match the subclass's spellcast trait
  * - Suggested weapons sort to the top by default
- * - Drill-down detail view with full SRD stats + page reference
+ * - Accordion-expandable detail tiles (SelectionTile) with full stats
  * - Enforces SRD rule: magic weapons require a Spellcast trait
  * - Enforces SRD rule: Two-Handed primary disables secondary selection
  */
 
-import React, { useState, useMemo, useRef, useEffect } from "react";
+import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import {
   ALL_TIER1_WEAPONS,
   SUBCLASS_SUGGESTED_WEAPONS,
   type SRDWeapon,
   type WeaponCategory,
 } from "@/lib/srdEquipment";
+import { SelectionTile } from "./SelectionTile";
 
 interface WeaponSelectionPanelProps {
   primaryWeaponId: string | null;
@@ -49,7 +50,7 @@ export function WeaponSelectionPanel({
 }: WeaponSelectionPanelProps) {
   const [activeSlot, setActiveSlot] = useState<ActiveSlot>("primary");
   const [filterText, setFilterText] = useState("");
-  const [drillWeapon, setDrillWeapon] = useState<SRDWeapon | null>(null);
+  const [expandedWeaponId, setExpandedWeaponId] = useState<string | null>(null);
 
   // Suggested weapon IDs for this subclass
   const suggestedIds: Set<string> = useMemo(() => {
@@ -108,18 +109,31 @@ export function WeaponSelectionPanel({
   const primaryWeapon = ALL_TIER1_WEAPONS.find((w) => w.id === primaryWeaponId) ?? null;
   const secondaryWeapon = ALL_TIER1_WEAPONS.find((w) => w.id === secondaryWeaponId) ?? null;
 
-  // Scroll selected item into view when the list first renders with a pre-selection.
-  const listRef = useRef<HTMLDivElement>(null);
+  // Pre-expand the currently selected weapon when returning to this step or switching tabs
+  const hasPreExpanded = useRef<string | null>(null);
   useEffect(() => {
-    if (!selectedId || !listRef.current) return;
-    const el = listRef.current.querySelector<HTMLElement>("[data-selected='true']");
-    if (el) el.scrollIntoView({ block: "nearest", behavior: "instant" });
-    // Only run on initial mount or when slot changes (activeSlot dependency keeps it in sync).
+    if (selectedId && hasPreExpanded.current !== activeSlot) {
+      setExpandedWeaponId(selectedId);
+      hasPreExpanded.current = activeSlot;
+    }
+  }, [selectedId, activeSlot]);
+
+  // Reset expanded weapon when switching slots
+  useEffect(() => {
+    if (selectedId) {
+      setExpandedWeaponId(selectedId);
+    } else {
+      setExpandedWeaponId(null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSlot]);
 
   // SRD rule: Two-Handed primary disables secondary slot
   const primaryIsTwoHanded = primaryWeapon?.burden === "Two-Handed";
+
+  const handleToggleExpand = useCallback((id: string) => {
+    setExpandedWeaponId((prev) => (prev === id ? null : id));
+  }, []);
 
   function handleSelect(weapon: SRDWeapon) {
     if (activeSlot === "primary") {
@@ -133,15 +147,7 @@ export function WeaponSelectionPanel({
     }
   }
 
-  if (drillWeapon) {
-    return (
-      <WeaponDrillDown
-        weapon={drillWeapon}
-        isSuggested={suggestedIds.has(drillWeapon.id)}
-        onBack={() => setDrillWeapon(null)}
-      />
-    );
-  }
+  const selectLabel = activeSlot === "primary" ? "Set as Primary" : "Set as Secondary";
 
   return (
     <div className="flex flex-col h-full">
@@ -198,8 +204,8 @@ export function WeaponSelectionPanel({
         </p>
       </div>
 
-      {/* Weapon list */}
-      <div className="flex-1 overflow-y-auto" ref={listRef}>
+      {/* Weapon list — accordion tiles */}
+      <div className="flex-1 overflow-y-auto">
         {sorted.length === 0 ? (
           <div className="flex items-center justify-center h-32">
             <p className="text-sm text-parchment-600">No weapons match your filter</p>
@@ -209,39 +215,20 @@ export function WeaponSelectionPanel({
             const isSelected = weapon.id === selectedId;
             const isSuggested = suggestedIds.has(weapon.id);
             return (
-              <div
+              <SelectionTile
                 key={weapon.id}
-                data-selected={isSelected ? "true" : undefined}
-                onClick={() => handleSelect(weapon)}
-                className={`
-                  flex items-start gap-2 px-4 py-3 border-l-2 transition-colors cursor-pointer
-                  ${isSelected
-                    ? "bg-[#577399]/20 border-[#577399]"
-                    : "border-transparent hover:bg-slate-800/60 hover:border-slate-600"
-                  }
-                `}
-              >
-                {/* Circular radio indicator (visual only, tile click selects) */}
-                <span
-                  className={`
-                    mt-0.5 flex-shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors
-                    ${isSelected
-                      ? "border-[#577399] bg-[#577399]"
-                      : "border-slate-600"
-                    }
-                  `}
-                  aria-hidden="true"
-                >
-                  {isSelected && <span className="h-2 w-2 rounded-full bg-white" />}
-                </span>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-semibold text-[#f7f7ff]">{weapon.name}</span>
+                id={`weapon-${activeSlot}-${weapon.id}`}
+                isSelected={isSelected}
+                isExpanded={expandedWeaponId === weapon.id}
+                onToggleExpand={() => handleToggleExpand(weapon.id)}
+                onSelect={() => handleSelect(weapon)}
+                name={weapon.name}
+                subtitle={`${weapon.trait} · ${weapon.burden} · ${weapon.range} · ${weapon.damageDie}`}
+                badges={
+                  <>
                     {isSuggested && (
                       <span className="text-xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#577399]/30 text-[#577399] border border-[#577399]/40 whitespace-nowrap">
-                        Suggested Weapon
+                        Suggested
                       </span>
                     )}
                     {weapon.damageType === "Magic" && (
@@ -249,42 +236,20 @@ export function WeaponSelectionPanel({
                         Magic
                       </span>
                     )}
-                  </div>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    <span className="text-xs text-parchment-500">{weapon.trait}</span>
-                    <span className="text-xs text-parchment-600">·</span>
-                    <span className="text-xs text-parchment-500">{weapon.burden}</span>
-                    <span className="text-xs text-parchment-600">·</span>
-                    <span className="text-xs text-parchment-500">{weapon.range}</span>
-                    <span className="text-xs text-parchment-600">·</span>
-                    <span className="text-xs font-mono text-[#b9baa3]/80">{weapon.damageDie}</span>
-                  </div>
-                  {weapon.feature && (
-                    <p className="text-xs text-parchment-500 mt-1 truncate">{weapon.feature}</p>
-                  )}
-                </div>
-
-                {/* Drill-down strip — clicking this area opens detail; delineated from select area */}
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); setDrillWeapon(weapon); }}
-                  aria-label={`View details for ${weapon.name}`}
-                  className="
-                    self-stretch shrink-0 flex items-center justify-center
-                    pl-3 pr-1 -mr-4 border-l border-slate-700/40
-                    text-parchment-600 hover:text-parchment-500
-                    transition-colors min-w-[44px]
-                  "
-                >
-                  <span className="text-lg leading-none">›</span>
-                </button>
-              </div>
+                  </>
+                }
+                selectLabel={selectLabel}
+                selectedLabel={activeSlot === "primary" ? "Primary" : "Secondary"}
+              >
+                {/* Expanded detail content */}
+                <WeaponDetail weapon={weapon} />
+              </SelectionTile>
             );
           })
         )}
       </div>
 
-      {/* Selected summary */}
+      {/* Selected summary footer */}
       {(primaryWeapon || secondaryWeapon) && (
         <div className="shrink-0 border-t border-slate-700/30 px-4 py-3 space-y-1">
           {primaryWeapon && (
@@ -307,78 +272,39 @@ export function WeaponSelectionPanel({
   );
 }
 
-// ─── Drill-Down Detail View ────────────────────────────────────────────────────
+// ─── Weapon Detail Content (shown inside expanded tile) ────────────────────────
 
-interface WeaponDrillDownProps {
-  weapon: SRDWeapon;
-  isSuggested: boolean;
-  onBack: () => void;
-}
-
-function WeaponDrillDown({ weapon, isSuggested, onBack }: WeaponDrillDownProps) {
+function WeaponDetail({ weapon }: { weapon: SRDWeapon }) {
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
-      {/* Back button */}
-      <div className="shrink-0 px-4 pt-4 pb-2">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex items-center gap-1.5 px-4 py-3 -mx-4 text-xs text-[#daa520] hover:text-[#e8b830] transition-colors min-h-[44px]"
-        >
-          ← Back to list
-        </button>
+    <div className="space-y-4">
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 gap-3">
+        <StatBlock label="Trait" value={weapon.trait} />
+        <StatBlock label="Burden" value={weapon.burden} />
+        <StatBlock label="Range" value={weapon.range} />
+        <StatBlock label="Damage" value={`${weapon.damageDie} (${weapon.damageType})`} />
       </div>
 
-      <div className="px-6 pb-6 space-y-5">
-        {/* Header */}
-        <div>
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <h3 className="font-serif text-2xl font-bold text-[#f7f7ff]">{weapon.name}</h3>
-            {isSuggested && (
-              <span className="text-xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#577399]/30 text-[#577399] border border-[#577399]/40">
-                Suggested Weapon
-              </span>
-            )}
-            {weapon.damageType === "Magic" && (
-              <span className="text-xs uppercase tracking-wider px-1.5 py-0.5 rounded bg-purple-900/30 text-purple-400 border border-purple-700/40">
-                Magic
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-parchment-500">
-            Tier {weapon.tier} {weapon.category} Weapon · SRD page {weapon.srdPage}
-          </p>
+      {/* Feature */}
+      {weapon.feature && (
+        <div className="rounded-lg border border-[#577399]/40 bg-[#577399]/10 px-4 py-3">
+          <p className="text-xs font-semibold uppercase text-[#577399] mb-1">Feature</p>
+          <p className="text-sm text-[#f7f7ff]">{weapon.feature}</p>
         </div>
+      )}
 
-        {/* Stats grid */}
-        <div className="grid grid-cols-2 gap-3">
-          <StatBlock label="Trait" value={weapon.trait} />
-          <StatBlock label="Burden" value={weapon.burden} />
-          <StatBlock label="Range" value={weapon.range} />
-          <StatBlock label="Damage" value={`${weapon.damageDie} (${weapon.damageType})`} />
+      {/* Description / notes */}
+      {weapon.description && (
+        <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3">
+          <p className="text-xs font-semibold uppercase text-parchment-500 mb-1">Notes</p>
+          <p className="text-sm text-parchment-500">{weapon.description}</p>
         </div>
+      )}
 
-        {/* Feature */}
-        {weapon.feature && (
-          <div className="rounded-lg border border-[#577399]/40 bg-[#577399]/10 px-4 py-3">
-            <p className="text-xs font-semibold uppercase text-[#577399] mb-1">Feature</p>
-            <p className="text-sm text-[#f7f7ff]">{weapon.feature}</p>
-          </div>
-        )}
-
-        {/* Description */}
-        {weapon.description && (
-          <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3">
-            <p className="text-xs font-semibold uppercase text-parchment-500 mb-1">Notes</p>
-            <p className="text-base text-parchment-500">{weapon.description}</p>
-          </div>
-        )}
-
-        {/* SRD citation */}
-        <p className="text-xs text-parchment-600">
-          Source: Daggerheart SRD, page {weapon.srdPage}
-        </p>
-      </div>
+      {/* SRD citation */}
+      <p className="text-xs text-parchment-600">
+        Source: Daggerheart SRD, page {weapon.srdPage}
+      </p>
     </div>
   );
 }

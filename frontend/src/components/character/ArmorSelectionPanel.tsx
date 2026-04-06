@@ -3,28 +3,23 @@
 /**
  * src/components/character/ArmorSelectionPanel.tsx
  *
- * Step 4 of the character builder: Choose Starting Armor.
+ * Step 7 of the character builder: Choose Starting Armor.
  *
  * Features:
  * - Filterable list (by name, tier, feature type, armor score, thresholds)
- * - "Suggested" badge on armor derived from class armorRec (`%% armor rec: ... %%`):
- *     light       → Gambeson (Flexible)
- *     med/medium  → Leather  (No feature)
- *     heavy       → Chainmail
- *     extra heavy → Full Plate
- * - Up to 2 items can be suggested (pipe-separated in markdown)
+ * - "Suggested" badge on armor derived from class armorRec
  * - Suggested armor sorts to the top by default
- * - Drill-down detail view with full SRD stats + page reference
- * - Shows all tiers (for reference), but Tier 1 items are highlighted as
- *   the only equippable options at character creation
+ * - Accordion-expandable detail tiles (SelectionTile) with full stats
+ * - Shows Tier 1 items as the only equippable options at character creation
  */
 
-import React, { useState, useMemo, useRef, useEffect } from "react";
+import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import {
   TIER1_ARMOR,
   getSuggestedArmorIds,
   type SRDArmor,
 } from "@/lib/srdEquipment";
+import { SelectionTile } from "./SelectionTile";
 
 interface ArmorSelectionPanelProps {
   armorId: string | null;
@@ -39,9 +34,18 @@ export function ArmorSelectionPanel({
   armorRec,
 }: ArmorSelectionPanelProps) {
   const [filterText, setFilterText] = useState("");
-  const [drillArmor, setDrillArmor] = useState<SRDArmor | null>(null);
+  const [expandedArmorId, setExpandedArmorId] = useState<string | null>(null);
 
   const suggestedIds = getSuggestedArmorIds(armorRec);
+
+  // Pre-expand the currently selected armor when returning to this step
+  const hasPreExpanded = useRef(false);
+  useEffect(() => {
+    if (!hasPreExpanded.current && armorId) {
+      setExpandedArmorId(armorId);
+      hasPreExpanded.current = true;
+    }
+  }, [armorId]);
 
   // Apply text filter
   const filtered = useMemo(() => {
@@ -73,6 +77,11 @@ export function ArmorSelectionPanel({
 
   const selectedArmor = TIER1_ARMOR.find((a) => a.id === armorId) ?? null;
 
+  // Toggle expand: if already expanded, collapse; otherwise expand the new one
+  const handleToggleExpand = useCallback((id: string) => {
+    setExpandedArmorId((prev) => (prev === id ? null : id));
+  }, []);
+
   // Scroll selected item into view when the list first renders with a pre-selection.
   const listRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -81,16 +90,6 @@ export function ArmorSelectionPanel({
     if (el) el.scrollIntoView({ block: "nearest", behavior: "instant" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  if (drillArmor) {
-    return (
-      <ArmorDrillDown
-        armor={drillArmor}
-        isSuggested={suggestedIds.includes(drillArmor.id)}
-        onBack={() => setDrillArmor(null)}
-      />
-    );
-  }
 
   // Build the banner label
   const suggestedNames = suggestedIds
@@ -132,7 +131,7 @@ export function ArmorSelectionPanel({
         </p>
       </div>
 
-      {/* Armor list */}
+      {/* Armor list — accordion tiles */}
       <div className="flex-1 overflow-y-auto" ref={listRef}>
         {sorted.length === 0 ? (
           <div className="flex items-center justify-center h-32">
@@ -143,77 +142,35 @@ export function ArmorSelectionPanel({
             const isSelected = armor.id === armorId;
             const isSuggested = suggestedIds.includes(armor.id);
             return (
-              <div
-                key={armor.id}
-                data-selected={isSelected ? "true" : undefined}
-                onClick={() => onArmorChange(armor.id)}
-                className={`
-                  flex items-start gap-2 px-4 py-3 border-l-2 transition-colors cursor-pointer
-                  ${isSelected
-                    ? "bg-[#577399]/20 border-[#577399]"
-                    : "border-transparent hover:bg-slate-800/60 hover:border-slate-600"
-                  }
-                `}
-              >
-                {/* Circular radio indicator (visual only, tile click selects) */}
-                <span
-                  className={`
-                    mt-0.5 flex-shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors
-                    ${isSelected
-                      ? "border-[#577399] bg-[#577399]"
-                      : "border-slate-600"
-                    }
-                  `}
-                  aria-hidden="true"
-                >
-                  {isSelected && <span className="h-2 w-2 rounded-full bg-white" />}
-                </span>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-semibold text-[#f7f7ff]">{armor.name}</span>
-                    {isSuggested && (
+              <div key={armor.id} data-selected={isSelected ? "true" : undefined}>
+                <SelectionTile
+                  id={`armor-${armor.id}`}
+                  isSelected={isSelected}
+                  isExpanded={expandedArmorId === armor.id}
+                  onToggleExpand={() => handleToggleExpand(armor.id)}
+                  onSelect={() => onArmorChange(armor.id)}
+                  name={armor.name}
+                  subtitle={`Armor Score ${armor.baseArmorScore} · Major ${armor.baseMajorThreshold}+ · Severe ${armor.baseSevereThreshold}+`}
+                  badges={
+                    isSuggested ? (
                       <span className="text-xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#577399]/30 text-[#577399] border border-[#577399]/40 whitespace-nowrap">
-                        Suggested Armor
+                        Suggested
                       </span>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    <span className="text-xs text-parchment-500">Armor Score {armor.baseArmorScore}</span>
-                    <span className="text-xs text-parchment-600">·</span>
-                    <span className="text-xs text-parchment-500">Major {armor.baseMajorThreshold}</span>
-                    <span className="text-xs text-parchment-600">·</span>
-                    <span className="text-xs text-parchment-500">Severe {armor.baseSevereThreshold}</span>
-                  </div>
-                  {armor.feature ? (
-                    <p className="text-xs text-parchment-500 mt-1 truncate">{armor.feature}</p>
-                  ) : (
-                    <p className="text-xs text-parchment-600 mt-1">No feature</p>
-                  )}
-                </div>
-
-                {/* Drill-down strip — clicking this area opens detail; delineated from select area */}
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); setDrillArmor(armor); }}
-                  aria-label={`View details for ${armor.name}`}
-                  className="
-                    self-stretch shrink-0 flex items-center justify-center
-                    pl-3 pr-1 -mr-4 border-l border-slate-700/40
-                    text-parchment-600 hover:text-parchment-500
-                    transition-colors min-w-[44px]
-                  "
+                    ) : undefined
+                  }
+                  selectLabel="Select"
+                  selectedLabel="Selected"
                 >
-                  <span className="text-lg leading-none">›</span>
-                </button>
+                  {/* ─── Expanded detail content ─── */}
+                  <ArmorDetail armor={armor} />
+                </SelectionTile>
               </div>
             );
           })
         )}
       </div>
 
-      {/* Selected summary */}
+      {/* Selected summary footer */}
       {selectedArmor && (
         <div className="shrink-0 border-t border-slate-700/30 px-4 py-3">
           <div className="flex items-center gap-2 text-xs min-w-0">
@@ -227,86 +184,52 @@ export function ArmorSelectionPanel({
   );
 }
 
-// ─── Drill-Down Detail View ────────────────────────────────────────────────────
+// ─── Armor Detail Content (shown inside expanded tile) ─────────────────────────
 
-interface ArmorDrillDownProps {
-  armor: SRDArmor;
-  isSuggested: boolean;
-  onBack: () => void;
-}
-
-function ArmorDrillDown({ armor, isSuggested, onBack }: ArmorDrillDownProps) {
+function ArmorDetail({ armor }: { armor: SRDArmor }) {
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
-      {/* Back button */}
-      <div className="shrink-0 px-4 pt-4 pb-2">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex items-center gap-1.5 px-4 py-3 -mx-4 text-xs text-[#daa520] hover:text-[#e8b830] transition-colors min-h-[44px]"
-        >
-          ← Back to list
-        </button>
+    <div className="space-y-4">
+      {/* Stats grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <StatBlock label="Armor Score" value={String(armor.baseArmorScore)} />
+        <StatBlock label="Major Threshold" value={`${armor.baseMajorThreshold}+`} />
+        <StatBlock label="Severe Threshold" value={`${armor.baseSevereThreshold}+`} />
       </div>
 
-      <div className="px-6 pb-6 space-y-5">
-        {/* Header */}
-        <div>
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <h3 className="font-serif text-2xl font-bold text-[#f7f7ff]">{armor.name}</h3>
-            {isSuggested && (
-              <span className="text-xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#577399]/30 text-[#577399] border border-[#577399]/40">
-                Suggested Armor
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-parchment-500">
-            Tier {armor.tier} Armor · SRD page {armor.srdPage}
-          </p>
+      {/* Feature */}
+      {armor.feature ? (
+        <div className="rounded-lg border border-[#577399]/40 bg-[#577399]/10 px-4 py-3">
+          <p className="text-xs font-semibold uppercase text-[#577399] mb-1">Feature</p>
+          <p className="text-sm text-[#f7f7ff]">{armor.feature}</p>
         </div>
-
-        {/* Stats grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <StatBlock label="Armor Score" value={String(armor.baseArmorScore)} />
-          <StatBlock label="Major Threshold" value={`${armor.baseMajorThreshold}+`} />
-          <StatBlock label="Severe Threshold" value={`${armor.baseSevereThreshold}+`} />
+      ) : (
+        <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3">
+          <p className="text-xs font-semibold uppercase text-parchment-500 mb-1">Feature</p>
+          <p className="text-sm text-parchment-500">No feature</p>
         </div>
+      )}
 
-        {/* Feature */}
-        {armor.feature ? (
-          <div className="rounded-lg border border-[#577399]/40 bg-[#577399]/10 px-4 py-3">
-            <p className="text-xs font-semibold uppercase text-[#577399] mb-1">Feature</p>
-            <p className="text-sm text-[#f7f7ff]">{armor.feature}</p>
-          </div>
-        ) : (
-          <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3">
-            <p className="text-xs font-semibold uppercase text-parchment-500 mb-1">Feature</p>
-            <p className="text-sm text-parchment-500">No feature</p>
-          </div>
-        )}
-
-        {/* Threshold note */}
-        <div className="rounded-lg border border-slate-700/40 bg-slate-900/40 px-4 py-3">
-          <p className="text-xs font-semibold uppercase text-parchment-500 mb-2">At Level 1</p>
-          <div className="space-y-1 text-xs text-parchment-500">
-            <p>Major threshold: <span className="text-[#f7f7ff] font-medium">{armor.baseMajorThreshold + 1}+</span> (base {armor.baseMajorThreshold} + level 1)</p>
-            <p>Severe threshold: <span className="text-[#f7f7ff] font-medium">{armor.baseSevereThreshold + 1}+</span> (base {armor.baseSevereThreshold} + level 1)</p>
-          </div>
+      {/* Threshold note at level 1 */}
+      <div className="rounded-lg border border-slate-700/40 bg-slate-900/40 px-4 py-3">
+        <p className="text-xs font-semibold uppercase text-parchment-500 mb-2">At Level 1</p>
+        <div className="space-y-1 text-xs text-parchment-500">
+          <p>Major threshold: <span className="text-[#f7f7ff] font-medium">{armor.baseMajorThreshold + 1}+</span> (base {armor.baseMajorThreshold} + level 1)</p>
+          <p>Severe threshold: <span className="text-[#f7f7ff] font-medium">{armor.baseSevereThreshold + 1}+</span> (base {armor.baseSevereThreshold} + level 1)</p>
         </div>
-
-        {/* Description */}
-        {armor.description && (
-          <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3">
-            <p className="text-xs font-semibold uppercase text-parchment-500 mb-1">Notes</p>
-            <p className="text-base text-parchment-500">{armor.description}</p>
-          </div>
-        )}
-
-        {/* SRD citation */}
-        <p className="text-xs text-parchment-600">
-          Source: Daggerheart SRD, page {armor.srdPage}
-        </p>
       </div>
+
+      {/* Description / notes */}
+      {armor.description && (
+        <div className="rounded-lg border border-slate-700/60 bg-slate-850/50 px-4 py-3">
+          <p className="text-xs font-semibold uppercase text-parchment-500 mb-1">Notes</p>
+          <p className="text-sm text-parchment-500">{armor.description}</p>
+        </div>
+      )}
+
+      {/* SRD citation */}
+      <p className="text-xs text-parchment-600">
+        Source: Daggerheart SRD, page {armor.srdPage}
+      </p>
     </div>
   );
 }
