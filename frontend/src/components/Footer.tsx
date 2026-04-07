@@ -25,13 +25,13 @@ export function Footer() {
     <footer className="relative z-[1] mt-auto border-t border-slate-800/60 bg-[#0a100d] py-6">
       <div className="mx-auto max-w-[1200px] px-4 space-y-4">
         {/* Top row: Discord link + logo */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
           <a
             href="https://discord.gg/KBqDAS4Tbv"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Get Support, Chat with Cast, and More on Discord (opens in new tab)"
-            className={`py-2 text-sm text-parchment-500 hover:text-parchment-400 transition-colors ${focusRing}`}
+            className={`min-h-[44px] flex items-center py-2 text-sm text-parchment-500 hover:text-parchment-400 transition-colors ${focusRing}`}
           >
             Get Support, Chat with Cast, and More on Discord
             <span className="sr-only"> (opens in new tab)</span>
@@ -41,7 +41,7 @@ export function Footer() {
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Man in Jumpsuit Productions website (opens in new tab)"
-            className={`py-2 opacity-60 hover:opacity-80 transition-opacity ${focusRing}`}
+            className={`min-h-[44px] flex items-center py-2 opacity-60 hover:opacity-80 transition-opacity ${focusRing}`}
           >
             <Image
               src="/images/man-in-jumpsuit-logo-white-transparent.png"
@@ -54,28 +54,28 @@ export function Footer() {
           </a>
         </div>
         {/* Bottom row: legal links + copyright */}
-        <div className="flex items-center justify-between text-sm text-parchment-500">
-          <nav aria-label="Legal" className="flex gap-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm text-parchment-500 gap-2 sm:gap-0">
+          <nav aria-label="Legal" className="flex flex-col sm:flex-row gap-1 sm:gap-6">
             <Link
               href="/terms"
-              className={`py-2 hover:text-parchment-400 transition-colors ${focusRing}`}
+              className={`min-h-[44px] flex items-center py-2 hover:text-parchment-400 transition-colors ${focusRing}`}
             >
               Terms of Service
             </Link>
             <Link
               href="/privacy"
-              className={`py-2 hover:text-parchment-400 transition-colors ${focusRing}`}
+              className={`min-h-[44px] flex items-center py-2 hover:text-parchment-400 transition-colors ${focusRing}`}
             >
               Privacy Policy
             </Link>
             <Link
               href="/conduct"
-              className={`py-2 hover:text-parchment-400 transition-colors ${focusRing}`}
+              className={`min-h-[44px] flex items-center py-2 hover:text-parchment-400 transition-colors ${focusRing}`}
             >
               Code of Conduct
             </Link>
           </nav>
-          <small className="text-parchment-500">
+          <small className="text-parchment-500 text-center sm:text-right">
             &copy; {new Date().getFullYear()} Man in Jumpsuit Productions
           </small>
         </div>

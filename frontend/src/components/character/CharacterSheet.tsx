@@ -710,7 +710,7 @@ function SheetHeader({
       <PortraitDisplay characterId={characterId} />
 
       {/* ── Name row + Conditions + Level inline ───────────────────── */}
-      <div className="flex items-start gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
         {/* Name (flex-1 so it takes remaining space) */}
         <div className="flex-1 min-w-0 flex flex-col gap-1">
           <div className="flex items-center gap-2">
@@ -1169,6 +1169,7 @@ function FeatureActionButton({
             disabled:opacity-50 disabled:cursor-wait
             transition-all duration-150
             focus:outline-none focus:ring-2 focus:ring-steel-400 focus:ring-offset-1 focus:ring-offset-slate-900
+            min-h-[44px]
           "
         >
           {isPending ? (
@@ -1293,7 +1294,7 @@ function FeaturesPanel({
           {classData.classFeatures.map((feature) => (
             <div
               key={feature.name}
-              className="rounded-lg border border-steel-400/20 bg-slate-850 p-4 space-y-3"
+              className="rounded-lg border border-steel-400/20 bg-slate-850 p-4 space-y-3 min-h-[44px]"
             >
               <div>
                 <h3 className="mb-1 font-serif text-[0.938rem] font-semibold text-[#f7f7ff] leading-snug">
@@ -1334,7 +1335,7 @@ function FeaturesPanel({
       {/* Hope Feature — always has a hopeCost; always gets an action button */}
       {classData.hopeFeature && (
         <div
-          className="rounded-lg border border-gold-400/25 bg-gold-400/[0.06] p-4 space-y-3"
+          className="rounded-lg border border-gold-400/25 bg-gold-400/[0.06] p-4 space-y-3 min-h-[44px]"
           data-field-key="features.hope"
         >
           <div>
@@ -1380,7 +1381,7 @@ function FeaturesPanel({
             return (
               <div
                 key={feat.name}
-                className="rounded-lg border border-steel-400/20 bg-slate-850 p-4 space-y-3"
+                className="rounded-lg border border-steel-400/20 bg-slate-850 p-4 space-y-3 min-h-[44px]"
               >
                 <div>
                   <div className="flex items-center gap-2 mb-1">
@@ -1413,7 +1414,7 @@ function FeaturesPanel({
 
           {/* Specialization feature — shown when unlocked (tier >= 2), teased when locked */}
           {tier >= 2 ? (
-            <div className="rounded-lg border border-steel-400/25 bg-slate-850 p-4 space-y-3">
+            <div className="rounded-lg border border-steel-400/25 bg-slate-850 p-4 space-y-3 min-h-[44px]">
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <h4 className="font-serif text-[0.938rem] font-semibold text-[#f7f7ff] leading-snug">
@@ -1467,7 +1468,7 @@ function FeaturesPanel({
 
           {/* Mastery feature — shown when unlocked (tier >= 3), teased when locked */}
           {tier >= 3 ? (
-            <div className="rounded-lg border border-steel-400/30 bg-slate-850 p-4 space-y-3">
+            <div className="rounded-lg border border-steel-400/30 bg-slate-850 p-4 space-y-3 min-h-[44px]">
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <h4 className="font-serif text-[0.938rem] font-semibold text-[#f7f7ff] leading-snug">
@@ -1547,7 +1548,7 @@ function FeaturesPanel({
               {multiclassData.classFeatures.map((feature) => (
                 <div
                   key={feature.name}
-                  className="rounded-lg border border-steel-400/20 bg-slate-850 p-4 space-y-3"
+                  className="rounded-lg border border-steel-400/20 bg-slate-850 p-4 space-y-3 min-h-[44px]"
                 >
                   <div>
                     <h4 className="mb-1 font-serif text-[0.938rem] font-semibold text-[#f7f7ff] leading-snug">
@@ -1590,7 +1591,7 @@ function FeaturesPanel({
               return (
                 <div
                   key={feat.name}
-                  className="rounded-lg border border-steel-400/20 bg-slate-850 p-4 space-y-3"
+                  className="rounded-lg border border-steel-400/20 bg-slate-850 p-4 space-y-3 min-h-[44px]"
                 >
                   <div>
                     <div className="flex items-center gap-2 mb-1">

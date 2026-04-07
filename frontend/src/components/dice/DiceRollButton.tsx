@@ -79,7 +79,7 @@ export function DiceRollButton({
         aria-label={`Roll ${rollRequest.label}`}
         aria-busy={isRolling}
         className={[
-          "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1",
+          "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 min-h-[44px]",
           "text-xs font-semibold transition-all duration-150",
           "border-[#577399]/40 bg-[#577399]/10 text-[#577399]",
           "hover:bg-[#577399]/20 hover:border-[#577399] hover:text-[#f7f7ff]",

@@ -18,6 +18,7 @@
 import React, { useCallback, useId, useMemo, useState } from "react";
 import type { HomebrewMarkdownInput, MechanicalBonus } from "@shared/types";
 import { INPUT_CLS, LABEL_CLS, TEXTAREA_CLS, BTN_SECONDARY, SOFT_WARNING_CLS } from "./styles";
+import { SHOW_PREVIEW_EVENT } from "./WorkshopLayout";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -316,7 +317,7 @@ export function CommunityForm({
       <div className="flex items-center justify-between gap-3 border-t border-slate-700/40 pt-5">
         <button
           type="button"
-          onClick={triggerPreview}
+          onClick={() => { triggerPreview(); window.dispatchEvent(new Event(SHOW_PREVIEW_EVENT)); }}
           disabled={!canPreview}
           className={`${BTN_SECONDARY} disabled:opacity-30 disabled:cursor-not-allowed`}
         >

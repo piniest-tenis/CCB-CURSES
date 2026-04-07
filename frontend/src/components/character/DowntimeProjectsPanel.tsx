@@ -63,6 +63,153 @@ function ProgressPips({ current, max }: { current: number; max: number }) {
   );
 }
 
+// ─── TappableProgressSteps ────────────────────────────────────────────────────
+// Interactive progress bar for active projects. The next unfilled segment is
+// tappable and fires tick-project. Filled segments are opaque blue, the next
+// segment is outlined/highlighted, and future locked segments are dim.
+
+function TappableProgressSteps({
+  current,
+  max,
+  onTick,
+  isPending,
+}: {
+  current: number;
+  max: number;
+  onTick: () => void;
+  isPending: boolean;
+}) {
+  return (
+    <div
+      className="flex gap-1"
+      role="group"
+      aria-label={`Progress: ${current} of ${max}`}
+    >
+      {Array.from({ length: max }, (_, i) => {
+        const filled = i < current;
+        const isNext = i === current;
+        const isLocked = i > current;
+
+        if (isNext) {
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={onTick}
+              disabled={isPending}
+              aria-label={`Tick progress to step ${i + 1} of ${max}`}
+              className="
+                min-h-[44px] flex-1 rounded-md border-2 border-[#577399] bg-[#577399]/10
+                text-xs font-bold text-[#577399]
+                hover:bg-[#577399]/25 hover:border-[#577399]
+                disabled:opacity-50 disabled:cursor-wait
+                transition-all duration-150
+                focus:outline-none focus:ring-2 focus:ring-[#577399]
+                flex items-center justify-center
+              "
+            >
+              {isPending ? (
+                <span
+                  aria-hidden="true"
+                  className="inline-block h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"
+                />
+              ) : (
+                <span aria-hidden="true">+</span>
+              )}
+            </button>
+          );
+        }
+
+        return (
+          <div
+            key={i}
+            aria-hidden="true"
+            className={`
+              min-h-[44px] flex-1 rounded-md border transition-colors
+              flex items-center justify-center text-xs font-bold
+              ${
+                filled
+                  ? "bg-[#577399] border-[#577399] text-[#f7f7ff]"
+                  : isLocked
+                    ? "bg-transparent border-slate-700 text-slate-700"
+                    : ""
+              }
+            `}
+          >
+            {filled ? "✓" : ""}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── StepCountSelector ────────────────────────────────────────────────────────
+// Tappable step-count segments (1–10) for NewProjectForm countdown input,
+// plus a numeric input fallback for values 11–20.
+
+function StepCountSelector({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap gap-1">
+        {Array.from({ length: 10 }, (_, i) => {
+          const step = i + 1;
+          const isSelected = step === value;
+          return (
+            <button
+              key={step}
+              type="button"
+              onClick={() => onChange(step)}
+              aria-label={`${step} step${step !== 1 ? "s" : ""}`}
+              aria-pressed={isSelected}
+              className={`
+                min-h-[44px] min-w-[44px] flex-1 rounded-md border text-sm font-bold
+                transition-all duration-150
+                focus:outline-none focus:ring-2 focus:ring-gold-500
+                flex items-center justify-center
+                ${
+                  isSelected
+                    ? "bg-[#577399] border-[#577399] text-[#f7f7ff] shadow-md"
+                    : "border-slate-600 bg-slate-900 text-parchment-500 hover:border-slate-400 hover:text-parchment-300"
+                }
+              `}
+            >
+              {step}
+            </button>
+          );
+        })}
+      </div>
+      {/* Numeric fallback for 11–20 */}
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          min={1}
+          max={20}
+          value={value}
+          onChange={(e) => {
+            const v = parseInt(e.target.value, 10);
+            if (!isNaN(v) && v >= 1 && v <= 20) onChange(v);
+          }}
+          aria-label="Countdown steps (type for 11–20)"
+          className="
+            w-16 rounded bg-slate-850 px-2 py-1.5 text-sm text-center
+            text-parchment-200 border border-burgundy-800
+            focus:outline-none focus:ring-2 focus:ring-gold-500 transition-colors
+            [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none
+          "
+        />
+        <span className="text-xs text-parchment-600">steps (type for 11–20)</span>
+      </div>
+    </div>
+  );
+}
+
 // ─── CardNameDisplay ──────────────────────────────────────────────────────────
 // Resolves cardId → card name for project source display.
 
@@ -282,7 +429,7 @@ function ProjectCard({ project, characterId }: ProjectCardProps) {
         }
       `}
     >
-      {/* Header: name + source + tick + abandon */}
+      {/* Header: name + source + abandon (Tick button removed — progress steps are tappable) */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
@@ -311,34 +458,9 @@ function ProjectCard({ project, characterId }: ProjectCardProps) {
           )}
         </div>
 
-        {/* Action buttons */}
+        {/* Action buttons — only abandon remains in the header */}
         <div className="flex items-center gap-1 shrink-0">
-          {/* Tick button (disabled when completed) */}
-          {!isCompleted ? (
-            <button
-              type="button"
-              onClick={() => fire("tick-project", { projectId: project.projectId })}
-              disabled={isPending}
-              aria-label={`Tick progress for project: ${project.name}`}
-              aria-describedby={inlineError ? errorId : undefined}
-              aria-busy={isPending}
-              className="
-                rounded px-2.5 py-1 text-xs font-semibold
-                bg-[#577399]/20 text-steel-accessible border border-[#577399]/40
-                hover:bg-[#577399]/30 disabled:opacity-50 disabled:cursor-wait
-                transition-colors focus:outline-none focus:ring-2 focus:ring-[#577399]
-              "
-            >
-              {isPending ? (
-                <span
-                  aria-hidden="true"
-                  className="inline-block h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"
-                />
-              ) : (
-                "Tick"
-              )}
-            </button>
-          ) : (
+          {isCompleted && (
             <span
               className="rounded px-2 py-1 text-xs font-semibold bg-slate-800 text-parchment-600 border border-slate-700"
               aria-label="Project completed — ticking disabled"
@@ -356,19 +478,28 @@ function ProjectCard({ project, characterId }: ProjectCardProps) {
         </div>
       </div>
 
-      {/* Progress pips */}
+      {/* Progress: tappable steps for active, read-only pips for completed */}
       <div className="space-y-1">
-        <ProgressPips
-          current={project.countdownCurrent}
-          max={project.countdownMax}
-        />
+        {isCompleted ? (
+          <ProgressPips
+            current={project.countdownCurrent}
+            max={project.countdownMax}
+          />
+        ) : (
+          <TappableProgressSteps
+            current={project.countdownCurrent}
+            max={project.countdownMax}
+            onTick={() => fire("tick-project", { projectId: project.projectId })}
+            isPending={isPending}
+          />
+        )}
         <p className="text-sm text-parchment-600">
           {project.countdownCurrent}/{project.countdownMax}
           {isCompleted && " — Complete"}
         </p>
       </div>
 
-      {/* Inline action error */}
+      {/* Inline action error — displayed below progress bar */}
       <InlineActionError message={inlineError} id={errorId} />
 
       {/* Notes (debounced PATCH) */}
@@ -478,65 +609,18 @@ function NewProjectForm({ characterId, onCreated, onCancel }: NewProjectFormProp
           />
         </div>
 
-        {/* Countdown steps (1–20) */}
+        {/* Countdown steps (1–20) — tappable segments */}
         <div>
           <label
             htmlFor="new-project-countdown"
-            className="text-xs uppercase tracking-wider text-parchment-600 block mb-0.5"
+            className="text-xs uppercase tracking-wider text-parchment-600 block mb-1"
           >
             Countdown Steps
           </label>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setCountdownMax((v) => Math.max(1, v - 1))}
-              disabled={countdownMax <= 1}
-              aria-label="Decrease countdown steps"
-              className="
-                h-8 w-8 rounded border border-burgundy-800 bg-slate-900
-                text-xs text-parchment-500 hover:bg-burgundy-900/30
-                disabled:opacity-25 disabled:cursor-not-allowed
-                transition-colors flex items-center justify-center
-                focus:outline-none focus:ring-1 focus:ring-gold-500
-              "
-            >
-              −
-            </button>
-            <input
-              id="new-project-countdown"
-              type="number"
-              min={1}
-              max={20}
-              value={countdownMax}
-              onChange={(e) => {
-                const v = parseInt(e.target.value, 10);
-                if (!isNaN(v) && v >= 1 && v <= 20) setCountdownMax(v);
-              }}
-              aria-label="Countdown steps required"
-              className="
-                w-16 rounded bg-slate-850 px-2 py-1.5 text-sm text-center
-                text-parchment-200 border border-burgundy-800
-                focus:outline-none focus:ring-2 focus:ring-gold-500 transition-colors
-                [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none
-              "
-            />
-            <button
-              type="button"
-              onClick={() => setCountdownMax((v) => Math.min(20, v + 1))}
-              disabled={countdownMax >= 20}
-              aria-label="Increase countdown steps"
-              className="
-                h-8 w-8 rounded border border-burgundy-800 bg-slate-900
-                text-xs text-parchment-500 hover:bg-gold-900/20 hover:text-gold-300
-                disabled:opacity-25 disabled:cursor-not-allowed
-                transition-colors flex items-center justify-center
-                focus:outline-none focus:ring-1 focus:ring-gold-500
-              "
-            >
-              +
-            </button>
-            <span className="text-xs text-parchment-600">steps</span>
-          </div>
+          <StepCountSelector
+            value={countdownMax}
+            onChange={setCountdownMax}
+          />
         </div>
 
         {/* Source card (optional) — dropdown from loadout, or free text */}

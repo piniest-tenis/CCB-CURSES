@@ -458,8 +458,8 @@ function TokenTracker({
             disabled={isPending}
             aria-label={`Remove token from ${cardName}`}
             className="
-              h-6 w-6 rounded border border-burgundy-800 bg-slate-900
-              text-xs text-parchment-500 hover:bg-burgundy-900/30
+              min-h-[44px] min-w-[44px] rounded border border-burgundy-800 bg-slate-900
+              text-sm text-parchment-500 hover:bg-burgundy-900/30
               disabled:opacity-50 disabled:cursor-wait
               transition-colors flex items-center justify-center
               focus:outline-none focus:ring-1 focus:ring-gold-500
@@ -483,8 +483,8 @@ function TokenTracker({
             disabled={isPending}
             aria-label={`Add token to ${cardName}`}
             className="
-              h-6 w-6 rounded border border-gold-800 bg-slate-900
-              text-xs text-gold-600 hover:bg-gold-900/20
+              min-h-[44px] min-w-[44px] rounded border border-gold-800 bg-slate-900
+              text-sm text-gold-600 hover:bg-gold-900/20
               disabled:opacity-50 disabled:cursor-wait
               transition-colors flex items-center justify-center
               focus:outline-none focus:ring-1 focus:ring-gold-500
@@ -501,8 +501,8 @@ function TokenTracker({
             aria-label={`Clear all tokens from ${cardName}`}
             title="Clear all tokens"
             className="
-              h-6 w-6 rounded border border-slate-700 bg-slate-900
-              text-xs text-parchment-600 hover:bg-coral-400/15 hover:text-coral-400 hover:border-coral-400/40
+              min-h-[44px] min-w-[44px] rounded border border-slate-700 bg-slate-900
+              text-sm text-parchment-600 hover:bg-coral-400/15 hover:text-coral-400 hover:border-coral-400/40
               disabled:opacity-50 disabled:cursor-wait
               transition-colors flex items-center justify-center
               focus:outline-none focus:ring-1 focus:ring-gold-500
@@ -513,6 +513,18 @@ function TokenTracker({
           </button>
         </div>
       </div>
+
+      {/* Visual slot pips — at-a-glance gold dots for counts 1–8 */}
+      {count > 0 && count <= 8 && (
+        <div className="flex gap-1 ml-0.5" aria-hidden="true">
+          {Array.from({ length: count }, (_, i) => (
+            <span
+              key={i}
+              className="h-2 w-2 rounded-full bg-[#DAA520]"
+            />
+          ))}
+        </div>
+      )}
 
       <InlineActionError message={inlineError} id={errorId} />
     </div>
@@ -551,7 +563,7 @@ function AuraToggle({
         aria-describedby={inlineError ? errorId : undefined}
         className={`
           inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold
-          border transition-all duration-150
+          border transition-all duration-150 min-h-[44px]
           focus:outline-none focus:ring-2 focus:ring-gold-500
           disabled:opacity-50 disabled:cursor-wait
           ${

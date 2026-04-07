@@ -20,6 +20,9 @@ import { Footer } from "@/components/Footer";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+/** Custom event name dispatched when "Preview Markdown" is clicked in a form. */
+export const SHOW_PREVIEW_EVENT = "workshop:show-preview";
+
 export interface WorkshopLayoutProps {
   /** Page title displayed above the panels. */
   title: string;
@@ -62,6 +65,13 @@ export function WorkshopLayout({
       router.replace("/auth/login");
     }
   }, [isReady, isAuthenticated, router]);
+
+  // Listen for SHOW_PREVIEW_EVENT dispatched from form "Preview Markdown" buttons
+  useEffect(() => {
+    const handleShowPreview = () => setMobileTab("preview");
+    window.addEventListener(SHOW_PREVIEW_EVENT, handleShowPreview);
+    return () => window.removeEventListener(SHOW_PREVIEW_EVENT, handleShowPreview);
+  }, []);
 
   // Loading state while auth initializes
   if (!isReady || authLoading || !isAuthenticated) {
@@ -146,7 +156,7 @@ export function WorkshopLayout({
                 type="button"
                 onClick={() => setMobileTab(tab)}
                 className={`
-                  flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors
+                  flex-1 rounded-lg px-3 py-2 min-h-[44px] text-sm font-medium transition-colors
                   focus:outline-none focus:ring-2 focus:ring-coral-400 focus:ring-offset-2 focus:ring-offset-[#0a100d]
                   ${
                     mobileTab === tab
@@ -200,13 +210,28 @@ export function WorkshopLayout({
               >
                 {/* Preview header */}
                 <div className="sticky top-0 z-[1] border-b border-coral-400/20 bg-slate-900/95 backdrop-blur-sm px-5 py-3">
-                  <h2 className="flex items-center gap-2 font-serif text-sm font-semibold text-coral-400">
-                    <span
-                      aria-hidden="true"
-                      className="inline-block h-2 w-2 rounded-full bg-coral-400/60"
-                    />
-                    Live Preview
-                  </h2>
+                  <div className="flex items-center justify-between">
+                    <h2 className="flex items-center gap-2 font-serif text-sm font-semibold text-coral-400">
+                      <span
+                        aria-hidden="true"
+                        className="inline-block h-2 w-2 rounded-full bg-coral-400/60"
+                      />
+                      Live Preview
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => setMobileTab("edit")}
+                      className="
+                        lg:hidden flex items-center gap-1 min-h-[44px]
+                        rounded-lg px-3 text-sm font-medium
+                        text-parchment-500 border border-slate-700/60
+                        hover:text-[#f7f7ff] hover:border-slate-600 transition-colors
+                        focus:outline-none focus:ring-2 focus:ring-coral-400 focus:ring-offset-2 focus:ring-offset-slate-900
+                      "
+                    >
+                      <span aria-hidden="true">&larr;</span> Back to Edit
+                    </button>
+                  </div>
                 </div>
 
                 <div className="p-5">

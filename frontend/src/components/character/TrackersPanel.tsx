@@ -712,7 +712,7 @@ function DamageThresholdBar({
 
   return (
     <>
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
         <dl
           className="flex flex-wrap items-center gap-x-0 gap-y-1 flex-1"
           aria-label="Damage thresholds"
@@ -736,12 +736,6 @@ function DamageThresholdBar({
 
           {/* Major threshold value */}
           <div className="flex items-center gap-1.5">
-            <dt className="text-xs text-parchment-500 whitespace-nowrap">
-              <abbr title="Major Damage" className="no-underline">
-                <span className="hidden sm:inline">Major Damage</span>
-                <span className="sm:hidden">Major</span>
-              </abbr>
-            </dt>
             {majorTooltip ? (
               // majorTooltip is a StatTooltip wrapping the <dd> value
               majorTooltip
@@ -750,6 +744,12 @@ function DamageThresholdBar({
                 {major}
               </dd>
             )}
+            <dt className="text-xs text-parchment-500 whitespace-nowrap">
+              <abbr title="Major Damage" className="no-underline">
+                <span className="hidden sm:inline">Major Damage</span>
+                <span className="sm:hidden">Major</span>
+              </abbr>
+            </dt>
           </div>
 
           <span
@@ -761,12 +761,6 @@ function DamageThresholdBar({
 
           {/* Severe threshold value */}
           <div className="flex items-center gap-1.5">
-            <dt className="text-xs text-parchment-500 whitespace-nowrap">
-              <abbr title="Severe Damage" className="no-underline">
-                <span className="hidden sm:inline">Severe Damage</span>
-                <span className="sm:hidden">Severe</span>
-              </abbr>
-            </dt>
             {severeTooltip ? (
               // severeTooltip is a StatTooltip wrapping the <dd> value
               severeTooltip
@@ -775,6 +769,12 @@ function DamageThresholdBar({
                 {severe}
               </dd>
             )}
+            <dt className="text-xs text-parchment-500 whitespace-nowrap">
+              <abbr title="Severe Damage" className="no-underline">
+                <span className="hidden sm:inline">Severe Damage</span>
+                <span className="sm:hidden">Severe</span>
+              </abbr>
+            </dt>
           </div>
         </dl>
 
@@ -790,6 +790,7 @@ function DamageThresholdBar({
             hover:border-steel-400 hover:text-[#f7f7ff] hover:bg-slate-800
             focus:outline-none focus:ring-2 focus:ring-steel-400 focus:ring-offset-1 focus:ring-offset-slate-900
             transition-colors flex-shrink-0
+            min-h-[44px] justify-center w-full sm:w-auto
           "
         >
           <svg
@@ -1639,87 +1640,76 @@ function HopeTrackerInner({
   const combinedError = gainAction.inlineError ?? spendAction.inlineError;
   const isPending = gainAction.isPending || spendAction.isPending;
 
+  // Follows the ActionableSlotTracker pattern: clicking a filled pip spends
+  // hope down to that index; clicking an empty pip gains hope up to that index.
+  const handleToggle = async (index: number) => {
+    const isFilled = index < hope;
+    if (isFilled) {
+      // Spend hope: clear from current down to the clicked index
+      await spendAction.fire("spend-hope", { n: hope - index });
+    } else {
+      // Gain hope: fill from current up to the clicked index (inclusive)
+      await gainAction.fire("gain-hope", { n: index + 1 - hope });
+    }
+  };
+
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="text-xs font-semibold uppercase tracking-wider text-parchment-400">
-        Hope
-      </span>
-
-      {/* +/- controls */}
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => spendAction.fire("spend-hope", { n: 1 })}
-          disabled={isPending}
-          aria-label="Spend 1 Hope"
-          className="
-            h-9 w-9 rounded border border-steel-400/30 bg-slate-900
-            text-sm text-[#b9baa3] hover:bg-steel-400/15 hover:text-[#f7f7ff]
-            disabled:opacity-50 disabled:cursor-wait
-            transition-colors flex items-center justify-center
-            focus:outline-none focus:ring-2 focus:ring-steel-400
-          "
-        >
-          −
-        </button>
-
-        {/* Hope pips (read-only visual; mutations are handled by +/-) */}
-        <div
-          className="flex flex-wrap gap-2"
-          role="meter"
-          aria-valuenow={hope}
-          aria-valuemin={0}
-          aria-valuemax={hopeMax}
-          aria-label={`Hope: ${hope} of ${hopeMax}`}
-        >
-          {Array.from({ length: hopeMax }, (_, i) => {
-            const filled = i < hope;
-            return (
-              <span
-                key={i}
-                aria-hidden="true"
-                className={`
-                  h-8 w-8 rounded-lg border-2 text-xs font-bold
-                  flex items-center justify-center select-none
-                  transition-all duration-150
-                   ${
-                     filled
-                       ? "bg-[#DAA520] border-[#DAA520] text-[#f7f7ff] shadow-lg"
-                       : "border-amber-400/30 bg-transparent text-steel-accessible/40"
-                   }
-                `}
-              >
-                {i + 1}
-              </span>
-            );
-          })}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => gainAction.fire("gain-hope", { n: 1 })}
-          disabled={isPending}
-          aria-label="Gain 1 Hope"
-          className="
-            h-9 w-9 rounded border border-steel-400/40 bg-slate-900
-            text-sm text-steel-accessible hover:bg-steel-400/20 hover:text-[#f7f7ff]
-            disabled:opacity-50 disabled:cursor-wait
-            transition-colors flex items-center justify-center
-            focus:outline-none focus:ring-2 focus:ring-steel-400
-          "
-        >
-          +
-        </button>
-
-        {/* Hope max — hoverable stat trigger */}
-        <span className="ml-auto text-xs text-parchment-600 flex items-center gap-1">
-          max
+      {/* Header: label + N/max display */}
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold uppercase tracking-wider text-parchment-400">
+          Hope
+        </span>
+        <span className="text-xs text-parchment-600 flex items-center gap-1">
+          <span
+            aria-live="polite"
+            aria-label={`Hope: ${hope} of ${hopeMax}`}
+            className="font-semibold tabular-nums text-[#f7f7ff]"
+          >
+            {hope}
+          </span>
+          <span className="text-parchment-600">/</span>
           {hopeTooltip ? (
             hopeTooltip
           ) : (
             <span className="tabular-nums text-[#b9baa3]">{hopeMax}</span>
           )}
         </span>
+      </div>
+
+      {/* Tappable hope pips — each pip is a button */}
+      <div
+        className="flex flex-wrap gap-2"
+        role="group"
+        aria-label={`Hope: ${hope} of ${hopeMax}`}
+      >
+        {Array.from({ length: hopeMax }, (_, i) => {
+          const filled = i < hope;
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={() => handleToggle(i)}
+              disabled={isPending}
+              aria-label={filled ? `Spend hope down to ${i}` : `Gain hope to ${i + 1}`}
+              aria-pressed={filled}
+              className={`
+                min-h-[44px] min-w-[44px] rounded-lg border-2 text-xs font-bold
+                flex items-center justify-center select-none
+                transition-all duration-150
+                disabled:opacity-50 disabled:cursor-wait
+                focus:outline-none focus:ring-2 focus:ring-gold-500
+                ${
+                  filled
+                    ? "bg-[#DAA520] border-[#DAA520] text-[#f7f7ff] shadow-lg hover:bg-[#c4941a] hover:border-[#c4941a]"
+                    : "border-amber-400/30 bg-transparent text-steel-accessible/40 hover:border-amber-400/60 hover:bg-amber-400/10"
+                }
+              `}
+            >
+              {i + 1}
+            </button>
+          );
+        })}
       </div>
 
       <InlineActionError message={combinedError} id={errorId} />

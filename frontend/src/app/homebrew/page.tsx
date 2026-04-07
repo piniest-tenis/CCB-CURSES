@@ -14,7 +14,7 @@
  *   - Footer
  */
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { useHomebrewList, useDeleteHomebrew } from "@/hooks/useHomebrew";
@@ -206,6 +206,74 @@ function HomebrewCard({ item, onEdit, onDelete, isDeleting }: HomebrewCardProps)
   );
 }
 
+// ─── ScrollFadeTabs ──────────────────────────────────────────────────────────
+
+/**
+ * Wraps a horizontally scrollable tab bar and shows gradient fade overlays
+ * to indicate more content can be scrolled in either direction.
+ */
+function ScrollFadeTabs({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showLeft, setShowLeft] = useState(false);
+  const [showRight, setShowRight] = useState(false);
+
+  const updateGradients = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setShowLeft(el.scrollLeft > 2);
+    setShowRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    updateGradients();
+
+    el.addEventListener("scroll", updateGradients, { passive: true });
+
+    const observer = new ResizeObserver(updateGradients);
+    observer.observe(el);
+
+    return () => {
+      el.removeEventListener("scroll", updateGradients);
+      observer.disconnect();
+    };
+  }, [updateGradients]);
+
+  return (
+    <div className={`relative ${className}`}>
+      {/* Left gradient overlay */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute left-0 top-0 bottom-0 z-[1] w-8 bg-gradient-to-r from-[#0a100d] to-transparent transition-opacity duration-200"
+        style={{ opacity: showLeft ? 1 : 0 }}
+      />
+
+      {/* Scrollable container */}
+      <div
+        ref={scrollRef}
+        className="-mx-1 flex items-center gap-1 overflow-x-auto px-1 py-1 scrollbar-hide"
+      >
+        {children}
+      </div>
+
+      {/* Right gradient overlay */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute right-0 top-0 bottom-0 z-[1] w-8 bg-gradient-to-l from-[#0a100d] to-transparent transition-opacity duration-200"
+        style={{ opacity: showRight ? 1 : 0 }}
+      />
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function HomebrewListPage() {
@@ -291,8 +359,8 @@ export default function HomebrewListPage() {
           </div>
         </div>
 
-        {/* Type filter tabs */}
-        <div className="mb-5 -mx-1 flex items-center gap-1 overflow-x-auto px-1 py-1 scrollbar-hide">
+        {/* Type filter tabs with gradient scroll affordance */}
+        <ScrollFadeTabs className="mb-5">
           {TABS.map((tab) => {
             const isActive = activeTab === tab.key;
             const count = tab.key === "all"
@@ -304,7 +372,7 @@ export default function HomebrewListPage() {
                 type="button"
                 onClick={() => setActiveTab(tab.key)}
                 className={`
-                  shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors
+                  shrink-0 rounded-lg px-3 py-1.5 min-h-[44px] text-sm font-medium transition-colors
                   focus:outline-none focus:ring-2 focus:ring-coral-400 focus:ring-offset-2 focus:ring-offset-[#0a100d]
                   ${
                     isActive
@@ -322,7 +390,7 @@ export default function HomebrewListPage() {
               </button>
             );
           })}
-        </div>
+        </ScrollFadeTabs>
 
         {/* Search + sort bar */}
         {!isLoading && !isError && totalCount > 0 && (
