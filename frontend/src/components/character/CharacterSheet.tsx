@@ -71,11 +71,15 @@ import { StatTooltip } from "./StatTooltip";
 import { useStatBreakdowns } from "@/hooks/useStatBreakdowns";
 import { usePatreonGate, usePatreonOAuth } from "@/hooks/usePatreonGate";
 import { useSourceFilterDefault } from "@/hooks/useSourceFilterDefault";
+import { ViewerModeProvider } from "./ViewerModeContext";
+import { DisabledInViewerMode } from "./DisabledInViewerMode";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface CharacterSheetProps {
   characterId: string;
+  /** When true, interactive controls (edits, dice rolls, actions) are hidden or disabled. */
+  viewerMode?: boolean;
 }
 
 // ─── SRD conditions ───────────────────────────────────────────────────────────
@@ -788,6 +792,7 @@ function SheetHeader({
         </div>
 
         {/* Conditions — matches defensive-stat visual language, gold/coral theme */}
+        <DisabledInViewerMode tooltip="Only the owner can toggle conditions">
         <div
           className="flex-shrink-0 flex flex-col items-center gap-1.5"
           data-field-key="sheet.conditions"
@@ -821,6 +826,7 @@ function SheetHeader({
             {activeConditions.length === 0 ? "—" : activeConditions.length}
           </button>
         </div>
+        </DisabledInViewerMode>
 
         {/* Level — matches defensive-stat visual language, gold/amber theme */}
         <div
@@ -847,6 +853,7 @@ function SheetHeader({
       {/* ── Actions Toolbar (Edit, Share, Level Up) ──── */}
       <div className="flex items-center gap-2 rounded-lg border border-steel-400/20 bg-slate-900/60 px-3 py-2">
         {/* Edit — pill button */}
+        <DisabledInViewerMode hideInstead>
         <button
           type="button"
           onClick={() => router.push(`/character/${characterId}/build`)}
@@ -863,8 +870,10 @@ function SheetHeader({
           <i className="fa-solid fa-pen text-[11px]" aria-hidden="true"></i>
           <span>Edit</span>
         </button>
+        </DisabledInViewerMode>
 
         {/* Share — pill button */}
+        <DisabledInViewerMode hideInstead>
         <button
           type="button"
           onClick={handleShare}
@@ -907,8 +916,10 @@ function SheetHeader({
                 : "Share"}
           </span>
         </button>
+        </DisabledInViewerMode>
 
         {/* Level Up — right-aligned, with Patreon gate */}
+        <DisabledInViewerMode tooltip="Only the owner can level up">
         {activeCharacter.level < 10 &&
           (canLevelUp ? (
             <button
@@ -948,9 +959,11 @@ function SheetHeader({
               <span>{isLinking ? "Linking\u2026" : "Level Up"}</span>
             </button>
           ))}
+        </DisabledInViewerMode>
       </div>
 
       {/* ── Dice Colors (visually separate from header stats) ──── */}
+      <DisabledInViewerMode tooltip="Dice colors are personal to the owner">
       <div className="rounded-lg border border-steel-400/20 bg-slate-900/60 px-3 py-2">
         <button
           type="button"
@@ -1098,6 +1111,7 @@ function SheetHeader({
           )}
         </div>
       </div>
+      </DisabledInViewerMode>
 
       {/* Conditions slide-in panel */}
       <ConditionsSidebar
@@ -1136,6 +1150,7 @@ function FeatureActionButton({
   const errorId = React.useId();
 
   return (
+    <DisabledInViewerMode>
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2.5">
         <button
@@ -1176,6 +1191,7 @@ function FeatureActionButton({
       </div>
       <InlineActionError message={inlineError} id={errorId} />
     </div>
+    </DisabledInViewerMode>
   );
 }
 
@@ -1655,7 +1671,7 @@ function SaveStatus({ isDirty, isSaving }: SaveStatusProps) {
 
 // ─── Main CharacterSheet ──────────────────────────────────────────────────────
 
-export function CharacterSheet({ characterId }: CharacterSheetProps) {
+export function CharacterSheet({ characterId, viewerMode = false }: CharacterSheetProps) {
   const {
     data: character,
     isLoading,
@@ -1739,6 +1755,7 @@ export function CharacterSheet({ characterId }: CharacterSheetProps) {
   if (!activeCharacter) return null;
 
   return (
+    <ViewerModeProvider viewerMode={viewerMode}>
     <EditSidebarProvider characterId={characterId}>
       <CharacterSheetContent
         characterId={characterId}
@@ -1751,6 +1768,7 @@ export function CharacterSheet({ characterId }: CharacterSheetProps) {
         setLevelUpOpen={setLevelUpOpen}
       />
     </EditSidebarProvider>
+    </ViewerModeProvider>
   );
 }
 
@@ -1823,7 +1841,10 @@ function CharacterSheetContent({
     <div className="mx-auto max-w-4xl space-y-4 pb-20">
       {/* Toolbar */}
       <div className="flex items-center justify-between">
+        <DisabledInViewerMode hideInstead>
         <SaveStatus isDirty={isDirty} isSaving={isSaving} />
+        </DisabledInViewerMode>
+        <DisabledInViewerMode tooltip="Downtime is personal">
         <button
           type="button"
           onClick={() => setDowntimeOpen(true)}
@@ -1838,6 +1859,7 @@ function CharacterSheetContent({
         >
           Downtime / Rest
         </button>
+        </DisabledInViewerMode>
       </div>
 
       {/* Header card */}

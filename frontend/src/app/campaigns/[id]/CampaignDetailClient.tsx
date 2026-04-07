@@ -46,6 +46,8 @@ import { DiceLog } from "@/components/dice/DiceLog";
 import { DiceRollerPanel } from "@/components/dice/DiceRollerPanel";
 import { useCharacters } from "@/hooks/useCharacter";
 import { SheetContextMenu, type ContextMenuPosition } from "@/components/campaign/SheetContextMenu";
+import { CondensedCharacterCard } from "@/components/campaign/CondensedCharacterCard";
+import { CommandCenterTab } from "@/components/campaign/CommandCenterTab";
 import { useLongPress } from "@/hooks/useLongPress";
 import type { ForceCritEvent } from "@/hooks/useGameWebSocket";
 import { resolveDiceColors, resolveGmDiceColor, buildColorOverrides } from "@/lib/diceColorResolver";
@@ -77,9 +79,11 @@ interface SheetPingWrapperProps {
   characterName: string;
   isGm: boolean;
   onPingField: (fieldKey: string) => void;
+  /** When true, the sheet is rendered in read-only viewer mode (GM viewing player's sheet). */
+  viewerMode?: boolean;
 }
 
-function SheetPingWrapper({ characterId, characterName, isGm, onPingField }: SheetPingWrapperProps) {
+function SheetPingWrapper({ characterId, characterName, isGm, onPingField, viewerMode }: SheetPingWrapperProps) {
   const wrapperRef  = useRef<HTMLDivElement>(null);
   const triggerRef  = useRef<HTMLElement | null>(null);
 
@@ -211,7 +215,7 @@ function SheetPingWrapper({ characterId, characterName, isGm, onPingField }: She
           </button>
         </div>
       )}
-      <CharacterSheet characterId={characterId} />
+      <CharacterSheet characterId={characterId} viewerMode={viewerMode} />
 
       {contextMenu && (
         <SheetContextMenu
@@ -349,6 +353,7 @@ function AssignCharacterPanel({ campaignId }: AssignCharacterPanelProps) {
 // On mobile, replaced by the bottom nav — this bar is hidden on sm and below.
 
 const GM_TABS: { id: CampaignTab; label: string; icon: string }[] = [
+  { id: "command", label: "Command", icon: "🎯" },
   { id: "characters", label: "Characters", icon: "👤" },
   { id: "adversaries", label: "Adversaries", icon: "👹" },
   { id: "encounter", label: "Encounter", icon: "⚔️" },
@@ -730,6 +735,8 @@ export default function CampaignDetailClient() {
   /** GM-only: overflow menu open state on mobile. */
   const [overflowOpen, setOverflowOpen] = useState(false);
   const overflowRef = useRef<HTMLDivElement>(null);
+  /** Mobile: show full sheet instead of condensed card. */
+  const [showFullSheet, setShowFullSheet] = useState(false);
 
   const titleId = useId();
 
@@ -773,6 +780,11 @@ export default function CampaignDetailClient() {
     setDrawerOpen(false);
   }, [selectedCharacterId]);
 
+  // Reset mobile full-sheet toggle when switching characters
+  useEffect(() => {
+    setShowFullSheet(false);
+  }, [selectedCharacterId]);
+
   // ── Derived state ───────────────────────────────────────────────────────────
   const isGm        = campaign?.callerRole === "gm";
   const callerChar  = campaign?.members.find((m) => m.userId === user?.userId);
@@ -785,6 +797,18 @@ export default function CampaignDetailClient() {
   const forceCritCharName = forceCritCharId
     ? campaign?.characters.find((c) => c.characterId === forceCritCharId)?.name ?? null
     : null;
+
+  // Selected character's member info (for viewer banner + condensed card)
+  const selectedMember = selectedCharacterId
+    ? campaign?.members.find((m) => m.characterId === selectedCharacterId)
+    : null;
+  const selectedCharDetail = selectedCharacterId
+    ? campaign?.characters.find((c) => c.characterId === selectedCharacterId)
+    : null;
+  const selectedMemberName = selectedCharDetail?.name ?? selectedMember?.displayName ?? "Character";
+
+  // Whether the GM is viewing someone else's character (viewer mode)
+  const isViewerMode = isGm && !!selectedCharacterId && selectedCharacterId !== myCharId;
 
   // ── Dice color overrides ────────────────────────────────────────────────────
   const activeCharacter = useCharacterStore((s) => s.activeCharacter);
@@ -1283,6 +1307,32 @@ export default function CampaignDetailClient() {
 
               {/* Tab Panels */}
 
+              {/* Command Center tab (GM only) */}
+              {isGm && activeTab === "command" && (
+                <div
+                  id="tabpanel-command"
+                  role="tabpanel"
+                  aria-labelledby="tab-command"
+                >
+                  <CommandCenterTab
+                    campaignId={campaignId}
+                    characters={campaign?.characters ?? []}
+                    currentFear={campaign?.currentFear ?? 0}
+                    onSelectCharacter={(charId) => {
+                      setSelectedCharacter(charId);
+                      setActiveTab("characters");
+                    }}
+                    fearTracker={
+                      <FearTracker
+                        campaignId={campaignId}
+                        currentFear={campaign?.currentFear ?? 0}
+                        compact
+                      />
+                    }
+                  />
+                </div>
+              )}
+
               {/* Characters tab */}
               {(activeTab === "characters" || !isGm) && (
                 <div
@@ -1319,14 +1369,63 @@ export default function CampaignDetailClient() {
                   )}
 
                   {selectedCharacterId && (
-                    <SheetPingWrapper
-                      characterId={selectedCharacterId}
-                      characterName={
-                        campaign?.characters.find((c) => c.characterId === selectedCharacterId)?.name ?? "Character"
-                      }
-                      isGm={isGm}
-                      onPingField={handlePingField}
-                    />
+                    <>
+                      {/* Viewer mode banner — GM viewing a player's sheet */}
+                      {isViewerMode && (
+                        <div className="flex items-center gap-2 rounded-lg bg-[#577399]/15 border border-[#577399]/30 px-3 py-1.5 text-xs text-[#577399] mb-2">
+                          <span>♛ Viewing {selectedMemberName}&apos;s Sheet</span>
+                        </div>
+                      )}
+
+                      {/* Mobile: condensed card by default, full sheet on toggle */}
+                      <div className="sm:hidden">
+                        {!showFullSheet ? (
+                          <div>
+                            <CondensedCharacterCard
+                              characterId={selectedCharacterId}
+                              onExpand={() => setShowFullSheet(true)}
+                              fallbackName={selectedCharDetail?.name}
+                              fallbackClass={selectedCharDetail?.className}
+                              fallbackLevel={selectedCharDetail?.level}
+                              fallbackAvatar={selectedCharDetail?.avatarUrl ?? selectedCharDetail?.portraitUrl}
+                            />
+                            <button
+                              onClick={() => setShowFullSheet(true)}
+                              className="mt-3 w-full rounded-lg border border-[#577399]/30 bg-[#577399]/10 px-4 py-2 text-sm text-[#bfc3d6] hover:bg-[#577399]/20 transition-colors"
+                            >
+                              Full Sheet →
+                            </button>
+                          </div>
+                        ) : (
+                          <div>
+                            <button
+                              onClick={() => setShowFullSheet(false)}
+                              className="mb-2 text-xs text-[#577399] hover:text-[#bfc3d6] transition-colors"
+                            >
+                              ← Summary
+                            </button>
+                            <SheetPingWrapper
+                              characterId={selectedCharacterId}
+                              characterName={selectedMemberName}
+                              isGm={isGm}
+                              onPingField={handlePingField}
+                              viewerMode={isViewerMode}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Desktop: always show full sheet */}
+                      <div className="hidden sm:block">
+                        <SheetPingWrapper
+                          characterId={selectedCharacterId}
+                          characterName={selectedMemberName}
+                          isGm={isGm}
+                          onPingField={handlePingField}
+                          viewerMode={isViewerMode}
+                        />
+                      </div>
+                    </>
                   )}
                 </div>
               )}

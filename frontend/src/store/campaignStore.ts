@@ -12,7 +12,7 @@ import { create } from "zustand";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 /** Tabs available in the Campaign Detail main content area. */
-export type CampaignTab = "characters" | "adversaries" | "encounter" | "environments";
+export type CampaignTab = "command" | "characters" | "adversaries" | "encounter" | "environments";
 
 interface CampaignState {
   activeCampaignId:    string | null;
@@ -36,7 +36,7 @@ export const useCampaignStore = create<CampaignStore>((set) => ({
   // ── State ────────────────────────────────────────────────────────────────
   activeCampaignId:    null,
   selectedCharacterId: null,
-  activeTab:           "characters",
+  activeTab:           "command",
 
   // ── Actions ──────────────────────────────────────────────────────────────
   setActiveCampaign: (id) => set({ activeCampaignId: id }),
@@ -46,5 +46,5 @@ export const useCampaignStore = create<CampaignStore>((set) => ({
   setActiveTab: (tab) => set({ activeTab: tab }),
 
   clearCampaignSession: () =>
-    set({ activeCampaignId: null, selectedCharacterId: null, activeTab: "characters" }),
+    set({ activeCampaignId: null, selectedCharacterId: null, activeTab: "command" }),
 }));
