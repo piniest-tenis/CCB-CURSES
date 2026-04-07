@@ -6,9 +6,11 @@
  * Edit page for an existing homebrew content item.
  *
  * Fetches the existing item, maps it to initialValues, and renders the
- * appropriate structured form component (AncestryForm, CommunityForm,
- * DomainCardForm, or ClassWizard) inside a WorkshopLayout -- identical
- * to the create page pattern but with pre-populated fields.
+ * appropriate form component inside a WorkshopLayout.
+ *
+ * Markdown types (class, ancestry, community, domainCard) use the preview panel.
+ * Equipment types (weapon, armor, item, consumable) use structured forms without
+ * a markdown preview panel.
  */
 
 import React, { useCallback, useState } from "react";
@@ -19,27 +21,41 @@ import {
   useUpdateHomebrew,
   useParsePreview,
   type HomebrewItemData,
+  type HomebrewInput,
 } from "@/hooks/useHomebrew";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import type {
   HomebrewContentType,
   HomebrewMarkdownInput,
+  HomebrewEquipmentInput,
   AncestryData,
   CommunityData,
   DomainCard,
   ClassData,
+  HomebrewWeaponData,
+  HomebrewArmorData,
+  HomebrewItemData as SharedItemData,
+  HomebrewConsumableData,
 } from "@shared/types";
 
 import { WorkshopLayout } from "@/components/homebrew/WorkshopLayout";
-import { MarkdownPreview } from "@/components/homebrew/MarkdownPreview";
+import { MarkdownPreview, type PreviewData } from "@/components/homebrew/MarkdownPreview";
 import { AncestryForm } from "@/components/homebrew/AncestryForm";
 import { CommunityForm } from "@/components/homebrew/CommunityForm";
 import { DomainCardForm } from "@/components/homebrew/DomainCardForm";
 import { ClassWizard } from "@/components/homebrew/ClassWizard";
+import { WeaponForm } from "@/components/homebrew/WeaponForm";
+import { ArmorForm } from "@/components/homebrew/ArmorForm";
+import { LootForm } from "@/components/homebrew/LootForm";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const VALID_TYPES = new Set<string>(["class", "ancestry", "community", "domainCard"]);
+const VALID_TYPES = new Set<string>([
+  "class", "ancestry", "community", "domainCard",
+  "weapon", "armor", "item", "consumable",
+]);
+
+const MARKDOWN_TYPES = new Set<string>(["class", "ancestry", "community", "domainCard"]);
 
 function typeLabel(type: HomebrewContentType): string {
   switch (type) {
@@ -47,6 +63,10 @@ function typeLabel(type: HomebrewContentType): string {
     case "ancestry":   return "Ancestry";
     case "community":  return "Community";
     case "domainCard": return "Domain Card";
+    case "weapon":     return "Weapon";
+    case "armor":      return "Armor";
+    case "item":       return "Item";
+    case "consumable": return "Consumable";
   }
 }
 
@@ -118,6 +138,54 @@ function classInitialValues(data: ClassData) {
   };
 }
 
+// ── Equipment initial-value mappers ───────────────────────────────────────────
+
+function weaponInitialValues(data: HomebrewWeaponData) {
+  return {
+    name: data.name,
+    tier: data.tier,
+    category: data.category,
+    trait: data.trait.charAt(0).toUpperCase() + data.trait.slice(1), // capitalize for display
+    range: data.range,
+    damageDie: data.damageDie,
+    damageType: data.damageType,
+    burden: data.burden,
+    featureName: data.feature?.name,
+    featureDescription: data.feature?.description,
+  };
+}
+
+function armorInitialValues(data: HomebrewArmorData) {
+  return {
+    name: data.name,
+    tier: data.tier,
+    baseThresholdMajor: data.baseThresholds.major,
+    baseThresholdSevere: data.baseThresholds.severe,
+    baseArmorScore: data.baseArmorScore,
+    featureName: data.feature?.name,
+    featureDescription: data.feature?.description,
+  };
+}
+
+function itemInitialValues(data: SharedItemData) {
+  return {
+    name: data.name,
+    rarity: data.rarity,
+    effect: data.effect,
+    lootType: "item" as const,
+  };
+}
+
+function consumableInitialValues(data: HomebrewConsumableData) {
+  return {
+    name: data.name,
+    rarity: data.rarity,
+    effect: data.effect,
+    uses: data.uses,
+    lootType: "consumable" as const,
+  };
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function HomebrewEditClient() {
@@ -125,6 +193,7 @@ export default function HomebrewEditClient() {
   const router = useRouter();
 
   const contentType = VALID_TYPES.has(type) ? (type as HomebrewContentType) : undefined;
+  const isMarkdownType = contentType ? MARKDOWN_TYPES.has(contentType) : false;
 
   const detailQuery = useHomebrewDetail(contentType, id);
   const updateMutation = useUpdateHomebrew();
@@ -133,11 +202,11 @@ export default function HomebrewEditClient() {
     storageKey: `hb-draft-edit-${type}-${id}`,
   });
 
-  // Preview data state
+  // Preview data state (markdown types only)
   const [previewData, setPreviewData] = useState<HomebrewItemData | null>(null);
 
-  // ── Handle parse preview ────────────────────────────────────────────────
-  const handlePreview = useCallback(
+  // ── Handle parse preview (markdown types) ───────────────────────────────
+  const handleMarkdownPreview = useCallback(
     async (input: HomebrewMarkdownInput) => {
       markDirty(input);
       try {
@@ -150,9 +219,17 @@ export default function HomebrewEditClient() {
     [parseMutation, markDirty]
   );
 
-  // ── Handle submit ───────────────────────────────────────────────────────
+  // ── Handle equipment preview ────────────────────────────────────────────
+  const handleEquipmentPreview = useCallback(
+    (input: HomebrewEquipmentInput) => {
+      markDirty(input);
+    },
+    [markDirty]
+  );
+
+  // ── Handle submit (all types) ───────────────────────────────────────────
   const handleSubmit = useCallback(
-    async (input: HomebrewMarkdownInput) => {
+    async (input: HomebrewInput) => {
       if (!contentType) return;
       try {
         await updateMutation.mutateAsync({
@@ -167,6 +244,16 @@ export default function HomebrewEditClient() {
       }
     },
     [contentType, id, updateMutation, router, markClean]
+  );
+
+  // Narrowed submit callbacks for type-safety
+  const handleMarkdownSubmit = useCallback(
+    (input: HomebrewMarkdownInput) => handleSubmit(input),
+    [handleSubmit]
+  );
+  const handleEquipmentSubmit = useCallback(
+    (input: HomebrewEquipmentInput) => handleSubmit(input),
+    [handleSubmit]
   );
 
   // ── Invalid type guard ──────────────────────────────────────────────────
@@ -222,71 +309,117 @@ export default function HomebrewEditClient() {
     // Wait for data before rendering the form (so initialValues are populated)
     if (!detailQuery.data) return null;
 
-    const formProps = {
-      onSubmit: handleSubmit,
-      onPreview: handlePreview,
+    if (isMarkdownType) {
+      const formProps = {
+        onSubmit: handleMarkdownSubmit,
+        onPreview: handleMarkdownPreview,
+        isSubmitting: updateMutation.isPending,
+        submitLabel: "Save Changes",
+      };
+
+      switch (contentType) {
+        case "ancestry":
+          return (
+            <AncestryForm
+              {...formProps}
+              initialValues={ancestryInitialValues(detailQuery.data as AncestryData)}
+            />
+          );
+        case "community":
+          return (
+            <CommunityForm
+              {...formProps}
+              initialValues={communityInitialValues(detailQuery.data as CommunityData)}
+            />
+          );
+        case "domainCard":
+          return (
+            <DomainCardForm
+              {...formProps}
+              initialValues={domainCardInitialValues(detailQuery.data as DomainCard)}
+            />
+          );
+        case "class":
+          return (
+            <ClassWizard
+              {...formProps}
+              initialValues={classInitialValues(detailQuery.data as ClassData)}
+            />
+          );
+      }
+    }
+
+    // Equipment types
+    const equipProps = {
+      onSubmit: handleEquipmentSubmit,
+      onPreview: handleEquipmentPreview,
       isSubmitting: updateMutation.isPending,
       submitLabel: "Save Changes",
     };
 
     switch (contentType) {
-      case "ancestry":
+      case "weapon":
         return (
-          <AncestryForm
-            {...formProps}
-            initialValues={ancestryInitialValues(detailQuery.data as AncestryData)}
+          <WeaponForm
+            {...equipProps}
+            initialValues={weaponInitialValues(detailQuery.data as HomebrewWeaponData)}
           />
         );
-      case "community":
+      case "armor":
         return (
-          <CommunityForm
-            {...formProps}
-            initialValues={communityInitialValues(detailQuery.data as CommunityData)}
+          <ArmorForm
+            {...equipProps}
+            initialValues={armorInitialValues(detailQuery.data as HomebrewArmorData)}
           />
         );
-      case "domainCard":
+      case "item":
         return (
-          <DomainCardForm
-            {...formProps}
-            initialValues={domainCardInitialValues(detailQuery.data as DomainCard)}
+          <LootForm
+            {...equipProps}
+            defaultType="item"
+            initialValues={itemInitialValues(detailQuery.data as SharedItemData)}
           />
         );
-      case "class":
+      case "consumable":
         return (
-          <ClassWizard
-            {...formProps}
-            initialValues={classInitialValues(detailQuery.data as ClassData)}
+          <LootForm
+            {...equipProps}
+            defaultType="consumable"
+            initialValues={consumableInitialValues(detailQuery.data as HomebrewConsumableData)}
           />
         );
     }
   };
 
-  // ── Build the preview panel ─────────────────────────────────────────────
-  const renderPreview = () => (
-    <div className="space-y-3">
-      {/* Preview loading indicator */}
-      {parseMutation.isPending && (
-        <div className="flex items-center gap-2 text-xs text-[#b9baa3]/40">
-          <span className="h-3 w-3 animate-spin rounded-full border border-coral-400 border-t-transparent" />
-          Parsing...
-        </div>
-      )}
+  // ── Build the preview panel (markdown types only) ────────────────────────
+  const renderPreview = () => {
+    if (!isMarkdownType) return null;
+    return (
+      <div className="space-y-3">
+        {/* Preview loading indicator */}
+        {parseMutation.isPending && (
+          <div className="flex items-center gap-2 text-xs text-[#b9baa3]/40">
+            <span className="h-3 w-3 animate-spin rounded-full border border-coral-400 border-t-transparent" />
+            Parsing...
+          </div>
+        )}
 
-      {/* Parse error */}
-      {parseMutation.isError && (
-        <div className="rounded-lg border border-[#fe5f55]/20 bg-[#fe5f55]/5 px-3 py-2">
-          <p className="text-xs text-[#fe5f55]/80">
-            Preview error: {parseMutation.error?.message ?? "Failed to parse markdown"}
-          </p>
-        </div>
-      )}
+        {/* Parse error */}
+        {parseMutation.isError && (
+          <div className="rounded-lg border border-[#fe5f55]/20 bg-[#fe5f55]/5 px-3 py-2">
+            <p className="text-xs text-[#fe5f55]/80">
+              Preview error: {parseMutation.error?.message ?? "Failed to parse markdown"}
+            </p>
+          </div>
+        )}
 
-      <MarkdownPreview
-        data={previewData ?? detailQuery.data ?? null}
-        contentType={contentType}
-      />
-    </div>
-  );
+        <MarkdownPreview
+          data={(previewData ?? detailQuery.data ?? null) as PreviewData}
+          contentType={contentType}
+        />
+      </div>
+    );
+  };
 
   return (
     <WorkshopLayout

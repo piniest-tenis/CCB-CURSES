@@ -39,6 +39,11 @@ import type {
   HomebrewContentType,
   HomebrewSummary,
   HomebrewMarkdownInput,
+  HomebrewEquipmentInput,
+  HomebrewWeaponData,
+  HomebrewArmorData,
+  HomebrewItemData,
+  HomebrewConsumableData,
   ClassData,
   CommunityData,
   AncestryData,
@@ -76,7 +81,21 @@ const VALID_CONTENT_TYPES: HomebrewContentType[] = [
   "community",
   "ancestry",
   "domainCard",
+  "weapon",
+  "armor",
+  "item",
+  "consumable",
 ];
+
+/** Content types that use the markdown-based flow. */
+const MARKDOWN_CONTENT_TYPES = new Set<HomebrewContentType>([
+  "class", "community", "ancestry", "domainCard",
+]);
+
+/** Content types that use the structured equipment form flow. */
+const EQUIPMENT_CONTENT_TYPES = new Set<HomebrewContentType>([
+  "weapon", "armor", "item", "consumable",
+]);
 
 const markdownInputSchema = z.object({
   contentType: z.enum(["class", "community", "ancestry", "domainCard"]),
@@ -89,6 +108,53 @@ const markdownInputSchema = z.object({
   recallCost: z.number().int().min(0).max(10).optional(),
 });
 
+// ─── Equipment Zod Schemas ────────────────────────────────────────────────────
+
+const featureSchema = z.object({
+  name: z.string().min(1).max(100),
+  description: z.string().min(1).max(2000),
+}).optional();
+
+const weaponInputSchema = z.object({
+  contentType: z.literal("weapon"),
+  name: z.string().min(1, "name is required").max(100, "name must be ≤ 100 characters"),
+  tier: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+  category: z.enum(["primary", "secondary"]),
+  trait: z.string().min(1, "trait is required").max(50),
+  range: z.enum(["melee", "ranged", "very close", "close", "far", "very far"]),
+  damageDie: z.string().min(1).max(10).regex(/^\d*d\d+$/, "Invalid damage die format (e.g. d6, 2d8)"),
+  damageType: z.enum(["physical", "magic"]),
+  burden: z.number().int().min(0).max(3),
+  featureName: z.string().max(100).optional(),
+  featureDescription: z.string().max(2000).optional(),
+});
+
+const armorInputSchema = z.object({
+  contentType: z.literal("armor"),
+  name: z.string().min(1, "name is required").max(100, "name must be ≤ 100 characters"),
+  tier: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+  baseThresholdMajor: z.number().int().min(1).max(30),
+  baseThresholdSevere: z.number().int().min(1).max(50),
+  baseArmorScore: z.number().int().min(0).max(10),
+  featureName: z.string().max(100).optional(),
+  featureDescription: z.string().max(2000).optional(),
+});
+
+const itemInputSchema = z.object({
+  contentType: z.literal("item"),
+  name: z.string().min(1, "name is required").max(100, "name must be ≤ 100 characters"),
+  rarity: z.enum(["common", "uncommon", "rare", "very rare", "legendary"]),
+  effect: z.string().min(1, "effect is required").max(5000, "effect must be ≤ 5000 characters"),
+});
+
+const consumableInputSchema = z.object({
+  contentType: z.literal("consumable"),
+  name: z.string().min(1, "name is required").max(100, "name must be ≤ 100 characters"),
+  rarity: z.enum(["common", "uncommon", "rare", "very rare", "legendary"]),
+  effect: z.string().min(1, "effect is required").max(5000, "effect must be ≤ 5000 characters"),
+  uses: z.number().int().min(1).max(10),
+});
+
 // ─── Helper: Resolve table name for a content type ────────────────────────────
 
 function tableForContentType(contentType: HomebrewContentType): string {
@@ -97,6 +163,10 @@ function tableForContentType(contentType: HomebrewContentType): string {
       return CLASSES_TABLE;
     case "community":
     case "ancestry":
+    case "weapon":
+    case "armor":
+    case "item":
+    case "consumable":
       return GAME_DATA_TABLE;
     case "domainCard":
       return DOMAIN_CARDS_TABLE;
@@ -140,6 +210,14 @@ function buildHomebrewKey(
       return keys.homebrewCommunity(userId, slug);
     case "ancestry":
       return keys.homebrewAncestry(userId, slug);
+    case "weapon":
+      return keys.homebrewWeapon(userId, slug);
+    case "armor":
+      return keys.homebrewArmor(userId, slug);
+    case "item":
+      return keys.homebrewItem(userId, slug);
+    case "consumable":
+      return keys.homebrewConsumable(userId, slug);
     case "domainCard": {
       if (!domain) throw AppError.badRequest("domain is required for domainCard");
       if (isSrdDomain(domain)) {
@@ -346,6 +424,203 @@ function buildDynamoItems(
   }
 }
 
+// ─── Equipment Validation ─────────────────────────────────────────────────────
+
+/** Damage die scaling reference per tier (Homebrew Kit p.22). */
+const WEAPON_DAMAGE_SCALING: Record<number, string[]> = {
+  1: ["d6", "d8"],
+  2: ["d8", "d10", "2d6"],
+  3: ["d10", "d12", "2d8"],
+  4: ["d12", "2d10", "2d12"],
+};
+
+/** Armor balance ranges per tier (Homebrew Kit p.23). */
+const ARMOR_BALANCE: Record<number, { majorMin: number; majorMax: number; severeMin: number; severeMax: number; armorMin: number; armorMax: number }> = {
+  1: { majorMin: 3, majorMax: 5, severeMin: 7, severeMax: 10, armorMin: 0, armorMax: 2 },
+  2: { majorMin: 5, majorMax: 7, severeMin: 10, severeMax: 14, armorMin: 1, armorMax: 3 },
+  3: { majorMin: 7, majorMax: 9, severeMin: 14, severeMax: 18, armorMin: 2, armorMax: 4 },
+  4: { majorMin: 9, majorMax: 12, severeMin: 18, severeMax: 24, armorMin: 3, armorMax: 6 },
+};
+
+function validateEquipment(input: HomebrewEquipmentInput): ValidationResult {
+  const errors: ValidationResult["errors"] = [];
+  const warnings: ValidationResult["warnings"] = [];
+
+  switch (input.contentType) {
+    case "weapon": {
+      // Hard validation
+      if (input.category === "secondary" && (input.burden ?? 0) > 0) {
+        errors.push({ field: "burden", rule: "secondary-burden", message: "Secondary weapons must have burden 0." });
+      }
+      if (input.category === "primary" && (input.burden ?? 1) < 1) {
+        errors.push({ field: "burden", rule: "primary-burden", message: "Primary weapons must have burden ≥ 1." });
+      }
+      if (!input.tier || !input.damageDie) break;
+      if (input.baseThresholdSevere !== undefined && input.baseThresholdMajor !== undefined) {
+        if (input.baseThresholdSevere <= input.baseThresholdMajor) {
+          errors.push({ field: "baseThresholdSevere", rule: "threshold-order", message: "Severe threshold must be greater than Major threshold." });
+        }
+      }
+
+      // Soft warnings — damage die vs tier
+      const expectedDice = WEAPON_DAMAGE_SCALING[input.tier];
+      if (expectedDice && input.damageDie && !expectedDice.includes(input.damageDie)) {
+        warnings.push({ field: "damageDie", message: `Tier ${input.tier} weapons typically use ${expectedDice.join(" or ")}. Your choice of ${input.damageDie} may be unbalanced.` });
+      }
+      break;
+    }
+
+    case "armor": {
+      if (!input.tier) break;
+      // Hard: severe must be > major
+      if (input.baseThresholdMajor !== undefined && input.baseThresholdSevere !== undefined) {
+        if (input.baseThresholdSevere <= input.baseThresholdMajor) {
+          errors.push({ field: "baseThresholdSevere", rule: "threshold-order", message: "Severe threshold must be greater than Major threshold." });
+        }
+      }
+
+      // Soft warnings — balance ranges
+      const range = ARMOR_BALANCE[input.tier];
+      if (range && input.baseThresholdMajor !== undefined) {
+        if (input.baseThresholdMajor < range.majorMin || input.baseThresholdMajor > range.majorMax) {
+          warnings.push({ field: "baseThresholdMajor", message: `Tier ${input.tier} armor typically has Major threshold ${range.majorMin}–${range.majorMax}. Your value of ${input.baseThresholdMajor} may be unbalanced.` });
+        }
+      }
+      if (range && input.baseThresholdSevere !== undefined) {
+        if (input.baseThresholdSevere < range.severeMin || input.baseThresholdSevere > range.severeMax) {
+          warnings.push({ field: "baseThresholdSevere", message: `Tier ${input.tier} armor typically has Severe threshold ${range.severeMin}–${range.severeMax}. Your value of ${input.baseThresholdSevere} may be unbalanced.` });
+        }
+      }
+      if (range && input.baseArmorScore !== undefined) {
+        if (input.baseArmorScore < range.armorMin || input.baseArmorScore > range.armorMax) {
+          warnings.push({ field: "baseArmorScore", message: `Tier ${input.tier} armor typically has Armor Score ${range.armorMin}–${range.armorMax}. Your value of ${input.baseArmorScore} may be unbalanced.` });
+        }
+      }
+      break;
+    }
+
+    case "item": {
+      // No hard errors beyond schema validation; soft warnings only
+      if (input.effect && input.effect.length < 20) {
+        warnings.push({ field: "effect", message: "Effect description is very short. Consider adding more detail." });
+      }
+      break;
+    }
+
+    case "consumable": {
+      if (input.effect && input.effect.length < 20) {
+        warnings.push({ field: "effect", message: "Effect description is very short. Consider adding more detail." });
+      }
+      if ((input.uses ?? 1) > 3) {
+        warnings.push({ field: "uses", message: `${input.uses} uses is unusually high for a consumable. Most have 1–3 uses.` });
+      }
+      break;
+    }
+  }
+
+  return { valid: errors.length === 0, errors, warnings };
+}
+
+// ─── Helper: Build DynamoDB items from equipment input ────────────────────────
+
+function buildEquipmentDynamoItem(
+  input: HomebrewEquipmentInput,
+  userId: string,
+  now: string,
+  createdAt?: string
+): { table: string; item: Record<string, unknown> } {
+  const slug = toSlug(input.name);
+  const meta = {
+    creatorUserId: userId,
+    source: "homebrew" as const,
+    updatedAt: now,
+    createdAt: createdAt ?? now,
+  };
+
+  const feature =
+    input.featureName && input.featureDescription
+      ? { name: input.featureName, description: input.featureDescription }
+      : undefined;
+
+  switch (input.contentType) {
+    case "weapon": {
+      const key = keys.homebrewWeapon(userId, slug);
+      return {
+        table: GAME_DATA_TABLE,
+        item: {
+          ...key,
+          id: `hb-${userId}-${slug}`,
+          type: "weapon",
+          name: input.name,
+          tier: input.tier,
+          category: input.category,
+          trait: input.trait,
+          range: input.range,
+          damageDie: input.damageDie,
+          damageType: input.damageType,
+          burden: input.burden,
+          ...(feature ? { feature } : {}),
+          ...meta,
+        },
+      };
+    }
+
+    case "armor": {
+      const key = keys.homebrewArmor(userId, slug);
+      return {
+        table: GAME_DATA_TABLE,
+        item: {
+          ...key,
+          id: `hb-${userId}-${slug}`,
+          type: "armor",
+          name: input.name,
+          tier: input.tier,
+          baseThresholds: {
+            major: input.baseThresholdMajor,
+            severe: input.baseThresholdSevere,
+          },
+          baseArmorScore: input.baseArmorScore,
+          ...(feature ? { feature } : {}),
+          ...meta,
+        },
+      };
+    }
+
+    case "item": {
+      const key = keys.homebrewItem(userId, slug);
+      return {
+        table: GAME_DATA_TABLE,
+        item: {
+          ...key,
+          id: `hb-${userId}-${slug}`,
+          type: "item",
+          name: input.name,
+          rarity: input.rarity,
+          effect: input.effect,
+          ...meta,
+        },
+      };
+    }
+
+    case "consumable": {
+      const key = keys.homebrewConsumable(userId, slug);
+      return {
+        table: GAME_DATA_TABLE,
+        item: {
+          ...key,
+          id: `hb-${userId}-${slug}`,
+          type: "consumable",
+          name: input.name,
+          rarity: input.rarity,
+          effect: input.effect,
+          uses: input.uses,
+          ...meta,
+        },
+      };
+    }
+  }
+}
+
 // ─── Route Handlers ───────────────────────────────────────────────────────────
 
 /**
@@ -363,7 +638,9 @@ async function listMyHomebrew(
     (!contentTypeFilter || contentTypeFilter === "class")
       ? queryVisibleHomebrew<Record<string, unknown>>(CLASSES_TABLE, userId)
       : Promise.resolve([]),
-    (!contentTypeFilter || contentTypeFilter === "community" || contentTypeFilter === "ancestry")
+    (!contentTypeFilter || contentTypeFilter === "community" || contentTypeFilter === "ancestry" ||
+     contentTypeFilter === "weapon" || contentTypeFilter === "armor" ||
+     contentTypeFilter === "item" || contentTypeFilter === "consumable")
       ? queryVisibleHomebrew<Record<string, unknown>>(GAME_DATA_TABLE, userId)
       : Promise.resolve([]),
     (!contentTypeFilter || contentTypeFilter === "domainCard")
@@ -392,7 +669,7 @@ async function listMyHomebrew(
     });
   }
 
-  // Process game-data items (communities + ancestries)
+  // Process game-data items (communities, ancestries, weapons, armor, items, consumables)
   for (const item of gameDataItems) {
     const sk = item["SK"] as string;
     if (sk !== "METADATA") continue;
@@ -401,6 +678,10 @@ async function listMyHomebrew(
     let ct: HomebrewContentType;
     if (type === "community") ct = "community";
     else if (type === "ancestry") ct = "ancestry";
+    else if (type === "weapon") ct = "weapon";
+    else if (type === "armor") ct = "armor";
+    else if (type === "item") ct = "item";
+    else if (type === "consumable") ct = "consumable";
     else continue;
 
     if (contentTypeFilter && contentTypeFilter !== ct) continue;
@@ -447,12 +728,33 @@ async function listMyHomebrew(
 /**
  * POST /homebrew/parse — preview: parse markdown without saving.
  * Returns the parsed data and validation results.
+ * For equipment types, validates the structured input and returns it.
  */
 async function parsePreview(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
   // Auth is required but we don't need the userId for preview
   extractUserId(event);
+
+  const rawBody = JSON.parse(event.body ?? "{}");
+  const contentType = rawBody.contentType as string;
+
+  if (EQUIPMENT_CONTENT_TYPES.has(contentType as HomebrewContentType)) {
+    // Equipment preview — validate and return the input data directly
+    let equipmentSchema: z.ZodType;
+    switch (contentType) {
+      case "weapon": equipmentSchema = weaponInputSchema; break;
+      case "armor": equipmentSchema = armorInputSchema; break;
+      case "item": equipmentSchema = itemInputSchema; break;
+      case "consumable": equipmentSchema = consumableInputSchema; break;
+      default: throw AppError.badRequest(`Invalid equipment type: ${contentType}`);
+    }
+
+    const input = parseBody<HomebrewEquipmentInput>(event, equipmentSchema);
+    const validation = validateEquipment(input);
+
+    return createSuccessResponse({ data: input, validation });
+  }
 
   const input = parseBody<HomebrewMarkdownInput>(event, markdownInputSchema);
   const { data, validation } = parseAndValidate(input);
@@ -465,13 +767,71 @@ async function parsePreview(
 
 /**
  * POST /homebrew — create new homebrew content.
- * Accepts HomebrewMarkdownInput in the request body.
+ * Accepts HomebrewMarkdownInput (for classes, communities, ancestries, domainCards)
+ * or HomebrewEquipmentInput (for weapons, armor, items, consumables).
  */
 async function createHomebrew(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
   const userId = extractUserId(event);
 
+  // Peek at contentType to determine which schema to use
+  const rawBody = JSON.parse(event.body ?? "{}");
+  const contentType = rawBody.contentType as string;
+
+  if (EQUIPMENT_CONTENT_TYPES.has(contentType as HomebrewContentType)) {
+    // ── Equipment flow (structured form input) ──────────────────────────
+    let equipmentSchema: z.ZodType;
+    switch (contentType) {
+      case "weapon": equipmentSchema = weaponInputSchema; break;
+      case "armor": equipmentSchema = armorInputSchema; break;
+      case "item": equipmentSchema = itemInputSchema; break;
+      case "consumable": equipmentSchema = consumableInputSchema; break;
+      default: throw AppError.badRequest(`Invalid equipment type: ${contentType}`);
+    }
+
+    const input = parseBody<HomebrewEquipmentInput>(event, equipmentSchema);
+    const validation = validateEquipment(input);
+
+    if (!validation.valid) {
+      throw AppError.validationError(
+        `Homebrew ${contentType} failed validation with ${validation.errors.length} error(s)`,
+        validation.errors.map((e) => ({
+          field: e.field,
+          issue: `[${e.rule}] ${e.message}`,
+        }))
+      );
+    }
+
+    const now = new Date().toISOString();
+    const { table, item } = buildEquipmentDynamoItem(input, userId, now);
+
+    // Check for existing item with the same key
+    const existing = await getItem<Record<string, unknown>>(
+      table,
+      { PK: item["PK"], SK: item["SK"] }
+    );
+    if (existing) {
+      throw AppError.conflict(
+        `Homebrew ${contentType} named "${input.name}" already exists. Use PUT to update.`
+      );
+    }
+
+    await batchWrite(table, [item]);
+
+    return createSuccessResponse(
+      {
+        message: `Homebrew ${contentType} created successfully`,
+        contentType,
+        pk: item["PK"],
+        sk: item["SK"],
+        validation: { warnings: validation.warnings },
+      },
+      201
+    );
+  }
+
+  // ── Markdown flow (existing content types) ────────────────────────────
   const input = parseBody<HomebrewMarkdownInput>(event, markdownInputSchema);
   const { data, validation } = parseAndValidate(input);
 
@@ -541,6 +901,7 @@ async function getHomebrew(
   // For domain cards, id format is "domain/cardSlug" or we can use query params
   const domain = getQueryParam(event, "domain");
 
+  // Equipment types don't need domain
   const key = buildHomebrewKey(contentType, userId, id, domain);
   const table = tableForContentType(contentType);
 
@@ -585,7 +946,7 @@ async function getHomebrew(
 
 /**
  * PUT /homebrew/{contentType}/{id} — update an existing homebrew item.
- * Accepts HomebrewMarkdownInput (same as create).
+ * Accepts HomebrewMarkdownInput (markdown types) or HomebrewEquipmentInput (equipment types).
  */
 async function updateHomebrew(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
@@ -598,16 +959,7 @@ async function updateHomebrew(
     throw AppError.badRequest(`Invalid contentType: ${contentType}`);
   }
 
-  const input = parseBody<HomebrewMarkdownInput>(event, markdownInputSchema);
-
-  // Ensure contentType in path matches body
-  if (input.contentType !== contentType) {
-    throw AppError.badRequest(
-      `contentType in path (${contentType}) does not match body (${input.contentType})`
-    );
-  }
-
-  const domain = getQueryParam(event, "domain") ?? input.domain;
+  const domain = getQueryParam(event, "domain");
   const key = buildHomebrewKey(contentType, userId, id, domain);
   const table = tableForContentType(contentType);
 
@@ -619,6 +971,67 @@ async function updateHomebrew(
   if (existing["creatorUserId"] !== userId) {
     throw AppError.forbidden("You can only update your own homebrew content");
   }
+
+  const originalCreatedAt = existing["createdAt"] as string | undefined;
+  const now = new Date().toISOString();
+
+  if (EQUIPMENT_CONTENT_TYPES.has(contentType)) {
+    // ── Equipment update flow ───────────────────────────────────────────
+    let equipmentSchema: z.ZodType;
+    switch (contentType) {
+      case "weapon": equipmentSchema = weaponInputSchema; break;
+      case "armor": equipmentSchema = armorInputSchema; break;
+      case "item": equipmentSchema = itemInputSchema; break;
+      case "consumable": equipmentSchema = consumableInputSchema; break;
+      default: throw AppError.badRequest(`Invalid equipment type: ${contentType}`);
+    }
+
+    const input = parseBody<HomebrewEquipmentInput>(event, equipmentSchema);
+
+    if (input.contentType !== contentType) {
+      throw AppError.badRequest(
+        `contentType in path (${contentType}) does not match body (${input.contentType})`
+      );
+    }
+
+    const validation = validateEquipment(input);
+
+    if (!validation.valid) {
+      throw AppError.validationError(
+        `Homebrew ${contentType} failed validation with ${validation.errors.length} error(s)`,
+        validation.errors.map((e) => ({
+          field: e.field,
+          issue: `[${e.rule}] ${e.message}`,
+        }))
+      );
+    }
+
+    const { table: newTable, item } = buildEquipmentDynamoItem(
+      input, userId, now, originalCreatedAt
+    );
+
+    await batchWrite(newTable, [item]);
+
+    return createSuccessResponse({
+      message: `Homebrew ${contentType} updated successfully`,
+      contentType,
+      pk: item["PK"],
+      sk: item["SK"],
+      validation: { warnings: validation.warnings },
+    });
+  }
+
+  // ── Markdown update flow ────────────────────────────────────────────────
+  const input = parseBody<HomebrewMarkdownInput>(event, markdownInputSchema);
+
+  // Ensure contentType in path matches body
+  if (input.contentType !== contentType) {
+    throw AppError.badRequest(
+      `contentType in path (${contentType}) does not match body (${input.contentType})`
+    );
+  }
+
+  const effectiveDomain = domain ?? input.domain;
 
   // Parse and validate the new content
   const { data, validation } = parseAndValidate(input);
@@ -633,8 +1046,6 @@ async function updateHomebrew(
     );
   }
 
-  const originalCreatedAt = existing["createdAt"] as string | undefined;
-  const now = new Date().toISOString();
   const { table: newTable, items } = buildDynamoItems(
     contentType,
     data,

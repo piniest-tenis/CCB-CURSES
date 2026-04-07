@@ -497,4 +497,28 @@ export const keys = {
     PK: `DOMAIN#hb-${userId}-${domain}`,
     SK: `CARD#hb-${userId}-${slug}`,
   }),
+
+  /** Key for a homebrew weapon item. */
+  homebrewWeapon: (userId: string, slug: string) => ({
+    PK: `WEAPON#hb-${userId}-${slug}`,
+    SK: "METADATA",
+  }),
+
+  /** Key for a homebrew armor item. */
+  homebrewArmor: (userId: string, slug: string) => ({
+    PK: `ARMOR#hb-${userId}-${slug}`,
+    SK: "METADATA",
+  }),
+
+  /** Key for a homebrew item (reusable). */
+  homebrewItem: (userId: string, slug: string) => ({
+    PK: `ITEM#hb-${userId}-${slug}`,
+    SK: "METADATA",
+  }),
+
+  /** Key for a homebrew consumable. */
+  homebrewConsumable: (userId: string, slug: string) => ({
+    PK: `CONSUMABLE#hb-${userId}-${slug}`,
+    SK: "METADATA",
+  }),
 };

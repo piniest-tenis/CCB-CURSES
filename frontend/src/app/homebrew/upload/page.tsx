@@ -22,7 +22,7 @@ import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
 import { AppHeader } from "@/components/AppHeader";
 import { Footer } from "@/components/Footer";
-import { MarkdownPreview } from "@/components/homebrew/MarkdownPreview";
+import { MarkdownPreview, type PreviewData } from "@/components/homebrew/MarkdownPreview";
 import {
   useCreateHomebrew,
   useParsePreview,
@@ -272,7 +272,8 @@ function downloadFile(filename: string, content: string) {
   URL.revokeObjectURL(url);
 }
 
-const TYPE_LABELS: Record<HomebrewContentType, string> = {
+/** Only markdown-based content types are supported for upload. */
+const TYPE_LABELS: Partial<Record<HomebrewContentType, string>> = {
   class: "Class",
   ancestry: "Ancestry",
   community: "Community",
@@ -650,7 +651,7 @@ export default function HomebrewUploadPage() {
                     </p>
                   </div>
                 )}
-                <MarkdownPreview data={previewData} contentType={contentType} />
+                <MarkdownPreview data={previewData as PreviewData} contentType={contentType} />
               </div>
             </div>
 

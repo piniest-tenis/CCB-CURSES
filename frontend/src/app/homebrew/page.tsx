@@ -34,6 +34,10 @@ const TABS: { key: FilterTab; label: string }[] = [
   { key: "domainCard", label: "Domain Cards" },
   { key: "ancestry",   label: "Ancestries" },
   { key: "community",  label: "Communities" },
+  { key: "weapon",     label: "Weapons" },
+  { key: "armor",      label: "Armor" },
+  { key: "item",       label: "Items" },
+  { key: "consumable", label: "Consumables" },
 ];
 
 type SortKey = "updatedAt" | "name" | "contentType";
@@ -51,6 +55,10 @@ function contentTypeLabel(ct: HomebrewContentType): string {
     case "domainCard": return "Domain Card";
     case "ancestry":   return "Ancestry";
     case "community":  return "Community";
+    case "weapon":     return "Weapon";
+    case "armor":      return "Armor";
+    case "item":       return "Item";
+    case "consumable": return "Consumable";
   }
 }
 
@@ -65,6 +73,14 @@ function typeColorClasses(ct: HomebrewContentType): string {
       return "border-gold-500/40 bg-gold-500/10 text-gold-400";
     case "community":
       return "border-emerald-500/40 bg-emerald-500/10 text-emerald-400";
+    case "weapon":
+      return "border-violet-400/40 bg-violet-400/10 text-violet-400";
+    case "armor":
+      return "border-sky-400/40 bg-sky-400/10 text-sky-400";
+    case "item":
+      return "border-amber-500/40 bg-amber-500/10 text-amber-400";
+    case "consumable":
+      return "border-rose-400/40 bg-rose-400/10 text-rose-400";
   }
 }
 
@@ -397,8 +413,8 @@ export default function HomebrewListPage() {
                 No homebrew content yet
               </p>
               <p className="text-base text-parchment-600 max-w-sm mx-auto leading-relaxed">
-                Create custom Classes, Ancestries, Communities, and Domain Cards
-                for your Daggerheart campaigns.
+                Create custom Classes, Ancestries, Communities, Domain Cards,
+                Weapons, Armor, Items, and Consumables for your Daggerheart campaigns.
               </p>
             </div>
             <button

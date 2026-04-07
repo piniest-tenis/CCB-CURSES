@@ -27,7 +27,7 @@ export interface WorkshopLayoutProps {
   subtitle?: string;
   /** The input form panel (left on desktop). */
   inputPanel: React.ReactNode;
-  /** The live preview panel (right on desktop). */
+  /** The live preview panel (right on desktop). If null, the layout becomes single-column. */
   previewPanel: React.ReactNode;
   /** Called when form should be submitted. */
   onSubmit?: () => void;
@@ -137,35 +137,37 @@ export function WorkshopLayout({
           )}
         </div>
 
-        {/* ── Mobile tab toggle (visible < lg) ─────────────────────── */}
-        <div className="mb-4 flex items-center gap-1 lg:hidden">
-          {(["edit", "preview"] as const).map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setMobileTab(tab)}
-              className={`
-                flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors
-                focus:outline-none focus:ring-2 focus:ring-coral-400 focus:ring-offset-2 focus:ring-offset-[#0a100d]
-                ${
-                  mobileTab === tab
-                    ? "bg-coral-400/15 text-coral-400 border border-coral-400/50"
-                    : "text-[#b9baa3]/50 hover:text-[#b9baa3]/80 hover:bg-slate-800/50 border border-transparent"
-                }
-              `}
-            >
-              {tab === "edit" ? "Edit" : "Preview"}
-            </button>
-          ))}
-        </div>
+        {/* ── Mobile tab toggle (visible < lg, only when preview exists) ── */}
+        {previewPanel && (
+          <div className="mb-4 flex items-center gap-1 lg:hidden">
+            {(["edit", "preview"] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setMobileTab(tab)}
+                className={`
+                  flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors
+                  focus:outline-none focus:ring-2 focus:ring-coral-400 focus:ring-offset-2 focus:ring-offset-[#0a100d]
+                  ${
+                    mobileTab === tab
+                      ? "bg-coral-400/15 text-coral-400 border border-coral-400/50"
+                      : "text-[#b9baa3]/50 hover:text-[#b9baa3]/80 hover:bg-slate-800/50 border border-transparent"
+                  }
+                `}
+              >
+                {tab === "edit" ? "Edit" : "Preview"}
+              </button>
+            ))}
+          </div>
+        )}
 
-        {/* ── Two-panel area ───────────────────────────────────────── */}
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
+        {/* ── Panel area ───────────────────────────────────────────── */}
+        <div className={`flex flex-col gap-5 ${previewPanel ? "lg:flex-row lg:items-start" : ""}`}>
           {/* Left panel: Input form */}
           <div
             className={`
-              w-full lg:w-[60%] lg:block
-              ${mobileTab === "edit" ? "block" : "hidden"}
+              w-full ${previewPanel ? "lg:w-[60%]" : "max-w-3xl mx-auto"} lg:block
+              ${previewPanel && mobileTab === "edit" ? "block" : previewPanel ? "hidden" : "block"}
             `}
           >
             <div
@@ -181,36 +183,38 @@ export function WorkshopLayout({
             </div>
           </div>
 
-          {/* Right panel: Live preview */}
-          <div
-            className={`
-              w-full lg:w-[40%] lg:block lg:sticky lg:top-20
-              ${mobileTab === "preview" ? "block" : "hidden"}
-            `}
-          >
+          {/* Right panel: Live preview (only when provided) */}
+          {previewPanel && (
             <div
-              className="
-                rounded-xl border border-coral-400/30 bg-slate-900/80
-                overflow-y-auto max-h-[calc(100vh-200px)]
-                scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent
-              "
+              className={`
+                w-full lg:w-[40%] lg:block lg:sticky lg:top-20
+                ${mobileTab === "preview" ? "block" : "hidden"}
+              `}
             >
-              {/* Preview header */}
-              <div className="sticky top-0 z-[1] border-b border-coral-400/20 bg-slate-900/95 backdrop-blur-sm px-5 py-3">
-                <h2 className="flex items-center gap-2 font-serif text-sm font-semibold text-coral-400">
-                  <span
-                    aria-hidden="true"
-                    className="inline-block h-2 w-2 rounded-full bg-coral-400/60"
-                  />
-                  Live Preview
-                </h2>
-              </div>
+              <div
+                className="
+                  rounded-xl border border-coral-400/30 bg-slate-900/80
+                  overflow-y-auto max-h-[calc(100vh-200px)]
+                  scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent
+                "
+              >
+                {/* Preview header */}
+                <div className="sticky top-0 z-[1] border-b border-coral-400/20 bg-slate-900/95 backdrop-blur-sm px-5 py-3">
+                  <h2 className="flex items-center gap-2 font-serif text-sm font-semibold text-coral-400">
+                    <span
+                      aria-hidden="true"
+                      className="inline-block h-2 w-2 rounded-full bg-coral-400/60"
+                    />
+                    Live Preview
+                  </h2>
+                </div>
 
-              <div className="p-5">
-                {previewPanel}
+                <div className="p-5">
+                  {previewPanel}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* ── Mobile submit button (fixed bottom) ──────────────────── */}

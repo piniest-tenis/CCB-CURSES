@@ -633,7 +633,7 @@ export interface RestResult {
 
 // ─── Homebrew Content System ──────────────────────────────────────────────────
 
-export type HomebrewContentType = "class" | "community" | "ancestry" | "domainCard";
+export type HomebrewContentType = "class" | "community" | "ancestry" | "domainCard" | "weapon" | "armor" | "item" | "consumable";
 
 /**
  * A lightweight summary of a homebrew content item, returned by the list
@@ -673,6 +673,143 @@ export interface HomebrewMarkdownInput {
   isLinkedCurse?: boolean;
   /** Override recall cost (defaults to card level). */
   recallCost?: number;
+}
+
+// ─── Homebrew Equipment & Loot Types ──────────────────────────────────────
+
+/**
+ * SRD weapon features (Homebrew Kit p.22).
+ * Primary weapon features affect the main attack properties.
+ */
+export type WeaponFeatureName =
+  | "Brutal"
+  | "Burning"
+  | "Cumbersome"
+  | "Deadly"
+  | "Disarming"
+  | "Entangling"
+  | "Forceful"
+  | "Keen"
+  | "Piercing"
+  | "Quickdraw"
+  | "Reaching"
+  | "Throwing"
+  | "Versatile";
+
+/**
+ * Secondary weapon features.
+ */
+export type SecondaryWeaponFeatureName =
+  | "Paired"
+  | "Protective"
+  | "Barrier";
+
+export type WeaponCategory = "primary" | "secondary";
+export type DamageType = "physical" | "magic";
+export type WeaponRange = "melee" | "ranged" | "very close" | "close" | "far" | "very far";
+
+/**
+ * Homebrew weapon data — submitted via the WeaponForm.
+ * Stored in GAME_DATA_TABLE with PK=WEAPON#hb-{userId}-{slug}, SK=METADATA.
+ */
+export interface HomebrewWeaponData {
+  weaponId: string;
+  name: string;
+  tier: 1 | 2 | 3 | 4;
+  category: WeaponCategory;
+  trait: string;            // e.g. "Agility" — the stat trait used to attack
+  range: WeaponRange;
+  damageDie: string;        // e.g. "d6", "d8", "d10", "d12", "2d6"
+  damageType: DamageType;
+  burden: number;           // 1-3 for primary, 0 for secondary
+  feature?: {
+    name: string;
+    description: string;
+  };
+  source: CharacterSource;
+}
+
+/**
+ * Homebrew armor data — submitted via the ArmorForm.
+ * Stored in GAME_DATA_TABLE with PK=ARMOR#hb-{userId}-{slug}, SK=METADATA.
+ */
+export interface HomebrewArmorData {
+  armorId: string;
+  name: string;
+  tier: 1 | 2 | 3 | 4;
+  baseThresholds: {
+    major: number;
+    severe: number;
+  };
+  baseArmorScore: number;
+  feature?: {
+    name: string;
+    description: string;
+  };
+  source: CharacterSource;
+}
+
+/** Rarity for items and consumables (Homebrew Kit). */
+export type LootRarity = "common" | "uncommon" | "rare" | "very rare" | "legendary";
+
+/**
+ * Homebrew item data — a reusable item.
+ * Stored in GAME_DATA_TABLE with PK=ITEM#hb-{userId}-{slug}, SK=METADATA.
+ */
+export interface HomebrewItemData {
+  itemId: string;
+  name: string;
+  rarity: LootRarity;
+  effect: string;
+  source: CharacterSource;
+}
+
+/**
+ * Homebrew consumable data — a single-use (or limited-use) item.
+ * Stored in GAME_DATA_TABLE with PK=CONSUMABLE#hb-{userId}-{slug}, SK=METADATA.
+ */
+export interface HomebrewConsumableData {
+  consumableId: string;
+  name: string;
+  rarity: LootRarity;
+  effect: string;
+  uses: number;             // Number of uses before consumed (typically 1-3)
+  source: CharacterSource;
+}
+
+// ─── Homebrew Equipment Form Input ────────────────────────────────────────────
+
+/**
+ * Input payload for creating/updating homebrew equipment (weapons, armor, items,
+ * consumables) via structured forms rather than markdown.
+ * Sent as the body of POST /homebrew and PUT /homebrew/{contentType}/{id}.
+ */
+export interface HomebrewEquipmentInput {
+  contentType: "weapon" | "armor" | "item" | "consumable";
+  name: string;
+
+  // ── Weapon fields ─────────────────────────────────────────────────────
+  tier?: 1 | 2 | 3 | 4;
+  category?: WeaponCategory;
+  trait?: string;
+  range?: WeaponRange;
+  damageDie?: string;
+  damageType?: DamageType;
+  burden?: number;
+
+  // ── Armor fields ──────────────────────────────────────────────────────
+  baseThresholdMajor?: number;
+  baseThresholdSevere?: number;
+  baseArmorScore?: number;
+
+  // ── Item / Consumable fields ──────────────────────────────────────────
+  rarity?: LootRarity;
+  effect?: string;
+  uses?: number;
+
+  // ── Shared optional feature ───────────────────────────────────────────
+  featureName?: string;
+  featureDescription?: string;
 }
 
 // ─── CMS Content ─────────────────────────────────────────────────────────────

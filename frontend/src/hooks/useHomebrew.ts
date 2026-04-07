@@ -25,6 +25,11 @@ import type {
   HomebrewContentType,
   HomebrewSummary,
   HomebrewMarkdownInput,
+  HomebrewEquipmentInput,
+  HomebrewWeaponData,
+  HomebrewArmorData,
+  HomebrewItemData as SharedItemData,
+  HomebrewConsumableData,
   ClassData,
   CommunityData,
   AncestryData,
@@ -44,7 +49,18 @@ export const homebrewKeys = {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 /** Full homebrew item data as returned by the detail endpoint. */
-export type HomebrewItemData = ClassData | CommunityData | AncestryData | DomainCard;
+export type HomebrewItemData =
+  | ClassData
+  | CommunityData
+  | AncestryData
+  | DomainCard
+  | HomebrewWeaponData
+  | HomebrewArmorData
+  | SharedItemData
+  | HomebrewConsumableData;
+
+/** Input types accepted by create/update mutations. */
+export type HomebrewInput = HomebrewMarkdownInput | HomebrewEquipmentInput;
 
 /** Response from the parse preview endpoint. */
 export interface ParsePreviewResponse {
@@ -64,7 +80,7 @@ export interface CreateHomebrewResponse {
 export interface UpdateHomebrewInput {
   contentType: HomebrewContentType;
   id: string;
-  body: HomebrewMarkdownInput;
+  body: HomebrewInput;
 }
 
 /** Input for deleting an existing homebrew item. */
@@ -110,31 +126,31 @@ export function useHomebrewDetail(
 }
 
 // ─── useParsePreview ──────────────────────────────────────────────────────────
-// POST /homebrew/parse — parse markdown without saving, returns preview data
+// POST /homebrew/parse — parse/validate input without saving, returns preview data
 
 export function useParsePreview(): UseMutationResult<
   ParsePreviewResponse,
   Error,
-  HomebrewMarkdownInput
+  HomebrewInput
 > {
   return useMutation({
-    mutationFn: (input: HomebrewMarkdownInput) =>
+    mutationFn: (input: HomebrewInput) =>
       apiClient.post<ParsePreviewResponse>("/homebrew/parse", input),
   });
 }
 
 // ─── useCreateHomebrew ────────────────────────────────────────────────────────
-// POST /homebrew — create homebrew content (markdown input)
+// POST /homebrew — create homebrew content (markdown or equipment input)
 
 export function useCreateHomebrew(): UseMutationResult<
   CreateHomebrewResponse,
   Error,
-  HomebrewMarkdownInput
+  HomebrewInput
 > {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: HomebrewMarkdownInput) =>
+    mutationFn: (input: HomebrewInput) =>
       apiClient.post<CreateHomebrewResponse>("/homebrew", input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: homebrewKeys.mine() });

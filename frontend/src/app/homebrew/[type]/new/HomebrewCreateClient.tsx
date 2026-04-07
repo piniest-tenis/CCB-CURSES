@@ -6,36 +6,47 @@
  * Creation form page for homebrew content. Routes to the correct form component
  * based on the `params.type` URL segment:
  *
- *   - "ancestry"   → AncestryForm
- *   - "community"  → CommunityForm
- *   - "domainCard" → DomainCardForm
- *   - "class"      → ClassWizard
+ *   - "ancestry"    → AncestryForm
+ *   - "community"   → CommunityForm
+ *   - "domainCard"  → DomainCardForm
+ *   - "class"       → ClassWizard
+ *   - "weapon"      → WeaponForm
+ *   - "armor"       → ArmorForm
+ *   - "item"        → LootForm (defaultType="item")
+ *   - "consumable"  → LootForm (defaultType="consumable")
  *
- * Each form produces a HomebrewMarkdownInput that is submitted via
- * useCreateHomebrew().mutateAsync(). On success, redirects to /homebrew.
- *
- * The live preview panel uses useParsePreview() to render parsed data
- * in real time as the user edits.
+ * Markdown-based types use useParsePreview() for a live preview panel.
+ * Equipment types use structured form input and skip the markdown preview.
  */
 
 import React, { useCallback, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCreateHomebrew, useParsePreview } from "@/hooks/useHomebrew";
+import type { HomebrewInput } from "@/hooks/useHomebrew";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
-import type { HomebrewContentType, HomebrewMarkdownInput } from "@shared/types";
+import type { HomebrewContentType, HomebrewMarkdownInput, HomebrewEquipmentInput } from "@shared/types";
 import type { HomebrewItemData } from "@/hooks/useHomebrew";
 
 import { WorkshopLayout } from "@/components/homebrew/WorkshopLayout";
-import { MarkdownPreview } from "@/components/homebrew/MarkdownPreview";
+import { MarkdownPreview, type PreviewData } from "@/components/homebrew/MarkdownPreview";
 import { AncestryForm } from "@/components/homebrew/AncestryForm";
 import { CommunityForm } from "@/components/homebrew/CommunityForm";
 import { DomainCardForm } from "@/components/homebrew/DomainCardForm";
 import { ClassWizard } from "@/components/homebrew/ClassWizard";
+import { WeaponForm } from "@/components/homebrew/WeaponForm";
+import { ArmorForm } from "@/components/homebrew/ArmorForm";
+import { LootForm } from "@/components/homebrew/LootForm";
 
 // ─── Valid content types ──────────────────────────────────────────────────────
 
-const VALID_TYPES = new Set<string>(["class", "ancestry", "community", "domainCard"]);
+const VALID_TYPES = new Set<string>([
+  "class", "ancestry", "community", "domainCard",
+  "weapon", "armor", "item", "consumable",
+]);
+
+/** Content types that use markdown-based parsing and the preview panel. */
+const MARKDOWN_TYPES = new Set<string>(["class", "ancestry", "community", "domainCard"]);
 
 /** Human-readable labels for each content type. */
 function typeLabel(type: HomebrewContentType): string {
@@ -44,6 +55,10 @@ function typeLabel(type: HomebrewContentType): string {
     case "ancestry":   return "Ancestry";
     case "community":  return "Community";
     case "domainCard": return "Domain Card";
+    case "weapon":     return "Weapon";
+    case "armor":      return "Armor";
+    case "item":       return "Item";
+    case "consumable": return "Consumable";
   }
 }
 
@@ -58,11 +73,13 @@ export default function HomebrewCreateClient() {
     storageKey: `hb-draft-new-${type}`,
   });
 
-  // Preview data state
+  const isMarkdownType = MARKDOWN_TYPES.has(type);
+
+  // Preview data state (only used for markdown types)
   const [previewData, setPreviewData] = useState<HomebrewItemData | null>(null);
 
-  // ── Handle parse preview ────────────────────────────────────────────────
-  const handlePreview = useCallback(
+  // ── Handle parse preview (markdown types) ───────────────────────────────
+  const handleMarkdownPreview = useCallback(
     async (input: HomebrewMarkdownInput) => {
       markDirty(input);
       try {
@@ -75,9 +92,18 @@ export default function HomebrewCreateClient() {
     [parseMutation, markDirty]
   );
 
-  // ── Handle submit ───────────────────────────────────────────────────────
+  // ── Handle equipment preview (equipment types) ──────────────────────────
+  const handleEquipmentPreview = useCallback(
+    (input: HomebrewEquipmentInput) => {
+      markDirty(input);
+      // Equipment types validate client-side; no server-side parse needed
+    },
+    [markDirty]
+  );
+
+  // ── Handle submit (all types) ───────────────────────────────────────────
   const handleSubmit = useCallback(
-    async (input: HomebrewMarkdownInput) => {
+    async (input: HomebrewInput) => {
       try {
         await createMutation.mutateAsync(input);
         markClean();
@@ -87,6 +113,16 @@ export default function HomebrewCreateClient() {
       }
     },
     [createMutation, router, markClean]
+  );
+
+  // Narrowed submit callbacks for type-safety with each form component
+  const handleMarkdownSubmit = useCallback(
+    (input: HomebrewMarkdownInput) => handleSubmit(input),
+    [handleSubmit]
+  );
+  const handleEquipmentSubmit = useCallback(
+    (input: HomebrewEquipmentInput) => handleSubmit(input),
+    [handleSubmit]
   );
 
   // ── Invalid type guard ──────────────────────────────────────────────────
@@ -101,7 +137,7 @@ export default function HomebrewCreateClient() {
         </h1>
         <p className="text-sm text-[#b9baa3]/50 max-w-sm">
           &ldquo;{type}&rdquo; is not a valid homebrew content type.
-          Valid types are: class, ancestry, community, domainCard.
+          Valid types are: class, ancestry, community, domainCard, weapon, armor, item, consumable.
         </p>
         <Link
           href="/homebrew/new"
@@ -125,47 +161,70 @@ export default function HomebrewCreateClient() {
 
   // ── Select the correct form component ───────────────────────────────────
   const renderForm = () => {
-    const formProps = {
-      onSubmit: handleSubmit,
-      onPreview: handlePreview,
+    if (isMarkdownType) {
+      const formProps = {
+        onSubmit: handleMarkdownSubmit,
+        onPreview: handleMarkdownPreview,
+        isSubmitting: createMutation.isPending,
+      };
+
+      switch (contentType) {
+        case "ancestry":
+          return <AncestryForm {...formProps} />;
+        case "community":
+          return <CommunityForm {...formProps} />;
+        case "domainCard":
+          return <DomainCardForm {...formProps} />;
+        case "class":
+          return <ClassWizard {...formProps} />;
+      }
+    }
+
+    // Equipment types
+    const equipProps = {
+      onSubmit: handleEquipmentSubmit,
+      onPreview: handleEquipmentPreview,
       isSubmitting: createMutation.isPending,
     };
 
     switch (contentType) {
-      case "ancestry":
-        return <AncestryForm {...formProps} />;
-      case "community":
-        return <CommunityForm {...formProps} />;
-      case "domainCard":
-        return <DomainCardForm {...formProps} />;
-      case "class":
-        return <ClassWizard {...formProps} />;
+      case "weapon":
+        return <WeaponForm {...equipProps} />;
+      case "armor":
+        return <ArmorForm {...equipProps} />;
+      case "item":
+        return <LootForm {...equipProps} defaultType="item" />;
+      case "consumable":
+        return <LootForm {...equipProps} defaultType="consumable" />;
     }
   };
 
-  // ── Build the preview panel ─────────────────────────────────────────────
-  const renderPreview = () => (
-    <div className="space-y-3">
-      {/* Preview loading indicator */}
-      {parseMutation.isPending && (
-        <div className="flex items-center gap-2 text-xs text-[#b9baa3]/40">
-          <span className="h-3 w-3 animate-spin rounded-full border border-coral-400 border-t-transparent" />
-          Parsing...
-        </div>
-      )}
+  // ── Build the preview panel (markdown types only) ────────────────────────
+  const renderPreview = () => {
+    if (!isMarkdownType) return null;
+    return (
+      <div className="space-y-3">
+        {/* Preview loading indicator */}
+        {parseMutation.isPending && (
+          <div className="flex items-center gap-2 text-xs text-[#b9baa3]/40">
+            <span className="h-3 w-3 animate-spin rounded-full border border-coral-400 border-t-transparent" />
+            Parsing...
+          </div>
+        )}
 
-      {/* Parse error */}
-      {parseMutation.isError && (
-        <div className="rounded-lg border border-[#fe5f55]/20 bg-[#fe5f55]/5 px-3 py-2">
-          <p className="text-xs text-[#fe5f55]/80">
-            Preview error: {parseMutation.error?.message ?? "Failed to parse markdown"}
-          </p>
-        </div>
-      )}
+        {/* Parse error */}
+        {parseMutation.isError && (
+          <div className="rounded-lg border border-[#fe5f55]/20 bg-[#fe5f55]/5 px-3 py-2">
+            <p className="text-xs text-[#fe5f55]/80">
+              Preview error: {parseMutation.error?.message ?? "Failed to parse markdown"}
+            </p>
+          </div>
+        )}
 
-      <MarkdownPreview data={previewData} contentType={contentType} />
-    </div>
-  );
+        <MarkdownPreview data={previewData as PreviewData} contentType={contentType} />
+      </div>
+    );
+  };
 
   return (
     <WorkshopLayout

@@ -24,7 +24,8 @@ interface TypeOption {
   borderColor: string;
 }
 
-const TYPE_OPTIONS: TypeOption[] = [
+/** Character Options — existing markdown-based types. */
+const CHARACTER_OPTIONS: TypeOption[] = [
   {
     type: "class",
     label: "Class",
@@ -63,6 +64,77 @@ const TYPE_OPTIONS: TypeOption[] = [
   },
 ];
 
+/** Equipment & Loot — new structured-form types. Ordered by complexity (simplest first). */
+const EQUIPMENT_OPTIONS: TypeOption[] = [
+  {
+    type: "item",
+    label: "Item",
+    description:
+      "Create a reusable item with a rarity and effect description for your campaigns.",
+    icon: "🎒",
+    colorClasses: "border-amber-500/40 bg-amber-500/10 text-amber-400 hover:border-amber-500 hover:bg-amber-500/20",
+    borderColor: "border-l-amber-500",
+  },
+  {
+    type: "consumable",
+    label: "Consumable",
+    description:
+      "Design a limited-use consumable — potions, scrolls, and single-use items.",
+    icon: "🧪",
+    colorClasses: "border-rose-400/40 bg-rose-400/10 text-rose-400 hover:border-rose-400 hover:bg-rose-400/20",
+    borderColor: "border-l-rose-400",
+  },
+  {
+    type: "armor",
+    label: "Armor",
+    description:
+      "Build custom armor with thresholds, armor score, tier, and an optional feature.",
+    icon: "🛡️",
+    colorClasses: "border-sky-400/40 bg-sky-400/10 text-sky-400 hover:border-sky-400 hover:bg-sky-400/20",
+    borderColor: "border-l-sky-400",
+  },
+  {
+    type: "weapon",
+    label: "Weapon",
+    description:
+      "Forge a weapon with tier, damage die, attack trait, range, burden, and an optional feature.",
+    icon: "🗡️",
+    colorClasses: "border-violet-400/40 bg-violet-400/10 text-violet-400 hover:border-violet-400 hover:bg-violet-400/20",
+    borderColor: "border-l-violet-400",
+  },
+];
+
+// ─── Type Card ────────────────────────────────────────────────────────────────
+
+function TypeCard({ opt, onClick }: { opt: TypeOption; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`
+        group text-left rounded-xl border border-l-[3px]
+        p-5 transition-all duration-200
+        focus:outline-none focus:ring-2 focus:ring-coral-400 focus:ring-offset-2 focus:ring-offset-[#0a100d]
+        ${opt.colorClasses} ${opt.borderColor}
+      `}
+    >
+      <div className="flex items-start gap-3">
+        <span className="text-2xl" aria-hidden="true">
+          {opt.icon}
+        </span>
+        <div className="space-y-1">
+          <h3 className="font-serif text-lg font-semibold text-[#f7f7ff]">
+            {opt.label}
+          </h3>
+          <p className="text-sm text-[#b9baa3]/50 leading-relaxed">
+            {opt.description}
+          </p>
+        </div>
+      </div>
+    </button>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function HomebrewNewPage() {
@@ -95,41 +167,33 @@ export default function HomebrewNewPage() {
             Create Homebrew Content
           </h1>
           <p className="mt-2 text-base text-[#b9baa3]/50 max-w-lg mx-auto">
-            Choose what type of content you&apos;d like to create. You can build
-            it using a form or paste/upload markdown.
+            Choose what type of content you&apos;d like to create.
           </p>
         </div>
 
-        {/* Type cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {TYPE_OPTIONS.map((opt) => (
-            <button
-              key={opt.type}
-              type="button"
-              onClick={() => router.push(`/homebrew/${opt.type}/new`)}
-              className={`
-                group text-left rounded-xl border border-l-[3px]
-                p-5 transition-all duration-200
-                focus:outline-none focus:ring-2 focus:ring-coral-400 focus:ring-offset-2 focus:ring-offset-[#0a100d]
-                ${opt.colorClasses} ${opt.borderColor}
-              `}
-            >
-              <div className="flex items-start gap-3">
-                <span className="text-2xl" aria-hidden="true">
-                  {opt.icon}
-                </span>
-                <div className="space-y-1">
-                  <h2 className="font-serif text-lg font-semibold text-[#f7f7ff]">
-                    {opt.label}
-                  </h2>
-                  <p className="text-sm text-[#b9baa3]/50 leading-relaxed">
-                    {opt.description}
-                  </p>
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
+        {/* ── Character Options section ──────────────────────────────── */}
+        <section className="mb-8">
+          <h2 className="font-serif text-lg font-semibold text-[#b9baa3]/70 mb-3">
+            Character Options
+          </h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {CHARACTER_OPTIONS.map((opt) => (
+              <TypeCard key={opt.type} opt={opt} onClick={() => router.push(`/homebrew/${opt.type}/new`)} />
+            ))}
+          </div>
+        </section>
+
+        {/* ── Equipment & Loot section ─────────────────────────────────── */}
+        <section>
+          <h2 className="font-serif text-lg font-semibold text-[#b9baa3]/70 mb-3">
+            Equipment &amp; Loot
+          </h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {EQUIPMENT_OPTIONS.map((opt) => (
+              <TypeCard key={opt.type} opt={opt} onClick={() => router.push(`/homebrew/${opt.type}/new`)} />
+            ))}
+          </div>
+        </section>
 
         {/* Markdown upload shortcut */}
         <div className="mt-8 text-center">
