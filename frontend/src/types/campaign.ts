@@ -55,6 +55,12 @@ export interface Campaign {
    * Defaults to 0 if never set.
    */
   currentFear?: number;
+  /**
+   * Whether this campaign uses the Curses! campaign frame (homebrew
+   * extensions: Faction Favors, Curses! conditions, etc.).
+   * Defaults to true for existing campaigns.
+   */
+  cursesContentEnabled?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -161,6 +167,8 @@ export interface UpdateCampaignInput {
   schedule?: SessionSchedule | null;
   /** GM Fear counter update. Clamped 0–12 server-side. */
   fear?: number;
+  /** Whether this campaign uses Curses! content (Faction Favors, etc.). */
+  cursesContentEnabled?: boolean;
 }
 
 export interface CreateInviteInput {

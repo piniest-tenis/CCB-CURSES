@@ -418,6 +418,7 @@ export default function CampaignSettingsClient() {
   const [name,          setName]          = useState("");
   const [description,   setDescription]   = useState("");
   const [schedule,      setSchedule]      = useState<SessionSchedule | null>(null);
+  const [cursesContent, setCursesContent] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [saveSuccess,   setSaveSuccess]   = useState(false);
 
@@ -444,6 +445,7 @@ export default function CampaignSettingsClient() {
       setName(campaign.name);
       setDescription(campaign.description ?? "");
       setSchedule(campaign.schedule ?? null);
+      setCursesContent(campaign.cursesContentEnabled ?? true);
     }
   }, [campaign]);
 
@@ -466,6 +468,7 @@ export default function CampaignSettingsClient() {
       name:        nameValue,
       description: description.trim() || null,
       schedule,
+      cursesContentEnabled: cursesContent,
     });
 
     setSaveSuccess(true);
@@ -578,6 +581,50 @@ export default function CampaignSettingsClient() {
                 </p>
               </div>
             </div>
+          </section>
+
+          {/* Curses! Campaign Frame toggle */}
+          <section
+            aria-label="Curses! content settings"
+            className="rounded-xl border border-coral-400/30 bg-slate-900/80 p-6 shadow-card-fantasy space-y-3"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-serif text-lg font-semibold text-[#f7f7ff]">
+                  Curses! Campaign Frame
+                </h2>
+                <p className="text-sm text-[#b9baa3]/50 mt-0.5">
+                  Enable Curses! homebrew content for this campaign (Faction Favors, extra conditions, etc.).
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={cursesContent}
+                onClick={() => { setCursesContent((v) => !v); setSaveSuccess(false); }}
+                className={[
+                  "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full",
+                  "border-2 transition-colors duration-200",
+                  "focus:outline-none focus:ring-2 focus:ring-coral-400 focus:ring-offset-2 focus:ring-offset-slate-900",
+                  cursesContent
+                    ? "border-coral-400 bg-coral-400"
+                    : "border-slate-600 bg-slate-700",
+                ].join(" ")}
+              >
+                <span
+                  aria-hidden="true"
+                  className={[
+                    "pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200",
+                    cursesContent ? "translate-x-5" : "translate-x-0",
+                  ].join(" ")}
+                />
+              </button>
+            </div>
+            {!cursesContent && (
+              <p className="text-xs text-[#b9baa3]/40 leading-snug">
+                Curses! content (Faction Favors panel, Curses! conditions) will be hidden for all characters in this campaign.
+              </p>
+            )}
           </section>
 
           {/* Schedule editor */}

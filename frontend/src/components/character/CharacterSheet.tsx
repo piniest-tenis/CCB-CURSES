@@ -28,6 +28,7 @@ import {
   useClasses,
   useCommunities,
 } from "@/hooks/useGameData";
+import { useCampaignDetail } from "@/hooks/useCampaigns";
 import { useCharacterStore } from "@/store/characterStore";
 import { apiClient } from "@/lib/api";
 import { StatsPanel } from "./StatsPanel";
@@ -1660,6 +1661,16 @@ function CharacterSheetContent({
   const [diceModalOpen, setDiceModalOpen] = useState(false);
   const userPrefs = useAuthStore((s) => s.user?.preferences);
 
+  // Fetch campaign data (if character belongs to one) to check cursesContentEnabled
+  const { data: campaignData } = useCampaignDetail(
+    activeCharacter?.campaignId ?? undefined,
+  );
+
+  // Show Curses! content if the user has it enabled OR the campaign has it enabled
+  const showCursesContent =
+    userPrefs?.cursesEnabled === true ||
+    (campaignData?.cursesContentEnabled ?? true) === true;
+
   // Compute dice color overrides from character → user → system cascade
   const diceColorOverrides = React.useMemo(() => {
     const resolved = resolveDiceColors(
@@ -1758,8 +1769,8 @@ function CharacterSheetContent({
 
       <SheetDivider spellcastTrait={spellcastTrait} />
 
-      {/* Favors — per-faction social currency */}
-      <FavorsPanel />
+      {/* Favors — per-faction social currency (Curses! content) */}
+      {showCursesContent && <FavorsPanel />}
 
       <SheetDivider spellcastTrait={spellcastTrait} />
 

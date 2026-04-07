@@ -77,6 +77,7 @@ const UpdateUserSchema = z.object({
       defaultDiceStyle: z.string().min(1).optional(),
       diceColors: DiceColorPrefsSchema.optional(),
       defaultSourceFilter: z.enum(["srd", "curses", "all"]).optional(),
+      cursesEnabled: z.boolean().optional(),
     })
     .optional(),
 });
@@ -113,6 +114,9 @@ function toUserProfile(record: UserDynamoRecord): UserProfile {
         : {}),
       ...(record.preferences?.defaultSourceFilter !== undefined
         ? { defaultSourceFilter: record.preferences.defaultSourceFilter }
+        : {}),
+      ...(record.preferences?.cursesEnabled !== undefined
+        ? { cursesEnabled: record.preferences.cursesEnabled }
         : {}),
     },
     patreon: record.patreon ?? null,
@@ -283,6 +287,10 @@ async function updateMe(
       setExpressions.push("preferences.defaultSourceFilter = :defaultSourceFilter");
       expressionAttributeValues[":defaultSourceFilter"] = prefPatch.defaultSourceFilter;
     }
+    if (prefPatch.cursesEnabled !== undefined) {
+      setExpressions.push("preferences.cursesEnabled = :cursesEnabled");
+      expressionAttributeValues[":cursesEnabled"] = prefPatch.cursesEnabled;
+    }
   }
 
   const updateResult = await updateItem({
@@ -315,6 +323,9 @@ async function updateMe(
           : {}),
         ...(prefPatch?.defaultSourceFilter !== undefined
           ? { defaultSourceFilter: prefPatch.defaultSourceFilter }
+          : {}),
+        ...(prefPatch?.cursesEnabled !== undefined
+          ? { cursesEnabled: prefPatch.cursesEnabled }
           : {}),
       },
       updatedAt: now,

@@ -150,6 +150,8 @@ const PatchCampaignSchema = z.object({
   schedule: SessionScheduleSchema.nullable().optional(),
   /** GM Fear counter (SRD). Clamped 0–12. */
   fear: z.number().int().min(0).max(12).optional(),
+  /** Whether this campaign uses the Curses! campaign frame. */
+  cursesContentEnabled: z.boolean().optional(),
 });
 
 const CreateInviteSchema = z.object({
@@ -451,6 +453,7 @@ async function buildCampaignDetail(
     createdAt: campaignMeta.createdAt,
     updatedAt: campaignMeta.updatedAt,
     currentFear: campaignMeta.currentFear ?? 0,
+    cursesContentEnabled: campaignMeta.cursesContentEnabled ?? true,
     members,
     characters: characterDetails,
     callerRole,
@@ -670,6 +673,7 @@ async function listCampaigns(
         schedule: campaign.schedule ?? null,
         createdAt: campaign.createdAt,
         updatedAt: campaign.updatedAt,
+        cursesContentEnabled: campaign.cursesContentEnabled ?? true,
         memberCount: members.length,
         callerRole: idx.role,
         callerCharacterId: callerChar?.characterId ?? null,
@@ -779,6 +783,10 @@ async function patchCampaign(
   if (body.fear !== undefined) {
     updates.push("currentFear = :fear");
     vals[":fear"] = body.fear;
+  }
+  if (body.cursesContentEnabled !== undefined) {
+    updates.push("cursesContentEnabled = :cursesContent");
+    vals[":cursesContent"] = body.cursesContentEnabled;
   }
 
   if (updates.length === 1) {

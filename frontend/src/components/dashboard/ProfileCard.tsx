@@ -30,6 +30,38 @@ export function ProfileCard({ user, onSignOut }: ProfileCardProps) {
   const { isLinking, startOAuth } = usePatreonOAuth();
   const diceColorsGated = !canAccessCampaigns;
 
+  // ── Curses! content toggle ────────────────────────────────────────────
+  const [cursesEnabled, setCursesEnabled] = useState(
+    user.preferences?.cursesEnabled ?? false,
+  );
+  const [cursesSaveState, setCursesSaveState] = useState<SaveState>("idle");
+  const cursesTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync from server when user prop changes
+  useEffect(() => {
+    setCursesEnabled(user.preferences?.cursesEnabled ?? false);
+  }, [user.preferences?.cursesEnabled]);
+
+  const handleCursesToggle = useCallback(async () => {
+    const next = !cursesEnabled;
+    setCursesEnabled(next);
+    setCursesSaveState("saving");
+    try {
+      const updated = await apiClient.put<UserProfile>("/users/me", {
+        preferences: { cursesEnabled: next },
+      });
+      useAuthStore.getState().setUser(updated);
+      setCursesSaveState("saved");
+      if (cursesTimerRef.current) clearTimeout(cursesTimerRef.current);
+      cursesTimerRef.current = setTimeout(() => setCursesSaveState("idle"), 2500);
+    } catch {
+      setCursesEnabled(!next); // rollback
+      setCursesSaveState("error");
+      if (cursesTimerRef.current) clearTimeout(cursesTimerRef.current);
+      cursesTimerRef.current = setTimeout(() => setCursesSaveState("idle"), 4000);
+    }
+  }, [cursesEnabled]);
+
   // ── Editable display name ─────────────────────────────────────────────
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(user.displayName || "");
@@ -356,6 +388,59 @@ export function ProfileCard({ user, onSignOut }: ProfileCardProps) {
               <>&#9888; Couldn&apos;t save — check your connection</>
             )}
           </div>
+        )}
+      </div>
+
+      {/* ── Curses! Content ──────────────────────────────────────── */}
+      <div className="mt-4 pt-3 border-t border-[#577399]/20">
+        <div className="flex items-center justify-between">
+          <div className="flex-1 min-w-0">
+            <span className="text-xs uppercase tracking-widest text-parchment-500 font-medium">
+              Curses! Content
+            </span>
+            <p className="text-[11px] text-parchment-600 mt-0.5 leading-tight">
+              Enable homebrew Curses! features (Faction Favors, extra conditions)
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={cursesEnabled}
+            aria-label="Enable Curses! content"
+            onClick={handleCursesToggle}
+            className={[
+              "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full",
+              "border-2 transition-colors duration-200",
+              "focus:outline-none focus:ring-2 focus:ring-coral-400 focus:ring-offset-2 focus:ring-offset-slate-900",
+              cursesEnabled
+                ? "border-coral-400 bg-coral-400"
+                : "border-slate-600 bg-slate-700",
+            ].join(" ")}
+          >
+            <span
+              aria-hidden="true"
+              className={[
+                "pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200",
+                cursesEnabled ? "translate-x-5" : "translate-x-0",
+              ].join(" ")}
+            />
+          </button>
+        </div>
+        {cursesSaveState !== "idle" && (
+          <p
+            role="status"
+            aria-live="polite"
+            className={[
+              "text-[11px] mt-1.5",
+              cursesSaveState === "saving" ? "text-[#577399]" : "",
+              cursesSaveState === "saved"  ? "text-emerald-400/80" : "",
+              cursesSaveState === "error"  ? "text-red-400/80" : "",
+            ].join(" ")}
+          >
+            {cursesSaveState === "saving" && "Saving..."}
+            {cursesSaveState === "saved" && "Preference saved"}
+            {cursesSaveState === "error" && "Failed to save"}
+          </p>
         )}
       </div>
 

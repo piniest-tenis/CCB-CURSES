@@ -431,6 +431,12 @@ export interface UserPreferences {
   diceColors?: DiceColorPrefs;
   /** Default content source filter for browsing views. Defaults to "srd" if unset. */
   defaultSourceFilter?: "srd" | "curses" | "all";
+  /**
+   * Whether the user has opted-in to Curses! content (our homebrew extensions).
+   * Controls visibility of Curses!-specific features like Faction Favors, Curses!
+   * conditions, etc. Defaults to false if unset.
+   */
+  cursesEnabled?: boolean;
 }
 
 // ─── Patreon Integration ──────────────────────────────────────────────────────
@@ -732,6 +738,12 @@ export interface Campaign {
    * Defaults to 0 if never set.
    */
   currentFear?: number;
+  /**
+   * Whether this campaign uses the Curses! campaign frame (our homebrew
+   * extensions: Faction Favors, Curses! conditions, etc.). Defaults to true
+   * for existing campaigns; new campaigns inherit the GM's cursesEnabled pref.
+   */
+  cursesContentEnabled?: boolean;
   createdAt: string;
   updatedAt: string;
 }
