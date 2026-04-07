@@ -16,6 +16,7 @@ import { DataStack } from "../lib/data-stack";
 import { StorageStack } from "../lib/storage-stack";
 import { ApiStack } from "../lib/api-stack";
 import { CampaignStack } from "../lib/campaign-stack";
+import { HomebrewStack } from "../lib/homebrew-stack";
 import { FrontendStack } from "../lib/frontend-stack";
 
 const app = new cdk.App();
@@ -58,13 +59,22 @@ const corsAllowedOrigins = isProd
       "http://localhost:3000",
       "http://localhost:3001",
       `https://${stage}.curses-ccb.example.com`,
-      "https://dqt96kbhxdqy3.cloudfront.net",
+      "https://d195iz9cwkg00c.cloudfront.net",
     ];
 
-new CampaignStack(app, `DaggerheartCampaign-${stage}`, {
+const campaignStack = new CampaignStack(app, `DaggerheartCampaign-${stage}`, {
   ...stackProps,
   authStack,
   dataStack,
+  httpApi: apiStack.httpApi,
+  corsAllowedOrigins,
+});
+
+new HomebrewStack(app, `DaggerheartHomebrew-${stage}`, {
+  ...stackProps,
+  authStack,
+  dataStack,
+  campaignStack,
   httpApi: apiStack.httpApi,
   corsAllowedOrigins,
 });

@@ -691,9 +691,27 @@ function parseArmorRec(raw: string): string[] {
  */
 export function parseClassFile(filePath: string, className?: string, source: CharacterSource = "homebrew"): ClassData {
   const raw = fs.readFileSync(filePath, "utf-8");
-  const lines = raw.split(/\r?\n/);
-
   const name = className ?? path.basename(filePath, path.extname(filePath));
+  return parseClassRaw(raw, name, source);
+}
+
+/**
+ * Parse a class from a raw markdown string (no filesystem access).
+ * Used by the homebrew handler to parse user-submitted markdown.
+ *
+ * @param markdown   The full markdown content as a string.
+ * @param className  Display name for the class.
+ * @param source     Content source — "srd" or "homebrew" (default: "homebrew")
+ */
+export function parseClassString(markdown: string, className: string, source: CharacterSource = "homebrew"): ClassData {
+  return parseClassRaw(markdown, className, source);
+}
+
+/**
+ * Internal: parse class data from raw markdown text and a display name.
+ */
+function parseClassRaw(raw: string, name: string, source: CharacterSource): ClassData {
+  const lines = raw.split(/\r?\n/);
   const classId = toSlug(name);
 
   // 1. Stats table

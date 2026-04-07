@@ -275,6 +275,24 @@ export function validateAncestry(data: AncestryData): ValidationResult {
   requireNonEmpty(result, data.traitName, "traitName");
   requireNonEmpty(result, data.traitDescription, "traitDescription");
 
+  // Ancestries must have exactly 2 traits (Mixed Ancestry depends on this)
+  if (!data.secondTraitName || data.secondTraitName.trim().length === 0) {
+    addError(
+      result,
+      "secondTraitName",
+      "required-field",
+      "secondTraitName is required — ancestries must have exactly 2 traits"
+    );
+  }
+  if (!data.secondTraitDescription || data.secondTraitDescription.trim().length === 0) {
+    addError(
+      result,
+      "secondTraitDescription",
+      "required-field",
+      "secondTraitDescription is required — ancestries must have exactly 2 traits"
+    );
+  }
+
   return result;
 }
 

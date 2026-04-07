@@ -29,14 +29,40 @@ export function parseAncestryFile(
   source: CharacterSource = "homebrew"
 ): AncestryData {
   const raw = fs.readFileSync(filePath, "utf-8");
-  const lines = raw.split(/\r?\n/).map((l) => l.trim());
-
   const ancestryName = name ?? path.basename(filePath, path.extname(filePath));
+  return parseAncestryRaw(raw, ancestryName, source);
+}
+
+/**
+ * Parse an ancestry from a raw markdown string (no filesystem access).
+ * Used by the homebrew handler to parse user-submitted markdown.
+ *
+ * @param markdown  The full markdown content as a string.
+ * @param name      Display name for the ancestry.
+ * @param source    Content source — "srd" or "homebrew" (default: "homebrew")
+ */
+export function parseAncestryString(
+  markdown: string,
+  name: string,
+  source: CharacterSource = "homebrew"
+): AncestryData {
+  return parseAncestryRaw(markdown, name, source);
+}
+
+/**
+ * Internal: parse ancestry data from raw markdown text and a display name.
+ */
+function parseAncestryRaw(
+  raw: string,
+  ancestryName: string,
+  source: CharacterSource
+): AncestryData {
+  const lines = raw.split(/\r?\n/).map((l) => l.trim());
   const ancestryId = toSlug(ancestryName);
 
   if (lines.every((l) => l.length === 0)) {
     console.warn(
-      `[AncestryParser] File is empty: ${path.basename(filePath)}. ` +
+      `[AncestryParser] Content is empty for "${ancestryName}". ` +
         `Returning minimal AncestryData.`
     );
     return {
@@ -104,7 +130,7 @@ export function parseAncestryFile(
 
   if (traits.length === 0) {
     console.warn(
-      `[AncestryParser] No trait line found in ${path.basename(filePath)} — ` +
+      `[AncestryParser] No trait line found for "${ancestryName}" — ` +
         `traitName and traitDescription will be empty.`
     );
   }

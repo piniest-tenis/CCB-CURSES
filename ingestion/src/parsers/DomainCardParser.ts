@@ -217,6 +217,69 @@ export function parseDomainCardFile(filePath: string, domain: string, source: Ch
   const { level, name, isCursed, isLinkedCurse } = parseFilename(filename);
   const cardId = toCardId(filename);
 
+  return parseDomainCardRaw(raw, domain, name, level, {
+    isCursed,
+    isLinkedCurse,
+    cardId,
+    source,
+  });
+}
+
+/**
+ * Options for the string-based domain card parser.
+ */
+export interface DomainCardStringOptions {
+  isCursed?: boolean;
+  isLinkedCurse?: boolean;
+  recallCost?: number;
+}
+
+/**
+ * Parse a domain card from a raw markdown string (no filesystem access).
+ * Used by the homebrew handler to parse user-submitted markdown.
+ *
+ * @param markdown  The full markdown content as a string.
+ * @param domain    Domain name (e.g. "Arcana", "Blade", or a custom domain).
+ * @param name      Display name for the card.
+ * @param level     Card level (1–10).
+ * @param options   Optional cursed/linked-curse/recallCost overrides.
+ * @param source    Content source — "srd" or "homebrew" (default: "homebrew")
+ */
+export function parseDomainCardString(
+  markdown: string,
+  domain: string,
+  name: string,
+  level: number,
+  options: DomainCardStringOptions = {},
+  source: CharacterSource = "homebrew"
+): DomainCard {
+  const cardId = toCardId(name);
+  return parseDomainCardRaw(markdown, domain, name, level, {
+    isCursed: options.isCursed ?? false,
+    isLinkedCurse: options.isLinkedCurse ?? false,
+    recallCost: options.recallCost,
+    cardId,
+    source,
+  });
+}
+
+/**
+ * Internal: parse domain card data from raw markdown text.
+ */
+function parseDomainCardRaw(
+  raw: string,
+  domain: string,
+  name: string,
+  level: number,
+  opts: {
+    isCursed: boolean;
+    isLinkedCurse: boolean;
+    recallCost?: number;
+    cardId: string;
+    source: CharacterSource;
+  }
+): DomainCard {
+  const { isCursed, isLinkedCurse, cardId, source } = opts;
   const lines = raw.split(/\r?\n/);
 
   // ── Extract optional YAML frontmatter ─────────────────────────────────────
@@ -230,7 +293,7 @@ export function parseDomainCardFile(filePath: string, domain: string, source: Ch
       cardId,
       domain,
       level,
-      recallCost: frontmatter.recall_cost ?? level,
+      recallCost: opts.recallCost ?? frontmatter.recall_cost ?? level,
       name,
       isCursed,
       isLinkedCurse,
@@ -244,28 +307,23 @@ export function parseDomainCardFile(filePath: string, domain: string, source: Ch
   }
 
   // ── Detect Grimoire ───────────────────────────────────────────────────────
-  // A grimoire card's first non-empty content line is exactly `**Grimoire**`
   const isGrimoire = /^\*\*Grimoire\*\*\s*$/.test(nonEmptyLines[0]);
 
   // ── Split content on the separator for cursed cards ───────────────────────
-  // Find the first horizontal-rule separator in the body lines array
   const separatorIdx = bodyLines.findIndex(isSeparator);
 
   let descriptionLines: string[];
   let curseLines: string[];
 
   if (isCursed && separatorIdx >= 0) {
-    // Normal case: *** or --- divides description from curse block
     descriptionLines = bodyLines.slice(0, separatorIdx);
     curseLines = bodyLines.slice(separatorIdx + 1);
   } else if (isCursed) {
-    // Fallback: no separator — look for a **Curse**: label inline
     const curseLabelIdx = bodyLines.findIndex((l) => isCurseLabel(l));
     if (curseLabelIdx >= 0) {
       descriptionLines = bodyLines.slice(0, curseLabelIdx);
       curseLines = bodyLines.slice(curseLabelIdx);
     } else {
-      // Cursed card with no discernible curse block — treat all as description
       descriptionLines = bodyLines;
       curseLines = [];
     }
@@ -279,15 +337,13 @@ export function parseDomainCardFile(filePath: string, domain: string, source: Ch
   let grimoire: GrimoireAbility[] = [];
 
   if (isGrimoire) {
-    // Skip the `**Grimoire**` marker and any immediately following blank line;
-    // then parse ability entries from the remaining description block.
     const bodyStart = descriptionLines.findIndex(
       (l, i) => i > 0 && l.trim().length > 0
     );
     const grimoireBodyLines =
       bodyStart >= 0 ? descriptionLines.slice(bodyStart) : [];
     grimoire = parseGrimoireEntries(grimoireBodyLines);
-    description = ""; // Grimoire cards have no standalone description prose
+    description = "";
   } else {
     description = descriptionLines
       .map((l) => l.trim())
@@ -312,7 +368,7 @@ export function parseDomainCardFile(filePath: string, domain: string, source: Ch
     curseText = curseBody.length > 0 ? curseBody : null;
   }
 
-  // ── Extract linked card IDs from description and curse text ───────────────
+  // ── Extract linked card IDs ──────────────────────────────────────────────
   const allText = [description, curseText ?? ""].join("\n");
   const linkedCardIds = extractLinkedCardIds(allText);
 
@@ -320,7 +376,7 @@ export function parseDomainCardFile(filePath: string, domain: string, source: Ch
     cardId,
     domain,
     level,
-    recallCost: frontmatter.recall_cost ?? level,
+    recallCost: opts.recallCost ?? frontmatter.recall_cost ?? level,
     name,
     isCursed,
     isLinkedCurse,

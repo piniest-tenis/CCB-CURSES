@@ -55,7 +55,7 @@ export class ApiStack extends cdk.Stack {
           "http://localhost:3001",
           `https://${stage}.curses-ccb.example.com`,
           // CloudFront domain for the deployed dev frontend
-          "https://dqt96kbhxdqy3.cloudfront.net",
+          "https://d195iz9cwkg00c.cloudfront.net",
         ];
 
     // -----------------------------------------------------------------------

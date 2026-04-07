@@ -33,9 +33,35 @@ export function parseCommunityFile(
   source: CharacterSource = "homebrew"
 ): CommunityData {
   const raw = fs.readFileSync(filePath, "utf-8");
-  const lines = raw.split(/\r?\n/).map((l) => l.trim());
-
   const communityName = name ?? path.basename(filePath, path.extname(filePath));
+  return parseCommunityRaw(raw, communityName, source);
+}
+
+/**
+ * Parse a community from a raw markdown string (no filesystem access).
+ * Used by the homebrew handler to parse user-submitted markdown.
+ *
+ * @param markdown  The full markdown content as a string.
+ * @param name      Display name for the community.
+ * @param source    Content source — "srd" or "homebrew" (default: "homebrew")
+ */
+export function parseCommunityString(
+  markdown: string,
+  name: string,
+  source: CharacterSource = "homebrew"
+): CommunityData {
+  return parseCommunityRaw(markdown, name, source);
+}
+
+/**
+ * Internal: parse community data from raw markdown text and a display name.
+ */
+function parseCommunityRaw(
+  raw: string,
+  communityName: string,
+  source: CharacterSource
+): CommunityData {
+  const lines = raw.split(/\r?\n/).map((l) => l.trim());
   const communityId = toSlug(communityName);
 
   // ── Flavor text ────────────────────────────────────────────────────────────
@@ -92,7 +118,7 @@ export function parseCommunityFile(
 
   if (!traitFound) {
     console.warn(
-      `[CommunityParser] No trait line found in ${path.basename(filePath)} — ` +
+      `[CommunityParser] No trait line found for "${communityName}" — ` +
         `traitName and traitDescription will be empty.`
     );
   }

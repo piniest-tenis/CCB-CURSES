@@ -465,4 +465,36 @@ export const keys = {
     PK: `CAMPAIGN#${campaignId}`,
     SK: `CONNECTION#${connectionId}`,
   }),
+
+  // ─── Homebrew Key Builders ─────────────────────────────────────────────────
+
+  /** Key for a homebrew class METADATA item. */
+  homebrewClassMetadata: (userId: string, slug: string) => ({
+    PK: `CLASS#hb-${userId}-${slug}`,
+    SK: "METADATA",
+  }),
+
+  /** Key for a homebrew community item. */
+  homebrewCommunity: (userId: string, slug: string) => ({
+    PK: `COMMUNITY#hb-${userId}-${slug}`,
+    SK: "METADATA",
+  }),
+
+  /** Key for a homebrew ancestry item. */
+  homebrewAncestry: (userId: string, slug: string) => ({
+    PK: `ANCESTRY#hb-${userId}-${slug}`,
+    SK: "METADATA",
+  }),
+
+  /** Key for a homebrew domain card in an existing SRD domain. */
+  homebrewDomainCard: (userId: string, domain: string, slug: string) => ({
+    PK: `DOMAIN#${domain}`,
+    SK: `CARD#hb-${userId}-${slug}`,
+  }),
+
+  /** Key for a homebrew domain card in a custom (non-SRD) domain. */
+  homebrewCustomDomainCard: (userId: string, domain: string, slug: string) => ({
+    PK: `DOMAIN#hb-${userId}-${domain}`,
+    SK: `CARD#hb-${userId}-${slug}`,
+  }),
 };

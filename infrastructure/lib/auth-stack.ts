@@ -200,13 +200,13 @@ export class AuthStack extends cdk.Stack {
           ? ["https://curses-ccb.maninjumpsuit.com/auth/callback"]
           : [
               "http://localhost:3000/auth/callback",
-              "https://dqt96kbhxdqy3.cloudfront.net/auth/callback",
+              "https://d195iz9cwkg00c.cloudfront.net/auth/callback",
             ],
         logoutUrls: isProd
           ? ["https://curses-ccb.maninjumpsuit.com/auth/logout"]
           : [
               "http://localhost:3000/auth/logout",
-              "https://dqt96kbhxdqy3.cloudfront.net/auth/logout",
+              "https://d195iz9cwkg00c.cloudfront.net/auth/logout",
             ],
       },
 

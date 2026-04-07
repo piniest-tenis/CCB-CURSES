@@ -631,6 +631,50 @@ export interface RestResult {
   character: Character;
 }
 
+// ─── Homebrew Content System ──────────────────────────────────────────────────
+
+export type HomebrewContentType = "class" | "community" | "ancestry" | "domainCard";
+
+/**
+ * A lightweight summary of a homebrew content item, returned by the list
+ * endpoint (GET /homebrew/mine). Contains just enough to render a card in the
+ * homebrew list page — full data is fetched on demand via GET /homebrew/{type}/{id}.
+ */
+export interface HomebrewSummary {
+  contentType: HomebrewContentType;
+  pk: string;
+  sk: string;
+  /** URL-safe slug used as the {id} path parameter for GET/PUT/DELETE. */
+  slug: string;
+  name: string;
+  source: "homebrew";
+  creatorUserId: string;
+  updatedAt: string;
+  createdAt: string;
+  /** For domainCard items, the domain this card belongs to. */
+  domain?: string;
+}
+
+/**
+ * Input payload for creating or updating homebrew content via markdown.
+ * Sent as the body of POST /homebrew and PUT /homebrew/{contentType}/{id}.
+ */
+export interface HomebrewMarkdownInput {
+  contentType: HomebrewContentType;
+  name: string;
+  markdown: string;
+  /** Required for domainCard content type — the domain this card belongs to. */
+  domain?: string;
+  /** Required for domainCard — card level (1–10). */
+  level?: number;
+  /** Whether this domain card has a curse (★). */
+  isCursed?: boolean;
+  /** Whether this is a linked curse card (↔). */
+  isLinkedCurse?: boolean;
+  /** Override recall cost (defaults to card level). */
+  recallCost?: number;
+}
+
 // ─── CMS Content ─────────────────────────────────────────────────────────────
 
 export type CmsContentType = "interstitial" | "splash";
@@ -907,40 +951,4 @@ export interface SessionSchedule {
   reminderEnabled: boolean;
 }
 
-// ─── Homebrew Types ─────────────────────────────────────────────────────────
-
-/**
- * The four homebrew content types a user can create.
- */
-export type HomebrewContentType = "class" | "ancestry" | "community" | "domainCard";
-
-/**
- * Summary record returned by GET /homebrew/mine for listing homebrew items.
- */
-export interface HomebrewSummary {
-  pk: string;
-  sk: string;
-  contentType: HomebrewContentType;
-  name: string;
-  updatedAt: string;
-}
-
-/**
- * Input payload sent to POST /homebrew and PUT /homebrew/{type}/{id}.
- * Represents raw markdown + metadata before server-side parsing.
- */
-export interface HomebrewMarkdownInput {
-  contentType: HomebrewContentType;
-  name: string;
-  markdown: string;
-  /** Optional domain for domain cards. */
-  domain?: string;
-  /** Optional level for domain cards. */
-  level?: number;
-  /** Optional cursed flag for domain cards. */
-  isCursed?: boolean;
-  /** Optional linked-curse flag for domain cards. */
-  isLinkedCurse?: boolean;
-  /** Optional recall cost for domain cards. */
-  recallCost?: number;
-}
+// (Homebrew types defined above at line ~636 — do not duplicate here.)

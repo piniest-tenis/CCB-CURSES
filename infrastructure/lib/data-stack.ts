@@ -71,6 +71,14 @@ export class DataStack extends cdk.Stack {
       removalPolicy,
     });
 
+    // GSI: creator-index — query homebrew classes by creatorUserId
+    this.classesTable.addGlobalSecondaryIndex({
+      indexName: "creator-index",
+      partitionKey: { name: "creatorUserId", type: dynamodb.AttributeType.STRING },
+      sortKey: { name: "updatedAt", type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
+
     // -----------------------------------------------------------------------
     // 3. GameData Table
     //    PK: COMMUNITY#{id} | ANCESTRY#{id} | RULE#{id}   SK: METADATA
@@ -89,6 +97,14 @@ export class DataStack extends cdk.Stack {
     this.gameDataTable.addGlobalSecondaryIndex({
       indexName: "type-index",
       partitionKey: { name: "type", type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
+
+    // GSI: creator-index — query homebrew communities/ancestries by creatorUserId
+    this.gameDataTable.addGlobalSecondaryIndex({
+      indexName: "creator-index",
+      partitionKey: { name: "creatorUserId", type: dynamodb.AttributeType.STRING },
+      sortKey: { name: "updatedAt", type: dynamodb.AttributeType.STRING },
       projectionType: dynamodb.ProjectionType.ALL,
     });
 
@@ -113,6 +129,14 @@ export class DataStack extends cdk.Stack {
       indexName: "level-index",
       partitionKey: { name: "domain", type: dynamodb.AttributeType.STRING },
       sortKey: { name: "level", type: dynamodb.AttributeType.NUMBER },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
+
+    // GSI: creator-index — query homebrew domain cards by creatorUserId
+    this.domainCardsTable.addGlobalSecondaryIndex({
+      indexName: "creator-index",
+      partitionKey: { name: "creatorUserId", type: dynamodb.AttributeType.STRING },
+      sortKey: { name: "updatedAt", type: dynamodb.AttributeType.STRING },
       projectionType: dynamodb.ProjectionType.ALL,
     });
 
