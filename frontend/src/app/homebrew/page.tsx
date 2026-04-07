@@ -292,7 +292,7 @@ export default function HomebrewListPage() {
         </div>
 
         {/* Type filter tabs */}
-        <div className="mb-5 flex items-center gap-1 overflow-x-auto pb-1 scrollbar-hide">
+        <div className="mb-5 -mx-1 flex items-center gap-1 overflow-x-auto px-1 py-1 scrollbar-hide">
           {TABS.map((tab) => {
             const isActive = activeTab === tab.key;
             const count = tab.key === "all"
