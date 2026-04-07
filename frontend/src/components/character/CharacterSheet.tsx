@@ -1137,7 +1137,7 @@ function FeatureActionButton({
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2.5">
         <button
           type="button"
           onClick={() => fire(actionId, params)}
@@ -1146,9 +1146,11 @@ function FeatureActionButton({
           aria-describedby={inlineError ? errorId : undefined}
           aria-busy={isPending}
           className="
-            rounded-lg border border-steel-400/40 bg-steel-400/15 px-3 py-1.5
+            flex items-center gap-1.5
+            rounded-lg border border-steel-400/40 bg-steel-400/15 px-3.5 py-2
             text-xs font-semibold text-[#f7f7ff]
             hover:bg-steel-400/25 hover:border-steel-400
+            active:bg-steel-400/30
             disabled:opacity-50 disabled:cursor-wait
             transition-all duration-150
             focus:outline-none focus:ring-2 focus:ring-steel-400 focus:ring-offset-1 focus:ring-offset-slate-900
@@ -1160,11 +1162,14 @@ function FeatureActionButton({
               className="inline-block h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"
             />
           ) : (
-            label
+            <>
+              <i className="fa-solid fa-bolt text-[0.6rem] opacity-70" aria-hidden="true" />
+              {label}
+            </>
           )}
         </button>
         {costLabel && (
-          <span className="text-xs text-[#b9baa3] font-medium">
+          <span className="text-xs text-steel-accessible font-medium">
             {costLabel}
           </span>
         )}
@@ -1253,7 +1258,7 @@ function FeaturesPanel({
 
   return (
     <section
-      className="rounded-xl border border-steel-400/30 bg-slate-900/80 p-5 shadow-card space-y-4"
+      className="rounded-xl border border-steel-400/30 bg-slate-900/80 p-5 shadow-card space-y-5"
       aria-label="Features"
       data-field-key="features"
     >
@@ -1263,9 +1268,9 @@ function FeaturesPanel({
 
       {/* Class Features */}
       {(classData.classFeatures?.length ?? 0) > 0 && (
-        <div className="space-y-2" data-field-key="features.class">
+        <div className="space-y-3" data-field-key="features.class">
           {classData.classFeatures.length > 1 && (
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-steel-accessible">
+            <h3 className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-steel-accessible">
               Class Features
             </h3>
           )}
@@ -1275,16 +1280,16 @@ function FeaturesPanel({
               className="rounded-lg border border-steel-400/20 bg-slate-850 p-4 space-y-3"
             >
               <div>
-                <h3 className="mb-1 font-serif text-sm font-semibold text-[#f7f7ff]">
+                <h3 className="mb-1 font-serif text-[0.938rem] font-semibold text-[#f7f7ff] leading-snug">
                   {feature.name}
                 </h3>
                 <MarkdownContent className="text-sm text-[#b9baa3] leading-relaxed">
                   {feature.description}
                 </MarkdownContent>
                 {feature.options.length > 0 && (
-                  <ul className="mt-2 space-y-0.5 list-disc list-outside pl-4">
+                  <ul className="mt-2.5 space-y-1 list-disc list-outside pl-4">
                     {feature.options.map((opt) => (
-                      <li key={opt} className="text-sm text-[#b9baa3]">
+                      <li key={opt} className="text-sm text-[#b9baa3] leading-relaxed">
                         <MarkdownContent inline>{opt}</MarkdownContent>
                       </li>
                     ))}
@@ -1313,15 +1318,18 @@ function FeaturesPanel({
       {/* Hope Feature — always has a hopeCost; always gets an action button */}
       {classData.hopeFeature && (
         <div
-          className="rounded-lg border border-steel-400/30 bg-steel-400/8 p-4 space-y-3"
+          className="rounded-lg border border-gold-400/25 bg-gold-400/[0.06] p-4 space-y-3"
           data-field-key="features.hope"
         >
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-serif text-sm font-semibold text-[#f7f7ff]">
+              <h3 className="font-serif text-[0.938rem] font-semibold text-[#f7f7ff] leading-snug">
                 {classData.hopeFeature.name}
               </h3>
-              <span className="rounded bg-steel-400/30 px-1.5 text-xs font-bold text-[#f7f7ff]">
+              <span
+                className="rounded-md bg-gold-400/20 border border-gold-400/30 px-2 py-0.5 text-xs font-bold text-gold-400"
+                aria-label={`Costs ${classData.hopeFeature.hopeCost} Hope`}
+              >
                 {classData.hopeFeature.hopeCost} Hope
               </span>
             </div>
@@ -1343,23 +1351,34 @@ function FeaturesPanel({
 
       {/* Subclass features */}
       {activeSubclass && (
-        <div className="space-y-2" data-field-key="features.subclass">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-steel-accessible">
-            {activeSubclass.name} — Subclass Features
+        <div className="space-y-3" data-field-key="features.subclass">
+          <h3 className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-steel-accessible">
+            {activeSubclass.name}
+            <span className="text-steel-accessible/60"> — </span>
+            Subclass Features
           </h3>
 
+          {/* Foundation features — always visible */}
           {activeSubclass.foundationFeatures.map((feat) => {
             const action = classFeatureHasAction(feat.name);
             return (
               <div
                 key={feat.name}
-                className="rounded border border-steel-400/20 bg-slate-900 p-3 space-y-2"
+                className="rounded-lg border border-steel-400/20 bg-slate-850 p-4 space-y-3"
               >
                 <div>
-                  <p className="text-sm font-medium text-[#f7f7ff]">
-                    {feat.name}
-                  </p>
-                  <MarkdownContent className="mt-0.5 text-sm text-[#b9baa3] leading-relaxed">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h4 className="font-serif text-[0.938rem] font-semibold text-[#f7f7ff] leading-snug">
+                      {feat.name}
+                    </h4>
+                    <span
+                      className="rounded-md bg-steel-400/15 border border-steel-400/20 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-steel-accessible"
+                      aria-label="Foundation tier feature"
+                    >
+                      Foundation
+                    </span>
+                  </div>
+                  <MarkdownContent className="text-sm text-[#b9baa3] leading-relaxed">
                     {feat.description}
                   </MarkdownContent>
                 </div>
@@ -1376,14 +1395,18 @@ function FeaturesPanel({
             );
           })}
 
-          {tier >= 2 && (
-            <div className="rounded border border-steel-400/30 bg-slate-900 p-3 space-y-2">
+          {/* Specialization feature — shown when unlocked (tier >= 2), teased when locked */}
+          {tier >= 2 ? (
+            <div className="rounded-lg border border-steel-400/25 bg-slate-850 p-4 space-y-3">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <p className="text-sm font-medium text-[#f7f7ff]">
+                  <h4 className="font-serif text-[0.938rem] font-semibold text-[#f7f7ff] leading-snug">
                     {activeSubclass.specializationFeature.name}
-                  </p>
-                  <span className="rounded bg-steel-400/25 px-1.5 text-xs font-bold text-[#f7f7ff]">
+                  </h4>
+                  <span
+                    className="rounded-md bg-steel-400/20 border border-steel-400/30 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-[#f7f7ff]"
+                    aria-label="Specialization tier feature, unlocked at level 2"
+                  >
                     Specialization
                   </span>
                 </div>
@@ -1406,16 +1429,38 @@ function FeaturesPanel({
                 ) : null;
               })()}
             </div>
+          ) : (
+            <div
+              className="rounded-lg border border-steel-400/10 bg-slate-900/40 p-4 opacity-50 select-none"
+              aria-hidden="true"
+            >
+              <div className="flex items-center gap-2">
+                <i className="fa-solid fa-lock text-[0.6rem] text-steel-accessible/50" aria-hidden="true" />
+                <span className="font-serif text-[0.938rem] font-semibold text-[#f7f7ff]/40 leading-snug">
+                  {activeSubclass.specializationFeature.name}
+                </span>
+                <span className="rounded-md bg-steel-400/10 border border-steel-400/15 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-steel-accessible/50">
+                  Specialization
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-[#b9baa3]/40">
+                Unlocked at Level 2
+              </p>
+            </div>
           )}
 
-          {tier >= 3 && (
-            <div className="rounded border border-steel-400/40 bg-slate-900 p-3 space-y-2">
+          {/* Mastery feature — shown when unlocked (tier >= 3), teased when locked */}
+          {tier >= 3 ? (
+            <div className="rounded-lg border border-steel-400/30 bg-slate-850 p-4 space-y-3">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <p className="text-sm font-medium text-[#f7f7ff]">
+                  <h4 className="font-serif text-[0.938rem] font-semibold text-[#f7f7ff] leading-snug">
                     {activeSubclass.masteryFeature.name}
-                  </p>
-                  <span className="rounded bg-steel-400/35 px-1.5 text-xs font-bold text-[#f7f7ff]">
+                  </h4>
+                  <span
+                    className="rounded-md bg-gold-400/15 border border-gold-400/25 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-gold-400"
+                    aria-label="Mastery tier feature, unlocked at level 5"
+                  >
                     Mastery
                   </span>
                 </div>
@@ -1438,27 +1483,48 @@ function FeaturesPanel({
                 ) : null;
               })()}
             </div>
+          ) : (
+            <div
+              className="rounded-lg border border-steel-400/10 bg-slate-900/40 p-4 opacity-50 select-none"
+              aria-hidden="true"
+            >
+              <div className="flex items-center gap-2">
+                <i className="fa-solid fa-lock text-[0.6rem] text-steel-accessible/50" aria-hidden="true" />
+                <span className="font-serif text-[0.938rem] font-semibold text-[#f7f7ff]/40 leading-snug">
+                  {activeSubclass.masteryFeature.name}
+                </span>
+                <span className="rounded-md bg-steel-400/10 border border-steel-400/15 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-steel-accessible/50">
+                  Mastery
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-[#b9baa3]/40">
+                Unlocked at Level 5
+              </p>
+            </div>
           )}
         </div>
       )}
 
       {/* ── Multiclass features ───────────────────────────────────────────── */}
       {multiclassData && (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-steel-accessible">
+            <h3 className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-steel-accessible">
               {multiclassData.name} — Multiclass Features
             </h3>
-            <span className="rounded bg-steel-400/20 px-1.5 text-xs font-bold text-[#f7f7ff]">
+            <span
+              className="rounded-md bg-steel-400/15 border border-steel-400/20 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-steel-accessible"
+              aria-label="Multiclass features"
+            >
               Multiclass
             </span>
           </div>
 
           {/* Multiclass class features */}
           {(multiclassData.classFeatures?.length ?? 0) > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {multiclassData.classFeatures.length > 1 && (
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-steel-accessible">
+                <h4 className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-steel-accessible">
                   Class Features
                 </h4>
               )}
@@ -1468,16 +1534,16 @@ function FeaturesPanel({
                   className="rounded-lg border border-steel-400/20 bg-slate-850 p-4 space-y-3"
                 >
                   <div>
-                    <h4 className="mb-1 font-serif text-sm font-semibold text-[#f7f7ff]">
+                    <h4 className="mb-1 font-serif text-[0.938rem] font-semibold text-[#f7f7ff] leading-snug">
                       {feature.name}
                     </h4>
                     <MarkdownContent className="text-sm text-[#b9baa3] leading-relaxed">
                       {feature.description}
                     </MarkdownContent>
                     {feature.options.length > 0 && (
-                      <ul className="mt-2 space-y-0.5 list-disc list-outside pl-4">
+                      <ul className="mt-2.5 space-y-1 list-disc list-outside pl-4">
                         {feature.options.map((opt) => (
-                          <li key={opt} className="text-sm text-[#b9baa3]">
+                          <li key={opt} className="text-sm text-[#b9baa3] leading-relaxed">
                             <MarkdownContent inline>{opt}</MarkdownContent>
                           </li>
                         ))}
@@ -1508,14 +1574,17 @@ function FeaturesPanel({
               return (
                 <div
                   key={feat.name}
-                  className="rounded border border-steel-400/20 bg-slate-900 p-3 space-y-2"
+                  className="rounded-lg border border-steel-400/20 bg-slate-850 p-4 space-y-3"
                 >
                   <div>
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <p className="text-sm font-medium text-[#f7f7ff]">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-serif text-[0.938rem] font-semibold text-[#f7f7ff] leading-snug">
                         {feat.name}
-                      </p>
-                      <span className="rounded bg-steel-400/15 px-1.5 text-xs font-semibold text-[#b9baa3]">
+                      </h4>
+                      <span
+                        className="rounded-md bg-steel-400/15 border border-steel-400/20 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-steel-accessible"
+                        aria-label="Foundation tier feature"
+                      >
                         Foundation
                       </span>
                     </div>
