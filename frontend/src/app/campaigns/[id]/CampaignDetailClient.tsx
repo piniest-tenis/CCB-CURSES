@@ -1360,7 +1360,7 @@ export default function CampaignDetailClient() {
                           </p>
                           <p className="text-sm text-[#b9baa3]/40 max-w-xs">
                             {/* Mobile hint */}
-                            <span className="sm:hidden">Tap the 👥 Party button to open the roster.</span>
+                            <span className="sm:hidden">Tap Characters on the bottom bar to open the roster.</span>
                             <span className="hidden sm:inline">Click a member card on the left to view their character sheet.</span>
                           </p>
                         </div>
@@ -1492,36 +1492,18 @@ export default function CampaignDetailClient() {
         </main>
       </div>
 
-      {/* ── Mobile: floating Party drawer trigger ───────────────────────────── */}
-      {isGm && activeTab === "characters" && (
-        <button
-          type="button"
-          onClick={() => setDrawerOpen(true)}
-          aria-label="Open party roster"
-          className="
-            fixed z-40
-            bottom-[calc(56px+env(safe-area-inset-bottom)+12px)]
-            right-4
-            sm:hidden
-            inline-flex items-center gap-2
-            rounded-full px-4 py-2
-            bg-slate-800 border border-slate-700/60
-            text-sm font-semibold text-[#b9baa3]
-            shadow-lg
-            hover:bg-slate-700 hover:border-slate-600
-            transition-colors
-            focus:outline-none focus:ring-2 focus:ring-[#577399]
-          "
-        >
-          👥 Party
-        </button>
-      )}
-
       {/* ── Mobile bottom nav (GM only) ─────────────────────────────────────── */}
       {isGm && (
         <MobileBottomNav
           activeTab={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={(tab) => {
+            setActiveTab(tab);
+            // When tapping "Characters" on mobile, also open the party drawer
+            // so the GM can immediately pick a character from the roster.
+            if (tab === "characters") {
+              setDrawerOpen(true);
+            }
+          }}
           encounterCount={encounterAdversaries}
         />
       )}
