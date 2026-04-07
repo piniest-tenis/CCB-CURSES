@@ -113,6 +113,10 @@ export interface CharacterStore {
   // ── Conditions ─────────────────────────────────────────────────────────────
   /** Toggle a condition string on/off. */
   toggleCondition: (condition: string) => void;
+  /** Add a user-created custom condition (name + optional description). */
+  addCustomCondition: (name: string, description?: string) => void;
+  /** Remove a custom condition by conditionId and deactivate it. */
+  removeCustomCondition: (conditionId: string) => void;
 
   // ── Loadout management ─────────────────────────────────────────────────────
   /** Add a card to the active loadout (max 5 slots; no-op if already present). */
@@ -247,6 +251,46 @@ export const useCharacterStore = create<CharacterStore>()((set, get) => ({
 
     set({
       activeCharacter: { ...activeCharacter, conditions: next },
+      isDirty: true,
+    });
+  },
+
+  // ── addCustomCondition ──────────────────────────────────────────────────────
+  addCustomCondition: (name: string, description = "") => {
+    const { activeCharacter } = get();
+    if (!activeCharacter) return;
+
+    const customConditions = activeCharacter.customConditions ?? [];
+    // Prevent duplicates (case-insensitive name check)
+    if (customConditions.some((c) => c.name.toLowerCase() === name.toLowerCase())) return;
+
+    const conditionId = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const newCond = { conditionId, name, description, sourceCardId: null };
+
+    set({
+      activeCharacter: {
+        ...activeCharacter,
+        customConditions: [...customConditions, newCond],
+      },
+      isDirty: true,
+    });
+  },
+
+  // ── removeCustomCondition ───────────────────────────────────────────────────
+  removeCustomCondition: (conditionId: string) => {
+    const { activeCharacter } = get();
+    if (!activeCharacter) return;
+
+    const customConditions = (activeCharacter.customConditions ?? []).filter(
+      (c) => c.conditionId !== conditionId,
+    );
+    // Also remove from active conditions if it was toggled on
+    const conditions = (activeCharacter.conditions ?? []).filter(
+      (c) => c !== conditionId,
+    );
+
+    set({
+      activeCharacter: { ...activeCharacter, customConditions, conditions },
       isDirty: true,
     });
   },

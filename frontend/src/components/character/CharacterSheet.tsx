@@ -68,6 +68,7 @@ import { useAuthStore } from "@/store/authStore";
 import { StatTooltip } from "./StatTooltip";
 import { useStatBreakdowns } from "@/hooks/useStatBreakdowns";
 import { usePatreonGate, usePatreonOAuth } from "@/hooks/usePatreonGate";
+import { useSourceFilterDefault } from "@/hooks/useSourceFilterDefault";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -91,6 +92,13 @@ const SRD_CONDITIONS = [
 // ─── ConditionsSidebar ────────────────────────────────────────────────────────
 // A self-contained slide-in panel for toggling conditions, separate from the
 // generic EditSidebar so it can render a checkbox list rather than a text input.
+//
+// Sections:
+//   1. SRD Conditions    — always visible (7 standard conditions)
+//   2. Curses! Conditions — visible when user's source filter includes "curses" content
+//   3. Campaign Conditions — domain-card conditions already on the character
+//   4. Custom Conditions   — user-created ad-hoc conditions with add/remove
+//   (Homebrew conditions — future-proof; shown when available from campaign)
 
 interface ConditionsSidebarProps {
   open: boolean;
@@ -99,6 +107,8 @@ interface ConditionsSidebarProps {
   customConditions: CustomCondition[];
   activeConditions: string[];
   onToggle: (id: string) => void;
+  onAddCustom: (name: string, description?: string) => void;
+  onRemoveCustom: (conditionId: string) => void;
 }
 
 function ConditionsSidebar({
@@ -108,9 +118,46 @@ function ConditionsSidebar({
   customConditions,
   activeConditions,
   onToggle,
+  onAddCustom,
+  onRemoveCustom,
 }: ConditionsSidebarProps) {
   const headingId = React.useId();
   const panelRef = React.useRef<HTMLDivElement>(null);
+  const sourceDefault = useSourceFilterDefault();
+  const showCurses = sourceDefault === "curses" || sourceDefault === "all";
+
+  // ── "Add Custom" form state ──────────────────────────────────────────────
+  const [addingCustom, setAddingCustom] = React.useState(false);
+  const [customName, setCustomName] = React.useState("");
+  const [customDesc, setCustomDesc] = React.useState("");
+  const nameInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Separate campaign conditions (from domain cards) vs user-created customs
+  const campaignConditions = customConditions.filter((c) => c.sourceCardId !== null);
+  const userCustomConditions = customConditions.filter((c) => c.sourceCardId === null);
+
+  const handleAddCustom = () => {
+    const trimmed = customName.trim();
+    if (!trimmed) return;
+    onAddCustom(trimmed, customDesc.trim() || undefined);
+    setCustomName("");
+    setCustomDesc("");
+    setAddingCustom(false);
+  };
+
+  const handleCancelAdd = () => {
+    setCustomName("");
+    setCustomDesc("");
+    setAddingCustom(false);
+  };
+
+  // Focus the name input when the add form opens
+  React.useEffect(() => {
+    if (addingCustom) {
+      const t = setTimeout(() => nameInputRef.current?.focus(), 50);
+      return () => clearTimeout(t);
+    }
+  }, [addingCustom]);
 
   // Focus first focusable element when opened
   React.useEffect(() => {
@@ -130,12 +177,26 @@ function ConditionsSidebar({
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
-        onClose();
+        if (addingCustom) {
+          handleCancelAdd();
+        } else {
+          onClose();
+        }
       }
     };
     document.addEventListener("keydown", handler, true);
     return () => document.removeEventListener("keydown", handler, true);
-  }, [open, onClose]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, onClose, addingCustom]);
+
+  // Reset add form when sidebar closes
+  React.useEffect(() => {
+    if (!open) {
+      setAddingCustom(false);
+      setCustomName("");
+      setCustomDesc("");
+    }
+  }, [open]);
 
   return (
     <>
@@ -185,7 +246,7 @@ function ConditionsSidebar({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
-          {/* SRD conditions */}
+          {/* ── 1. SRD Conditions ── */}
           <fieldset>
             <legend className="text-xs font-semibold uppercase tracking-[0.2em] sidebar-text-secondary mb-3">
               SRD Conditions
@@ -221,8 +282,21 @@ function ConditionsSidebar({
             </ul>
           </fieldset>
 
-          {/* Campaign conditions */}
-          {customConditions.length > 0 && (
+          {/* ── 2. Curses! Conditions (gated by source filter) ── */}
+          {showCurses && (
+            <fieldset>
+              <legend className="text-xs font-semibold uppercase tracking-[0.2em] text-coral-400/80 mb-3">
+                <i className="fa-solid fa-fire mr-1.5 text-[0.6rem]" aria-hidden="true" />
+                Curses! Conditions
+              </legend>
+              <p className="text-xs text-[#b9baa3]/60 italic px-3">
+                No Curses! conditions available yet. Check back after a future update.
+              </p>
+            </fieldset>
+          )}
+
+          {/* ── 3. Campaign Conditions (from domain cards) ── */}
+          {campaignConditions.length > 0 && (
             <fieldset>
               <legend className="text-xs font-semibold uppercase tracking-[0.2em] sidebar-text-secondary mb-3">
                 Campaign Conditions{" "}
@@ -231,9 +305,9 @@ function ConditionsSidebar({
                 </span>
               </legend>
               <ul className="space-y-1" role="list">
-                {customConditions.map((cond) => {
+                {campaignConditions.map((cond) => {
                   const checked = activeConditions.includes(cond.conditionId);
-                  const inputId = `cond-custom-${cond.conditionId}`;
+                  const inputId = `cond-campaign-${cond.conditionId}`;
                   return (
                     <li key={cond.conditionId}>
                       <label
@@ -276,6 +350,135 @@ function ConditionsSidebar({
               </ul>
             </fieldset>
           )}
+
+          {/* ── 4. Custom Conditions (user-created) ── */}
+          <fieldset>
+            <legend className="text-xs font-semibold uppercase tracking-[0.2em] sidebar-text-secondary mb-3">
+              Custom Conditions
+            </legend>
+
+            {/* Existing user-created customs */}
+            {userCustomConditions.length > 0 && (
+              <ul className="space-y-1 mb-3" role="list">
+                {userCustomConditions.map((cond) => {
+                  const checked = activeConditions.includes(cond.conditionId);
+                  const inputId = `cond-user-${cond.conditionId}`;
+                  return (
+                    <li key={cond.conditionId} className="group relative">
+                      <label
+                        htmlFor={inputId}
+                        className={[
+                          "flex items-start gap-3 rounded-lg px-3 py-3 pr-9 cursor-pointer",
+                          "border transition-colors",
+                          checked
+                            ? "border-amber-500/50 bg-amber-500/10 text-[#f7f7ff]"
+                            : "border-transparent hover:border-steel-400/40 hover:bg-slate-800/50 text-parchment-400",
+                        ].join(" ")}
+                      >
+                        <input
+                          id={inputId}
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => onToggle(cond.conditionId)}
+                          className="mt-0.5 h-4 w-4 rounded border-steel-400/60 bg-slate-900 accent-steel-400 focus:ring-2 focus:ring-steel-400"
+                        />
+                        <span className="flex flex-col gap-0.5 flex-1 min-w-0">
+                          <span className="text-sm font-medium truncate">{cond.name}</span>
+                          {cond.description && (
+                            <span className="text-sm sidebar-text-secondary">
+                              {cond.description}
+                            </span>
+                          )}
+                        </span>
+                      </label>
+                      {/* Delete button — visible on hover/focus */}
+                      <button
+                        type="button"
+                        onClick={() => onRemoveCustom(cond.conditionId)}
+                        aria-label={`Remove custom condition: ${cond.name}`}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded text-[#b9baa3]/40 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 hover:text-coral-400 hover:bg-coral-400/10 transition-all focus:outline-none focus:ring-2 focus:ring-coral-400 focus:opacity-100"
+                      >
+                        <i className="fa-solid fa-xmark text-xs" aria-hidden="true" />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            {/* Add Custom form / button */}
+            {addingCustom ? (
+              <div className="rounded-lg border border-steel-400/30 bg-slate-900/60 p-3 space-y-3">
+                <div>
+                  <label
+                    htmlFor="custom-cond-name"
+                    className="block text-xs font-medium text-[#b9baa3] mb-1"
+                  >
+                    Name <span className="text-coral-400">*</span>
+                  </label>
+                  <input
+                    ref={nameInputRef}
+                    id="custom-cond-name"
+                    type="text"
+                    value={customName}
+                    onChange={(e) => setCustomName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleAddCustom();
+                    }}
+                    placeholder="e.g. Blinded"
+                    maxLength={60}
+                    className="w-full rounded-md border border-steel-400/40 bg-slate-850 px-3 py-2 text-sm text-[#f7f7ff] placeholder:text-[#b9baa3]/40 focus:outline-none focus:ring-2 focus:ring-steel-400 focus:border-steel-400"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="custom-cond-desc"
+                    className="block text-xs font-medium text-[#b9baa3] mb-1"
+                  >
+                    Description <span className="text-[#b9baa3]/40">(optional)</span>
+                  </label>
+                  <input
+                    id="custom-cond-desc"
+                    type="text"
+                    value={customDesc}
+                    onChange={(e) => setCustomDesc(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleAddCustom();
+                    }}
+                    placeholder="Brief effect description"
+                    maxLength={200}
+                    className="w-full rounded-md border border-steel-400/40 bg-slate-850 px-3 py-2 text-sm text-[#f7f7ff] placeholder:text-[#b9baa3]/40 focus:outline-none focus:ring-2 focus:ring-steel-400 focus:border-steel-400"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleAddCustom}
+                    disabled={!customName.trim()}
+                    className="flex-1 rounded-md border border-steel-400/40 bg-steel-400/15 px-3 py-2 text-xs font-semibold text-[#f7f7ff] hover:bg-steel-400/25 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-steel-400 transition-colors"
+                  >
+                    Add Condition
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelAdd}
+                    className="rounded-md border border-steel-400/20 px-3 py-2 text-xs text-[#b9baa3] hover:text-[#f7f7ff] hover:border-steel-400/40 focus:outline-none focus:ring-2 focus:ring-steel-400 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAddingCustom(true)}
+                className="flex items-center gap-2 rounded-lg border border-dashed border-steel-400/30 px-3 py-3 text-sm text-[#b9baa3]/70 hover:border-steel-400/50 hover:text-[#b9baa3] hover:bg-slate-800/30 transition-colors w-full focus:outline-none focus:ring-2 focus:ring-steel-400"
+              >
+                <i className="fa-solid fa-plus text-xs" aria-hidden="true" />
+                Add Custom Condition
+              </button>
+            )}
+          </fieldset>
         </div>
 
         {/* Footer */}
@@ -353,7 +556,7 @@ function SheetHeader({
   isDirty = false,
 }: SheetHeaderProps) {
   const router = useRouter();
-  const { activeCharacter, toggleCondition, updateField } = useCharacterStore();
+  const { activeCharacter, toggleCondition, updateField, addCustomCondition, removeCustomCondition } = useCharacterStore();
   const { data: classesData } = useClasses();
   const { data: communitiesData } = useCommunities();
   const statBreakdowns = useStatBreakdowns();
@@ -851,6 +1054,8 @@ function SheetHeader({
         customConditions={customConditions}
         activeConditions={activeConditions}
         onToggle={toggleCondition}
+        onAddCustom={addCustomCondition}
+        onRemoveCustom={removeCustomCondition}
       />
     </div>
   );
