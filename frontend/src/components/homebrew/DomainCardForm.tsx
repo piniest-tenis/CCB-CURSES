@@ -16,6 +16,7 @@
 import React, { useCallback, useId, useMemo, useState } from "react";
 import type { HomebrewMarkdownInput } from "@shared/types";
 import { useDomains } from "@/hooks/useGameData";
+import { useAuthStore } from "@/store/authStore";
 import { INPUT_CLS, LABEL_CLS, TEXTAREA_CLS, BTN_SECONDARY, SOFT_WARNING_CLS } from "./styles";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -57,6 +58,9 @@ export function DomainCardForm({
 }: DomainCardFormProps) {
   const idPrefix = useId();
 
+  // Only show curse options if the user has opted-in to Curses! content
+  const cursesEnabled = useAuthStore((s) => s.user?.preferences?.cursesEnabled === true);
+
   // Fetch existing domains for the selector
   const { data: domainsData } = useDomains();
   const domainNames = useMemo(
@@ -76,6 +80,10 @@ export function DomainCardForm({
   const [isLinkedCurse, setIsLinkedCurse] = useState(initialValues?.isLinkedCurse ?? false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // When Curses! content is disabled, suppress all curse state so stale data
+  // from edit mode is never submitted.
+  const effectiveIsCursed = cursesEnabled && isCursed;
+
   // Resolve effective domain (custom or selected)
   const effectiveDomain = domain === "__custom__" ? customDomain.trim() : domain;
 
@@ -89,12 +97,12 @@ export function DomainCardForm({
     if (description.trim()) {
       lines.push(description.trim());
     }
-    if (isCursed && curseDescription.trim()) {
+    if (effectiveIsCursed && curseDescription.trim()) {
       lines.push("***");
       lines.push(`**Curse**: ${curseDescription.trim()}`);
     }
     return lines.join("\n");
-  }, [description, isCursed, curseDescription]);
+  }, [description, effectiveIsCursed, curseDescription]);
 
   const buildInput = useCallback((): HomebrewMarkdownInput => ({
     contentType: "domainCard",
@@ -102,10 +110,10 @@ export function DomainCardForm({
     markdown: assembleMarkdown(),
     domain: effectiveDomain,
     level,
-    isCursed,
-    isLinkedCurse,
+    isCursed: effectiveIsCursed,
+    isLinkedCurse: effectiveIsCursed && isLinkedCurse,
     recallCost: recallCost === "" ? level : recallCost,
-  }), [name, assembleMarkdown, effectiveDomain, level, isCursed, isLinkedCurse, recallCost]);
+  }), [name, assembleMarkdown, effectiveDomain, level, effectiveIsCursed, isLinkedCurse, recallCost]);
 
   const triggerPreview = useCallback(() => {
     if (onPreview && name.trim()) {
@@ -119,10 +127,10 @@ export function DomainCardForm({
     if (!name.trim()) errs.name = "Card name is required.";
     if (!effectiveDomain) errs.domain = "Domain is required.";
     if (!description.trim()) errs.description = "Ability description is required.";
-    if (isCursed && !curseDescription.trim()) errs.curseDescription = "Curse description is required when card is cursed.";
+    if (effectiveIsCursed && !curseDescription.trim()) errs.curseDescription = "Curse description is required when card is cursed.";
     setErrors(errs);
     return Object.keys(errs).length === 0;
-  }, [name, effectiveDomain, description, isCursed, curseDescription]);
+  }, [name, effectiveDomain, description, effectiveIsCursed, curseDescription]);
 
   const handleSubmit = useCallback(() => {
     if (!validate()) return;
@@ -258,75 +266,78 @@ export function DomainCardForm({
       </div>
 
       {/* ── Curse section (progressive disclosure) ─────────────────────── */}
-      <div className="space-y-3 rounded-lg border border-slate-700/40 p-4">
-        <h3 className="font-serif text-lg font-semibold text-[#f7f7ff]">
-          Curse Options
-        </h3>
+      {/* Only visible when the user has enabled Curses! content in their profile */}
+      {cursesEnabled && (
+        <div className="space-y-3 rounded-lg border border-slate-700/40 p-4">
+          <h3 className="font-serif text-lg font-semibold text-[#f7f7ff]">
+            Curse Options
+          </h3>
 
-        {/* Is Cursed toggle */}
-        <label className="flex items-center gap-3 cursor-pointer group">
-          <input
-            type="checkbox"
-            checked={isCursed}
-            onChange={(e) => {
-              setIsCursed(e.target.checked);
-              if (!e.target.checked) {
-                setCurseDescription("");
-                setIsLinkedCurse(false);
-                setErrors((p) => ({ ...p, curseDescription: "" }));
-              }
-            }}
-            className="
-              h-4 w-4 rounded border-slate-600 bg-slate-900
-              text-coral-400 focus:ring-2 focus:ring-coral-400/50
-              accent-coral-400
-            "
-          />
-          <span className="text-sm text-parchment-500 group-hover:text-[#b9baa3] transition-colors">
-            This card has a curse effect
-          </span>
-        </label>
+          {/* Is Cursed toggle */}
+          <label className="flex items-center gap-3 cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={isCursed}
+              onChange={(e) => {
+                setIsCursed(e.target.checked);
+                if (!e.target.checked) {
+                  setCurseDescription("");
+                  setIsLinkedCurse(false);
+                  setErrors((p) => ({ ...p, curseDescription: "" }));
+                }
+              }}
+              className="
+                h-4 w-4 rounded border-slate-600 bg-slate-900
+                text-coral-400 focus:ring-2 focus:ring-coral-400/50
+                accent-coral-400
+              "
+            />
+            <span className="text-sm text-parchment-500 group-hover:text-[#b9baa3] transition-colors">
+              This card has a curse effect
+            </span>
+          </label>
 
-        {/* Curse description (revealed when isCursed) */}
-        {isCursed && (
-          <div className="space-y-3 animate-fade-in pl-7">
-            <div>
-              <label htmlFor={`${idPrefix}-curse`} className={LABEL_CLS}>
-                Curse Description <span className="text-[#fe5f55]" aria-hidden="true">*</span>
+          {/* Curse description (revealed when isCursed) */}
+          {isCursed && (
+            <div className="space-y-3 animate-fade-in pl-7">
+              <div>
+                <label htmlFor={`${idPrefix}-curse`} className={LABEL_CLS}>
+                  Curse Description <span className="text-[#fe5f55]" aria-hidden="true">*</span>
+                </label>
+                <textarea
+                  id={`${idPrefix}-curse`}
+                  value={curseDescription}
+                  onChange={(e) => { setCurseDescription(e.target.value); setErrors((p) => ({ ...p, curseDescription: "" })); }}
+                  onBlur={triggerPreview}
+                  rows={3}
+                  placeholder="Describe the curse effect that activates..."
+                  className={`${TEXTAREA_CLS} border-[#fe5f55]/20 focus:ring-[#fe5f55]/30 focus:border-[#fe5f55]/30`}
+                />
+                {errors.curseDescription && (
+                  <p role="alert" className="mt-1 text-xs text-[#fe5f55]">{errors.curseDescription}</p>
+                )}
+              </div>
+
+              {/* Is Linked Curse toggle */}
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={isLinkedCurse}
+                  onChange={(e) => setIsLinkedCurse(e.target.checked)}
+                  className="
+                    h-4 w-4 rounded border-slate-600 bg-slate-900
+                    text-purple-400 focus:ring-2 focus:ring-purple-400/50
+                    accent-purple-400
+                  "
+                />
+                <span className="text-sm text-parchment-500 group-hover:text-[#b9baa3] transition-colors">
+                  This is a linked curse (paired with another card)
+                </span>
               </label>
-              <textarea
-                id={`${idPrefix}-curse`}
-                value={curseDescription}
-                onChange={(e) => { setCurseDescription(e.target.value); setErrors((p) => ({ ...p, curseDescription: "" })); }}
-                onBlur={triggerPreview}
-                rows={3}
-                placeholder="Describe the curse effect that activates..."
-                className={`${TEXTAREA_CLS} border-[#fe5f55]/20 focus:ring-[#fe5f55]/30 focus:border-[#fe5f55]/30`}
-              />
-              {errors.curseDescription && (
-                <p role="alert" className="mt-1 text-xs text-[#fe5f55]">{errors.curseDescription}</p>
-              )}
             </div>
-
-            {/* Is Linked Curse toggle */}
-            <label className="flex items-center gap-3 cursor-pointer group">
-              <input
-                type="checkbox"
-                checked={isLinkedCurse}
-                onChange={(e) => setIsLinkedCurse(e.target.checked)}
-                className="
-                  h-4 w-4 rounded border-slate-600 bg-slate-900
-                  text-purple-400 focus:ring-2 focus:ring-purple-400/50
-                  accent-purple-400
-                "
-              />
-              <span className="text-sm text-parchment-500 group-hover:text-[#b9baa3] transition-colors">
-                This is a linked curse (paired with another card)
-              </span>
-            </label>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* ── Balance guardrails (soft warnings) ──────────────────────── */}
       {(() => {
@@ -347,7 +358,7 @@ export function DomainCardForm({
             "High-level cards (7+) typically have longer, more detailed ability descriptions."
           );
         }
-        if (isCursed && !isLinkedCurse && level <= 2) {
+        if (effectiveIsCursed && !isLinkedCurse && level <= 2) {
           warnings.push(
             "Cursed cards at low levels can be punishing for new characters. Consider making this a linked curse or raising the level."
           );
