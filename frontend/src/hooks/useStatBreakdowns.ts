@@ -51,6 +51,19 @@ function sumMechanicalBonus(
   return bonuses.filter((b) => b.stat === stat).reduce((acc, b) => acc + b.amount, 0);
 }
 
+// ─── Helper: sum mechanicalBonuses for a given stat, filtered by traitIndex ──
+
+function sumMechanicalBonusByTrait(
+  bonuses: Array<{ stat: string; amount: number; traitIndex: number }> | undefined,
+  stat: string,
+  traitIndex: 0 | 1
+): number {
+  if (!bonuses) return 0;
+  return bonuses
+    .filter((b) => b.stat === stat && b.traitIndex === traitIndex)
+    .reduce((acc, b) => acc + b.amount, 0);
+}
+
 // ─── Helper: count level-up advancement choices by type ──────────────────────
 
 function countAdvances(
@@ -98,6 +111,11 @@ export function useStatBreakdowns(): StatBreakdowns {
   // Fetch game data — these are cached; duplicate calls are free.
   const { data: classData }      = useClass(activeCharacter?.classId);
   const { data: ancestryData }   = useAncestry(activeCharacter?.ancestryId ?? undefined);
+  // Mixed ancestry: fetch the bottom ancestry record when applicable.
+  // When isMixedAncestry is false/undefined, mixedAncestryBottomId is null → useAncestry is disabled.
+  const { data: bottomAncestryData } = useAncestry(
+    activeCharacter?.isMixedAncestry ? (activeCharacter.mixedAncestryBottomId ?? undefined) : undefined
+  );
   const { data: communityData }  = useCommunity(activeCharacter?.communityId ?? undefined);
 
   if (!activeCharacter) {
@@ -110,6 +128,40 @@ export function useStatBreakdowns(): StatBreakdowns {
   const loadout = char.domainLoadout ?? [];
   const vault   = char.domainVault   ?? [];
   const traitBonuses = char.traitBonuses ?? {};
+
+  // ── Mixed ancestry helpers ────────────────────────────────────────────────
+  // For mixed ancestry, we take traitIndex=0 bonuses from the top ancestry
+  // and traitIndex=1 bonuses from the bottom ancestry. For single ancestry,
+  // we sum all bonuses from the single ancestry record (backward-compatible).
+  const isMixed = Boolean(char.isMixedAncestry);
+
+  /**
+   * Computes the combined ancestry mechanical bonus for a given stat.
+   * Mixed ancestry: top ancestry traitIndex=0 + bottom ancestry traitIndex=1.
+   * Single ancestry: all bonuses from the single ancestry.
+   */
+  function ancestryBonus(stat: string): number {
+    if (isMixed) {
+      return (
+        sumMechanicalBonusByTrait(ancestryData?.mechanicalBonuses, stat, 0) +
+        sumMechanicalBonusByTrait(bottomAncestryData?.mechanicalBonuses, stat, 1)
+      );
+    }
+    return sumMechanicalBonus(ancestryData?.mechanicalBonuses, stat);
+  }
+
+  /** Label for ancestry bonus lines in tooltips. */
+  function ancestryLabel(stat: string): string {
+    if (!isMixed) return `Ancestry (${ancestryData?.name ?? "ancestry"})`;
+    // Build label showing which ancestry/trait the bonus comes from
+    const topBon = sumMechanicalBonusByTrait(ancestryData?.mechanicalBonuses, stat, 0);
+    const botBon = sumMechanicalBonusByTrait(bottomAncestryData?.mechanicalBonuses, stat, 1);
+    if (topBon !== 0 && botBon !== 0) {
+      return `Ancestry (${ancestryData?.name ?? "top"} + ${bottomAncestryData?.name ?? "bottom"})`;
+    }
+    if (topBon !== 0) return `Ancestry (${ancestryData?.name ?? "top"})`;
+    return `Ancestry (${bottomAncestryData?.name ?? "bottom"})`;
+  }
 
   const activeArmor = char.activeArmorId
     ? ALL_ARMOR.find((a) => a.id === char.activeArmorId) ?? null
@@ -205,7 +257,7 @@ export function useStatBreakdowns(): StatBreakdowns {
   //   ─────────────────────────────────────────────────────────────────
   //   = derivedStats.armor  (server-authoritative)
 
-  const ancestryArmorBonus  = sumMechanicalBonus(ancestryData?.mechanicalBonuses, "armor");
+  const ancestryArmorBonus  = ancestryBonus("armor");
   const communityArmorBonus = sumMechanicalBonus(communityData?.mechanicalBonuses, "armor");
 
   const armorLines: TooltipLine[] = [];
@@ -215,7 +267,7 @@ export function useStatBreakdowns(): StatBreakdowns {
     armorLines.push({ label: "No armor equipped", value: "0" });
   }
   if (ancestryArmorBonus !== 0) {
-    armorLines.push({ label: `Ancestry (${ancestryData?.name ?? "ancestry"})`, value: fmtDelta(ancestryArmorBonus) });
+    armorLines.push({ label: ancestryLabel("armor"), value: fmtDelta(ancestryArmorBonus) });
   }
   if (communityArmorBonus !== 0) {
     armorLines.push({ label: `Community (${communityData?.name ?? "community"})`, value: fmtDelta(communityArmorBonus) });
@@ -321,7 +373,7 @@ export function useStatBreakdowns(): StatBreakdowns {
   // may not match what was stored when the character was created (class data can
   // change). Instead we back-derive the class base from the authoritative total.
 
-  const ancestryHpBonus  = sumMechanicalBonus(ancestryData?.mechanicalBonuses, "hp");
+  const ancestryHpBonus  = ancestryBonus("hp");
   const communityHpBonus = sumMechanicalBonus(communityData?.mechanicalBonuses, "hp");
   const hpSlotAdvances   = countAdvances(levelHistory, "hp-slot");
   // Back-derive class base so the breakdown always sums to the authoritative total.
@@ -338,7 +390,7 @@ export function useStatBreakdowns(): StatBreakdowns {
     hpLines.push({ label: "Level-up HP advances", value: fmtDelta(hpSlotAdvances) });
   }
   if (ancestryHpBonus !== 0) {
-    hpLines.push({ label: `Ancestry (${ancestryData?.name ?? "ancestry"})`, value: fmtDelta(ancestryHpBonus) });
+    hpLines.push({ label: ancestryLabel("hp"), value: fmtDelta(ancestryHpBonus) });
   }
   if (communityHpBonus !== 0) {
     hpLines.push({ label: `Community (${communityData?.name ?? "community"})`, value: fmtDelta(communityHpBonus) });
@@ -360,7 +412,7 @@ export function useStatBreakdowns(): StatBreakdowns {
   //   ─────────────────────────────────────────────────────────────────
   //   = trackers.stress.max  (server-authoritative)
 
-  const ancestryStressBonus  = sumMechanicalBonus(ancestryData?.mechanicalBonuses, "stress");
+  const ancestryStressBonus  = ancestryBonus("stress");
   const communityStressBonus = sumMechanicalBonus(communityData?.mechanicalBonuses, "stress");
   const stressSlotAdvances   = countAdvances(levelHistory, "stress-slot");
 
@@ -371,7 +423,7 @@ export function useStatBreakdowns(): StatBreakdowns {
     stressLines.push({ label: "Level-up Stress advances", value: fmtDelta(stressSlotAdvances) });
   }
   if (ancestryStressBonus !== 0) {
-    stressLines.push({ label: `Ancestry (${ancestryData?.name ?? "ancestry"})`, value: fmtDelta(ancestryStressBonus) });
+    stressLines.push({ label: ancestryLabel("stress"), value: fmtDelta(ancestryStressBonus) });
   }
   if (communityStressBonus !== 0) {
     stressLines.push({ label: `Community (${communityData?.name ?? "community"})`, value: fmtDelta(communityStressBonus) });
@@ -390,7 +442,7 @@ export function useStatBreakdowns(): StatBreakdowns {
   //   = hopeMax  (server-authoritative)
 
   const hopeMax            = char.hopeMax ?? 6;
-  const ancestryHopeBonus  = sumMechanicalBonus(ancestryData?.mechanicalBonuses, "hopeMax");
+  const ancestryHopeBonus  = ancestryBonus("hopeMax");
   const communityHopeBonus = sumMechanicalBonus(communityData?.mechanicalBonuses, "hopeMax");
   // Scar reduction = (6 + bonuses) − actual hopeMax
   const expectedHopeMax = 6 + ancestryHopeBonus + communityHopeBonus;
@@ -400,7 +452,7 @@ export function useStatBreakdowns(): StatBreakdowns {
     { label: "Base max Hope (all characters)", value: "6" },
   ];
   if (ancestryHopeBonus !== 0) {
-    hopeLines.push({ label: `Ancestry (${ancestryData?.name ?? "ancestry"})`, value: fmtDelta(ancestryHopeBonus) });
+    hopeLines.push({ label: ancestryLabel("hopeMax"), value: fmtDelta(ancestryHopeBonus) });
   }
   if (communityHopeBonus !== 0) {
     hopeLines.push({ label: `Community (${communityData?.name ?? "community"})`, value: fmtDelta(communityHopeBonus) });

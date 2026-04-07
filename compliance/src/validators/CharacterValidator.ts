@@ -7,6 +7,7 @@ import type {
   Character,
   ClassData,
   DomainCard,
+  AncestryData,
   ValidationResult,
 } from "@shared/types";
 
@@ -55,6 +56,146 @@ function fail(
   };
 }
 
+// ─── Mixed Ancestry validation (SRD p.16, rules MIX-001 through MIX-007) ────
+
+/**
+ * Validates mixed ancestry fields on a character document.
+ *
+ * Checks performed:
+ *  - MIX-001: If isMixedAncestry is true, mixedAncestryBottomId must be present
+ *  - MIX-002: mixedAncestryBottomId must differ from ancestryId (top ancestry)
+ *  - MIX-003: Both referenced ancestries must exist in the provided ancestry list
+ *  - MIX-004: mixedAncestryDisplayName must be present (non-empty)
+ *  - MIX-005: mixedAncestryDisplayName must be 60 characters or fewer
+ *  - MIX-006: If isMixedAncestry is false/undefined, mixed fields should be absent
+ *
+ * @param character  The character document to validate.
+ * @param ancestries All known ancestry records (for existence checks).
+ */
+export function validateMixedAncestry(
+  character: Character,
+  ancestries: AncestryData[]
+): ValidationResult {
+  // If not mixed ancestry, validate that mixed-only fields are cleared
+  if (!character.isMixedAncestry) {
+    const results: ValidationResult[] = [];
+    if (character.mixedAncestryBottomId) {
+      results.push({
+        valid: true,
+        errors: [],
+        warnings: [
+          {
+            field: "mixedAncestryBottomId",
+            message:
+              "mixedAncestryBottomId is set but isMixedAncestry is false — field will be ignored",
+          },
+        ],
+      });
+    }
+    return results.length > 0 ? merge(...results) : ok();
+  }
+
+  // isMixedAncestry is true — validate all mixed ancestry rules
+  const results: ValidationResult[] = [];
+
+  // MIX-001: ancestryId (top) must be present
+  if (!character.ancestryId) {
+    results.push(
+      fail(
+        "ancestryId",
+        "MIX_TOP_ANCESTRY_REQUIRED",
+        "Mixed ancestry requires a top ancestry (ancestryId) to be set"
+      )
+    );
+  }
+
+  // MIX-001: mixedAncestryBottomId must be present
+  if (!character.mixedAncestryBottomId) {
+    results.push(
+      fail(
+        "mixedAncestryBottomId",
+        "MIX_BOTTOM_ANCESTRY_REQUIRED",
+        "Mixed ancestry requires a bottom ancestry (mixedAncestryBottomId) to be set"
+      )
+    );
+  }
+
+  // MIX-002: Top and bottom ancestries must differ
+  if (
+    character.ancestryId &&
+    character.mixedAncestryBottomId &&
+    character.ancestryId === character.mixedAncestryBottomId
+  ) {
+    results.push(
+      fail(
+        "mixedAncestryBottomId",
+        "MIX_SAME_ANCESTRY",
+        `Mixed ancestry top and bottom must be different ancestries, both are "${character.ancestryId}"`
+      )
+    );
+  }
+
+  // MIX-003: Both ancestries must exist in the SRD data
+  if (character.ancestryId) {
+    const topExists = ancestries.some(
+      (a) => a.ancestryId === character.ancestryId
+    );
+    if (!topExists) {
+      results.push(
+        fail(
+          "ancestryId",
+          "MIX_TOP_ANCESTRY_NOT_FOUND",
+          `Top ancestry "${character.ancestryId}" not found in ancestry data`
+        )
+      );
+    }
+  }
+  if (character.mixedAncestryBottomId) {
+    const bottomExists = ancestries.some(
+      (a) => a.ancestryId === character.mixedAncestryBottomId
+    );
+    if (!bottomExists) {
+      results.push(
+        fail(
+          "mixedAncestryBottomId",
+          "MIX_BOTTOM_ANCESTRY_NOT_FOUND",
+          `Bottom ancestry "${character.mixedAncestryBottomId}" not found in ancestry data`
+        )
+      );
+    }
+  }
+
+  // MIX-004: Heritage display name must be present
+  if (
+    !character.mixedAncestryDisplayName ||
+    character.mixedAncestryDisplayName.trim().length === 0
+  ) {
+    results.push(
+      fail(
+        "mixedAncestryDisplayName",
+        "MIX_DISPLAY_NAME_REQUIRED",
+        "Mixed ancestry requires a heritage display name"
+      )
+    );
+  }
+
+  // MIX-005: Heritage display name max length
+  if (
+    character.mixedAncestryDisplayName &&
+    character.mixedAncestryDisplayName.trim().length > 60
+  ) {
+    results.push(
+      fail(
+        "mixedAncestryDisplayName",
+        "MIX_DISPLAY_NAME_TOO_LONG",
+        `Heritage display name must be 60 characters or fewer (received ${character.mixedAncestryDisplayName.trim().length})`
+      )
+    );
+  }
+
+  return results.length > 0 ? merge(...results) : ok();
+}
+
 // ─── Full character validation ────────────────────────────────────────────────
 
 /**
@@ -75,11 +216,13 @@ function fail(
  * @param character  The full character document to validate.
  * @param classData  The class record for the character's classId.
  * @param domainCards All domain card records (used for loadout checks).
+ * @param ancestries  All ancestry records (used for mixed ancestry checks). Optional for backward compatibility.
  */
 export function validateCharacter(
   character: Character,
   classData: ClassData,
-  domainCards: DomainCard[]
+  domainCards: DomainCard[],
+  ancestries?: AncestryData[]
 ): ValidationResult {
   const results: ValidationResult[] = [];
 
@@ -212,6 +355,11 @@ export function validateCharacter(
         `Evasion (${character.derivedStats.evasion}) is below the class base of ${minEvasion}`
       )
     );
+  }
+
+  // ── 11. Mixed ancestry (SRD p.16) ────────────────────────────────────────
+  if (ancestries) {
+    results.push(validateMixedAncestry(character, ancestries));
   }
 
   return results.length > 0 ? merge(...results) : ok();

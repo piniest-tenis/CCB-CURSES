@@ -114,6 +114,25 @@ export interface CharacterSummary {
   communityName: string | null;
   ancestryId: string | null;
   ancestryName: string | null;
+  /**
+   * When true, this character uses mixed ancestry (SRD p.16).
+   * `ancestryId` stores the Top Feature ancestry; `mixedAncestryBottomId` stores
+   * the Bottom Feature ancestry. The player-authored heritage display name is in
+   * `mixedAncestryDisplayName`.
+   */
+  isMixedAncestry?: boolean;
+  /**
+   * The ancestryId of the ancestry providing the Bottom Feature (second-listed).
+   * Only meaningful when `isMixedAncestry` is true.
+   * Null for single-ancestry characters.
+   */
+  mixedAncestryBottomId?: string | null;
+  /**
+   * Free-text heritage display name chosen by the player (SRD p.16).
+   * Used as the display name instead of `ancestryName` when `isMixedAncestry` is true.
+   * Examples: "Elf-Goblin", "Toothling", "Goblin"
+   */
+  mixedAncestryDisplayName?: string | null;
   level: number;
   avatarUrl: string | null;
   /**

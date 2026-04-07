@@ -40,6 +40,15 @@ export interface BuilderDraft {
   experiences?: Experience[];
   heritageTab: "ancestry" | "community";
   characterName?: string;
+  // ── Mixed Ancestry (SRD p.16) ──────────────────────────────────────────────
+  /** Whether the user has selected mixed ancestry mode. */
+  isMixedAncestry?: boolean;
+  /** AncestryId providing the Bottom Feature (second-listed trait). */
+  mixedAncestryBottomId?: string;
+  /** Player-authored heritage display name (e.g. "Elf-Goblin", "Toothling"). */
+  mixedAncestryDisplayName?: string;
+  /** Current phase within the 3-phase mixed ancestry selection flow. */
+  mixedAncestryPhase?: "A" | "B" | "C" | "done";
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────

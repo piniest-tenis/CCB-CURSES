@@ -36,6 +36,7 @@ import { TraitAssignmentPanel, type TraitBonuses } from "@/components/character/
 import { WeaponSelectionPanel } from "@/components/character/WeaponSelectionPanel";
 import { ArmorSelectionPanel } from "@/components/character/ArmorSelectionPanel";
 import { SelectionTile } from "@/components/character/SelectionTile";
+import { MixedAncestryFlow, type MixedAncestryPhase } from "@/components/character/MixedAncestryFlow";
 import { StartingEquipmentPanel, type StartingEquipmentSelections } from "@/components/character/StartingEquipmentPanel";
 import { DomainCardSelectionPanel } from "@/components/character/DomainCardSelectionPanel";
 import { ALL_TIER1_WEAPONS, TIER1_ARMOR, UNIVERSAL_STARTING_ITEMS, STARTING_GOLD } from "@/lib/srdEquipment";
@@ -166,6 +167,19 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
   const [ancestryId, setAncestryId] = useState(
     sessionDraft?.ancestryId ?? character?.ancestryId ?? ""
   );
+  // ── Mixed Ancestry state (SRD p.16) ──────────────────────────────────────
+  const [isMixedAncestry, setIsMixedAncestry] = useState(
+    sessionDraft?.isMixedAncestry ?? character?.isMixedAncestry ?? false
+  );
+  const [mixedAncestryBottomId, setMixedAncestryBottomId] = useState(
+    sessionDraft?.mixedAncestryBottomId ?? character?.mixedAncestryBottomId ?? ""
+  );
+  const [mixedAncestryDisplayName, setMixedAncestryDisplayName] = useState(
+    sessionDraft?.mixedAncestryDisplayName ?? character?.mixedAncestryDisplayName ?? ""
+  );
+  const [mixedAncestryPhase, setMixedAncestryPhase] = useState<MixedAncestryPhase>(
+    sessionDraft?.mixedAncestryPhase ?? (character?.isMixedAncestry ? "done" : "A")
+  );
   const [communityId, setCommunityId] = useState(
     sessionDraft?.communityId ?? character?.communityId ?? ""
   );
@@ -258,12 +272,18 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
       experiences,
       heritageTab,
       characterName,
+      // Mixed ancestry fields
+      isMixedAncestry,
+      mixedAncestryBottomId,
+      mixedAncestryDisplayName,
+      mixedAncestryPhase,
     }),
     [
       step, classId, subclassId, ancestryId, communityId,
       traitBonuses, primaryWeaponId, secondaryWeaponId,
       armorId, equipmentSelections, selectedDomainCardIds, experiences, heritageTab,
       characterName,
+      isMixedAncestry, mixedAncestryBottomId, mixedAncestryDisplayName, mixedAncestryPhase,
     ]
   );
   const { clearSession } = useBuilderSessionStorage(characterId, builderDraft);
@@ -281,6 +301,13 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
     if (!classId   && character.classId)    setClassId(character.classId);
     if (!subclassId && character.subclassId) setSubclassId(character.subclassId);
     if (!ancestryId && character.ancestryId) setAncestryId(character.ancestryId);
+    // Backfill mixed ancestry fields from server
+    if (character.isMixedAncestry && !isMixedAncestry) {
+      setIsMixedAncestry(true);
+      if (character.mixedAncestryBottomId) setMixedAncestryBottomId(character.mixedAncestryBottomId);
+      if (character.mixedAncestryDisplayName) setMixedAncestryDisplayName(character.mixedAncestryDisplayName);
+      setMixedAncestryPhase("done");
+    }
     if (!communityId && character.communityId) setCommunityId(character.communityId);
     if (!characterName && character.name) setCharacterName(character.name);
     if (!primaryWeaponId && character.weapons?.primary?.weaponId)
@@ -359,7 +386,9 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
   
   // Validators
   const canGoNext1 = Boolean(classId && subclassId);
-  const canGoNext2 = Boolean(ancestryId);
+  const canGoNext2 = isMixedAncestry
+    ? Boolean(ancestryId && mixedAncestryBottomId && mixedAncestryDisplayName.trim() && mixedAncestryPhase === "done")
+    : Boolean(ancestryId);
   const canGoNext3 = Boolean(communityId);
   const canGoNext4 = Object.keys(traitBonuses).length === 4;
   const canGoNext5 = Boolean(primaryWeaponId); // secondary is optional
@@ -464,6 +493,10 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
         subclassId: subclassId || undefined,
         ancestryId: ancestryId || undefined,
         communityId: communityId || undefined,
+        // Mixed ancestry fields (SRD p.16)
+        isMixedAncestry: isMixedAncestry || undefined,
+        mixedAncestryBottomId: isMixedAncestry ? (mixedAncestryBottomId || undefined) : null,
+        mixedAncestryDisplayName: isMixedAncestry ? (mixedAncestryDisplayName || undefined) : null,
         traitBonuses,
         stats,
         derivedStats,
@@ -840,23 +873,139 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                   </div>
                   <CollapsibleSRDDescription
                     title="What are Ancestries?"
-                    content="Ancestries are the species or lineage of your character. Each ancestry grants one or two unique traits that represent innate abilities."
+                    content="Ancestries are the species or lineage of your character. Each ancestry grants one or two unique traits that represent innate abilities. You may also choose **Mixed Ancestry** to combine one primary trait from one ancestry with one secondary trait from a different ancestry."
                   />
                   <SourceFilter value={heritageSourceFilter} onChange={setHeritageSourceOverride} defaultFilter={sourceFilterDefault} />
                 </div>
 
-                {/* Ancestry list — accordion tiles */}
+                {/* Ancestry list — Mixed Ancestry tile first, then accordion tiles */}
                 <div className="flex-1 overflow-y-auto border-t border-slate-700/30">
+                  {/* ── Mixed Ancestry tile (SRD p.16) ── */}
+                  {(() => {
+                    const isMixedSelected = isMixedAncestry;
+                    const isMixedExpanded = expandedAncestryId === "__mixed__";
+                    return (
+                      <div
+                        className={`
+                          border-b transition-colors
+                          ${isMixedSelected
+                            ? "border-[#577399]/40 bg-[#577399]/[0.04]"
+                            : "border-slate-700/30"
+                          }
+                        `}
+                      >
+                        {/* Collapsed header */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isMixedExpanded) {
+                              setExpandedAncestryId(null);
+                            } else {
+                              setExpandedAncestryId("__mixed__");
+                              if (!isMixedAncestry) {
+                                // Entering mixed ancestry mode
+                                setIsMixedAncestry(true);
+                                setAncestryId("");
+                                setMixedAncestryBottomId("");
+                                setMixedAncestryDisplayName("");
+                                setMixedAncestryPhase("A");
+                              }
+                            }
+                          }}
+                          className={`
+                            w-full flex items-center gap-3 px-4 sm:px-5 py-3 sm:py-4 text-left transition-colors
+                            ${isMixedExpanded ? "bg-slate-800/20" : "hover:bg-slate-800/20"}
+                          `}
+                          aria-expanded={isMixedExpanded}
+                        >
+                          {/* Merge icon */}
+                          <span className={`
+                            shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm
+                            ${isMixedSelected
+                              ? "bg-[#577399]/20 text-[#577399]"
+                              : "bg-slate-800 text-parchment-500 border border-dashed border-slate-600"
+                            }
+                          `}>
+                            <i className="fa-solid fa-code-merge" aria-hidden="true" />
+                          </span>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className={`text-sm font-semibold ${isMixedSelected ? "text-[#f7f7ff]" : "text-[#f7f7ff]/70"}`}>
+                                Mixed Ancestry
+                              </span>
+                              {isMixedSelected && mixedAncestryPhase === "done" && (
+                                <span className="shrink-0 w-5 h-5 rounded-full bg-[#577399] flex items-center justify-center">
+                                  <svg className="w-3 h-3 text-white" viewBox="0 0 16 16" fill="currentColor">
+                                    <path d="M13.485 3.929a1 1 0 0 1 .086 1.412l-6 7a1 1 0 0 1-1.46.038l-3-3a1 1 0 1 1 1.414-1.414L6.8 10.24l5.273-6.147a1 1 0 0 1 1.412-.164Z" />
+                                  </svg>
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-[#b9baa3]/50 mt-0.5">
+                              {isMixedSelected && mixedAncestryPhase === "done" && mixedAncestryDisplayName
+                                ? mixedAncestryDisplayName
+                                : "Combine traits from two ancestries"
+                              }
+                            </p>
+                          </div>
+
+                          {/* Expand chevron */}
+                          <span className={`text-parchment-600 text-xs transition-transform ${isMixedExpanded ? "rotate-180" : ""}`}>
+                            <i className="fa-solid fa-chevron-down" aria-hidden="true" />
+                          </span>
+                        </button>
+
+                        {/* Expanded: MixedAncestryFlow */}
+                        {isMixedExpanded && ancestriesData?.ancestries && (
+                          <div className="px-4 sm:px-5 pb-4 pt-2">
+                            <MixedAncestryFlow
+                              ancestries={ancestriesData.ancestries}
+                              topAncestryId={ancestryId}
+                              bottomAncestryId={mixedAncestryBottomId}
+                              displayName={mixedAncestryDisplayName}
+                              phase={mixedAncestryPhase}
+                              onTopSelect={(id) => setAncestryId(id)}
+                              onBottomSelect={setMixedAncestryBottomId}
+                              onDisplayNameChange={setMixedAncestryDisplayName}
+                              onPhaseChange={setMixedAncestryPhase}
+                              onCancel={() => {
+                                // Cancel mixed ancestry — clear all mixed state
+                                setIsMixedAncestry(false);
+                                setAncestryId("");
+                                setMixedAncestryBottomId("");
+                                setMixedAncestryDisplayName("");
+                                setMixedAncestryPhase("A");
+                                setExpandedAncestryId(null);
+                              }}
+                              sourceFilter={heritageSourceFilter}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* ── Standard ancestry tiles ── */}
                   {ancestriesData?.ancestries
                     .filter((a) => matchesSourceFilter(a.source, heritageSourceFilter))
                     .map((a) => (
                       <SelectionTile
                         key={a.ancestryId}
                         id={`ancestry-${a.ancestryId}`}
-                        isSelected={ancestryId === a.ancestryId}
+                        isSelected={!isMixedAncestry && ancestryId === a.ancestryId}
                         isExpanded={expandedAncestryId === a.ancestryId}
                         onToggleExpand={() => handleToggleAncestry(a.ancestryId)}
-                        onSelect={() => setAncestryId(a.ancestryId)}
+                        onSelect={() => {
+                          // Selecting a standard ancestry clears mixed ancestry
+                          if (isMixedAncestry) {
+                            setIsMixedAncestry(false);
+                            setMixedAncestryBottomId("");
+                            setMixedAncestryDisplayName("");
+                            setMixedAncestryPhase("A");
+                          }
+                          setAncestryId(a.ancestryId);
+                        }}
                         name={a.name}
                         subtitle={a.traitName + (a.secondTraitName ? ` · ${a.secondTraitName}` : "")}
                         badges={<SourceBadge source={a.source} size="xs" />}
@@ -1248,9 +1397,50 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                       <p className="text-xs uppercase tracking-wider text-parchment-500 font-medium mb-1">
                         Ancestry
                       </p>
-                      <p className="text-lg font-semibold text-[#f7f7ff]">
-                        {selectedAncestry?.name ?? "Not selected"}
-                      </p>
+                      {isMixedAncestry ? (() => {
+                        const topAnc = ancestriesData?.ancestries.find((a) => a.ancestryId === ancestryId);
+                        const botAnc = ancestriesData?.ancestries.find((a) => a.ancestryId === mixedAncestryBottomId);
+                        return (
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg font-semibold text-[#f7f7ff]">
+                                {mixedAncestryDisplayName || "Mixed Ancestry"}
+                              </span>
+                              <span className="text-xs rounded-full px-2 py-0.5 bg-[#577399]/15 text-[#577399] font-medium">
+                                Mixed
+                              </span>
+                            </div>
+                            {topAnc && (
+                              <div className="rounded-md border border-slate-700/40 bg-slate-900/30 px-3 py-2 space-y-1">
+                                <p className="text-[10px] uppercase tracking-wider text-[#577399] font-semibold">
+                                  Primary Trait — from {topAnc.name}
+                                </p>
+                                <p className="text-sm font-semibold text-[#f7f7ff]">{topAnc.traitName}</p>
+                                <MarkdownContent className="text-xs text-[#b9baa3]/60">
+                                  {topAnc.traitDescription}
+                                </MarkdownContent>
+                              </div>
+                            )}
+                            {botAnc && (
+                              <div className="rounded-md border border-slate-700/40 bg-slate-900/30 px-3 py-2 space-y-1">
+                                <p className="text-[10px] uppercase tracking-wider text-[#577399] font-semibold">
+                                  Secondary Trait — from {botAnc.name}
+                                </p>
+                                <p className="text-sm font-semibold text-[#f7f7ff]">{botAnc.secondTraitName}</p>
+                                {botAnc.secondTraitDescription && (
+                                  <MarkdownContent className="text-xs text-[#b9baa3]/60">
+                                    {botAnc.secondTraitDescription}
+                                  </MarkdownContent>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })() : (
+                        <p className="text-lg font-semibold text-[#f7f7ff]">
+                          {selectedAncestry?.name ?? "Not selected"}
+                        </p>
+                      )}
                     </div>
                     
                     {/* Community */}
@@ -1424,8 +1614,13 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
                 },
                 {
                   num: 2, name: "Ancestry",
-                  done: Boolean(ancestryId), locked: false,
-                  summary: selectedAncestry?.name ?? null,
+                  done: isMixedAncestry
+                    ? Boolean(ancestryId && mixedAncestryBottomId && mixedAncestryDisplayName.trim() && mixedAncestryPhase === "done")
+                    : Boolean(ancestryId),
+                  locked: false,
+                  summary: isMixedAncestry
+                    ? (mixedAncestryDisplayName || "Mixed (in progress)")
+                    : (selectedAncestry?.name ?? null),
                 },
                 {
                   num: 3, name: "Community",
