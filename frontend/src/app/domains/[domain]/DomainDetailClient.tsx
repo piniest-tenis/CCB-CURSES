@@ -41,7 +41,7 @@ const DOMAIN_COLOUR: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 function CardTile({ card }: { card: DomainCard }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const bodyId = `card-body-${card.cardId}`;
 
   const badges: React.ReactNode[] = [];

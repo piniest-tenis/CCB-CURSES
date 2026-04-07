@@ -280,7 +280,7 @@ function AcquireCardPicker({
     domain2Result.isLoading;
 
   return (
-    <div className="rounded-xl border border-burgundy-800 bg-slate-900/50 p-4 space-y-3">
+    <div className="rounded-xl border border-steel-400/30 bg-slate-900/50 p-4 space-y-3">
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-semibold text-parchment-200">
           Acquire a card
@@ -289,9 +289,9 @@ function AcquireCardPicker({
           type="button"
           onClick={onClose}
           aria-label="Close acquire card picker"
-          className="text-parchment-500 hover:text-parchment-200 focus:outline-none"
+          className="text-parchment-600 hover:text-parchment-300 text-xs focus:outline-none focus:ring-1 focus:ring-gold-500 rounded px-1"
         >
-          ✕
+          Close
         </button>
       </div>
 
@@ -338,8 +338,8 @@ function AcquireCardPicker({
                     "w-full text-left rounded-lg px-3 py-2 text-sm transition-colors",
                     "focus:outline-none focus:ring-2 focus:ring-gold-500",
                     isSelected
-                      ? "bg-burgundy-800 text-parchment-100 border border-burgundy-600"
-                      : "border border-burgundy-900/40 text-parchment-300 hover:bg-slate-800/50 hover:border-burgundy-700",
+                      ? "bg-steel-400/20 text-parchment-100 border border-steel-400"
+                      : "border border-steel-400/20 text-parchment-300 hover:bg-slate-800/50 hover:border-steel-400/50",
                   ].join(" ")}
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -361,7 +361,7 @@ function AcquireCardPicker({
       )}
 
       {actionError && (
-        <p role="alert" className="text-xs text-[#fe5f55]">
+        <p role="alert" className="text-xs text-coral-400">
           {actionError}
         </p>
       )}
@@ -499,12 +499,14 @@ function TokenTracker({
             onClick={() => clearAction.fire("clear-tokens", { cardId })}
             disabled={isPending}
             aria-label={`Clear all tokens from ${cardName}`}
+            title="Clear all tokens"
             className="
               h-6 w-6 rounded border border-slate-700 bg-slate-900
-              text-xs text-parchment-600 hover:bg-slate-800 hover:text-parchment-300
+              text-xs text-parchment-600 hover:bg-coral-400/15 hover:text-coral-400 hover:border-coral-400/40
               disabled:opacity-50 disabled:cursor-wait
               transition-colors flex items-center justify-center
               focus:outline-none focus:ring-1 focus:ring-gold-500
+              ml-1
             "
           >
             ×
@@ -800,6 +802,7 @@ function LoadoutCardSlot({
   const { activeCharacter } = useCharacterStore();
   const { domain, id } = parseCardId(cardId);
   const { data: card } = useDomainCard(domain, id);
+  const [confirmingRemove, setConfirmingRemove] = React.useState(false);
 
   const cardTokens = activeCharacter?.cardTokens ?? {};
   const activeAuras = activeCharacter?.activeAuras ?? [];
@@ -807,6 +810,18 @@ function LoadoutCardSlot({
   const showTokens = cardHasTokens(card, cardTokens, cardId);
   const showAura = cardHasAura(card);
   const isAuraActive = activeAuras.includes(cardId);
+
+  // Determine if removal needs confirmation (has tokens or active aura)
+  const needsRemoveConfirm = tokenCount > 0 || isAuraActive;
+
+  const handleRemoveClick = () => {
+    if (needsRemoveConfirm && !confirmingRemove) {
+      setConfirmingRemove(true);
+      return;
+    }
+    setConfirmingRemove(false);
+    onRemove();
+  };
 
   return (
     <div
@@ -824,7 +839,7 @@ function LoadoutCardSlot({
             ? "opacity-40 border-gold-500 bg-slate-800"
             : isAuraActive
               ? "border-[#577399]/60 bg-slate-850 shadow-[0_0_10px_rgba(87,115,153,0.25)]"
-              : "border-burgundy-800 bg-slate-850 hover:border-burgundy-600"
+              : "border-steel-400/30 bg-slate-850 hover:border-steel-400/50"
         }
         shadow-card-fantasy
       `}
@@ -872,7 +887,7 @@ function LoadoutCardSlot({
                     Grimoire
                   </span>
                 )}
-                <span className="ml-auto text-parchment-600 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="ml-auto text-parchment-600 text-xs opacity-40 group-hover:opacity-100 transition-opacity">
                   ›
                 </span>
               </div>
@@ -884,6 +899,15 @@ function LoadoutCardSlot({
                   Lv {card.level}
                 </span>
               </div>
+              {/* Inline description preview — avoids needing to open sidebar */}
+              <p className="text-xs text-parchment-600 leading-snug mt-1 line-clamp-2">
+                {card.isGrimoire && card.grimoire.length > 0
+                  ? card.grimoire.map((a) => a.name).join(", ")
+                  : card.description
+                      .replace(/\*\*/g, "")
+                      .replace(/\n/g, " ")
+                      .trim()}
+              </p>
             </button>
           ) : (
             <span className="text-sm text-parchment-500">Loading…</span>
@@ -897,7 +921,8 @@ function LoadoutCardSlot({
             disabled={index === 0}
             className="
               text-parchment-600 hover:text-gold-400 disabled:opacity-20
-              transition-colors text-xs px-1 py-1
+              transition-colors text-xs p-1.5 min-w-[2rem] min-h-[2rem]
+              flex items-center justify-center
               focus:outline-none focus:ring-1 focus:ring-gold-500 rounded
             "
             aria-label={`Move ${card?.name ?? cardId} up`}
@@ -909,7 +934,8 @@ function LoadoutCardSlot({
             disabled={index === total - 1}
             className="
               text-parchment-600 hover:text-gold-400 disabled:opacity-20
-              transition-colors text-xs px-1 py-1
+              transition-colors text-xs p-1.5 min-w-[2rem] min-h-[2rem]
+              flex items-center justify-center
               focus:outline-none focus:ring-1 focus:ring-gold-500 rounded
             "
             aria-label={`Move ${card?.name ?? cardId} down`}
@@ -919,16 +945,37 @@ function LoadoutCardSlot({
         </div>
 
         {/* Remove button */}
-        <button
-          onClick={onRemove}
-          className="
-            shrink-0 rounded p-2 text-burgundy-500 hover:bg-burgundy-900/40 hover:text-burgundy-300
-            transition-colors focus:outline-none focus:ring-2 focus:ring-burgundy-500
-          "
-          aria-label={`Remove ${card?.name ?? cardId} from loadout`}
-        >
-          ✕
-        </button>
+        {confirmingRemove ? (
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={handleRemoveClick}
+              className="rounded px-2 py-1 text-xs font-semibold text-coral-400 bg-coral-400/10 border border-coral-400/30
+                hover:bg-coral-400/20 transition-colors focus:outline-none focus:ring-2 focus:ring-coral-400"
+              aria-label={`Confirm remove ${card?.name ?? cardId}`}
+            >
+              Confirm
+            </button>
+            <button
+              onClick={() => setConfirmingRemove(false)}
+              className="rounded px-2 py-1 text-xs text-parchment-500 hover:text-parchment-300
+                transition-colors focus:outline-none focus:ring-1 focus:ring-gold-500"
+              aria-label="Cancel removal"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleRemoveClick}
+            className="
+              shrink-0 rounded p-2 text-parchment-500 hover:bg-coral-400/15 hover:text-coral-400
+              transition-colors focus:outline-none focus:ring-2 focus:ring-coral-400
+            "
+            aria-label={`Remove ${card?.name ?? cardId} from loadout`}
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       {/* Token tracker (shown for cursed cards or cards that already have tokens) */}
@@ -1076,7 +1123,7 @@ function VaultPicker({
 
       {/* Loadout displacement selection (only when loadout is full) */}
       {isFull && selectedVaultCard && (
-        <div className="border-t border-burgundy-900/40 pt-3">
+        <div className="border-t border-slate-700/30 pt-3">
           <p className="text-sm text-parchment-500 mb-2">
             Choose a card to move from loadout to vault:
           </p>
@@ -1191,7 +1238,7 @@ function VaultPickerItem({
               {card.domain}
             </span>
             <span
-              className={`text-xs font-bold ${aboveLevel ? "text-burgundy-500" : "text-gold-600"}`}
+              className={`text-xs font-bold ${aboveLevel ? "text-parchment-600" : "text-gold-600"}`}
             >
               Lv{card.level}
             </span>
@@ -1344,8 +1391,8 @@ export function DomainLoadout({
             data-field-key="loadout.change"
             className="
             rounded px-2 py-0.5 text-xs font-semibold
-            bg-burgundy-800/60 text-parchment-300 border border-burgundy-700
-            hover:bg-burgundy-700 transition-colors
+            bg-steel-400/15 text-parchment-300 border border-steel-400/40
+            hover:bg-steel-400/25 hover:border-steel-400 transition-colors
             focus:outline-none focus:ring-2 focus:ring-gold-500
           "
           >
@@ -1393,16 +1440,44 @@ export function DomainLoadout({
           </div>
         )}
 
-        {/* Empty slots visual */}
+        {/* Empty slots — clickable to open card picker */}
         {domainLoadout.length < 5 && (
           <div className="flex gap-1.5">
             {Array.from({ length: 5 - domainLoadout.length }, (_, i) => (
-              <div
+              <button
                 key={i}
-                className="h-8 flex-1 rounded border border-dashed border-burgundy-900/60 bg-slate-900/30"
-              />
+                type="button"
+                onClick={() => {
+                  setPickerMode(canSwap ? "swap" : "acquire");
+                  setShowPicker(true);
+                }}
+                aria-label="Add a domain card"
+                className="h-8 flex-1 rounded border border-dashed border-steel-400/30 bg-slate-900/30
+                  hover:border-steel-400/60 hover:bg-steel-400/5 transition-colors
+                  focus:outline-none focus:ring-2 focus:ring-gold-500
+                  flex items-center justify-center text-parchment-700 text-xs"
+              >
+                +
+              </button>
             ))}
           </div>
+        )}
+
+        {/* Vault summary — always visible when vault has cards and picker is closed */}
+        {!showPicker && canSwap && (
+          <button
+            type="button"
+            onClick={() => {
+              setPickerMode("swap");
+              setShowPicker(true);
+            }}
+            className="w-full flex items-center justify-between rounded-lg border border-steel-400/20 bg-slate-900/30
+              px-3 py-2 text-xs text-parchment-500 hover:border-steel-400/40 hover:bg-slate-800/40
+              transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500"
+          >
+            <span>{domainVault.length} card{domainVault.length !== 1 ? "s" : ""} in vault</span>
+            <span className="text-parchment-600">Tap to swap ›</span>
+          </button>
         )}
 
         {/* Card picker — toggles between Swap and Acquire modes */}
@@ -1411,6 +1486,7 @@ export function DomainLoadout({
             {/* SRD explanation */}
             <CollapsibleSRDDescription
               title="Vault & Loadout"
+              heightThreshold={400}
               content={
                 "Your **Vault** holds every domain card you have unlocked. Your **Loadout** is the subset of up to 5 cards you can use during play. " +
                 "During a **rest**, you may freely swap cards between your vault and loadout at no cost. " +
@@ -1430,12 +1506,12 @@ export function DomainLoadout({
                   focus:outline-none focus:ring-2 focus:ring-gold-500
                   ${
                     pickerMode === "swap"
-                      ? "bg-gold-800/80 text-parchment-100 border border-gold-600"
+                      ? "bg-gold-800/80 text-parchment-100 border border-gold-600 shadow-sm"
                       : "bg-slate-800 text-parchment-400 border border-slate-700 hover:bg-slate-700"
                   }
                 `}
                 >
-                  Swap from Vault ({domainVault.length})
+                  {pickerMode === "swap" ? "▸ " : ""}Swap from Vault ({domainVault.length})
                 </button>
               )}
               {canAcquire && (
@@ -1448,12 +1524,12 @@ export function DomainLoadout({
                   focus:outline-none focus:ring-2 focus:ring-gold-500
                   ${
                     pickerMode === "acquire"
-                      ? "bg-gold-800/80 text-parchment-100 border border-gold-600"
+                      ? "bg-gold-800/80 text-parchment-100 border border-gold-600 shadow-sm"
                       : "bg-slate-800 text-parchment-400 border border-slate-700 hover:bg-slate-700"
                   }
                 `}
                 >
-                  Acquire New Card
+                  {pickerMode === "acquire" ? "▸ " : ""}Acquire New Card
                 </button>
               )}
             </div>

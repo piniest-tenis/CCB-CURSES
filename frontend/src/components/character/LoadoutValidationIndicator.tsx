@@ -38,7 +38,7 @@ export function LoadoutValidationIndicator({
           <span
             className={`text-xs font-bold ${
               capacity.current >= capacity.max
-                ? "text-[#fe5f55]"
+                ? "text-gold-500"
                 : capacity.current >= 3
                   ? "text-[#f7b500]"
                   : "text-[#577399]"
@@ -56,7 +56,7 @@ export function LoadoutValidationIndicator({
               className={`flex-1 h-2 rounded-sm transition-colors ${
                 i < capacity.current
                   ? capacity.current >= capacity.max
-                    ? "bg-[#fe5f55]"
+                    ? "bg-gold-500"
                     : "bg-[#577399]"
                   : "bg-slate-800/40"
               }`}

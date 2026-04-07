@@ -72,8 +72,8 @@ function CardDetailContent({ card }: { card: DomainCard }) {
       </div>
 
       {card.isCursed && card.curseText && (
-        <div className="rounded-lg border border-[#fe5f55]/30 bg-[#fe5f55]/5 px-4 py-3">
-          <p className="text-xs uppercase tracking-wider text-[#fe5f55]/70 mb-1">Curse</p>
+        <div className="rounded-lg border border-steel-400/30 bg-slate-900/60 px-4 py-3">
+          <p className="text-xs uppercase tracking-wider text-steel-accessible mb-1">Curse</p>
           <MarkdownContent className="text-base text-parchment-500">
             {card.curseText}
           </MarkdownContent>
@@ -88,107 +88,78 @@ function CardDetailContent({ card }: { card: DomainCard }) {
 function LockedCardRow({
   card,
   isInVault,
-  onDrill,
+  isExpanded,
+  onToggleExpand,
 }: {
   card: DomainCard;
   isInVault: boolean;
-  onDrill: () => void;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
 }) {
   return (
     <div
       data-selected={isInVault ? "true" : undefined}
       className={`
-        flex items-center rounded-lg border transition-all
+        rounded-lg border transition-all overflow-hidden
         ${isInVault
           ? "border-[#577399] bg-[#577399]/15"
           : "border-slate-700/40 bg-slate-900/20 opacity-60"
         }
       `}
     >
-      {/* Radio indicator */}
-      <span
-        className={`
-          ml-3 flex-shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors
-          ${isInVault ? "border-[#577399] bg-[#577399]" : "border-slate-700/40"}
-        `}
-        aria-hidden="true"
-      >
-        {isInVault && <span className="h-2 w-2 rounded-full bg-white" />}
-      </span>
-
-      {/* Text */}
-      <div className="flex-1 flex items-center gap-3 px-3 py-3 min-w-0">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold text-[#f7f7ff] truncate">{card.name}</span>
-            <SourceBadge source={card.source} size="sm" />
-            <span className="text-xs text-parchment-600 shrink-0">{card.domain}</span>
-          </div>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-xs text-parchment-600">Lvl {card.level}</span>
-            <span className="text-parchment-600 text-xs">·</span>
-            <span className="text-xs text-parchment-500 truncate">
-              {truncate(card.isGrimoire
-                ? (card.grimoire[0]?.description ?? card.description)
-                : card.description)}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Drill-down */}
+      {/* Card header — clickable to expand inline */}
       <button
         type="button"
-        onClick={(e) => { e.stopPropagation(); onDrill(); }}
-        aria-label={`View details for ${card.name}`}
-        className="
-          self-stretch shrink-0 flex items-center justify-center
-          pl-3 pr-2 border-l border-slate-700/40 rounded-r-lg
-          text-parchment-600 hover:text-parchment-500
-          transition-colors min-w-[44px]
-        "
+        onClick={onToggleExpand}
+        aria-expanded={isExpanded}
+        className="w-full flex items-center text-left hover:bg-slate-800/30 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#577399]"
       >
-        <span className="text-lg leading-none">›</span>
-      </button>
-    </div>
-  );
-}
+        {/* Radio indicator */}
+        <span
+          className={`
+            ml-3 flex-shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors
+            ${isInVault ? "border-[#577399] bg-[#577399]" : "border-slate-700/40"}
+          `}
+          aria-hidden="true"
+        >
+          {isInVault && <span className="h-2 w-2 rounded-full bg-white" />}
+        </span>
 
-// ─── Locked-mode Detail View ──────────────────────────────────────────────────
-
-function LockedCardDetail({
-  card,
-  onBack,
-}: {
-  card: DomainCard;
-  onBack: () => void;
-}) {
-  return (
-    <div className="flex flex-col h-full">
-      <button
-        type="button"
-        onClick={onBack}
-        className="flex items-center gap-1.5 px-4 py-3 min-h-[44px] text-xs text-[#daa520] hover:text-[#e8b830] transition-colors shrink-0 focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-inset rounded"
-      >
-        ← Back to cards
-      </button>
-      <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs uppercase tracking-wider text-parchment-600">{card.domain}</span>
-            <span className="text-parchment-600">·</span>
-            <span className="text-xs uppercase tracking-wider text-parchment-600">Level {card.level}</span>
-            {card.isGrimoire && (
-              <>
-                <span className="text-parchment-600">·</span>
-                <span className="text-xs uppercase tracking-wider text-[#daa520]/60">Grimoire</span>
-              </>
-            )}
+        {/* Text */}
+        <div className="flex-1 flex items-center gap-3 px-3 py-3 min-w-0">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-semibold text-[#f7f7ff] truncate">{card.name}</span>
+              <SourceBadge source={card.source} size="sm" />
+              <span className="text-xs text-parchment-600 shrink-0">{card.domain}</span>
+            </div>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-xs text-parchment-600">Lvl {card.level}</span>
+              <span className="text-parchment-600 text-xs">·</span>
+              <span className="text-xs text-parchment-500 truncate">
+                {truncate(card.isGrimoire
+                  ? (card.grimoire[0]?.description ?? card.description)
+                  : card.description)}
+              </span>
+            </div>
           </div>
-          <h4 className="font-serif text-xl font-bold text-[#f7f7ff]">{card.name}</h4>
         </div>
-        <CardDetailContent card={card} />
-      </div>
+
+        {/* Expand indicator */}
+        <span
+          aria-hidden="true"
+          className="shrink-0 pr-3 text-parchment-600 text-lg leading-none"
+        >
+          {isExpanded ? "▲" : "▼"}
+        </span>
+      </button>
+
+      {/* Inline expanded detail */}
+      {isExpanded && (
+        <div className="border-t border-slate-700/40 px-4 py-3 animate-fade-in">
+          <CardDetailContent card={card} />
+        </div>
+      )}
     </div>
   );
 }
@@ -285,7 +256,7 @@ export function DomainCardSelectionPanel({
 }: Props) {
   const isLocked = lockedCardIds !== undefined;
 
-  const [detailCard, setDetailCard] = useState<DomainCard | null>(null);
+  const [expandedLockedCardId, setExpandedLockedCardId] = useState<string | null>(null);
   const sourceFilterDefault = useSourceFilterDefault();
   const [sourceOverride, setSourceOverride] = useState<SourceFilterValue | null>(null);
   const sourceFilter = sourceOverride ?? sourceFilterDefault;
@@ -353,18 +324,8 @@ export function DomainCardSelectionPanel({
     );
   }
 
-  // ── Locked mode (post-Level-1): read-only card rows with drill-down ──
+  // ── Locked mode (post-Level-1): read-only card rows with inline expand ──
   if (isLocked) {
-    // Keep the drill-down detail view for locked mode
-    if (detailCard) {
-      return (
-        <LockedCardDetail
-          card={detailCard}
-          onBack={() => setDetailCard(null)}
-        />
-      );
-    }
-
     const filteredCards = allCards.filter((c) => matchesSourceFilter(c.source, sourceFilter));
     const acquiredCards = filteredCards.filter((c) => c.level <= characterLevel);
     const futureCards   = filteredCards.filter((c) => c.level >  characterLevel);
@@ -390,7 +351,7 @@ export function DomainCardSelectionPanel({
           <SourceFilter value={sourceFilter} onChange={setSourceOverride} defaultFilter={sourceFilterDefault} />
         </div>
 
-        {/* Card list */}
+        {/* Card list — inline accordion */}
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
           {acquiredCards.length > 0 && (
             <div className="space-y-2">
@@ -405,7 +366,12 @@ export function DomainCardSelectionPanel({
                     key={card.cardId}
                     card={card}
                     isInVault={isInVault}
-                    onDrill={() => setDetailCard(card)}
+                    isExpanded={expandedLockedCardId === card.cardId}
+                    onToggleExpand={() =>
+                      setExpandedLockedCardId((prev) =>
+                        prev === card.cardId ? null : card.cardId
+                      )
+                    }
                   />
                 );
               })}
@@ -422,7 +388,12 @@ export function DomainCardSelectionPanel({
                   <LockedCardRow
                     card={card}
                     isInVault={false}
-                    onDrill={() => setDetailCard(card)}
+                    isExpanded={expandedLockedCardId === card.cardId}
+                    onToggleExpand={() =>
+                      setExpandedLockedCardId((prev) =>
+                        prev === card.cardId ? null : card.cardId
+                      )
+                    }
                   />
                 </div>
               ))}
