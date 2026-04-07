@@ -67,6 +67,26 @@
 
   /* jetsam-collection-basilea display font — no size override needed here */
 
+  /* ─── Small-text font override ────────────────────────────────────────────────
+     Body default is mestiza-sans (more readable at small sizes).
+     Restore sofia-pro-narrow for Tailwind font-size utilities ≥ 18px (text-lg+)
+     so that larger UI text keeps the brand condensed sans-serif.
+     Headings using font-serif / font-serif-sc / font-display are unaffected
+     because their explicit font-family class already takes precedence.
+     ─────────────────────────────────────────────────────────────────────────── */
+  .text-lg,
+  .text-xl,
+  .text-2xl,
+  .text-3xl,
+  .text-4xl,
+  .text-5xl,
+  .text-6xl,
+  .text-7xl,
+  .text-8xl,
+  .text-9xl {
+    font-family: "sofia-pro-narrow", "Sofia Pro Narrow", Inter, system-ui, sans-serif;
+  }
+
   /* Scrollbar styling */
   ::-webkit-scrollbar {
     width: 6px;

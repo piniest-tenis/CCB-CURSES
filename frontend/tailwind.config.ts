@@ -137,6 +137,8 @@ const config: Config = {
         "serif-sc": ['"double-pica-sc"', '"double-pica"', "Georgia", "Cambria", "serif"],
         // sofia-pro-narrow — body/UI font (Adobe Typekit) — condensed sans-serif
         sans:    ['"sofia-pro-narrow"', '"Sofia Pro Narrow"', "Inter", "system-ui", "sans-serif"],
+        // mestiza-sans — readable body font for small text below 18px (Adobe Typekit)
+        body:    ['"mestiza-sans"', '"sofia-pro-narrow"', "Inter", "system-ui", "sans-serif"],
         // jetsam-collection-basilea — attention-getting display font (Adobe Typekit)
         display: ['"jetsam-collection-basilea"', '"double-pica"', "Georgia", "serif"],
         mono:    ['"JetBrains Mono"', '"Fira Code"', "monospace"],
