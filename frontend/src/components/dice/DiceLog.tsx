@@ -7,17 +7,18 @@
  * Shows the last N rolls from diceStore.log with outcome badges.
  *
  * Design:
- *  - Collapsed: a small die icon button with roll count badge.
- *  - Expanded: a 260px-wide panel listing recent rolls, newest on top.
+ *  - Desktop (sm+): Collapsed: a small die icon button with roll count badge.
+ *    Expanded: a 260px-wide panel listing recent rolls, newest on top.
+ *  - Mobile (< sm): A docked strip above the bottom nav bar that expands
+ *    upward into a scrollable accordion (max-height 40vh).
  *  - "Custom Roll" tray lets users pick arbitrary dice before rolling.
  *  - Clicking any row shows its detail.
  *  - "Clear" button empties the log.
  */
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useDiceStore } from "@/store/diceStore";
 import type { RollResult, ActionOutcome, DieSize, DieSpec } from "@/types/dice";
-import { usePatreonCTAVisible, usePatreonBannerStore } from "@/components/PatreonCTA";
 
 // ─── Outcome colors ───────────────────────────────────────────────────────────
 
@@ -82,19 +83,19 @@ function LogEntry({
       <div className="flex items-center justify-between gap-2">
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold text-[#f7f7ff] truncate">{request.label}</p>
-          <p className="text-[11px] text-[#b9baa3]">
+          <p className="text-[10px] text-[#b9baa3]">
             {diceLabel}{request.modifier ? ` ${request.modifier > 0 ? "+" : ""}${request.modifier}` : ""} = <strong className="text-[#f7f7ff]">{total}</strong>
           </p>
         </div>
         <div className="flex flex-col items-end gap-0.5 shrink-0">
           {outcome ? (
-            <span className={`text-[10px] font-bold uppercase border rounded px-1 py-px ${OUTCOME_COLOR[outcome]}`}>
+            <span className={`text-[9px] font-bold uppercase border rounded px-1 py-px ${OUTCOME_COLOR[outcome]}`}>
               {OUTCOME_SHORT[outcome]}
             </span>
           ) : (
             <span className="text-sm font-bold text-[#f7f7ff] leading-none">{total}</span>
           )}
-          <span className="text-[10px] text-[#b9baa3]">{timeStr}</span>
+          <span className="text-[9px] text-[#b9baa3]">{timeStr}</span>
         </div>
       </div>
     </button>
@@ -144,7 +145,7 @@ function LogEntryDetail({ result }: { result: RollResult }) {
 
       {/* Hope vs Fear */}
       {hopeValue !== undefined && fearValue !== undefined && (
-        <p className="text-[11px] text-[#b9baa3]">
+        <p className="text-[10px] text-[#b9baa3]">
           <span style={{ color: "#DAA520" }}>Hope {hopeValue}</span>
           {" · "}
           <span style={{ color: "#9BB5CC" }}>Fear {fearValue}</span>
@@ -215,7 +216,7 @@ function CustomRollTray({ onRoll, characterName }: { onRoll: () => void; charact
 
   return (
     <div className="border-t border-[#577399]/20 px-3 py-3 space-y-3 bg-slate-950/40">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-[#577399]">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-[#577399]">
         Custom Roll
       </p>
 
@@ -250,7 +251,7 @@ function CustomRollTray({ onRoll, characterName }: { onRoll: () => void; charact
                     draggable={false}
                   />
                 ) : (
-                  <span className="text-[10px] font-bold text-[#b9baa3]">{size}</span>
+                  <span className="text-[9px] font-bold text-[#b9baa3]">{size}</span>
                 )}
                 {count > 0 && (
                   <span className="absolute -right-1 -top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[#577399] px-0.5 text-[8px] font-bold text-white leading-none">
@@ -266,7 +267,7 @@ function CustomRollTray({ onRoll, characterName }: { onRoll: () => void; charact
                     onClick={() => adjust(size, -1)}
                     disabled={count === 0 || isRolling}
                     aria-label={`Remove a ${size}`}
-                    className="flex h-3.5 w-3.5 items-center justify-center rounded text-[#b9baa3] border border-[#577399]/30 hover:border-[#577399] hover:text-[#f7f7ff] disabled:opacity-30 text-[10px] transition-colors focus:outline-none focus:ring-1 focus:ring-[#577399]"
+                    className="flex h-3.5 w-3.5 items-center justify-center rounded text-[#b9baa3] border border-[#577399]/30 hover:border-[#577399] hover:text-[#f7f7ff] disabled:opacity-30 text-[9px] transition-colors focus:outline-none focus:ring-1 focus:ring-[#577399]"
                   >−</button>
                 )}
                 <span className="text-[8px] text-[#b9baa3]">{size}</span>
@@ -278,7 +279,7 @@ function CustomRollTray({ onRoll, characterName }: { onRoll: () => void; charact
 
       {/* Modifier */}
       <div className="flex items-center gap-2">
-        <label className="text-[11px] text-[#b9baa3] uppercase tracking-wider">Modifier</label>
+        <label className="text-[10px] text-[#b9baa3] uppercase tracking-wider">Modifier</label>
         <input
           type="number"
           value={modifier}
@@ -302,29 +303,261 @@ function CustomRollTray({ onRoll, characterName }: { onRoll: () => void; charact
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Chevron icons ────────────────────────────────────────────────────────────
 
-export function DiceLog({ characterName }: { characterName?: string } = {}) {
+function ChevronUp({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" className={className}>
+      <path d="M4 10l4-4 4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ChevronDown({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" className={className}>
+      <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function CloseIcon({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" className={className}>
+      <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// ─── Mobile Docked Dice Strip ─────────────────────────────────────────────────
+// Full-width docked strip above mobile bottom nav. Expands into a scrollable
+// accordion with max-height 40vh.
+
+function MobileDiceStrip({
+  characterName,
+  mobileBottomOffset = 0,
+}: {
+  characterName?: string;
+  mobileBottomOffset?: number;
+}) {
+  const { log, clearLog } = useDiceStore();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showCustom, setShowCustom] = useState(false);
+  const [isFlashing, setIsFlashing] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const touchStartY = useRef<number | null>(null);
+
+  const latestRoll = log[0] ?? null;
+
+  // Track new roll arrivals — flash the strip and update preview
+  const lastId = log[0]?.id;
+  const prevLastIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (lastId && lastId !== prevLastIdRef.current) {
+      prevLastIdRef.current = lastId;
+      // Flash the strip briefly
+      setIsFlashing(true);
+      const timer = setTimeout(() => setIsFlashing(false), 400);
+      // If expanded, auto-scroll to newest and select it
+      if (isExpanded) {
+        setSelectedId(lastId);
+        requestAnimationFrame(() => {
+          scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+        });
+      }
+      return () => clearTimeout(timer);
+    }
+  }, [lastId, isExpanded]);
+
+  // Swipe-down to collapse
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartY.current === null) return;
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+    // If swiped down more than 40px, collapse
+    if (deltaY > 40 && isExpanded) {
+      setIsExpanded(false);
+    }
+    touchStartY.current = null;
+  }, [isExpanded]);
+
+  // Bottom offset: if there's a bottom nav (GM), dock above it.
+  // Otherwise dock at the very bottom with safe-area inset.
+  const bottomStyle = mobileBottomOffset > 0
+    ? { bottom: `calc(${mobileBottomOffset}px + env(safe-area-inset-bottom))` }
+    : { bottom: "0px", paddingBottom: "env(safe-area-inset-bottom)" };
+
+  return (
+    <div
+      className="fixed left-0 right-0 z-40 sm:hidden"
+      style={bottomStyle}
+      aria-label="Dice roll log"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* ── Expanded panel (above the collapsed strip) ──────────────────────── */}
+      <div
+        className={[
+          "overflow-hidden transition-all duration-250 ease-out",
+          isExpanded ? "max-h-[40vh] opacity-100" : "max-h-0 opacity-0",
+        ].join(" ")}
+        style={{ transitionDuration: "250ms" }}
+        aria-hidden={!isExpanded}
+      >
+        {/* Expanded header */}
+        <div className="flex items-center justify-between border-t border-[#577399]/30 bg-[#0d1610] px-3 py-2 shrink-0">
+          <span className="text-xs font-semibold uppercase tracking-widest text-[#577399]">
+            Dice Log
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setShowCustom((v) => !v)}
+              aria-label={showCustom ? "Hide custom roll" : "Custom roll"}
+              aria-pressed={showCustom}
+              title="Custom roll"
+              className={[
+                "rounded px-2 py-0.5 text-[10px] font-semibold transition-colors focus:outline-none focus:ring-1 focus:ring-[#577399]",
+                showCustom
+                  ? "bg-[#577399]/20 text-[#577399]"
+                  : "text-[#b9baa3]/60 hover:text-[#f7f7ff] hover:bg-[#577399]/10",
+              ].join(" ")}
+            >
+              + Custom
+            </button>
+            {log.length > 0 && (
+              <button
+                type="button"
+                onClick={clearLog}
+                aria-label="Clear dice log"
+                className="rounded px-2 py-0.5 text-[10px] font-semibold text-[#b9baa3]/60 hover:text-[#fe5f55] hover:bg-[#fe5f55]/10 transition-colors focus:outline-none focus:ring-1 focus:ring-[#fe5f55]"
+              >
+                Clear
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setIsExpanded(false)}
+              aria-label="Collapse dice log"
+              className="rounded p-1 text-[#b9baa3]/60 hover:text-[#f7f7ff] transition-colors focus:outline-none focus:ring-1 focus:ring-[#577399]"
+            >
+              <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsExpanded(false)}
+              aria-label="Close dice log"
+              className="rounded p-1 text-[#b9baa3]/60 hover:text-[#f7f7ff] transition-colors focus:outline-none focus:ring-1 focus:ring-[#577399]"
+            >
+              <CloseIcon className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Custom roll tray */}
+        {showCustom && (
+          <CustomRollTray onRoll={() => setShowCustom(false)} characterName={characterName} />
+        )}
+
+        {/* Scrollable roll list */}
+        <div
+          ref={scrollRef}
+          className="overflow-y-auto px-2 py-2 space-y-1.5 bg-[#0d1610]"
+          style={{ maxHeight: "calc(40vh - 44px)" }}
+        >
+          {log.length === 0 ? (
+            <p className="text-xs text-[#b9baa3]/50 italic text-center py-4">
+              No rolls yet.
+            </p>
+          ) : (
+            log.map((result) => (
+              <div key={result.id}>
+                <LogEntry
+                  result={result}
+                  isSelected={selectedId === result.id}
+                  onClick={() =>
+                    setSelectedId((prev) => (prev === result.id ? null : result.id))
+                  }
+                />
+                {selectedId === result.id && (
+                  <LogEntryDetail result={result} />
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* ── Collapsed strip (44px tall, full-width) ─────────────────────────── */}
+      <button
+        type="button"
+        onClick={() => setIsExpanded((v) => !v)}
+        aria-label={isExpanded ? "Collapse dice log" : "Expand dice log"}
+        aria-expanded={isExpanded}
+        className={[
+          "w-full min-h-[44px] flex items-center justify-between",
+          "border-t border-[#577399]/30 bg-[#0d1610]",
+          "px-3 py-2 transition-colors duration-150",
+          "focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#577399]",
+          isFlashing ? "animate-dice-strip-flash" : "",
+        ].join(" ")}
+      >
+        {/* Left side: die icon + recent roll preview */}
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <DieIcon className="h-5 w-5 text-[#577399] shrink-0" />
+          {latestRoll ? (
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-xs text-[#b9baa3] truncate max-w-[140px]">
+                {latestRoll.request.label}
+              </span>
+              <span className="text-xs font-semibold text-[#f7f7ff] shrink-0">
+                {latestRoll.total}
+              </span>
+            </div>
+          ) : (
+            <span className="text-xs text-[#b9baa3]/50">
+              🎲 Dice Log
+            </span>
+          )}
+        </div>
+
+        {/* Right side: chevron + roll count badge */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {log.length > 0 && (
+            <span
+              aria-label={`${log.length} rolls`}
+              className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#577399] px-1 text-[9px] font-bold text-white leading-none"
+            >
+              {log.length > 99 ? "99+" : log.length}
+            </span>
+          )}
+          {isExpanded ? (
+            <ChevronDown className="h-4 w-4 text-[#b9baa3]/60" />
+          ) : (
+            <ChevronUp className="h-4 w-4 text-[#b9baa3]/60" />
+          )}
+        </div>
+      </button>
+    </div>
+  );
+}
+
+// ─── Desktop floating panel (existing behavior, unchanged) ────────────────────
+
+function DesktopDiceLog({ characterName }: { characterName?: string }) {
   const { log, clearLog } = useDiceStore();
   const [isExpanded,    setIsExpanded]    = useState(false);
   const [selectedId,    setSelectedId]    = useState<string | null>(null);
   const [showCustom,    setShowCustom]    = useState(false);
 
-  // Offset the FAB above the Patreon CTA bar when it is visible.
-  // When the bar is dismissed the CSS transition animates the FAB back down.
-  const ctaVisible = usePatreonCTAVisible();
-  const ctaDismissed = usePatreonBannerStore((s) => s.dismissed);
-  // The bar is rendered (and takes space) when ctaVisible AND not dismissed
-  const barActive = ctaVisible && !ctaDismissed;
-  // bottom-4 = 16px, Patreon bar ≈ 40px → bump to 56px (3.5rem) when active
-  const bottomStyle = barActive
-    ? { bottom: "3.5rem",  transition: "bottom 1s ease" }
-    : { bottom: "1rem",    transition: "bottom 1s ease" };
-
   // Auto-expand when a new roll arrives and auto-select the latest
   const lastId = log[0]?.id;
-  const prevLastIdRef = React.useRef<string | null>(null);
-  React.useEffect(() => {
+  const prevLastIdRef = useRef<string | null>(null);
+  useEffect(() => {
     if (lastId && lastId !== prevLastIdRef.current) {
       prevLastIdRef.current = lastId;
       setSelectedId(lastId);
@@ -337,120 +570,147 @@ export function DiceLog({ characterName }: { characterName?: string } = {}) {
 
   return (
     <div
-      className="fixed left-4 z-40 flex flex-col items-start"
-      style={bottomStyle}
+      className="fixed z-40 flex flex-col items-start bottom-4 left-4"
       aria-label="Dice roll log"
     >
-      {/* Expanded panel */}
-      {isExpanded && (
-        <div
-          className="
-            mb-2 w-64 rounded-xl border border-[#577399]/30
-            bg-[#0d1610] shadow-2xl
-            flex flex-col overflow-hidden
-            max-h-[70vh]
-          "
-        >
-          {/* Panel header */}
-          <div className="flex items-center justify-between border-b border-[#577399]/20 px-3 py-2">
-            <span className="text-xs font-semibold uppercase tracking-widest text-[#577399]">
-              Dice Log
-            </span>
-            <div className="flex items-center gap-1">
+      {/* Expanded panel — accordion style, grows upward from the toggle */}
+      <div
+        className={[
+          "w-64 rounded-xl border border-[#577399]/30",
+          "bg-[#0d1610] shadow-2xl",
+          "flex flex-col overflow-hidden",
+          // Smooth expand/collapse via max-height + opacity transition
+          "transition-all duration-300 ease-in-out origin-bottom",
+          isExpanded
+            ? "max-h-[70vh] opacity-100 mb-2"
+            : "max-h-0 opacity-0 mb-0 border-transparent",
+        ].join(" ")}
+        aria-hidden={!isExpanded}
+      >
+        {/* Panel header */}
+        <div className="flex items-center justify-between border-b border-[#577399]/20 px-3 py-2 shrink-0">
+          <span className="text-xs font-semibold uppercase tracking-widest text-[#577399]">
+            Dice Log
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setShowCustom((v) => !v)}
+              aria-label={showCustom ? "Hide custom roll" : "Custom roll"}
+              aria-pressed={showCustom}
+              title="Custom roll"
+              className={[
+                "rounded px-2 py-0.5 text-[10px] font-semibold transition-colors focus:outline-none focus:ring-1 focus:ring-[#577399]",
+                showCustom
+                  ? "bg-[#577399]/20 text-[#577399]"
+                  : "text-[#b9baa3]/60 hover:text-[#f7f7ff] hover:bg-[#577399]/10",
+              ].join(" ")}
+            >
+              + Custom
+            </button>
+            {log.length > 0 && (
               <button
                 type="button"
-                onClick={() => setShowCustom((v) => !v)}
-                aria-label={showCustom ? "Hide custom roll" : "Custom roll"}
-                aria-pressed={showCustom}
-                title="Custom roll"
-                className={[
-                  "rounded px-2 py-0.5 text-[11px] font-semibold transition-colors focus:outline-none focus:ring-1 focus:ring-[#577399]",
-                  showCustom
-                    ? "bg-[#577399]/20 text-[#577399]"
-                    : "text-[#b9baa3]/60 hover:text-[#f7f7ff] hover:bg-[#577399]/10",
-                ].join(" ")}
+                onClick={clearLog}
+                aria-label="Clear dice log"
+                className="rounded px-2 py-0.5 text-[10px] font-semibold text-[#b9baa3]/60 hover:text-[#fe5f55] hover:bg-[#fe5f55]/10 transition-colors focus:outline-none focus:ring-1 focus:ring-[#fe5f55]"
               >
-                + Custom
+                Clear
               </button>
-              {log.length > 0 && (
-                <button
-                  type="button"
-                  onClick={clearLog}
-                  aria-label="Clear dice log"
-                  className="rounded px-2 py-0.5 text-[11px] font-semibold text-[#b9baa3]/60 hover:text-[#fe5f55] hover:bg-[#fe5f55]/10 transition-colors focus:outline-none focus:ring-1 focus:ring-[#fe5f55]"
-                >
-                  Clear
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setIsExpanded(false)}
-                aria-label="Collapse dice log"
-                className="rounded p-0.5 text-[#b9baa3]/60 hover:text-[#f7f7ff] transition-colors focus:outline-none focus:ring-1 focus:ring-[#577399]"
-              >
-                <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
-                  <path d="M4 10l4-4 4 4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          {/* Custom roll tray */}
-          {showCustom && (
-            <CustomRollTray onRoll={() => setShowCustom(false)} characterName={characterName} />
-          )}
-
-          {/* Roll list */}
-          <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1.5">
-            {log.length === 0 ? (
-              <p className="text-xs text-[#b9baa3]/50 italic text-center py-4">
-                No rolls yet.
-              </p>
-            ) : (
-              log.map((result) => (
-                <div key={result.id}>
-                  <LogEntry
-                    result={result}
-                    isSelected={selectedId === result.id}
-                    onClick={() =>
-                      setSelectedId((prev) => (prev === result.id ? null : result.id))
-                    }
-                  />
-                  {selectedId === result.id && (
-                    <LogEntryDetail result={result} />
-                  )}
-                </div>
-              ))
             )}
+            <button
+              type="button"
+              onClick={() => setIsExpanded(false)}
+              aria-label="Collapse dice log"
+              className="rounded p-0.5 text-[#b9baa3]/60 hover:text-[#f7f7ff] transition-colors focus:outline-none focus:ring-1 focus:ring-[#577399]"
+            >
+              <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
+                <path d="M4 10l4-4 4 4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
           </div>
         </div>
-      )}
 
-      {/* Collapse toggle button */}
+        {/* Custom roll tray */}
+        {showCustom && (
+          <CustomRollTray onRoll={() => setShowCustom(false)} characterName={characterName} />
+        )}
+
+        {/* Roll list */}
+        <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1.5">
+          {log.length === 0 ? (
+            <p className="text-xs text-[#b9baa3]/50 italic text-center py-4">
+              No rolls yet.
+            </p>
+          ) : (
+            log.map((result) => (
+              <div key={result.id}>
+                <LogEntry
+                  result={result}
+                  isSelected={selectedId === result.id}
+                  onClick={() =>
+                    setSelectedId((prev) => (prev === result.id ? null : result.id))
+                  }
+                />
+                {selectedId === result.id && (
+                  <LogEntryDetail result={result} />
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Collapse toggle button — 44px minimum touch target (WCAG 2.5.5) */}
       <button
         type="button"
         onClick={() => setIsExpanded((v) => !v)}
         aria-label={isExpanded ? "Collapse dice log" : "Open dice log"}
         aria-expanded={isExpanded}
         className="
-          relative flex h-[3.75rem] w-[3.75rem] items-center justify-center rounded-full
-          border-2 border-amber-500/50 bg-[#0d1610] shadow-lg
-          text-amber-500 hover:border-amber-500 hover:text-[#f7f7ff] hover:bg-[#0f1d17]
+          relative flex h-11 w-11 items-center justify-center rounded-full
+          border border-[#577399]/40 bg-[#0d1610] shadow-lg
+          text-[#577399] hover:border-[#577399] hover:text-[#f7f7ff] hover:bg-[#0f1d17]
           transition-all duration-150
-          focus:outline-none focus:ring-2 focus:ring-amber-500
+          focus:outline-none focus:ring-2 focus:ring-[#577399]
         "
       >
-        <DieIcon className="h-[39px] w-[39px]" />
+        <DieIcon className="h-[26px] w-[26px]" />
         {/* Roll count badge */}
         {log.length > 0 && (
           <span
             aria-hidden="true"
-            className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[11px] font-bold text-slate-900 leading-none"
+            className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#577399] px-1 text-[9px] font-bold text-white leading-none"
           >
             {log.length > 99 ? "99+" : log.length}
           </span>
         )}
       </button>
     </div>
+  );
+}
+
+// ─── Main export ──────────────────────────────────────────────────────────────
+
+export function DiceLog({
+  characterName,
+  mobileBottomOffset = 0,
+}: {
+  characterName?: string;
+  mobileBottomOffset?: number;
+} = {}) {
+  return (
+    <>
+      {/* Mobile (< sm): docked strip above bottom nav */}
+      <MobileDiceStrip
+        characterName={characterName}
+        mobileBottomOffset={mobileBottomOffset}
+      />
+
+      {/* Desktop (sm+): existing floating panel at bottom-left */}
+      <div className="hidden sm:block">
+        <DesktopDiceLog characterName={characterName} />
+      </div>
+    </>
   );
 }

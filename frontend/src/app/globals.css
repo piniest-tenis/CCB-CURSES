@@ -276,3 +276,23 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* ─── Dice Strip Flash ────────────────────────────────────────────────────────
+   Brief background pulse when a new roll arrives on the mobile docked strip.
+   Used by MobileDiceStrip in DiceLog.tsx.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+@keyframes dice-strip-flash {
+  0%  { background-color: rgba(87, 115, 153, 0.2); }
+  100% { background-color: transparent; }
+}
+
+.animate-dice-strip-flash {
+  animation: dice-strip-flash 400ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-dice-strip-flash {
+    animation: none;
+  }
+}

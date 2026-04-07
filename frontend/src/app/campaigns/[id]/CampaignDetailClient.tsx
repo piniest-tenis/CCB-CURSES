@@ -1402,7 +1402,7 @@ export default function CampaignDetailClient() {
           className="
             fixed z-40
             bottom-[calc(56px+env(safe-area-inset-bottom)+12px)]
-            left-4
+            right-4
             sm:hidden
             inline-flex items-center gap-2
             rounded-full px-4 py-2
@@ -1436,8 +1436,8 @@ export default function CampaignDetailClient() {
         />
       )}
 
-      {/* Dice log overlay (fixed lower-left) */}
-      <DiceLog characterName={isGm ? "GM" : undefined} />
+      {/* Dice log — mobile: docked strip above bottom nav; desktop: floating panel */}
+      <DiceLog characterName={isGm ? "GM" : undefined} mobileBottomOffset={isGm ? 56 : 0} />
 
       {/* GM 3D dice roller panel */}
       {isGm && (
