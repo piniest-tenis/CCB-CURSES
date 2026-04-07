@@ -48,6 +48,7 @@ import {
 import { EquipmentPanel } from "./EquipmentPanel";
 import { FavorsPanel } from "./FavorsPanel";
 import { PortraitDisplay } from "./PortraitUpload";
+import { isHomebrewId, deletedHomebrewLabel } from "@/lib/homebrewUtils";
 import { DiceRollerPanel } from "@/components/dice/DiceRollerPanel";
 import { DiceLog } from "@/components/dice/DiceLog";
 import { useDiceStore } from "@/store/diceStore";
@@ -600,16 +601,25 @@ function SheetHeader({
   const communityName =
     communitiesData?.communities.find(
       (c) => c.communityId === activeCharacter.communityId,
-    )?.name ?? "Unknown";
+    )?.name ??
+    (isHomebrewId(activeCharacter.communityId)
+      ? deletedHomebrewLabel(activeCharacter.communityName, activeCharacter.communityId)
+      : "Unknown");
 
   const ancestryName =
     ancestriesData?.ancestries.find(
       (a) => a.ancestryId === activeCharacter.ancestryId,
-    )?.name ?? "Unknown";
+    )?.name ??
+    (isHomebrewId(activeCharacter.ancestryId)
+      ? deletedHomebrewLabel(activeCharacter.ancestryName, activeCharacter.ancestryId)
+      : "Unknown");
 
   const className =
     classesData?.classes.find((c) => c.classId === activeCharacter.classId)
-      ?.name ?? "Unknown";
+      ?.name ??
+    (isHomebrewId(activeCharacter.classId)
+      ? deletedHomebrewLabel(activeCharacter.className, activeCharacter.classId)
+      : "Unknown");
 
   const multiclassClassName = activeCharacter.multiclassClassId
     ? (classesData?.classes.find(
@@ -639,6 +649,30 @@ function SheetHeader({
     ? `${classDisplay} (${subclassName})`
     : classDisplay;
 
+  // Detect deleted homebrew references
+  const deletedHomebrewItems: string[] = [];
+  if (
+    activeCharacter.classId &&
+    isHomebrewId(activeCharacter.classId) &&
+    !classesData?.classes.find((c) => c.classId === activeCharacter.classId)
+  ) {
+    deletedHomebrewItems.push(`Class: ${activeCharacter.className || activeCharacter.classId}`);
+  }
+  if (
+    activeCharacter.ancestryId &&
+    isHomebrewId(activeCharacter.ancestryId) &&
+    !ancestriesData?.ancestries.find((a) => a.ancestryId === activeCharacter.ancestryId)
+  ) {
+    deletedHomebrewItems.push(`Ancestry: ${activeCharacter.ancestryName || activeCharacter.ancestryId}`);
+  }
+  if (
+    activeCharacter.communityId &&
+    isHomebrewId(activeCharacter.communityId) &&
+    !communitiesData?.communities.find((c) => c.communityId === activeCharacter.communityId)
+  ) {
+    deletedHomebrewItems.push(`Community: ${activeCharacter.communityName || activeCharacter.communityId}`);
+  }
+
   // Conditions collapsed display
   const activeConditionLabels = activeConditions.map((id) => {
     const custom = customConditions.find((c) => c.conditionId === id);
@@ -650,6 +684,24 @@ function SheetHeader({
 
   return (
     <div className="space-y-4">
+      {/* Deleted homebrew warning banner */}
+      {deletedHomebrewItems.length > 0 && (
+        <div
+          role="alert"
+          className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-amber-400/90"
+        >
+          <p className="font-semibold">Some homebrew content used by this character has been deleted:</p>
+          <ul className="list-disc pl-5 mt-1 space-y-0.5 text-xs">
+            {deletedHomebrewItems.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+          <p className="mt-1.5 text-xs text-amber-400/70">
+            Use the character builder to select replacement content, or re-create the homebrew.
+          </p>
+        </div>
+      )}
+
       {/* Portrait */}
       <PortraitDisplay characterId={characterId} />
 

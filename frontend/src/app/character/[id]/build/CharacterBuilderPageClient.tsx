@@ -41,6 +41,7 @@ import { StartingEquipmentPanel, type StartingEquipmentSelections } from "@/comp
 import { DomainCardSelectionPanel } from "@/components/character/DomainCardSelectionPanel";
 import { ALL_TIER1_WEAPONS, TIER1_ARMOR, UNIVERSAL_STARTING_ITEMS, STARTING_GOLD } from "@/lib/srdEquipment";
 import { loadBuilderDraft, useBuilderSessionStorage } from "@/hooks/useBuilderSessionStorage";
+import { isHomebrewId } from "@/lib/homebrewUtils";
 
 // ─── DomainCardName ─────────────────────────────────────────────────────────
 // Small component that resolves a "domain/cardId" string to a human-friendly name.
@@ -620,6 +621,48 @@ export default function CharacterBuilderPageClient({ params: _params }: Characte
             </p>
           </div>
           
+          {/* Deleted homebrew warning — shown when character references homebrew content not found in any list */}
+          {(() => {
+            const missing: string[] = [];
+            if (
+              classId &&
+              isHomebrewId(classId) &&
+              classesData &&
+              !classesData.classes.find((c) => c.classId === classId)
+            ) {
+              missing.push(`Class (${character.className || classId})`);
+            }
+            if (
+              ancestryId &&
+              isHomebrewId(ancestryId) &&
+              ancestriesData &&
+              !ancestriesData.ancestries.find((a) => a.ancestryId === ancestryId)
+            ) {
+              missing.push(`Ancestry (${character.ancestryName || ancestryId})`);
+            }
+            if (
+              communityId &&
+              isHomebrewId(communityId) &&
+              communitiesData &&
+              !communitiesData.communities.find((c) => c.communityId === communityId)
+            ) {
+              missing.push(`Community (${character.communityName || communityId})`);
+            }
+            if (missing.length === 0) return null;
+            return (
+              <div
+                role="alert"
+                className="mx-4 sm:mx-6 mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-2.5 text-xs text-amber-400/90 shrink-0"
+              >
+                <p className="font-semibold text-sm">Deleted homebrew detected</p>
+                <p className="mt-0.5">
+                  {missing.join(", ")} {missing.length === 1 ? "was" : "were"} deleted.
+                  Please select a replacement in the relevant step.
+                </p>
+              </div>
+            );
+          })()}
+
           {/* Content */}
           <div className="flex flex-1 min-h-0 overflow-hidden">
             {/* Main step content */}

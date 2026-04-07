@@ -28,6 +28,8 @@ import {
   useParsePreview,
   type HomebrewItemData,
 } from "@/hooks/useHomebrew";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { INPUT_CLS, LABEL_CLS, BTN_SECONDARY } from "@/components/homebrew/styles";
 import type { HomebrewContentType, HomebrewMarkdownInput } from "@shared/types";
 
 // ─── Template definitions ─────────────────────────────────────────────────────
@@ -277,16 +279,6 @@ const TYPE_LABELS: Record<HomebrewContentType, string> = {
   domainCard: "Domain Card",
 };
 
-// ─── Styling ──────────────────────────────────────────────────────────────────
-
-const INPUT_CLS =
-  "w-full rounded-lg border border-slate-700/60 bg-slate-900/60 px-3 py-2 text-sm text-[#f7f7ff] placeholder:text-parchment-600 focus:outline-none focus:ring-2 focus:ring-coral-400/50 focus:border-coral-400/50 transition-colors";
-
-const LABEL_CLS = "block text-sm font-medium text-parchment-500 mb-1";
-
-const BTN_SECONDARY =
-  "rounded-lg border border-slate-700/60 px-4 py-2 text-sm text-parchment-500 hover:text-[#b9baa3] hover:border-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-coral-400/50";
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function HomebrewUploadPage() {
@@ -309,6 +301,9 @@ export default function HomebrewUploadPage() {
 
   const createMutation = useCreateHomebrew();
   const parseMutation = useParsePreview();
+  const { markDirty, markClean } = useUnsavedChanges({
+    storageKey: "hb-draft-upload",
+  });
 
   // Auth guard
   useEffect(() => {
@@ -337,24 +332,26 @@ export default function HomebrewUploadPage() {
   // ── Preview ─────────────────────────────────────────────────────────────
   const handlePreview = useCallback(async () => {
     if (!name.trim() || !markdown.trim()) return;
+    markDirty({ contentType, name, markdown });
     try {
       const result = await parseMutation.mutateAsync(buildInput());
       setPreviewData(result.data);
     } catch {
       // Preview failure is non-fatal
     }
-  }, [name, markdown, parseMutation, buildInput]);
+  }, [name, markdown, contentType, parseMutation, buildInput, markDirty]);
 
   // ── Submit ──────────────────────────────────────────────────────────────
   const handleSubmit = useCallback(async () => {
     if (!name.trim() || !markdown.trim()) return;
     try {
       await createMutation.mutateAsync(buildInput());
+      markClean();
       router.push("/homebrew");
     } catch {
       // Error displayed via mutation state
     }
-  }, [name, markdown, createMutation, buildInput, router]);
+  }, [name, markdown, createMutation, buildInput, router, markClean]);
 
   // ── File reading ────────────────────────────────────────────────────────
   const readFile = useCallback((file: File) => {

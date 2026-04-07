@@ -17,6 +17,7 @@
 
 import React, { useCallback, useId, useMemo, useState } from "react";
 import type { HomebrewMarkdownInput } from "@shared/types";
+import { INPUT_CLS, LABEL_CLS, TEXTAREA_CLS, BTN_PRIMARY, BTN_SECONDARY, SOFT_WARNING_CLS } from "./styles";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -101,24 +102,22 @@ const TRAIT_OPTIONS = [
   "knowledge",
 ];
 
-const INPUT_CLS =
-  "w-full rounded-lg border border-slate-700/60 bg-slate-900/60 px-3 py-2 text-sm text-[#f7f7ff] placeholder:text-parchment-600 focus:outline-none focus:ring-2 focus:ring-coral-400/50 focus:border-coral-400/50 transition-colors";
-
-const LABEL_CLS = "block text-sm font-medium text-parchment-500 mb-1";
-
-const TEXTAREA_CLS = `${INPUT_CLS} resize-none`;
-
-const BTN_PRIMARY =
-  "rounded-xl border border-coral-400/60 bg-coral-400/10 px-5 py-2.5 font-semibold text-base text-coral-400 hover:bg-coral-400/20 hover:border-coral-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all focus:outline-none focus:ring-2 focus:ring-coral-400 focus:ring-offset-2 focus:ring-offset-[#0a100d]";
-
-const BTN_SECONDARY =
-  "rounded-lg border border-slate-700/60 px-4 py-2 text-sm text-parchment-500 hover:text-[#b9baa3] hover:border-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-coral-400/50";
-
 const EMPTY_FEATURE: ClassFeatureEntry = {
   name: "",
   description: "",
   options: [],
 };
+
+// ─── SRD stat ranges (SRD p.30) ──────────────────────────────────────────────
+// All official SRD classes fall within these bounds.
+// The form enforces these as hard limits on inputs.
+
+const SRD_HP_MIN = 5;
+const SRD_HP_MAX = 7;
+const SRD_EVASION_MIN = 9;
+const SRD_EVASION_MAX = 12;
+const SRD_SUM_MIN = 15;
+const SRD_SUM_MAX = 18;
 
 const EMPTY_SUBCLASS: SubclassEntry = {
   name: "",
@@ -550,26 +549,30 @@ export function ClassWizard({
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div>
-              <label htmlFor={`${idPrefix}-hp`} className={LABEL_CLS}>Base HP</label>
+              <label htmlFor={`${idPrefix}-hp`} className={LABEL_CLS}>
+                Base HP <span className="font-normal text-parchment-600">({SRD_HP_MIN}-{SRD_HP_MAX})</span>
+              </label>
               <input
                 id={`${idPrefix}-hp`}
                 type="number"
-                min={1}
-                max={20}
+                min={SRD_HP_MIN}
+                max={SRD_HP_MAX}
                 value={baseHp}
-                onChange={(e) => setBaseHp(Number(e.target.value))}
+                onChange={(e) => setBaseHp(Math.max(SRD_HP_MIN, Math.min(SRD_HP_MAX, Number(e.target.value))))}
                 className={INPUT_CLS}
               />
             </div>
             <div>
-              <label htmlFor={`${idPrefix}-ev`} className={LABEL_CLS}>Evasion</label>
+              <label htmlFor={`${idPrefix}-ev`} className={LABEL_CLS}>
+                Evasion <span className="font-normal text-parchment-600">({SRD_EVASION_MIN}-{SRD_EVASION_MAX})</span>
+              </label>
               <input
                 id={`${idPrefix}-ev`}
                 type="number"
-                min={1}
-                max={30}
+                min={SRD_EVASION_MIN}
+                max={SRD_EVASION_MAX}
                 value={evasion}
-                onChange={(e) => setEvasion(Number(e.target.value))}
+                onChange={(e) => setEvasion(Math.max(SRD_EVASION_MIN, Math.min(SRD_EVASION_MAX, Number(e.target.value))))}
                 className={INPUT_CLS}
               />
             </div>
@@ -596,6 +599,36 @@ export function ClassWizard({
               />
             </div>
           </div>
+
+          {/* ── Balance guardrails (soft warnings) ──────────────────── */}
+          {(() => {
+            const statSum = baseHp + evasion;
+            const warnings: string[] = [];
+            if (statSum < SRD_SUM_MIN || statSum > SRD_SUM_MAX) {
+              warnings.push(
+                `HP + Evasion total is ${statSum}. SRD classes range from ${SRD_SUM_MIN} to ${SRD_SUM_MAX}; consider adjusting for balance.`
+              );
+            }
+            if (baseHp === SRD_HP_MAX && evasion === SRD_EVASION_MAX) {
+              warnings.push(
+                "Both HP and Evasion are at their maximums. This may make the class overly durable."
+              );
+            }
+            if (majorThreshold >= severeThreshold) {
+              warnings.push(
+                "Major threshold should be lower than severe threshold."
+              );
+            }
+            if (warnings.length === 0) return null;
+            return (
+              <div className={SOFT_WARNING_CLS}>
+                <p className="font-semibold mb-1">Balance Notes</p>
+                <ul className="list-disc pl-4 space-y-0.5">
+                  {warnings.map((w, i) => <li key={i}>{w}</li>)}
+                </ul>
+              </div>
+            );
+          })()}
 
           {/* Hope Feature */}
           <fieldset className="space-y-3 rounded-lg border border-slate-700/40 p-4">
@@ -1079,6 +1112,40 @@ export function ClassWizard({
               </div>
             )}
           </div>
+
+          {/* ── Review balance warnings ────────────────────────────── */}
+          {(() => {
+            const warnings: string[] = [];
+            const statSum = baseHp + evasion;
+            if (statSum < SRD_SUM_MIN || statSum > SRD_SUM_MAX) {
+              warnings.push(
+                `HP + Evasion total is ${statSum} (SRD range: ${SRD_SUM_MIN}-${SRD_SUM_MAX}).`
+              );
+            }
+            if (majorThreshold >= severeThreshold) {
+              warnings.push("Major threshold should be lower than severe threshold.");
+            }
+            if (summaryFeatures.length === 0) {
+              warnings.push("No class features defined. All SRD classes have at least one.");
+            }
+            if (summarySubclasses.length < 2) {
+              warnings.push(
+                `Only ${summarySubclasses.length} subclass(es). SRD classes typically have 2-3.`
+              );
+            }
+            if (!hopeName.trim()) {
+              warnings.push("No Hope feature defined. All SRD classes have a Hope feature.");
+            }
+            if (warnings.length === 0) return null;
+            return (
+              <div className={SOFT_WARNING_CLS}>
+                <p className="font-semibold mb-1">Balance Summary</p>
+                <ul className="list-disc pl-4 space-y-0.5">
+                  {warnings.map((w, i) => <li key={i}>{w}</li>)}
+                </ul>
+              </div>
+            );
+          })()}
 
           {/* Final submit */}
           <div className="text-center">

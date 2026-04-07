@@ -20,6 +20,7 @@ import {
   useParsePreview,
   type HomebrewItemData,
 } from "@/hooks/useHomebrew";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import type {
   HomebrewContentType,
   HomebrewMarkdownInput,
@@ -128,6 +129,9 @@ export default function HomebrewEditClient() {
   const detailQuery = useHomebrewDetail(contentType, id);
   const updateMutation = useUpdateHomebrew();
   const parseMutation = useParsePreview();
+  const { markDirty, markClean } = useUnsavedChanges({
+    storageKey: `hb-draft-edit-${type}-${id}`,
+  });
 
   // Preview data state
   const [previewData, setPreviewData] = useState<HomebrewItemData | null>(null);
@@ -135,6 +139,7 @@ export default function HomebrewEditClient() {
   // ── Handle parse preview ────────────────────────────────────────────────
   const handlePreview = useCallback(
     async (input: HomebrewMarkdownInput) => {
+      markDirty(input);
       try {
         const result = await parseMutation.mutateAsync(input);
         setPreviewData(result.data);
@@ -142,7 +147,7 @@ export default function HomebrewEditClient() {
         // Preview failures are non-fatal
       }
     },
-    [parseMutation]
+    [parseMutation, markDirty]
   );
 
   // ── Handle submit ───────────────────────────────────────────────────────
@@ -155,12 +160,13 @@ export default function HomebrewEditClient() {
           id,
           body: input,
         });
+        markClean();
         router.push("/homebrew");
       } catch {
         // Error is displayed via updateMutation.isError
       }
     },
-    [contentType, id, updateMutation, router]
+    [contentType, id, updateMutation, router, markClean]
   );
 
   // ── Invalid type guard ──────────────────────────────────────────────────

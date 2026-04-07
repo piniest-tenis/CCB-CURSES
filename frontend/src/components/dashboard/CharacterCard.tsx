@@ -10,6 +10,7 @@
 
 import React, { useState } from "react";
 import type { CharacterSummary } from "@shared/types";
+import { isHomebrewId } from "@/lib/homebrewUtils";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -55,6 +56,13 @@ export function CharacterCard({
   const meta = [character.ancestryName, character.communityName]
     .filter(Boolean)
     .join(" · ");
+
+  // Check if any denormalized name is actually a raw homebrew ID (backend fallback
+  // when the referenced homebrew has been deleted)
+  const hasDeletedHomebrew =
+    isHomebrewId(character.className) ||
+    isHomebrewId(character.ancestryName) ||
+    isHomebrewId(character.communityName);
 
   return (
     <div
@@ -108,6 +116,11 @@ export function CharacterCard({
           )}
           {meta && (
             <p className="text-xs text-parchment-600 mt-0.5 truncate">{meta}</p>
+          )}
+          {hasDeletedHomebrew && (
+            <p className="text-xs text-amber-400/80 mt-0.5 truncate" title="Some homebrew content used by this character has been deleted">
+              Missing homebrew content
+            </p>
           )}
           <p className="text-xs text-parchment-600 mt-0.5">
             {relativeDate(character.updatedAt)}

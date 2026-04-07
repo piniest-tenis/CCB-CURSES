@@ -16,6 +16,7 @@
 import React, { useCallback, useId, useMemo, useState } from "react";
 import type { HomebrewMarkdownInput } from "@shared/types";
 import { useDomains } from "@/hooks/useGameData";
+import { INPUT_CLS, LABEL_CLS, TEXTAREA_CLS, BTN_SECONDARY, SOFT_WARNING_CLS } from "./styles";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,18 +41,6 @@ export interface DomainCardFormProps {
   /** Label override for the submit button (defaults to "Create Domain Card"). */
   submitLabel?: string;
 }
-
-// ─── Styling constants ────────────────────────────────────────────────────────
-
-const INPUT_CLS =
-  "w-full rounded-lg border border-slate-700/60 bg-slate-900/60 px-3 py-2 text-sm text-[#f7f7ff] placeholder:text-parchment-600 focus:outline-none focus:ring-2 focus:ring-coral-400/50 focus:border-coral-400/50 transition-colors";
-
-const LABEL_CLS = "block text-sm font-medium text-parchment-500 mb-1";
-
-const TEXTAREA_CLS = `${INPUT_CLS} resize-none`;
-
-const BTN_SECONDARY =
-  "rounded-lg border border-slate-700/60 px-4 py-2 text-sm text-parchment-500 hover:text-[#b9baa3] hover:border-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-coral-400/50";
 
 // ─── Level options ────────────────────────────────────────────────────────────
 
@@ -338,6 +327,41 @@ export function DomainCardForm({
           </div>
         )}
       </div>
+
+      {/* ── Balance guardrails (soft warnings) ──────────────────────── */}
+      {(() => {
+        const warnings: string[] = [];
+        const rc = recallCost === "" ? level : recallCost;
+        if (rc > level + 2) {
+          warnings.push(
+            `Recall cost (${rc}) is much higher than card level (${level}). Most SRD cards have recall cost equal to or near their level.`
+          );
+        }
+        if (rc === 0 && level >= 3) {
+          warnings.push(
+            "A recall cost of 0 on a level 3+ card makes it very easy to recover. Consider whether this is intentional."
+          );
+        }
+        if (level >= 7 && description.trim().length < 40) {
+          warnings.push(
+            "High-level cards (7+) typically have longer, more detailed ability descriptions."
+          );
+        }
+        if (isCursed && !isLinkedCurse && level <= 2) {
+          warnings.push(
+            "Cursed cards at low levels can be punishing for new characters. Consider making this a linked curse or raising the level."
+          );
+        }
+        if (warnings.length === 0) return null;
+        return (
+          <div className={SOFT_WARNING_CLS}>
+            <p className="font-semibold mb-1">Balance Notes</p>
+            <ul className="list-disc pl-4 space-y-0.5">
+              {warnings.map((w, i) => <li key={i}>{w}</li>)}
+            </ul>
+          </div>
+        );
+      })()}
 
       {/* ── Actions ────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-3 border-t border-slate-700/40 pt-5">

@@ -22,6 +22,7 @@ import React, { useCallback, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCreateHomebrew, useParsePreview } from "@/hooks/useHomebrew";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import type { HomebrewContentType, HomebrewMarkdownInput } from "@shared/types";
 import type { HomebrewItemData } from "@/hooks/useHomebrew";
 
@@ -53,6 +54,9 @@ export default function HomebrewCreateClient() {
   const router = useRouter();
   const createMutation = useCreateHomebrew();
   const parseMutation = useParsePreview();
+  const { markDirty, markClean } = useUnsavedChanges({
+    storageKey: `hb-draft-new-${type}`,
+  });
 
   // Preview data state
   const [previewData, setPreviewData] = useState<HomebrewItemData | null>(null);
@@ -60,6 +64,7 @@ export default function HomebrewCreateClient() {
   // ── Handle parse preview ────────────────────────────────────────────────
   const handlePreview = useCallback(
     async (input: HomebrewMarkdownInput) => {
+      markDirty(input);
       try {
         const result = await parseMutation.mutateAsync(input);
         setPreviewData(result.data);
@@ -67,7 +72,7 @@ export default function HomebrewCreateClient() {
         // Preview failures are non-fatal — the user can still submit
       }
     },
-    [parseMutation]
+    [parseMutation, markDirty]
   );
 
   // ── Handle submit ───────────────────────────────────────────────────────
@@ -75,12 +80,13 @@ export default function HomebrewCreateClient() {
     async (input: HomebrewMarkdownInput) => {
       try {
         await createMutation.mutateAsync(input);
+        markClean();
         router.push("/homebrew");
       } catch {
         // Error is displayed via createMutation.isError
       }
     },
-    [createMutation, router]
+    [createMutation, router, markClean]
   );
 
   // ── Invalid type guard ──────────────────────────────────────────────────

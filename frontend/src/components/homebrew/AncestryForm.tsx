@@ -19,6 +19,7 @@
 
 import React, { useCallback, useId, useMemo, useState } from "react";
 import type { HomebrewMarkdownInput, MechanicalBonus } from "@shared/types";
+import { INPUT_CLS, LABEL_CLS, TEXTAREA_CLS, BTN_SECONDARY, SOFT_WARNING_CLS } from "./styles";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -49,17 +50,7 @@ interface BonusRow {
   condition: string;
 }
 
-// ─── Styling constants ────────────────────────────────────────────────────────
-
-const INPUT_CLS =
-  "w-full rounded-lg border border-slate-700/60 bg-slate-900/60 px-3 py-2 text-sm text-[#f7f7ff] placeholder:text-parchment-600 focus:outline-none focus:ring-2 focus:ring-coral-400/50 focus:border-coral-400/50 transition-colors";
-
-const LABEL_CLS = "block text-sm font-medium text-parchment-500 mb-1";
-
-const TEXTAREA_CLS = `${INPUT_CLS} resize-none`;
-
-const BTN_SECONDARY =
-  "rounded-lg border border-slate-700/60 px-4 py-2 text-sm text-parchment-500 hover:text-[#b9baa3] hover:border-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-coral-400/50";
+// ─── Stat options ─────────────────────────────────────────────────────────────
 
 const STAT_OPTIONS: MechanicalBonus["stat"][] = [
   "armor",
@@ -357,6 +348,40 @@ export function AncestryForm({
           </div>
         ))}
       </div>
+
+      {/* ── Balance guardrails (soft warnings) ──────────────────────── */}
+      {(() => {
+        const warnings: string[] = [];
+        if (traitName.trim() && !traitDescription.trim()) {
+          warnings.push(
+            "Feature 1 has a name but no description. Players will need to know what it does."
+          );
+        }
+        if (secondTraitName.trim() && !secondTraitDescription.trim()) {
+          warnings.push(
+            "Feature 2 has a name but no description. Players will need to know what it does."
+          );
+        }
+        if (!secondTraitName.trim() && traitName.trim()) {
+          warnings.push(
+            "SRD ancestries have exactly 2 features. Consider adding a second feature for balance parity."
+          );
+        }
+        if (bonuses.length > 3) {
+          warnings.push(
+            `${bonuses.length} mechanical bonuses is unusually high. SRD ancestries typically have 0-2 bonuses.`
+          );
+        }
+        if (warnings.length === 0) return null;
+        return (
+          <div className={SOFT_WARNING_CLS}>
+            <p className="font-semibold mb-1">Balance Notes</p>
+            <ul className="list-disc pl-4 space-y-0.5">
+              {warnings.map((w, i) => <li key={i}>{w}</li>)}
+            </ul>
+          </div>
+        );
+      })()}
 
       {/* ── Actions ────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-3 border-t border-slate-700/40 pt-5">
