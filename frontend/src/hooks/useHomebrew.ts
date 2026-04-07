@@ -76,12 +76,19 @@ export interface DeleteHomebrewInput {
 }
 
 // ─── useHomebrewList ──────────────────────────────────────────────────────────
-// GET /homebrew/mine — returns HomebrewSummary[]
+// GET /homebrew/mine — returns { items: HomebrewSummary[] }
+
+interface HomebrewListResponse {
+  items: HomebrewSummary[];
+}
 
 export function useHomebrewList(): UseQueryResult<HomebrewSummary[]> {
   return useQuery({
     queryKey: homebrewKeys.mine(),
-    queryFn:  () => apiClient.get<HomebrewSummary[]>("/homebrew/mine"),
+    queryFn:  async () => {
+      const res = await apiClient.get<HomebrewListResponse>("/homebrew/mine");
+      return res.items;
+    },
     staleTime: 60_000,
   });
 }
