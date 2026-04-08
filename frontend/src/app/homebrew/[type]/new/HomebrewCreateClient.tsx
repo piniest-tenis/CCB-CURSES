@@ -22,6 +22,7 @@
 import React, { useCallback, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useCreateHomebrew, useParsePreview } from "@/hooks/useHomebrew";
 import type { HomebrewInput } from "@/hooks/useHomebrew";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
@@ -33,10 +34,15 @@ import { MarkdownPreview, type PreviewData } from "@/components/homebrew/Markdow
 import { AncestryForm } from "@/components/homebrew/AncestryForm";
 import { CommunityForm } from "@/components/homebrew/CommunityForm";
 import { DomainCardForm } from "@/components/homebrew/DomainCardForm";
-import { ClassWizard } from "@/components/homebrew/ClassWizard";
 import { WeaponForm } from "@/components/homebrew/WeaponForm";
 import { ArmorForm } from "@/components/homebrew/ArmorForm";
 import { LootForm } from "@/components/homebrew/LootForm";
+
+// Lazy-load the 1,202-line ClassWizard — only needed when type === "class".
+const ClassWizard = dynamic(
+  () => import("@/components/homebrew/ClassWizard").then((m) => m.ClassWizard),
+  { ssr: false }
+);
 
 // ─── Valid content types ──────────────────────────────────────────────────────
 

@@ -7,20 +7,27 @@
  * initialises or a character is being fetched.
  *
  * Behaviour:
- * • Shows for a minimum of 3 seconds regardless of how fast loading finishes.
+ * • Shows for a minimum of 300 ms so the overlay doesn't flash.
  * • If the user clicks the card before it auto-dismisses, it stays up and
  *   reveals a "Continue →" button. The destination page is already rendered
  *   beneath the overlay.
  * • When loading finishes (isVisible → false) and the card has been clicked,
  *   the overlay fades to 15 % opacity rather than fully disappearing — the
  *   user then clicks Continue to dismiss it.
- * • If the user has not clicked, it dismisses normally once both the 3 s
- *   minimum and loading are done.
+ * • If the user has not clicked, it dismisses normally once both the minimum
+ *   time and loading are done.
  */
 
 import React, { useCallback, useEffect, useRef, useState, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { useCmsContent } from "@/hooks/useCmsContent";
-import { MarkdownContent } from "@/components/MarkdownContent";
+
+// Lazy-load MarkdownContent so react-markdown + remark-gfm (~144 KB) are not
+// in the critical path of every page.
+const MarkdownContent = dynamic(
+  () => import("@/components/MarkdownContent").then((m) => m.MarkdownContent),
+  { ssr: false }
+);
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -30,8 +37,10 @@ interface LoadingInterstitialProps {
 }
 
 // ─── Minimum display duration ─────────────────────────────────────────────────
+// Keep just enough time to avoid a jarring flash; the overlay dismisses as
+// soon as loading finishes (or after 300 ms, whichever is later).
 
-const MIN_VISIBLE_MS = 3000;
+const MIN_VISIBLE_MS = 300;
 
 // ─── Animated dot row ─────────────────────────────────────────────────────────
 
@@ -82,7 +91,7 @@ export function LoadingInterstitial({ isVisible }: LoadingInterstitialProps) {
   // Whether the user has clicked the card at least once.
   const [userClicked, setUserClicked] = useState(false);
 
-  // Whether the 3 s minimum has elapsed.
+  // Whether the minimum display time has elapsed.
   const [minElapsed, setMinElapsed] = useState(false);
 
   // Whether the parent has signalled loading is done.

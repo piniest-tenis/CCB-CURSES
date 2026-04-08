@@ -11,8 +11,14 @@
 import React, { Suspense, useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { handleGoogleCallback } from "@/lib/auth";
 import { useAuthStore } from "@/store/authStore";
+
+// Lazy-load the Cognito auth module so amazon-cognito-identity-js is not
+// in the initial bundle for this page.
+async function handleGoogleCallbackAsync(code: string) {
+  const { handleGoogleCallback } = await import("@/lib/auth");
+  return handleGoogleCallback(code);
+}
 
 function CallbackHandler() {
   const router = useRouter();
@@ -41,7 +47,7 @@ function CallbackHandler() {
       return;
     }
 
-    handleGoogleCallback(code).then(async (result) => {
+    handleGoogleCallbackAsync(code).then(async (result) => {
       if (result.ok && result.tokens) {
         await signInWithGoogle(result.tokens);
         router.replace("/dashboard");

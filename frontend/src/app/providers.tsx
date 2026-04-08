@@ -8,14 +8,39 @@
  */
 
 import React, { useEffect } from "react";
+import dynamic from "next/dynamic";
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useAuthStore } from "@/store/authStore";
 import { usePathname } from "next/navigation";
 import { ApiError, apiClient } from "@/lib/api";
-import { LoadingInterstitial } from "@/components/LoadingInterstitial";
-import { PatreonCTA, usePatreonCTAVisible } from "@/components/PatreonCTA";
+import { usePatreonCTAVisible } from "@/components/PatreonCTA";
 import type { UserProfile } from "@shared/types";
+
+// ── Lazy-loaded components ───────────────────────────────────────────────────
+// LoadingInterstitial transitively pulls in react-markdown + remark-gfm
+// (~144 KB) via MarkdownContent, and PatreonCTA is only shown on the dashboard.
+// Neither needs to be in the critical initial bundle.
+
+const LoadingInterstitial = dynamic(
+  () => import("@/components/LoadingInterstitial").then((m) => m.LoadingInterstitial),
+  { ssr: false }
+);
+
+const PatreonCTA = dynamic(
+  () => import("@/components/PatreonCTA").then((m) => m.PatreonCTA),
+  { ssr: false }
+);
+
+const ReactQueryDevtools =
+  process.env.NODE_ENV === "development"
+    ? dynamic(
+        () =>
+          import("@tanstack/react-query-devtools").then(
+            (m) => m.ReactQueryDevtools
+          ),
+        { ssr: false }
+      )
+    : () => null;
 
 // ── Global auth-error handler ────────────────────────────────────────────────
 // 401 = unauthenticated (bad/missing token) → sign out and send to login.
@@ -127,9 +152,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthInitializer>{children}</AuthInitializer>
-      {process.env.NODE_ENV === "development" && (
-        <ReactQueryDevtools initialIsOpen={false} />
-      )}
+      <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );
 }

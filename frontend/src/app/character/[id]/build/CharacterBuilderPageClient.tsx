@@ -24,11 +24,18 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useCharacter, useUpdateCharacter } from "@/hooks/useCharacter";
 import { useClass, useClasses, useAncestries, useCommunities, useDomainCard } from "@/hooks/useGameData";
 import type { Character, AncestryData, CommunityData, CoreStats, Experience } from "@shared/types";
-import { MarkdownContent } from "@/components/MarkdownContent";
 import { CollapsibleSRDDescription } from "@/components/character/CollapsibleSRDDescription";
+
+// Lazy-load MarkdownContent to avoid pulling react-markdown + remark-gfm
+// into the initial builder chunk.
+const MarkdownContent = dynamic(
+  () => import("@/components/MarkdownContent").then((m) => m.MarkdownContent),
+  { ssr: false }
+);
 import { SourceBadge } from "@/components/SourceBadge";
 import { SourceFilter, matchesSourceFilter, type SourceFilterValue } from "@/components/SourceFilter";
 import { useSourceFilterDefault } from "@/hooks/useSourceFilterDefault";

@@ -14,7 +14,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuthStore } from "@/store/authStore";
-import { startGoogleLogin } from "@/lib/auth";
 
 // ---------------------------------------------------------------------------
 // Schema
@@ -88,6 +87,7 @@ export default function LoginPage() {
       // Pass the store's current idToken so startGoogleLogin can detect an
       // existing SRP session and skip the OAuth redirect.
       const { idToken } = useAuthStore.getState();
+      const { startGoogleLogin } = await import("@/lib/auth");
       const outcome = await startGoogleLogin(idToken);
       // A valid session already exists in this browser (e.g. another tab is
       // open). Skip the OAuth round-trip and go straight to the dashboard.
@@ -107,12 +107,15 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-slate-950 px-4 overflow-hidden">
-      {/* Background video */}
+      {/* Background video — preload="none" so it doesn't compete for
+          bandwidth with the JS/CSS needed for interactivity. A poster
+          image or the gradient overlay covers the gap. */}
       <video
         autoPlay
         loop
         muted
         playsInline
+        preload="none"
         aria-hidden="true"
         className="absolute inset-0 h-full w-full object-cover pointer-events-none select-none"
         src="/videos/curses-logo-walk_60fps.webm"

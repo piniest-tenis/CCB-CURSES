@@ -14,7 +14,6 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import * as cognitoAuth from "@/lib/auth";
 
 // ---------------------------------------------------------------------------
 // Schema
@@ -63,6 +62,7 @@ function ConfirmForm() {
 
   const onSubmit = async (values: ConfirmFormValues) => {
     try {
+      const cognitoAuth = await import("@/lib/auth");
       await cognitoAuth.confirmSignUp(values.email, values.code);
       // Brief success state — then redirect to login
       setTimeout(() => router.replace("/auth/login"), 1500);

@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import * as cognitoAuth from "@/lib/auth";
 
 const resetRequestSchema = z.object({
   email: z
@@ -93,6 +92,7 @@ function ForgotPasswordForm() {
     requestForm.clearErrors();
 
     try {
+      const cognitoAuth = await import("@/lib/auth");
       await cognitoAuth.requestPasswordReset(values.email);
       setSentEmail(values.email);
       setIsRequestSuccessful(true);
@@ -123,6 +123,7 @@ function ForgotPasswordForm() {
     confirmForm.clearErrors();
 
     try {
+      const cognitoAuth = await import("@/lib/auth");
       await cognitoAuth.confirmPasswordReset(
         values.email,
         values.code,

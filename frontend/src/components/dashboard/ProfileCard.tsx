@@ -8,12 +8,18 @@
  */
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
+import dynamic from "next/dynamic";
 import type { UserProfile, DiceColorPrefs } from "@shared/types";
-import { DiceColorEditor } from "@/components/dice/DiceColorEditor";
 import { SYSTEM_DEFAULTS, resolveDiceColors } from "@/lib/diceColorResolver";
 import { apiClient } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { usePatreonGate, usePatreonOAuth } from "@/hooks/usePatreonGate";
+
+// Lazy-load DiceColorEditor — it's behind an accordion toggle (default closed).
+const DiceColorEditor = dynamic(
+  () => import("@/components/dice/DiceColorEditor").then((m) => m.DiceColorEditor),
+  { ssr: false }
+);
 
 interface ProfileCardProps {
   user: UserProfile;

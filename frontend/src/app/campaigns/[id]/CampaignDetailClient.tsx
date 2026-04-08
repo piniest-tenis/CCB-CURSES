@@ -25,6 +25,7 @@
 
 import React, { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useAuthStore } from "@/store/authStore";
 import { useCampaignDetail, useRemoveMember, useAddCharacterToCampaign, useRemoveCharacterFromCampaign, useUpdateCampaign } from "@/hooks/useCampaigns";
 import { useCampaignStore } from "@/store/campaignStore";
@@ -38,20 +39,54 @@ import type { PingEvent, RollRequestPayload } from "@/types/campaign";
 import type { Adversary } from "@/types/adversary";
 import type { RollResult } from "@/types/dice";
 import { MemberCard } from "@/components/campaign/MemberCard";
-import { InviteManagementModal } from "@/components/campaign/InviteManagementModal";
-import { CharacterSheet } from "@/components/character/CharacterSheet";
-import { AdversaryCatalog } from "@/components/adversary/AdversaryCatalog";
-import { EncounterConsole } from "@/components/encounter/EncounterConsole";
-import { EnvironmentCatalog } from "@/components/encounter/EnvironmentCatalog";
-import { DiceLog } from "@/components/dice/DiceLog";
-import { DiceRollerPanel } from "@/components/dice/DiceRollerPanel";
 import { useCharacters } from "@/hooks/useCharacter";
 import { SheetContextMenu, type ContextMenuPosition } from "@/components/campaign/SheetContextMenu";
 import { CondensedCharacterCard } from "@/components/campaign/CondensedCharacterCard";
-import { CommandCenterTab } from "@/components/campaign/CommandCenterTab";
 import { useLongPress } from "@/hooks/useLongPress";
 import type { ForceCritEvent } from "@/hooks/useGameWebSocket";
 import { resolveDiceColors, resolveGmDiceColor, buildColorOverrides } from "@/lib/diceColorResolver";
+
+// ── Lazy-loaded components (modals, tabs, heavy panels) ─────────────────────
+
+const InviteManagementModal = dynamic(
+  () => import("@/components/campaign/InviteManagementModal").then((m) => m.InviteManagementModal),
+  { ssr: false }
+);
+
+const CharacterSheet = dynamic(
+  () => import("@/components/character/CharacterSheet").then((m) => m.CharacterSheet),
+  { ssr: false }
+);
+
+const AdversaryCatalog = dynamic(
+  () => import("@/components/adversary/AdversaryCatalog").then((m) => m.AdversaryCatalog),
+  { ssr: false }
+);
+
+const EncounterConsole = dynamic(
+  () => import("@/components/encounter/EncounterConsole").then((m) => m.EncounterConsole),
+  { ssr: false }
+);
+
+const EnvironmentCatalog = dynamic(
+  () => import("@/components/encounter/EnvironmentCatalog").then((m) => m.EnvironmentCatalog),
+  { ssr: false }
+);
+
+const DiceLog = dynamic(
+  () => import("@/components/dice/DiceLog").then((m) => m.DiceLog),
+  { ssr: false }
+);
+
+const DiceRollerPanel = dynamic(
+  () => import("@/components/dice/DiceRollerPanel").then((m) => m.DiceRollerPanel),
+  { ssr: false }
+);
+
+const CommandCenterTab = dynamic(
+  () => import("@/components/campaign/CommandCenterTab").then((m) => m.CommandCenterTab),
+  { ssr: false }
+);
 
 // ─── Loading skeleton ─────────────────────────────────────────────────────────
 
@@ -354,8 +389,8 @@ function AssignCharacterPanel({ campaignId }: AssignCharacterPanelProps) {
 // On mobile, replaced by the bottom nav — this bar is hidden on sm and below.
 
 const GM_TABS: { id: CampaignTab; label: string; icon: string }[] = [
-  { id: "command", label: "Command", icon: "🎯" },
   { id: "characters", label: "Characters", icon: "👤" },
+  { id: "command", label: "Command", icon: "🎯" },
   { id: "adversaries", label: "Adversaries", icon: "👹" },
   { id: "encounter", label: "Encounter", icon: "⚔️" },
 ];
@@ -738,8 +773,6 @@ export default function CampaignDetailClient() {
   const [forceCritCharId, setForceCritCharId] = useState<string | null>(null);
   /** Mobile: party drawer open state. */
   const [drawerOpen, setDrawerOpen] = useState(false);
-  /** Ref: skip the next drawer-close from the selectedCharacterId effect. */
-  const skipDrawerCloseRef = useRef(false);
   /** GM-only: overflow menu open state on mobile. */
   const [overflowOpen, setOverflowOpen] = useState(false);
   const overflowRef = useRef<HTMLDivElement>(null);
@@ -781,13 +814,8 @@ export default function CampaignDetailClient() {
     return () => document.removeEventListener("mousedown", handler);
   }, [overflowOpen]);
 
-  // Close drawer when character changes (UX: navigating to content closes the panel)
-  // Skip if the drawer was just intentionally opened (e.g. tapping the Characters tab).
+  // Close drawer when the GM selects a character (navigating to their sheet).
   useEffect(() => {
-    if (skipDrawerCloseRef.current) {
-      skipDrawerCloseRef.current = false;
-      return;
-    }
     setDrawerOpen(false);
   }, [selectedCharacterId]);
 
@@ -1502,13 +1530,11 @@ export default function CampaignDetailClient() {
         <MobileBottomNav
           activeTab={activeTab}
           onTabChange={(tab) => {
-            // When tapping "Characters" on mobile, also open the party drawer
-            // so the GM can immediately pick a character from the roster.
-            // Set the skip ref BEFORE setActiveTab so the useEffect that fires
-            // from the URL change doesn't immediately close the drawer.
+            // "Characters" just opens the party drawer without navigating —
+            // the GM picks a character, and selecting one navigates normally.
             if (tab === "characters") {
-              skipDrawerCloseRef.current = true;
               setDrawerOpen(true);
+              return;
             }
             setActiveTab(tab);
           }}

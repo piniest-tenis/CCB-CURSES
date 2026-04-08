@@ -67,7 +67,17 @@ export const useAuthStore = create<AuthStore>()(
 
         // ── initialize ────────────────────────────────────────────────────
         initialize: async () => {
-          set({ isLoading: true });
+          // If we have a persisted token from a previous session, mark as
+          // ready immediately so the UI renders optimistically while we
+          // silently validate / refresh the token in the background.
+          const persisted = get();
+          const hasPersistedSession = !!persisted.idToken;
+          if (hasPersistedSession) {
+            set({ isReady: true, isAuthenticated: true, isLoading: true });
+          } else {
+            set({ isLoading: true });
+          }
+
           try {
             // 1. Check for a federated (Google SSO) session first.
             const federatedToken = cognitoAuth.getFederatedIdToken();
@@ -229,10 +239,13 @@ export const useAuthStore = create<AuthStore>()(
               removeItem: () => {},
             } as unknown as Storage)
       ),
-      // Only persist the minimal set needed to restore the session.
+      // Persist enough state to render optimistically on return visits
+      // without blocking on the full auth waterfall.
       partialize: (state) => ({
-        user:    state.user,
-        idToken: state.idToken,
+        user:            state.user,
+        idToken:         state.idToken,
+        isAuthenticated: state.isAuthenticated,
+        isReady:         state.isReady,
       }),
     }
   )

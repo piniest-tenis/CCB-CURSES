@@ -13,7 +13,6 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import * as cognitoAuth from "@/lib/auth";
 
 // ---------------------------------------------------------------------------
 // Schema
@@ -70,6 +69,7 @@ export default function RegisterPage() {
 
   const onSubmit = async (values: RegisterFormValues) => {
     try {
+      const cognitoAuth = await import("@/lib/auth");
       await cognitoAuth.signUp(values.email, values.password, values.displayName);
       // Redirect to confirmation page with email pre-populated
       router.push(`/auth/confirm?email=${encodeURIComponent(values.email)}`);
@@ -94,6 +94,7 @@ export default function RegisterPage() {
   const handleGoogleSignUp = async () => {
     try {
       setGoogleLoading(true);
+      const cognitoAuth = await import("@/lib/auth");
       await cognitoAuth.startGoogleLogin();
     } catch (err: unknown) {
       const message =

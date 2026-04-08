@@ -21,6 +21,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useCharacter, useUpdateCharacter } from "@/hooks/useCharacter";
 import {
   useAncestries,
@@ -34,11 +35,8 @@ import { apiClient } from "@/lib/api";
 import { StatsPanel } from "./StatsPanel";
 import { TrackersPanel } from "./TrackersPanel";
 import { DomainLoadout } from "./DomainLoadout";
-import { DowntimeModal } from "./DowntimeModal";
 import { CompanionPanel } from "./CompanionPanel";
 import { DowntimeProjectsPanel } from "./DowntimeProjectsPanel";
-import { LevelUpWizard } from "./LevelUpWizard";
-import { MarkdownContent } from "@/components/MarkdownContent";
 import { useActionButton, InlineActionError } from "./ActionButton";
 import { EditSidebarProvider, EditableField } from "./EditSidebar";
 import {
@@ -49,8 +47,6 @@ import { EquipmentPanel } from "./EquipmentPanel";
 import { FavorsPanel } from "./FavorsPanel";
 import { PortraitDisplay } from "./PortraitUpload";
 import { isHomebrewId, deletedHomebrewLabel } from "@/lib/homebrewUtils";
-import { DiceRollerPanel } from "@/components/dice/DiceRollerPanel";
-import { DiceLog } from "@/components/dice/DiceLog";
 import { useDiceStore } from "@/store/diceStore";
 import type {
   Character,
@@ -59,7 +55,6 @@ import type {
   CustomCondition,
   DiceColorPrefs,
 } from "@shared/types";
-import { DiceColorEditor } from "@/components/dice/DiceColorEditor";
 import {
   SYSTEM_DEFAULTS,
   resolveDiceColors,
@@ -68,6 +63,38 @@ import {
 } from "@/lib/diceColorResolver";
 import { useAuthStore } from "@/store/authStore";
 import { StatTooltip } from "./StatTooltip";
+
+// ── Lazy-loaded components (modals / panels not needed for first paint) ──────
+
+const DowntimeModal = dynamic(
+  () => import("./DowntimeModal").then((m) => m.DowntimeModal),
+  { ssr: false }
+);
+
+const LevelUpWizard = dynamic(
+  () => import("./LevelUpWizard").then((m) => m.LevelUpWizard),
+  { ssr: false }
+);
+
+const MarkdownContent = dynamic(
+  () => import("@/components/MarkdownContent").then((m) => m.MarkdownContent),
+  { ssr: false }
+);
+
+const DiceRollerPanel = dynamic(
+  () => import("@/components/dice/DiceRollerPanel").then((m) => m.DiceRollerPanel),
+  { ssr: false }
+);
+
+const DiceLog = dynamic(
+  () => import("@/components/dice/DiceLog").then((m) => m.DiceLog),
+  { ssr: false }
+);
+
+const DiceColorEditor = dynamic(
+  () => import("@/components/dice/DiceColorEditor").then((m) => m.DiceColorEditor),
+  { ssr: false }
+);
 import { useStatBreakdowns } from "@/hooks/useStatBreakdowns";
 import { usePatreonGate, usePatreonOAuth } from "@/hooks/usePatreonGate";
 import { useSourceFilterDefault } from "@/hooks/useSourceFilterDefault";
