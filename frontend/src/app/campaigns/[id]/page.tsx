@@ -3,6 +3,7 @@
  * generateStaticParams returns a placeholder — actual routing is client-side.
  * CloudFront rewrites all paths to index.html for SPA routing.
  */
+import { Suspense } from "react";
 import CampaignDetailClient from "./CampaignDetailClient";
 
 export function generateStaticParams() {
@@ -12,5 +13,9 @@ export function generateStaticParams() {
 }
 
 export default function CampaignDetailPage() {
-  return <CampaignDetailClient />;
+  return (
+    <Suspense>
+      <CampaignDetailClient />
+    </Suspense>
+  );
 }

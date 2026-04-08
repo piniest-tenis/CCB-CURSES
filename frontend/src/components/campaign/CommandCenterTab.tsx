@@ -121,7 +121,7 @@ export function CommandCenterTab({
       {/* Thematic header */}
       <div className="space-y-2">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <h2 className="font-display text-lg tracking-[0.3em] uppercase text-[#f7f7ff]/80 font-semibold">
+          <h2 className="font-body text-lg text-[#f7f7ff]/80 font-semibold">
             Command Center
           </h2>
           {/* Fear tracker */}

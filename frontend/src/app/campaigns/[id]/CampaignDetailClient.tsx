@@ -27,7 +27,8 @@ import React, { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { useCampaignDetail, useRemoveMember, useAddCharacterToCampaign, useRemoveCharacterFromCampaign, useUpdateCampaign } from "@/hooks/useCampaigns";
-import { useCampaignStore, type CampaignTab } from "@/store/campaignStore";
+import { useCampaignStore } from "@/store/campaignStore";
+import { useCampaignNav, type CampaignTab } from "@/hooks/useCampaignNav";
 import { useGameWebSocket, type DiceColorOverrides } from "@/hooks/useGameWebSocket";
 import { usePingEffect } from "@/hooks/usePingEffect";
 import { useDiceStore } from "@/store/diceStore";
@@ -724,7 +725,12 @@ export default function CampaignDetailClient() {
   const removeMemberMutation = useRemoveMember(campaignId);
   const removeCharacterMutation = useRemoveCharacterFromCampaign(campaignId);
   const updateCampaignMutation = useUpdateCampaign(campaignId);
-  const { selectedCharacterId, activeTab, setActiveCampaign, setSelectedCharacter, setActiveTab } = useCampaignStore();
+  const { setActiveCampaign } = useCampaignStore();
+  const {
+    activeTab, selectedCharacterId, showFullSheet,
+    setActiveTab, setSelectedCharacter, setShowFullSheet,
+    navigateToCharacter,
+  } = useCampaignNav();
   const [showInviteModal, setShowInviteModal] = useState(false);
   /** GM-only: open the 3D dice roller panel. */
   const [gmDiceOpen, setGmDiceOpen] = useState(false);
@@ -735,8 +741,6 @@ export default function CampaignDetailClient() {
   /** GM-only: overflow menu open state on mobile. */
   const [overflowOpen, setOverflowOpen] = useState(false);
   const overflowRef = useRef<HTMLDivElement>(null);
-  /** Mobile: show full sheet instead of condensed card. */
-  const [showFullSheet, setShowFullSheet] = useState(false);
 
   const titleId = useId();
 
@@ -775,14 +779,9 @@ export default function CampaignDetailClient() {
     return () => document.removeEventListener("mousedown", handler);
   }, [overflowOpen]);
 
-  // Close drawer when tab changes (UX: navigating to content closes the panel)
+  // Close drawer when character changes (UX: navigating to content closes the panel)
   useEffect(() => {
     setDrawerOpen(false);
-  }, [selectedCharacterId]);
-
-  // Reset mobile full-sheet toggle when switching characters
-  useEffect(() => {
-    setShowFullSheet(false);
   }, [selectedCharacterId]);
 
   // ── Derived state ───────────────────────────────────────────────────────────
@@ -1319,8 +1318,7 @@ export default function CampaignDetailClient() {
                     characters={campaign?.characters ?? []}
                     currentFear={campaign?.currentFear ?? 0}
                     onSelectCharacter={(charId) => {
-                      setSelectedCharacter(charId);
-                      setActiveTab("characters");
+                      navigateToCharacter(charId);
                     }}
                     fearTracker={
                       <FearTracker

@@ -2,29 +2,25 @@
  * src/store/campaignStore.ts
  *
  * Zustand store for campaign-session state.
- * Tracks which campaign is active and which character is selected in the
- * Campaign Detail view. Intentionally lightweight — all server state lives
- * in TanStack Query.
+ *
+ * Only tracks which campaign is currently active — used by WebSocket,
+ * dice BroadcastChannel, and other non-visual systems.
+ *
+ * Tab navigation, character selection, and full-sheet state have been
+ * moved to URL search params via useCampaignNav so that the browser
+ * back / forward buttons work.
  */
 
 import { create } from "zustand";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-/** Tabs available in the Campaign Detail main content area. */
-export type CampaignTab = "command" | "characters" | "adversaries" | "encounter" | "environments";
-
 interface CampaignState {
-  activeCampaignId:    string | null;
-  selectedCharacterId: string | null;
-  /** Currently active tab in the Campaign Detail main panel (GM only). */
-  activeTab:           CampaignTab;
+  activeCampaignId: string | null;
 }
 
 interface CampaignActions {
-  setActiveCampaign:    (id: string | null) => void;
-  setSelectedCharacter: (id: string | null) => void;
-  setActiveTab:         (tab: CampaignTab) => void;
+  setActiveCampaign: (id: string | null) => void;
   clearCampaignSession: () => void;
 }
 
@@ -33,18 +29,9 @@ export type CampaignStore = CampaignState & CampaignActions;
 // ─── Store ────────────────────────────────────────────────────────────────────
 
 export const useCampaignStore = create<CampaignStore>((set) => ({
-  // ── State ────────────────────────────────────────────────────────────────
-  activeCampaignId:    null,
-  selectedCharacterId: null,
-  activeTab:           "command",
+  activeCampaignId: null,
 
-  // ── Actions ──────────────────────────────────────────────────────────────
   setActiveCampaign: (id) => set({ activeCampaignId: id }),
 
-  setSelectedCharacter: (id) => set({ selectedCharacterId: id }),
-
-  setActiveTab: (tab) => set({ activeTab: tab }),
-
-  clearCampaignSession: () =>
-    set({ activeCampaignId: null, selectedCharacterId: null, activeTab: "command" }),
+  clearCampaignSession: () => set({ activeCampaignId: null }),
 }));
