@@ -176,6 +176,19 @@ export function createSuccessResponse<T>(
 }
 
 /**
+ * Return a 204 No Content response with CORS headers.
+ * Use this instead of a bare `{ statusCode: 204, body: "" }` so the
+ * Access-Control-Allow-Origin header is always present on DELETE/void responses.
+ */
+export function createNoContentResponse(): APIGatewayProxyResultV2 {
+  return {
+    statusCode: 204,
+    headers: corsHeaders(_currentRequestOrigin),
+    body: "",
+  };
+}
+
+/**
  * Wrap an error in the standard error envelope with CORS headers.
  */
 export function createErrorResponse(

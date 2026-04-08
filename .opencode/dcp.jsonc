@@ -1,0 +1,54 @@
+{
+  // Sets the strategy for automatic context compression
+  "compress.mode": "summary", // Options: "summary" (default), "truncate"
+
+  // Prunes tool outputs automatically to save tokens
+  "autoclean.tools": true,
+
+  // Protects a specific number of recent messages from being pruned
+  "protectedMessages": 5,
+
+  // Threshold to trigger automatic compression (in tokens)
+  "compressionThreshold": 8000,
+
+  // Defines commands protected from automatic sweeps
+  "commands": {
+    "protectedTools": ["files", "lsp"],
+  },
+
+  "compress": {
+    "type": "object",
+    "description": "Configuration for the unified compress tool",
+    "additionalProperties": false,
+    "properties": {
+      "mode": {
+        "description": "Soft lower threshold for reminder nudges. Below this, turn/iteration reminders are off (compression is less likely). At or above this, reminders are on. Accepts number or \"X%\" of the model context window.",
+        "default": 50000,
+        "oneOf": [
+          {
+            "type": "number",
+          },
+          {
+            "type": "string",
+            "pattern": "^\\d+(?:\\.\\d+)?%$",
+          },
+        ],
+        "modelMaxLimits": {
+          "description": "Per-model override for maxContextLimit by exact provider/model key. If set, this takes priority over the global maxContextLimit.",
+          "type": "object",
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "type": "number",
+              },
+              {
+                "type": "string",
+                "pattern": "^\\d+(?:\\.\\d+)?%$",
+              },
+            ],
+          },
+        },
+      },
+    },
+  },
+}

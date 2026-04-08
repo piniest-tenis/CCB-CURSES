@@ -11,6 +11,7 @@ import { z } from "zod";
 import {
   AppError,
   createSuccessResponse,
+  createNoContentResponse,
   createErrorResponse,
   extractUserId,
   extractEmail,
@@ -34,7 +35,7 @@ import {
   buildPatreonLink,
 } from "./patreon";
 
-const FRONTEND_URL = (process.env["FRONTEND_URL"] ?? "https://curses-ccb.maninjumpsuit.com").replace(/\/$/, "");
+const FRONTEND_URL = (process.env["FRONTEND_URL"] ?? "https://ccb.curses.show").replace(/\/$/, "");
 
 // ─── DynamoDB Record Shape ────────────────────────────────────────────────────
 
@@ -363,7 +364,7 @@ async function deleteMe(
 
   if (!existing) {
     // Already gone — idempotent success
-    return { statusCode: 204, body: "" };
+    return createNoContentResponse();
   }
 
   await deleteItem({
@@ -372,7 +373,7 @@ async function deleteMe(
     ConditionExpression: "attribute_exists(PK)",
   });
 
-  return { statusCode: 204, body: "" };
+  return createNoContentResponse();
 }
 
 // ─── Route Dispatcher ─────────────────────────────────────────────────────────
@@ -504,7 +505,7 @@ async function unlinkPatreon(
     ConditionExpression: "attribute_exists(PK)",
   });
 
-  return { statusCode: 204, body: "" };
+  return createNoContentResponse();
 }
 
 // ─── Route Dispatcher ─────────────────────────────────────────────────────────

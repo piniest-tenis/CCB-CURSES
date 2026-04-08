@@ -27,8 +27,7 @@ export interface CmsContent {
 
 // ─── API base ─────────────────────────────────────────────────────────────────
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ?? "";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 // ─── Fallback content ─────────────────────────────────────────────────────────
 
@@ -46,7 +45,7 @@ export const SPLASH_FALLBACK: CmsContent = {
   updatedAt: new Date().toISOString(),
 };
 
-/** Eight interstitial lore cards, one is picked randomly while loading. */
+/** Nineteen interstitial lore cards, one is picked randomly while loading. */
 export const INTERSTITIAL_FALLBACKS: CmsContent[] = [
   {
     id: "fallback-interstitial-1",
@@ -144,18 +143,146 @@ export const INTERSTITIAL_FALLBACKS: CmsContent[] = [
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
+
+  // ── Where to Find the Show ────────────────────────────────────────────────
+
+  {
+    id: "fallback-interstitial-9",
+    type: "interstitial",
+    title: "Curses! — Live on Twitch",
+    body: "The stories of Tidwell unfold live each week on Twitch. *Curses! A Daggerheart Adventure* is an actual-play tabletop RPG show run on the very tool you're using right now. Pull up a chair, because the 231st Andam has only just begun.",
+    imageKey: null,
+    imageUrl: null,
+    active: true,
+    order: 9,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "fallback-interstitial-10",
+    type: "interstitial",
+    title: "Watch Curses! Live",
+    body: "Every Wednesday night at 8:30 PM ET, you can join us for fresh, live sessions of *Curses! An Actual Play*. The show is run on Twitch, where you can chat with other viewers and get the occasional surprise lore drop from the GM. If you can't make it live, don't worry — full episodes will be coming to the Fable & Folly podcast network and YouTube in August 2026.",
+    imageKey: null,
+    imageUrl: null,
+    active: true,
+    order: 10,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "fallback-interstitial-12",
+    type: "interstitial",
+    title: "Stay in the Loop",
+    body: "Curses! streams live on Twitch every Wednesday at 8:30 PM ET, and full episodes are coming to the Fable & Folly podcast network and YouTube in August 2026. Until then, the best way to keep up is to follow along on social media to keep up with all the latest news.",
+    imageKey: null,
+    imageUrl: null,
+    active: true,
+    order: 12,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "fallback-interstitial-13",
+    type: "interstitial",
+    title: "The Cast of Curses!",
+    body: "You might know their voices from Dungeons and Drimbus, Quest Friends, Tales of the Ever After, REDACTED, or Heartglass. The cast of Curses! brings together some of the most compelling creators in indie audio fiction.  Catch them live on Twitch every Wednesday at 8:30 PM ET.",
+    imageKey: null,
+    imageUrl: null,
+    active: true,
+    order: 13,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+
+  // ── Additional World Lore ─────────────────────────────────────────────────
+
+  {
+    id: "fallback-interstitial-14",
+    type: "interstitial",
+    title: "The Two World Trees",
+    body: "The peoples of Tidwell believe their world is pinned to the sky by two great trees. The Tree of Life is a small, twisted oak in the Mnojest-Gora mountains that carries blooms through every season, defying all natural law. The Tree of Strength is a solitary sequoia, tall and unbowed, growing alone in the barren expanse of The Waste. The Golden Canopy in Reveille bears sculpted likenesses of both.",
+    imageKey: null,
+    imageUrl: null,
+    active: true,
+    order: 14,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "fallback-interstitial-15",
+    type: "interstitial",
+    title: "The Storied Altar",
+    body: "At the heart of Reveille's abandoned central monastery sits a massive stone altar carved to resemble the open pages of a book. Its surface bears markings in a vibrant gold that reflects more light than it receives, as though lit from within. The script has never been deciphered. Each age of Tidwell has brought a new people into the world through this altar though no one living has witnessed it happen since the dawn of the age.",
+    imageKey: null,
+    imageUrl: null,
+    active: true,
+    order: 15,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "fallback-interstitial-16",
+    type: "interstitial",
+    title: "The Nature of Curses",
+    body: "In Tidwell, magic is the sharp edge of a wish turned back on the wisher. Every curse is a bargain struck in flesh and fate. Every boon given warrants an equal price. Those who seek power this way learn quickly that the cost is always personal.",
+    imageKey: null,
+    imageUrl: null,
+    active: true,
+    order: 16,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "fallback-interstitial-17",
+    type: "interstitial",
+    title: "The Wishing Turtle",
+    body: "The Wishing Turtle is no larger than a dinner plate, with a broad flat face and deep pitted lips. It grants wishes to anyone who can trick it into speaking. Exiled to the Southern Mesa in Gyhrra and bitter about it, the Turtle hides not from danger but from the endless procession of desperate people who come looking for it.",
+    imageKey: null,
+    imageUrl: null,
+    active: true,
+    order: 17,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "fallback-interstitial-18",
+    type: "interstitial",
+    title: "The Revenant God",
+    body: "Followers of the Church of the Revenant God worship a deity they describe as a seven-year-old human boy named Dave. The Davites believe he drew the peoples of Tidwell in his sketchpad and breathed life into them through his dreams. When the world is in turmoil, Dave slumbers fitfully and risks awakening. The Davites teach that when he wakes, an age ends. They believe it is only when he dreams again, new wonders arrive on the continent.",
+    imageKey: null,
+    imageUrl: null,
+    active: true,
+    order: 18,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "fallback-interstitial-19",
+    type: "interstitial",
+    title: "The Masked Host",
+    body: "Before any people arrived through the Storied Altar, the Masked Host were already here. Now rare enough to be almost mythical, their gaunt spindly forms with hollow eyes and unmoving too-wide smiles are the stuff of children's nightmares.",
+    imageKey: null,
+    imageUrl: null,
+    active: true,
+    order: 19,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
 ];
 
 // ─── Query key factory ────────────────────────────────────────────────────────
 
 export const cmsKeys = {
-  splash:       ["cms", "splash"]       as const,
+  splash: ["cms", "splash"] as const,
   interstitial: ["cms", "interstitial"] as const,
 } as const;
 
 // ─── Raw fetch (no auth header — CMS endpoints are public) ───────────────────
 
-async function fetchCms(type: "splash" | "interstitial"): Promise<CmsContent[]> {
+async function fetchCms(
+  type: "splash" | "interstitial",
+): Promise<CmsContent[]> {
   const res = await fetch(`${API_BASE}/cms/${type}`, {
     method: "GET",
     headers: { Accept: "application/json" },
@@ -189,14 +316,16 @@ async function fetchCms(type: "splash" | "interstitial"): Promise<CmsContent[]> 
  * query settles (the fallback guarantees at least one item).
  */
 export function useCmsContent(
-  type: "splash" | "interstitial"
+  type: "splash" | "interstitial",
 ): UseQueryResult<CmsContent[]> {
   return useQuery<CmsContent[]>({
     queryKey: type === "splash" ? cmsKeys.splash : cmsKeys.interstitial,
     queryFn: async () => {
       try {
         const items = await fetchCms(type);
-        const active = items.filter((i) => i.active).sort((a, b) => a.order - b.order);
+        const active = items
+          .filter((i) => i.active)
+          .sort((a, b) => a.order - b.order);
         if (active.length > 0) return active;
         // API returned empty — use fallback
         return type === "splash" ? [SPLASH_FALLBACK] : INTERSTITIAL_FALLBACKS;
@@ -207,7 +336,7 @@ export function useCmsContent(
     },
     // CMS content changes rarely — cache aggressively
     staleTime: 10 * 60 * 1000, // 10 min
-    gcTime:    30 * 60 * 1000, // 30 min
+    gcTime: 30 * 60 * 1000, // 30 min
     // Never show error state — the queryFn always resolves with fallback
     retry: false,
   });

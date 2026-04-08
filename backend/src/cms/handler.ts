@@ -25,6 +25,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import {
   AppError,
   createSuccessResponse,
+  createNoContentResponse,
   createErrorResponse,
   parseBody,
   requirePathParam,
@@ -311,7 +312,7 @@ async function deleteItemHandler(
     ConditionExpression: "attribute_exists(PK)",
   });
 
-  return { statusCode: 204, body: "" };
+  return createNoContentResponse();
 }
 
 /**

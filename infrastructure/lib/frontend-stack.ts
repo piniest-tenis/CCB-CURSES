@@ -176,7 +176,7 @@ function handler(event) {
     // The cert is created in a dedicated DaggerheartCert-prod stack (us-east-1)
     // in app.ts and its ARN is passed in via frontendCertificateArn.
     // -----------------------------------------------------------------------
-    const prodDomain = "curses-ccb.maninjumpsuit.com";
+    const prodDomain = "ccb.curses.show";
     const certificate =
       isProd && frontendCertificateArn
         ? acm.Certificate.fromCertificateArn(

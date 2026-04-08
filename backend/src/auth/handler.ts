@@ -25,6 +25,7 @@ import {
 import {
   AppError,
   createSuccessResponse,
+  createNoContentResponse,
   createErrorResponse,
   extractUserId,
   requirePathParam,
@@ -289,7 +290,7 @@ async function deleteUser(
     console.warn("Failed to delete user profile from DynamoDB:", userId, err);
   }
 
-  return { statusCode: 204, body: "" };
+  return createNoContentResponse();
 }
 
 // ─── Route Dispatcher ─────────────────────────────────────────────────────────

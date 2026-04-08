@@ -2,7 +2,7 @@
 
 A full-stack web application for creating, managing, and sharing character sheets for the [Daggerheart](https://darringtonpress.com/daggerheart/) tabletop RPG. Game content is authored in Markdown, ingested into DynamoDB, and served through a serverless AWS backend to a Next.js frontend.
 
-**Production:** https://curses-ccb.maninjumpsuit.com
+**Production:** https://ccb.curses.show
 
 ---
 

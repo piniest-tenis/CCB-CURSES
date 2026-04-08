@@ -4,7 +4,7 @@
  * Server shell for /twitch-overlay
  *
  * Usage in OBS / Twitch browser source:
- *   https://curses-ccb.maninjumpsuit.com/twitch-overlay/?id=<characterId>&token=<shareToken>
+ *   https://ccb.curses.show/twitch-overlay/?id=<characterId>&token=<shareToken>
  *
  * The overlay is a compact, transparent-background widget designed to sit
  * in the corner of a stream. It displays the character name prominently,

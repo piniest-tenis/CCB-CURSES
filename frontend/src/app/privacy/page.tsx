@@ -55,12 +55,12 @@ export default function PrivacyPolicyPage() {
               <strong className="text-[#f7f7ff]">Curses! Custom Character Builder</strong> (&ldquo;CCB,&rdquo;
               &ldquo;the Service&rdquo;), available at{" "}
               <a
-                href="https://curses-ccb.maninjumpsuit.com"
+                href="https://ccb.curses.show"
                 className="text-[#577399] hover:underline"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                curses-ccb.maninjumpsuit.com
+                ccb.curses.show
               </a>
               .
             </p>

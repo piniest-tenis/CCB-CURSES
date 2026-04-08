@@ -55,12 +55,12 @@ export default function TermsOfServicePage() {
               By accessing or using <strong className="text-[#f7f7ff]">Curses! Custom Character Builder</strong>{" "}
               (&ldquo;CCB,&rdquo; &ldquo;the Service&rdquo;), available at{" "}
               <a
-                href="https://curses-ccb.maninjumpsuit.com"
+                href="https://ccb.curses.show"
                 className="text-[#577399] hover:underline"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                curses-ccb.maninjumpsuit.com
+                ccb.curses.show
               </a>
               , you agree to be bound by these Terms of Service (&ldquo;Terms&rdquo;). If you do not
               agree, do not use the Service.

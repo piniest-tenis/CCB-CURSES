@@ -18,6 +18,7 @@ import { v4 as uuidv4 } from "uuid";
 import {
   AppError,
   createSuccessResponse,
+  createNoContentResponse,
   createErrorResponse,
   extractUserId,
   parseBody,
@@ -280,7 +281,7 @@ async function deleteMedia(
     ConditionExpression: "attribute_exists(PK)",
   });
 
-  return { statusCode: 204, body: "" };
+  return createNoContentResponse();
 }
 
 /**

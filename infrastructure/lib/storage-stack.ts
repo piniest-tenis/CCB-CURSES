@@ -52,7 +52,7 @@ export class StorageStack extends cdk.Stack {
           ],
           // Tightened per environment: restrict to known domain in prod
           allowedOrigins: isProd
-            ? ["https://curses-ccb.maninjumpsuit.com"]
+            ? ["https://ccb.curses.show"]
             : ["*"],
           allowedHeaders: ["*"],
           exposedHeaders: ["ETag"],

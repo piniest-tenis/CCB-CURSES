@@ -51,7 +51,7 @@ const apiStack = new ApiStack(app, `DaggerheartApi-${stage}`, {
 const isProd = stage === "prod";
 const corsAllowedOrigins = isProd
   ? [
-      "https://curses-ccb.maninjumpsuit.com",
+      "https://ccb.curses.show",
       "https://localhost:8080",
       "https://ajls8isp75nequgerzql4vipnfrzzi.ext-twitch.tv",
     ]
@@ -80,28 +80,21 @@ new HomebrewStack(app, `DaggerheartHomebrew-${stage}`, {
 });
 
 // CloudFront requires ACM certificates to be in us-east-1 regardless of the
-// stack's deployment region. We create the cert in a dedicated us-east-1 stack
-// and pass the certificate ARN string into FrontendStack to avoid cross-region
-// SSM references (which require bootstrapping in both regions).
-let frontendCertificateArn: string | undefined;
-if (stage === "prod") {
-  const certStack = new cdk.Stack(app, `DaggerheartCert-${stage}`, {
-    env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: "us-east-1" },
-    crossRegionReferences: true,
-  });
+// stack's deployment region. The cert for ccb.curses.show was provisioned
+// manually (ARN below) and is already attached to CloudFront. We import it
+// by ARN so CDK can reference it without owning the resource lifecycle —
+// this avoids the cross-region SSM export deadlock that occurs when CDK tries
+// to replace a cert that a dependent stack is still consuming.
+//
+// If you ever need to rotate this cert, provision the new one in ACM first,
+// update the ARN here, and redeploy.
+const frontendCertificateArn: string | undefined = isProd
+  ? "arn:aws:acm:us-east-1:625693792690:certificate/39f5284e-7163-4a95-aef1-f70390abd7b4"
+  : undefined;
 
-  const cert = new acm.Certificate(certStack, "FrontendCertificate", {
-    domainName: "curses-ccb.maninjumpsuit.com",
-    validation: acm.CertificateValidation.fromDns(),
-  });
-  // Export the ARN as a plain string output so the FrontendStack can consume
-  // it without a cross-region reference (avoids SSM bootstrap requirement).
-  new cdk.CfnOutput(certStack, "CertificateArn", {
-    value: cert.certificateArn,
-    exportName: `DaggerheartFrontendCertArn-${stage}`,
-  });
-  frontendCertificateArn = cert.certificateArn;
-}
+// The DaggerheartCert-prod stack previously managed the cert resource. It has
+// been rolled back to UPDATE_ROLLBACK_COMPLETE and can be deleted once the
+// DaggerheartFrontend-prod stack no longer imports from it.
 
 new FrontendStack(app, `DaggerheartFrontend-${stage}`, {
   ...stackProps,

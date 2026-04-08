@@ -8,16 +8,16 @@
 // get started building a first character.
 //
 // Required env vars:
-//   SES_FROM_ADDRESS  — verified SES sender, e.g. "noreply@curses-ccb.maninjumpsuit.com"
-//   APP_BASE_URL      — e.g. "https://curses-ccb.maninjumpsuit.com"
+//   SES_FROM_ADDRESS  — verified SES sender, e.g. "noreply@ccb.curses.show"
+//   APP_BASE_URL      — e.g. "https://ccb.curses.show"
 
 import type { PostConfirmationTriggerHandler } from "aws-lambda";
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
 
 const ses = new SESClient({ region: process.env["AWS_REGION"] ?? "us-east-1" });
 
-const FROM = process.env["SES_FROM_ADDRESS"] ?? "noreply@curses-ccb.maninjumpsuit.com";
-const APP_URL = (process.env["APP_BASE_URL"] ?? "https://curses-ccb.maninjumpsuit.com").replace(/\/$/, "");
+const FROM = process.env["SES_FROM_ADDRESS"] ?? "noreply@ccb.curses.show";
+const APP_URL = (process.env["APP_BASE_URL"] ?? "https://ccb.curses.show").replace(/\/$/, "");
 
 // ---------------------------------------------------------------------------
 // Email copy
@@ -125,7 +125,7 @@ function buildHtmlBody(email: string): string {
     </div>
     <div class="footer">
       You received this email because you created an account at
-      <a href="${APP_URL}">curses-ccb.maninjumpsuit.com</a>.<br />
+      <a href="${APP_URL}">ccb.curses.show</a>.<br />
       If you didn't sign up, you can safely ignore this message.
     </div>
   </div>

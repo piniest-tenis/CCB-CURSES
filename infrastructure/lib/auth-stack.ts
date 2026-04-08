@@ -2,6 +2,7 @@ import * as cdk from "aws-cdk-lib";
 import * as cognito from "aws-cdk-lib/aws-cognito";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as ses from "aws-cdk-lib/aws-ses";
 import * as path from "path";
 import { Construct } from "constructs";
 
@@ -132,10 +133,10 @@ export class AuthStack extends cdk.Stack {
       memorySize: 256,
       environment: {
         SES_FROM_ADDRESS: isProd
-          ? "noreply@curses-ccb.maninjumpsuit.com"
-          : "noreply@curses-ccb.maninjumpsuit.com", // same address; SES identity covers both
+          ? "noreply@ccb.curses.show"
+          : "noreply@ccb.curses.show", // same address; SES identity covers both
         APP_BASE_URL: isProd
-          ? "https://curses-ccb.maninjumpsuit.com"
+          ? "https://ccb.curses.show"
           : "http://localhost:3000",
       },
     });
@@ -197,13 +198,13 @@ export class AuthStack extends cdk.Stack {
           cognito.OAuthScope.PROFILE,
         ],
         callbackUrls: isProd
-          ? ["https://curses-ccb.maninjumpsuit.com/auth/callback"]
+          ? ["https://ccb.curses.show/auth/callback"]
           : [
               "http://localhost:3000/auth/callback",
               "https://d195iz9cwkg00c.cloudfront.net/auth/callback",
             ],
         logoutUrls: isProd
-          ? ["https://curses-ccb.maninjumpsuit.com/auth/logout"]
+          ? ["https://ccb.curses.show/auth/logout"]
           : [
               "http://localhost:3000/auth/logout",
               "https://d195iz9cwkg00c.cloudfront.net/auth/logout",
@@ -261,6 +262,25 @@ export class AuthStack extends cdk.Stack {
         domainPrefix: `curses-ccb-${stage}`,
       },
     });
+
+    // -----------------------------------------------------------------------
+    // SES Domain Identity — ccb.curses.show
+    // -----------------------------------------------------------------------
+    // Registers ccb.curses.show as a verified sending domain in SES so that
+    // the post-confirmation Lambda can send email from noreply@ccb.curses.show.
+    //
+    // After deploying this stack for the first time, check the SES console
+    // (or the CloudFormation output) for the DKIM CNAME records and add them
+    // to the ccb.curses.show DNS zone.  SES will not deliver email until all
+    // three DKIM CNAMEs are verified.
+    if (isProd) {
+      new ses.EmailIdentity(this, "SesEmailIdentity", {
+        identity: ses.Identity.domain("ccb.curses.show"),
+        // DKIM signing is enabled by default with Easy DKIM (2048-bit keys).
+        // CDK will surface the three CNAME records as CloudFormation outputs.
+        dkimSigning: true,
+      });
+    }
 
     // -----------------------------------------------------------------------
     // CMS App Client (Google SSO only — no password auth)

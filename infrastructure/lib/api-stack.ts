@@ -46,7 +46,7 @@ export class ApiStack extends cdk.Stack {
     // -----------------------------------------------------------------------
     const corsAllowOrigins = isProd
       ? [
-          "https://curses-ccb.maninjumpsuit.com",
+          "https://ccb.curses.show",
           "https://localhost:8080",                                      // Twitch extension local test
           "https://ajls8isp75nequgerzql4vipnfrzzi.ext-twitch.tv",       // Twitch extension hosted test / prod
         ]

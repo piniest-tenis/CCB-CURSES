@@ -13,7 +13,7 @@
 //   PATREON_CLIENT_SECRET   — OAuth client secret
 //   PATREON_REDIRECT_URI    — Fully-qualified callback URL registered with Patreon
 //   PATREON_CAMPAIGN_ID     — Numeric campaign ID for the CursesAP Patreon page
-//   FRONTEND_URL            — e.g. "https://curses-ccb.maninjumpsuit.com"
+//   FRONTEND_URL            — e.g. "https://ccb.curses.show"
 
 import type { PatreonLink, PatreonMembershipStatus } from "@shared/types";
 

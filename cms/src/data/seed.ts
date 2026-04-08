@@ -97,4 +97,98 @@ export const interstitialSeed = [
     active: true,
     order: 8,
   },
+
+  // ── Where to Find the Show ──────────────────────────────────────────────────
+
+  {
+    type: "interstitial" as const,
+    title: "Chronicles of Tidwell — Live from the Table",
+    body: "The stories of Tidwell unfold live each week on Twitch at [twitch.tv/man_in_jumpsuit](https://twitch.tv/man_in_jumpsuit). *Curses! A Daggerheart Adventure* is an actual-play tabletop RPG show set in the land you're exploring right now. Pull up a chair — the 231st Andam has only just begun.",
+    imageKey: null,
+    active: true,
+    order: 9,
+  },
+  {
+    type: "interstitial" as const,
+    title: "Watch Curses! Live",
+    body: "Every Wednesday night at 8:30 PM ET, the cast of Curses! sits down to play live on [Twitch](https://twitch.tv/man_in_jumpsuit). It's the kind of session you wish you could pull up a chair to — tense, funny, and full of moments that only happen when the dice are real and the stakes are personal. Grab a seat. The table has room.",
+    imageKey: null,
+    active: true,
+    order: 10,
+  },
+  {
+    type: "interstitial" as const,
+    title: "Dispatches from the Varjalune",
+    body: "News from Tidwell travels faster than the Kuivatuul winds — if you know where to listen. Follow the show on [Bluesky](https://bsky.app/maninjumpsuit.com), [Instagram](https://instagram.com/CursesAP), or [TikTok](https://tiktok.com/@maninjumpsuit) for session recaps, behind-the-scenes lore, and announcements from the cast. Every age brings new arrivals to Tidwell. Yours might be next.",
+    imageKey: null,
+    active: true,
+    order: 11,
+  },
+  {
+    type: "interstitial" as const,
+    title: "Stay in the Loop",
+    body: "Curses! streams live on [Twitch](https://twitch.tv/man_in_jumpsuit) every Wednesday at 8:30 PM ET, and full episodes are coming to the Fable & Folly podcast network and [YouTube](https://youtube.com/@maninjumpsuit) in August 2026. Until then, the best way to keep up is to follow along on [Bluesky](https://bsky.app/maninjumpsuit.com), [Instagram](https://instagram.com/CursesAP), or [TikTok](https://tiktok.com/@maninjumpsuit) — where you'll find session recaps, behind-the-scenes glimpses, and the occasional unhinged lore drop from the GM.",
+    imageKey: null,
+    active: true,
+    order: 12,
+  },
+  {
+    type: "interstitial" as const,
+    title: "The Cast of Curses!",
+    body: "You might know their voices from Dungeons and Drimbus, Quest Friends, Tales of the Ever After, REDACTED, or Heartglass. The cast of Curses! brings together some of the most compelling creators in indie audio fiction — performers who know how to find the heartbreak in a dice roll and the comedy in a catastrophe. Catch them live on [Twitch](https://twitch.tv/man_in_jumpsuit) every Wednesday at 8:30 PM ET, or follow along on [Bluesky](https://bsky.app/maninjumpsuit.com), [Instagram](https://instagram.com/CursesAP), and [TikTok](https://tiktok.com/@maninjumpsuit).",
+    imageKey: null,
+    active: true,
+    order: 13,
+  },
+
+  // ── Additional World Lore ───────────────────────────────────────────────────
+
+  {
+    type: "interstitial" as const,
+    title: "The Two World Trees",
+    body: "The peoples of Tidwell believe their world is pinned to the sky by two great trees. The Tree of Life is a small, twisted oak in the Mnojest-Gora mountains that carries blooms through every season, defying all natural law. The Tree of Strength is a solitary sequoia, tall and unbowed, growing alone in the barren expanse of The Waste. The Golden Canopy in Reveille bears sculpted likenesses of both.",
+    imageKey: null,
+    active: true,
+    order: 14,
+  },
+  {
+    type: "interstitial" as const,
+    title: "The Storied Altar",
+    body: "At the heart of Reveille's abandoned central monastery sits a massive stone altar carved to resemble the open pages of a book. Its surface bears markings in a vibrant gold that reflects more light than it receives, as though lit from within. The script has never been deciphered. Each age of Tidwell has brought a new people into the world through this altar — though no one living has witnessed it happen.",
+    imageKey: null,
+    active: true,
+    order: 15,
+  },
+  {
+    type: "interstitial" as const,
+    title: "The Nature of Curses",
+    body: "In Tidwell, magic is the sharp edge of a wish turned back on the wisher. Every curse is a bargain struck in flesh and fate — for every benefit, an equal price. A luck curse might appear as a strange coin sewn into a monk's purse, or it might replace the eye of a compulsive gambler entirely. Those who seek power this way learn quickly that the cost is always personal.",
+    imageKey: null,
+    active: true,
+    order: 16,
+  },
+  {
+    type: "interstitial" as const,
+    title: "The Wishing Turtle",
+    body: "One of Tidwell's three forerunners — ancient beings who existed before the first age — the Wishing Turtle is no larger than a dinner plate, with a broad flat face and deep pitted lips. It grants wishes to anyone who can trick it into speaking. Exiled to the Southern Mesa in Gyhrra and bitter about it, the Turtle hides not from danger but from the endless procession of desperate people who come looking for it.",
+    imageKey: null,
+    active: true,
+    order: 17,
+  },
+  {
+    type: "interstitial" as const,
+    title: "The Revenant God",
+    body: "Followers of the Church of the Revenant God worship a deity they describe as a seven-year-old human boy named Dave. The Davites believe he drew the peoples of Tidwell in his sketchpad and breathed life into them through his dreams. When the world is in turmoil, Dave slumbers fitfully and risks awakening. The Davites teach that when he wakes, an age ends — and when he dreams again, new wonders arrive on the continent.",
+    imageKey: null,
+    active: true,
+    order: 18,
+  },
+  {
+    type: "interstitial" as const,
+    title: "The Masked Host",
+    body: "Before any people arrived through the Storied Altar, the Masked Host were already here — the first people raised from Tidwell's own soil. Now rare enough to be almost mythical, their gaunt spindly forms with hollow eyes and unmoving too-wide smiles are the stuff of children's nightmares. Parents across the continent still warn their children with the same words: don't stray out after dark.",
+    imageKey: null,
+    active: true,
+    order: 19,
+  },
 ];
