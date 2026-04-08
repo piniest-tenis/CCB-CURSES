@@ -20,11 +20,13 @@ type DangerState = "healthy" | "wounded" | "critical" | "down";
 
 function getDangerState(marked: number, max: number): DangerState {
   if (max === 0) return "healthy";
-  const pct = marked / max;
-  if (pct <= 0) return "down";
-  if (pct < 0.25) return "critical";
-  if (pct <= 0.5) return "wounded";
-  return "healthy";
+  // marked = damage taken (count-up). remaining = max - marked.
+  const remaining = max - marked;
+  if (remaining <= 0) return "down";
+  const remainingPct = remaining / max;
+  if (remainingPct < 0.25) return "critical";   // <25% HP remaining
+  if (remainingPct <= 0.5) return "wounded";     // 25-50% HP remaining
+  return "healthy";                              // >50% HP remaining
 }
 
 const DANGER_BORDER: Record<DangerState, string> = {
@@ -127,7 +129,7 @@ export function CommandCenterCard({
         hover:bg-slate-800/80 focus:outline-none focus:ring-2 focus:ring-[#577399]
         ${DANGER_BORDER[danger]} ${DANGER_BG[danger]} ${DANGER_GLOW[danger]}
       `}
-      aria-label={`${character.name} — HP ${hpMarked}/${hpMax}`}
+      aria-label={`${character.name} — ${hpMax - hpMarked} of ${hpMax} HP remaining`}
     >
       {/* Header: avatar + name */}
       <div className="flex items-center gap-2.5">
@@ -212,11 +214,12 @@ export function CommandCenterCard({
 }
 
 /**
- * Returns the HP percentage (0-1) for sorting. Lower = more danger.
+ * Returns the damage fraction (0-1) for sorting. Higher = more danger.
+ * marked/max where marked = damage taken (count-up system).
  * Exported for use by CommandCenterTab's sort logic.
  */
 export function getHpPercentage(character: { trackers?: { hp?: { marked?: number; max?: number } } }): number {
   const max = character.trackers?.hp?.max ?? 0;
-  if (max === 0) return 1; // no HP tracked → treat as healthy
+  if (max === 0) return 0; // no HP tracked → treat as healthy (0 danger)
   return (character.trackers?.hp?.marked ?? 0) / max;
 }

@@ -41,7 +41,7 @@ function usePartyHope(characterIds: string[]): number {
   }, [characterIds, c0.data, c1.data, c2.data, c3.data, c4.data, c5.data, c6.data, c7.data]);
 }
 
-// ─── Sorted character list (by HP% ascending = most-hurt first) ───────────────
+// ─── Sorted character list (by damage% descending = most-hurt first) ─────────
 
 function useSortedCharacters(characterIds: string[]): string[] {
   const c0 = useCharacter(characterIds[0]);
@@ -61,7 +61,7 @@ function useSortedCharacters(characterIds: string[]): string[] {
         id,
         pct: results[i]?.data ? getHpPercentage(results[i].data!) : 1,
       }));
-    entries.sort((a, b) => a.pct - b.pct);
+    entries.sort((a, b) => b.pct - a.pct);
     return entries.map((e) => e.id);
   }, [characterIds, c0.data, c1.data, c2.data, c3.data, c4.data, c5.data, c6.data, c7.data]);
 }
