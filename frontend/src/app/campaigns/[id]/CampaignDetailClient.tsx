@@ -738,6 +738,8 @@ export default function CampaignDetailClient() {
   const [forceCritCharId, setForceCritCharId] = useState<string | null>(null);
   /** Mobile: party drawer open state. */
   const [drawerOpen, setDrawerOpen] = useState(false);
+  /** Ref: skip the next drawer-close from the selectedCharacterId effect. */
+  const skipDrawerCloseRef = useRef(false);
   /** GM-only: overflow menu open state on mobile. */
   const [overflowOpen, setOverflowOpen] = useState(false);
   const overflowRef = useRef<HTMLDivElement>(null);
@@ -780,7 +782,12 @@ export default function CampaignDetailClient() {
   }, [overflowOpen]);
 
   // Close drawer when character changes (UX: navigating to content closes the panel)
+  // Skip if the drawer was just intentionally opened (e.g. tapping the Characters tab).
   useEffect(() => {
+    if (skipDrawerCloseRef.current) {
+      skipDrawerCloseRef.current = false;
+      return;
+    }
     setDrawerOpen(false);
   }, [selectedCharacterId]);
 
@@ -1495,12 +1502,15 @@ export default function CampaignDetailClient() {
         <MobileBottomNav
           activeTab={activeTab}
           onTabChange={(tab) => {
-            setActiveTab(tab);
             // When tapping "Characters" on mobile, also open the party drawer
             // so the GM can immediately pick a character from the roster.
+            // Set the skip ref BEFORE setActiveTab so the useEffect that fires
+            // from the URL change doesn't immediately close the drawer.
             if (tab === "characters") {
+              skipDrawerCloseRef.current = true;
               setDrawerOpen(true);
             }
+            setActiveTab(tab);
           }}
           encounterCount={encounterAdversaries}
         />
