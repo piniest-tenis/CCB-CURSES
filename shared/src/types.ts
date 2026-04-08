@@ -1089,3 +1089,274 @@ export interface SessionSchedule {
 }
 
 // (Homebrew types defined above at line ~636 — do not duplicate here.)
+
+// ─── Campaign Frames ─────────────────────────────────────────────────────────
+// A "Campaign Frame" is a curated homebrew package that can be attached to one
+// or more campaigns.  It bundles metadata, SRD content restrictions/alterations,
+// custom type extensions, and references to homebrew content.
+
+/**
+ * Complexity rating for a campaign frame — gives players a rough idea of how
+ * much new material the frame introduces.
+ */
+export type FrameComplexityRating = "low" | "moderate" | "high" | "extreme";
+
+/**
+ * The kinds of SRD content that can be restricted or altered within a frame.
+ * Maps 1:1 to existing content categories in the data layer.
+ */
+export type FrameRestrictableContentType = "class" | "community" | "ancestry" | "domainCard";
+
+/**
+ * The kinds of custom type extensions a frame can define.
+ * These extend the universe of values available to homebrew within the frame.
+ */
+export type FrameExtensionType = "damageType" | "adversaryType" | "condition" | "domain";
+
+// ─── Frame Core ──────────────────────────────────────────────────────────────
+
+/**
+ * Core metadata for a campaign frame.
+ * Only `name` is required; everything else is optional.
+ * Stored in FRAMES_TABLE with PK=FRAME#{frameId}, SK=METADATA.
+ */
+export interface CampaignFrame {
+  frameId: string;
+  /** Human-readable name — required, unique per creator. */
+  name: string;
+  /** User ID of the frame's author/creator. */
+  creatorUserId: string;
+  /** Display name of the author (denormalized for list views). */
+  author: string | null;
+  /** Brief elevator pitch (1-2 sentences). */
+  pitch: string | null;
+  /** Longer overview / description (supports markdown). */
+  overview: string | null;
+  /** Tone and feel descriptor, e.g. "Dark & Gritty", "Whimsical". */
+  toneAndFeel: string | null;
+  /** Complexity rating — how much new material does this frame introduce? */
+  complexity: FrameComplexityRating | null;
+  /** Thematic tags, e.g. ["political intrigue", "survival", "horror"]. Max 10. */
+  themes: string[];
+  /** Media touchstones, e.g. ["Attack on Titan", "Dark Souls"]. Max 10. */
+  touchstones: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Lightweight summary returned by list endpoints.
+ */
+export interface CampaignFrameSummary {
+  frameId: string;
+  name: string;
+  creatorUserId: string;
+  author: string | null;
+  pitch: string | null;
+  complexity: FrameComplexityRating | null;
+  themes: string[];
+  /** Number of homebrew content items linked to this frame. */
+  contentCount: number;
+  /** Number of SRD restrictions/alterations defined. */
+  restrictionCount: number;
+  /** Number of custom type extensions defined. */
+  extensionCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Full detail view of a campaign frame — includes all nested records.
+ */
+export interface CampaignFrameDetail extends CampaignFrame {
+  /** Homebrew content items linked to this frame. */
+  contents: FrameContentRef[];
+  /** SRD content restrictions/alterations. */
+  restrictions: FrameRestriction[];
+  /** Custom type extensions. */
+  extensions: FrameExtension[];
+}
+
+// ─── Frame Content References ────────────────────────────────────────────────
+
+/**
+ * A reference linking a homebrew content item to a frame.
+ * The actual homebrew data lives in the normal tables (Classes, GameData,
+ * DomainCards); this is a pointer that says "this item is part of this frame".
+ * Stored in FRAMES_TABLE: PK=FRAME#{frameId}, SK=CONTENT#{contentType}#{contentId}.
+ */
+export interface FrameContentRef {
+  /** The homebrew content type. */
+  contentType: HomebrewContentType;
+  /** The homebrew item's ID (slug). */
+  contentId: string;
+  /** Denormalized name for list rendering. */
+  name: string;
+  /** When this reference was added. */
+  addedAt: string;
+}
+
+// ─── SRD Restrictions / Alterations ──────────────────────────────────────────
+
+/**
+ * Describes how a specific SRD content item is restricted or altered within
+ * a frame.
+ *
+ * - "restricted": This SRD item is not available in campaigns using this frame.
+ * - "altered": This SRD item is available, but with modifications described
+ *   in `alterationNotes` and/or overridden fields in `alterationData`.
+ *
+ * Stored in FRAMES_TABLE: PK=FRAME#{frameId}, SK=RESTRICTION#{contentType}#{contentId}.
+ */
+export interface FrameRestriction {
+  /** Which SRD content type is affected. */
+  contentType: FrameRestrictableContentType;
+  /** The SRD item's canonical ID (e.g. "ranger", "elf", "blade"). */
+  contentId: string;
+  /** Denormalized name of the SRD item. */
+  name: string;
+  /** Whether the item is outright removed or just altered. */
+  mode: "restricted" | "altered";
+  /**
+   * Human-readable notes explaining what changed (markdown).
+   * Required when mode is "altered"; optional for "restricted".
+   */
+  alterationNotes: string | null;
+  /**
+   * Machine-readable overrides for the SRD item's data.
+   * Schema depends on contentType — intentionally loose here so the backend
+   * can validate per-type. For example, altering a class might change its
+   * available domains; altering a community might change its stat bonuses.
+   */
+  alterationData: Record<string, unknown> | null;
+}
+
+// ─── Custom Type Extensions ──────────────────────────────────────────────────
+
+/**
+ * A custom type extension defined by a frame.
+ * These extend enums/value sets that SRD homebrew cannot normally modify.
+ * Homebrew content within the frame can then reference these new values.
+ *
+ * Stored in FRAMES_TABLE: PK=FRAME#{frameId}, SK=EXTENSION#{extensionType}#{slug}.
+ */
+export interface FrameExtension {
+  /** What kind of type is being extended. */
+  extensionType: FrameExtensionType;
+  /** URL-safe slug for this extension. */
+  slug: string;
+  /** Display name, e.g. "Electric", "Colossus". */
+  name: string;
+  /**
+   * Optional description / rules text for this new type (markdown).
+   */
+  description: string | null;
+  /**
+   * Extension-type-specific data. For example:
+   * - damageType: { color?: string }  (UI color hint)
+   * - adversaryType: { tier?: number, baseHp?: number }
+   * - condition: { effect: string, duration?: string }
+   * - domain: { associatedStat?: CoreStatName }
+   */
+  data: Record<string, unknown> | null;
+}
+
+// ─── Campaign ↔ Frame Attachment ─────────────────────────────────────────────
+
+/**
+ * Represents the attachment of a frame to a campaign.
+ * Stored in CAMPAIGNS_TABLE: PK=CAMPAIGN#{campaignId}, SK=FRAME#{frameId}.
+ * This piggybacks on the existing Campaigns table key space, which already
+ * uses the CAMPAIGN# partition for all campaign-scoped records.
+ */
+export interface CampaignFrameAttachment {
+  campaignId: string;
+  frameId: string;
+  /** Denormalized frame name for efficient list rendering. */
+  frameName: string;
+  /** User ID of whoever attached the frame (must be a GM). */
+  attachedByUserId: string;
+  attachedAt: string;
+}
+
+// ─── Conflict Resolution ─────────────────────────────────────────────────────
+
+/**
+ * When multiple frames attached to the same campaign define content that
+ * conflicts (same contentType + name/identifier), the GM resolves the conflict
+ * by choosing which frame's version to keep for each item.
+ *
+ * Stored in CAMPAIGNS_TABLE: PK=CAMPAIGN#{campaignId},
+ *   SK=CONFLICT#{contentType}#{normalizedName}.
+ */
+export interface CampaignConflictResolution {
+  campaignId: string;
+  /** The conflicting content type. */
+  contentType: HomebrewContentType | FrameRestrictableContentType;
+  /** The normalized name/identifier of the conflicting item. */
+  contentName: string;
+  /** Frame ID whose version the GM chose to keep. */
+  winningFrameId: string;
+  /** All frame IDs that had a version of this item (including the winner). */
+  competingFrameIds: string[];
+  /** Who resolved the conflict. */
+  resolvedByUserId: string;
+  resolvedAt: string;
+}
+
+// ─── API Input Types ─────────────────────────────────────────────────────────
+
+export interface CreateCampaignFrameInput {
+  name: string;
+  author?: string;
+  pitch?: string;
+  overview?: string;
+  toneAndFeel?: string;
+  complexity?: FrameComplexityRating;
+  themes?: string[];
+  touchstones?: string[];
+}
+
+export interface UpdateCampaignFrameInput {
+  name?: string;
+  author?: string;
+  pitch?: string;
+  overview?: string;
+  toneAndFeel?: string;
+  complexity?: FrameComplexityRating;
+  themes?: string[];
+  touchstones?: string[];
+}
+
+export interface AddFrameContentInput {
+  contentType: HomebrewContentType;
+  contentId: string;
+  name: string;
+}
+
+export interface AddFrameRestrictionInput {
+  contentType: FrameRestrictableContentType;
+  contentId: string;
+  name: string;
+  mode: "restricted" | "altered";
+  alterationNotes?: string;
+  alterationData?: Record<string, unknown>;
+}
+
+export interface AddFrameExtensionInput {
+  extensionType: FrameExtensionType;
+  name: string;
+  description?: string;
+  data?: Record<string, unknown>;
+}
+
+export interface AttachFrameToCampaignInput {
+  frameId: string;
+}
+
+export interface ResolveConflictInput {
+  contentType: HomebrewContentType | FrameRestrictableContentType;
+  contentName: string;
+  winningFrameId: string;
+  competingFrameIds: string[];
+}

@@ -17,6 +17,7 @@ import { StorageStack } from "../lib/storage-stack";
 import { ApiStack } from "../lib/api-stack";
 import { CampaignStack } from "../lib/campaign-stack";
 import { HomebrewStack } from "../lib/homebrew-stack";
+import { FramesStack } from "../lib/frames-stack";
 import { FrontendStack } from "../lib/frontend-stack";
 
 const app = new cdk.App();
@@ -71,6 +72,15 @@ const campaignStack = new CampaignStack(app, `DaggerheartCampaign-${stage}`, {
 });
 
 new HomebrewStack(app, `DaggerheartHomebrew-${stage}`, {
+  ...stackProps,
+  authStack,
+  dataStack,
+  campaignStack,
+  httpApi: apiStack.httpApi,
+  corsAllowedOrigins,
+});
+
+new FramesStack(app, `DaggerheartFrames-${stage}`, {
   ...stackProps,
   authStack,
   dataStack,

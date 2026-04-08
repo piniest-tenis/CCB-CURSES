@@ -78,6 +78,11 @@ const DiceLog = dynamic(
   { ssr: false }
 );
 
+const CampaignFramesTab = dynamic(
+  () => import("@/components/campaign/CampaignFramesTab").then((m) => m.CampaignFramesTab),
+  { ssr: false }
+);
+
 const DiceRollerPanel = dynamic(
   () => import("@/components/dice/DiceRollerPanel").then((m) => m.DiceRollerPanel),
   { ssr: false }
@@ -393,6 +398,7 @@ const GM_TABS: { id: CampaignTab; label: string; icon: string }[] = [
   { id: "command", label: "Command", icon: "🎯" },
   { id: "adversaries", label: "Adversaries", icon: "👹" },
   { id: "encounter", label: "Encounter", icon: "⚔️" },
+  { id: "frames", label: "Frames", icon: "🖼" },
 ];
 
 interface GmTabBarProps {
@@ -1517,6 +1523,20 @@ export default function CampaignDetailClient() {
                       store.addAdversary(adversary);
                       setActiveTab("encounter");
                     }}
+                  />
+                </div>
+              )}
+
+              {/* Frames tab (visible to all members, GM gets edit controls) */}
+              {activeTab === "frames" && (
+                <div
+                  id="tabpanel-frames"
+                  role="tabpanel"
+                  aria-labelledby="tab-frames"
+                >
+                  <CampaignFramesTab
+                    campaignId={campaignId}
+                    isGm={isGm}
                   />
                 </div>
               )}

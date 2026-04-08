@@ -21,9 +21,9 @@ import { useCallback, useEffect, useState } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type CampaignTab = "command" | "characters" | "adversaries" | "encounter" | "environments";
+export type CampaignTab = "command" | "characters" | "adversaries" | "encounter" | "environments" | "frames";
 
-const VALID_TABS = new Set<CampaignTab>(["command", "characters", "adversaries", "encounter", "environments"]);
+const VALID_TABS = new Set<CampaignTab>(["command", "characters", "adversaries", "encounter", "environments", "frames"]);
 
 function isValidTab(v: string | null): v is CampaignTab {
   return v !== null && VALID_TABS.has(v as CampaignTab);
