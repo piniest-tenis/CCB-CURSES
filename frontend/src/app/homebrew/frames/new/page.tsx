@@ -1,22 +1,21 @@
 "use client";
 
 /**
- * src/app/frames/[id]/edit/FrameEditClient.tsx
+ * src/app/frames/new/page.tsx
  *
- * Edit form for an existing campaign frame.
- * Pre-populates all fields from the current frame data.
- * Validates ownership (creatorUserId === current user).
+ * Create new campaign frame form.
+ * Supports all frame metadata fields: name, author, complexity, pitch,
+ * tone & feel, overview, themes (tag input), and touchstones (tag input).
  * On success, redirects to /frames/{frameId}.
+ * Full accessibility: labels, aria-describedby for errors, focus management.
  */
 
-import React, { useEffect, useId, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import React, { useEffect, useId, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
-import { useFrameDetail, useUpdateFrame } from "@/hooks/useFrames";
+import { useCreateFrame } from "@/hooks/useFrames";
 import type { FrameComplexityRating } from "@shared/types";
-
-// ── Constants ─────────────────────────────────────────────────────────────────
 
 const MAX_NAME_LENGTH     = 100;
 const MAX_AUTHOR_LENGTH   = 100;
@@ -24,6 +23,8 @@ const MAX_PITCH_LENGTH    = 200;
 const MAX_TONE_LENGTH     = 500;
 const MAX_OVERVIEW_LENGTH = 2000;
 const MAX_TAGS            = 10;
+const MAX_THEME_LENGTH    = 30;
+const MAX_TOUCHSTONE_LENGTH = 50;
 
 const COMPLEXITY_OPTIONS: { value: FrameComplexityRating; label: string }[] = [
   { value: "low",      label: "Low" },
@@ -32,46 +33,36 @@ const COMPLEXITY_OPTIONS: { value: FrameComplexityRating; label: string }[] = [
   { value: "extreme",  label: "Extreme" },
 ];
 
-// ── Component ─────────────────────────────────────────────────────────────────
-
-export default function FrameEditClient() {
-  const pathname = usePathname();
-  // useParams() returns "__placeholder__" in a static export; usePathname()
-  // always reflects the actual browser URL path.
-  // Path: /frames/[id]/edit -> segment index 2
-  const frameId = pathname?.split("/")[2] ?? "";
-
+export default function NewFramePage() {
   const router = useRouter();
-  const { user, isAuthenticated, isReady, isLoading: authLoading } = useAuthStore();
-
-  const { data: frame, isLoading: frameLoading, isError: frameError, error: frameFetchError } =
-    useFrameDetail(frameId || undefined);
-  const updateMutation = useUpdateFrame(frameId);
+  const { isAuthenticated, isReady, isLoading: authLoading } = useAuthStore();
+  const createMutation = useCreateFrame();
 
   // ── Form state ────────────────────────────────────────────────────────────
-  const [name, setName]               = useState("");
-  const [author, setAuthor]           = useState("");
-  const [complexity, setComplexity]   = useState<FrameComplexityRating | "">("");
-  const [pitch, setPitch]             = useState("");
+  const [name, setName]             = useState("");
+  const [author, setAuthor]         = useState("");
+  const [complexity, setComplexity] = useState<FrameComplexityRating | "">("");
+  const [pitch, setPitch]           = useState("");
   const [toneAndFeel, setToneAndFeel] = useState("");
-  const [overview, setOverview]       = useState("");
-  const [themes, setThemes]           = useState<string[]>([]);
-  const [themeInput, setThemeInput]   = useState("");
+  const [overview, setOverview]     = useState("");
+  const [themes, setThemes]         = useState<string[]>([]);
+  const [themeInput, setThemeInput] = useState("");
   const [touchstones, setTouchstones] = useState<string[]>([]);
   const [touchstoneInput, setTouchstoneInput] = useState("");
-  const [initialized, setInitialized] = useState(false);
 
   // ── IDs for a11y ──────────────────────────────────────────────────────────
-  const nameId        = useId();
-  const authorId      = useId();
-  const complexityId  = useId();
-  const pitchId       = useId();
-  const toneId        = useId();
-  const overviewId    = useId();
-  const themesId      = useId();
-  const touchstonesId = useId();
-  const nameErrorId   = useId();
-  const formErrorId   = useId();
+  const nameId           = useId();
+  const authorId         = useId();
+  const complexityId     = useId();
+  const pitchId          = useId();
+  const toneId           = useId();
+  const overviewId       = useId();
+  const themesId         = useId();
+  const touchstonesId    = useId();
+  const nameErrorId      = useId();
+  const formErrorId      = useId();
+
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   // ── Auth guard ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -80,22 +71,12 @@ export default function FrameEditClient() {
     }
   }, [isReady, isAuthenticated, router]);
 
-  // ── Pre-fill form once frame data loads ───────────────────────────────────
+  // Focus name input on mount
   useEffect(() => {
-    if (frame && !initialized) {
-      setName(frame.name);
-      setAuthor(frame.author ?? "");
-      setComplexity(frame.complexity ?? "");
-      setPitch(frame.pitch ?? "");
-      setToneAndFeel(frame.toneAndFeel ?? "");
-      setOverview(frame.overview ?? "");
-      setThemes(frame.themes ?? []);
-      setTouchstones(frame.touchstones ?? []);
-      setInitialized(true);
-    }
-  }, [frame, initialized]);
+    nameInputRef.current?.focus();
+  }, []);
 
-  // ── Loading state ─────────────────────────────────────────────────────────
+  // ── Loading / auth check ──────────────────────────────────────────────────
   if (!isReady || authLoading || !isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a100d]">
@@ -107,125 +88,17 @@ export default function FrameEditClient() {
     );
   }
 
-  if (frameLoading) {
-    return (
-      <div className="min-h-screen bg-[#0a100d] flex flex-col">
-        <header className="border-b border-slate-800/60">
-          <div className="mx-auto max-w-2xl px-4 py-4">
-            <Link
-              href={`/frames/${frameId}`}
-              className="
-                flex items-center gap-2 text-sm text-[#b9baa3]/60
-                hover:text-[#b9baa3] transition-colors
-                focus:outline-none focus:ring-2 focus:ring-[#577399] rounded
-              "
-              aria-label="Back to frame"
-            >
-              <span aria-hidden="true">&larr;</span>
-              Back to Frame
-            </Link>
-          </div>
-        </header>
-        <div className="flex flex-1 items-center justify-center">
-          <div
-            aria-label="Loading frame data"
-            className="h-8 w-8 animate-spin rounded-full border-2 border-[#577399] border-t-transparent"
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // ── Fetch error state ─────────────────────────────────────────────────────
-  if (frameError) {
-    return (
-      <div className="min-h-screen bg-[#0a100d] flex flex-col">
-        <header className="border-b border-slate-800/60">
-          <div className="mx-auto max-w-2xl px-4 py-4">
-            <Link
-              href={`/frames/${frameId}`}
-              className="
-                flex items-center gap-2 text-sm text-[#b9baa3]/60
-                hover:text-[#b9baa3] transition-colors
-                focus:outline-none focus:ring-2 focus:ring-[#577399] rounded
-              "
-              aria-label="Back to frame"
-            >
-              <span aria-hidden="true">&larr;</span>
-              Back to Frame
-            </Link>
-          </div>
-        </header>
-        <main className="flex-1 mx-auto w-full max-w-2xl px-4 py-10">
-          <div
-            role="alert"
-            className="rounded-lg border border-[#fe5f55]/40 bg-[#fe5f55]/10 px-4 py-3"
-          >
-            <p className="text-sm text-[#fe5f55]">
-              {frameFetchError?.message ?? "Failed to load frame data. Please try again."}
-            </p>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  // ── Ownership check ───────────────────────────────────────────────────────
-  if (frame && user && frame.creatorUserId !== user.userId) {
-    return (
-      <div className="min-h-screen bg-[#0a100d] flex flex-col">
-        <header className="border-b border-slate-800/60">
-          <div className="mx-auto max-w-2xl px-4 py-4">
-            <Link
-              href={`/frames/${frameId}`}
-              className="
-                flex items-center gap-2 text-sm text-[#b9baa3]/60
-                hover:text-[#b9baa3] transition-colors
-                focus:outline-none focus:ring-2 focus:ring-[#577399] rounded
-              "
-              aria-label="Back to frame"
-            >
-              <span aria-hidden="true">&larr;</span>
-              Back to Frame
-            </Link>
-          </div>
-        </header>
-        <main className="flex-1 mx-auto w-full max-w-2xl px-4 py-10">
-          <div className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-6 shadow-card-fantasy text-center space-y-4">
-            <h1 className="font-serif text-2xl font-semibold text-[#f7f7ff]">
-              Permission Denied
-            </h1>
-            <p className="text-sm text-[#b9baa3]">
-              You don&apos;t have permission to edit this frame.
-            </p>
-            <Link
-              href={`/frames/${frameId}`}
-              className="
-                inline-block rounded-lg px-5 py-2.5 text-sm font-medium
-                border border-slate-700/60 text-[#b9baa3]/60
-                hover:border-slate-600 hover:text-[#b9baa3]
-                transition-colors
-                focus:outline-none focus:ring-2 focus:ring-[#577399]
-              "
-            >
-              Return to Frame
-            </Link>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
   // ── Derived values ────────────────────────────────────────────────────────
-  const nameValue   = name.trim();
+  const nameValue  = name.trim();
   const isNameEmpty = nameValue.length === 0;
-  const canSubmit   = !isNameEmpty && !updateMutation.isPending;
+  const canSubmit  = !isNameEmpty && !createMutation.isPending;
 
   // ── Tag helpers ───────────────────────────────────────────────────────────
   const addTheme = () => {
     const tag = themeInput.trim();
     if (
       tag.length > 0 &&
+      tag.length <= MAX_THEME_LENGTH &&
       themes.length < MAX_TAGS &&
       !themes.some((t) => t.toLowerCase() === tag.toLowerCase())
     ) {
@@ -242,6 +115,7 @@ export default function FrameEditClient() {
     const tag = touchstoneInput.trim();
     if (
       tag.length > 0 &&
+      tag.length <= MAX_TOUCHSTONE_LENGTH &&
       touchstones.length < MAX_TAGS &&
       !touchstones.some((t) => t.toLowerCase() === tag.toLowerCase())
     ) {
@@ -265,18 +139,18 @@ export default function FrameEditClient() {
     e.preventDefault();
     if (!canSubmit) return;
 
-    await updateMutation.mutateAsync({
+    const frame = await createMutation.mutateAsync({
       name: nameValue,
-      author:      author.trim()      || undefined,
-      complexity:  complexity          || undefined,
-      pitch:       pitch.trim()        || undefined,
-      toneAndFeel: toneAndFeel.trim()  || undefined,
-      overview:    overview.trim()     || undefined,
-      themes:      themes.length > 0   ? themes      : undefined,
-      touchstones: touchstones.length > 0 ? touchstones : undefined,
+      ...(author.trim()      ? { author: author.trim() }           : {}),
+      ...(complexity          ? { complexity }                      : {}),
+      ...(pitch.trim()        ? { pitch: pitch.trim() }             : {}),
+      ...(toneAndFeel.trim()  ? { toneAndFeel: toneAndFeel.trim() } : {}),
+      ...(overview.trim()     ? { overview: overview.trim() }       : {}),
+      ...(themes.length > 0   ? { themes }                          : {}),
+      ...(touchstones.length > 0 ? { touchstones }                  : {}),
     });
 
-    router.push(`/frames/${frameId}`);
+    router.push(`/homebrew/frames/${frame.frameId}`);
   };
 
   // ── Shared input class ────────────────────────────────────────────────────
@@ -289,16 +163,16 @@ export default function FrameEditClient() {
       <header className="border-b border-slate-800/60">
         <div className="mx-auto max-w-2xl px-4 py-4">
           <Link
-            href={`/frames/${frameId}`}
+            href="/homebrew/frames"
             className="
               flex items-center gap-2 text-sm text-[#b9baa3]/60
               hover:text-[#b9baa3] transition-colors
               focus:outline-none focus:ring-2 focus:ring-[#577399] rounded
             "
-            aria-label="Back to frame"
+            aria-label="Back to campaign frames"
           >
             <span aria-hidden="true">&larr;</span>
-            Back to Frame
+            Campaign Frames
           </Link>
         </div>
       </header>
@@ -307,10 +181,10 @@ export default function FrameEditClient() {
         {/* Page heading */}
         <div className="mb-8">
           <h1 className="font-serif text-3xl font-semibold text-[#f7f7ff]">
-            Edit Campaign Frame
+            Create Campaign Frame
           </h1>
           <p className="mt-2 text-sm text-[#b9baa3]/60">
-            Update the metadata for your campaign frame.
+            Define the rules, tone, and content for a reusable campaign frame.
           </p>
         </div>
 
@@ -333,6 +207,7 @@ export default function FrameEditClient() {
               <span className="sr-only">(required)</span>
             </label>
             <input
+              ref={nameInputRef}
               id={nameId}
               type="text"
               value={name}
@@ -532,17 +407,18 @@ export default function FrameEditClient() {
                   }
                 }}
                 disabled={themes.length >= MAX_TAGS}
+                maxLength={MAX_THEME_LENGTH}
                 placeholder={
                   themes.length >= MAX_TAGS
                     ? "Maximum themes reached"
                     : "e.g. political intrigue"
                 }
-                className={`${inputClassName} flex-1`}
+                className={`${inputClassName} flex-1 ${themeInput.trim().length > MAX_THEME_LENGTH ? "border-[#fe5f55] focus:ring-[#fe5f55]" : ""}`}
               />
               <button
                 type="button"
                 onClick={addTheme}
-                disabled={themes.length >= MAX_TAGS || themeInput.trim().length === 0}
+                disabled={themes.length >= MAX_TAGS || themeInput.trim().length === 0 || themeInput.trim().length > MAX_THEME_LENGTH}
                 className="
                   rounded-lg px-4 py-2 text-sm font-medium
                   bg-[#577399]/20 text-[#577399]
@@ -555,6 +431,11 @@ export default function FrameEditClient() {
                 Add
               </button>
             </div>
+            {themeInput.length > 0 && (
+              <p className={`mt-0.5 text-xs text-right ${themeInput.trim().length >= Math.floor(MAX_THEME_LENGTH * 0.9) ? "text-[#fe5f55]" : "text-[#b9baa3]"}`}>
+                {themeInput.trim().length}/{MAX_THEME_LENGTH}
+              </p>
+            )}
             {themes.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-2" role="list" aria-label="Themes">
                 {themes.map((theme, index) => (
@@ -622,17 +503,18 @@ export default function FrameEditClient() {
                   }
                 }}
                 disabled={touchstones.length >= MAX_TAGS}
+                maxLength={MAX_TOUCHSTONE_LENGTH}
                 placeholder={
                   touchstones.length >= MAX_TAGS
                     ? "Maximum touchstones reached"
                     : "e.g. Dark Souls, Attack on Titan"
                 }
-                className={`${inputClassName} flex-1`}
+                className={`${inputClassName} flex-1 ${touchstoneInput.trim().length > MAX_TOUCHSTONE_LENGTH ? "border-[#fe5f55] focus:ring-[#fe5f55]" : ""}`}
               />
               <button
                 type="button"
                 onClick={addTouchstone}
-                disabled={touchstones.length >= MAX_TAGS || touchstoneInput.trim().length === 0}
+                disabled={touchstones.length >= MAX_TAGS || touchstoneInput.trim().length === 0 || touchstoneInput.trim().length > MAX_TOUCHSTONE_LENGTH}
                 className="
                   rounded-lg px-4 py-2 text-sm font-medium
                   bg-[#577399]/20 text-[#577399]
@@ -645,19 +527,27 @@ export default function FrameEditClient() {
                 Add
               </button>
             </div>
+            {touchstoneInput.length > 0 && (
+              <p className={`mt-0.5 text-xs text-right ${touchstoneInput.trim().length >= Math.floor(MAX_TOUCHSTONE_LENGTH * 0.9) ? "text-[#fe5f55]" : "text-[#b9baa3]"}`}>
+                {touchstoneInput.trim().length}/{MAX_TOUCHSTONE_LENGTH}
+              </p>
+            )}
             {touchstones.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-2" role="list" aria-label="Touchstones">
                 {touchstones.map((touchstone, index) => (
                   <span
                     key={`${touchstone}-${index}`}
                     role="listitem"
+                    title={touchstone}
                     className="
                       inline-flex items-center gap-1.5
                       bg-[#577399]/20 text-[#577399] rounded-full
                       px-3 py-1 text-sm
                     "
                   >
-                    {touchstone}
+                    <span className="max-w-[125px] overflow-hidden text-ellipsis whitespace-nowrap block">
+                      {touchstone}
+                    </span>
                     <button
                       type="button"
                       onClick={() => removeTouchstone(index)}
@@ -686,15 +576,15 @@ export default function FrameEditClient() {
           </div>
 
           {/* ── Submission error ──────────────────────────────────────────── */}
-          {updateMutation.isError && (
+          {createMutation.isError && (
             <div
               id={formErrorId}
               role="alert"
               className="rounded-lg border border-[#fe5f55]/40 bg-[#fe5f55]/10 px-4 py-3"
             >
               <p className="text-sm text-[#fe5f55]">
-                {updateMutation.error?.message ??
-                  "Failed to save changes. Please try again."}
+                {createMutation.error?.message ??
+                  "Failed to create frame. Please try again."}
               </p>
             </div>
           )}
@@ -702,7 +592,7 @@ export default function FrameEditClient() {
           {/* ── Actions ──────────────────────────────────────────────────── */}
           <div className="flex items-center justify-end gap-3 pt-2">
             <Link
-              href={`/frames/${frameId}`}
+              href="/homebrew/frames"
               className="
                 rounded-lg px-5 py-2.5 text-sm font-medium
                 border border-slate-700/60 text-[#b9baa3]/60
@@ -717,7 +607,7 @@ export default function FrameEditClient() {
             <button
               type="submit"
               disabled={!canSubmit}
-              aria-describedby={updateMutation.isError ? formErrorId : undefined}
+              aria-describedby={createMutation.isError ? formErrorId : undefined}
               className="
                 rounded-lg px-6 py-2.5 font-semibold text-sm
                 bg-[#577399] text-[#f7f7ff]
@@ -728,16 +618,16 @@ export default function FrameEditClient() {
                 focus:ring-offset-2 focus:ring-offset-slate-900
               "
             >
-              {updateMutation.isPending ? (
+              {createMutation.isPending ? (
                 <span className="flex items-center gap-2">
                   <span
                     aria-hidden="true"
                     className="h-3.5 w-3.5 animate-spin rounded-full border border-[#f7f7ff] border-t-transparent"
                   />
-                  Saving...
+                  Creating...
                 </span>
               ) : (
-                "Save Changes"
+                "Create Frame"
               )}
             </button>
           </div>

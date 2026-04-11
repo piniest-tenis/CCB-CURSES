@@ -61,7 +61,7 @@ export default function FramesPage() {
           </div>
 
           <Link
-            href="/frames/new"
+            href="/homebrew/frames/new"
             className="
               shrink-0 flex items-center gap-2
               rounded-xl border border-[#577399]/60 bg-[#577399]/10
@@ -135,7 +135,7 @@ export default function FramesPage() {
               </p>
             </div>
             <Link
-              href="/frames/new"
+              href="/homebrew/frames/new"
               className="
                 mt-2 inline-flex items-center gap-2 rounded-xl
                 border border-[#577399]/60 bg-[#577399]/10

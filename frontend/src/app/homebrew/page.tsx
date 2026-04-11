@@ -16,12 +16,15 @@
 
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
 import { useHomebrewList, useDeleteHomebrew } from "@/hooks/useHomebrew";
+import { useFrames } from "@/hooks/useFrames";
 import type { HomebrewContentType, HomebrewSummary } from "@shared/types";
 
 import { AppHeader } from "@/components/AppHeader";
 import { SourceBadge } from "@/components/SourceBadge";
+import { FrameCard, FrameCardSkeleton } from "@/components/frames/FrameCard";
 import { Footer } from "@/components/Footer";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -112,58 +115,61 @@ function HomebrewCard({ item, onEdit, onDelete, isDeleting }: HomebrewCardProps)
   const [showConfirm, setShowConfirm] = useState(false);
 
   return (
-    <div
+    <article
       className="
-        group relative rounded-xl border border-slate-700/60 bg-slate-900/60
-        hover:border-coral-400/40 hover:shadow-glow-coral
+        group relative flex flex-col rounded-xl
+        border border-coral-400/20 bg-slate-900/80
+        p-5 shadow-card-fantasy
+        hover:shadow-card-fantasy-hover hover:border-coral-400/40
         transition-all duration-200
-        flex flex-col
-        border-l-[3px] border-l-coral-400/50
       "
-      style={{
-        backgroundImage: "linear-gradient(135deg, rgba(249,104,84,0.04) 0%, transparent 60%)",
-      }}
     >
-      <div className="flex-1 p-4 space-y-2">
-        {/* Header: type badge + name */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="space-y-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span
-                className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${typeColorClasses(item.contentType)}`}
-              >
-                {contentTypeLabel(item.contentType)}
-              </span>
-              <SourceBadge source="homebrew" size="xs" />
-            </div>
-            <h3 className="font-serif text-lg font-semibold text-[#f7f7ff] leading-tight truncate">
-              {item.name}
-            </h3>
-          </div>
-        </div>
+      {/* Coral accent bar — top edge */}
+      <div
+        className="absolute inset-x-0 top-0 h-[2px] rounded-t-xl bg-gradient-to-r from-coral-400/60 via-coral-400/30 to-transparent"
+        aria-hidden="true"
+      />
 
-        {/* Timestamp */}
-        <p className="text-xs text-parchment-600">
-          Updated{" "}
-          {new Date(item.updatedAt).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          })}
-        </p>
+      {/* Header: type badge + source badge */}
+      <div className="flex items-center gap-2 mb-2">
+        <span
+          className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${typeColorClasses(item.contentType)}`}
+        >
+          {contentTypeLabel(item.contentType)}
+        </span>
+        <SourceBadge source="homebrew" size="xs" />
       </div>
 
-      {/* Actions */}
-      <div className="border-t border-slate-700/40 px-4 py-3 flex items-center gap-2">
+      {/* Name */}
+      <h3 className="font-serif text-lg font-semibold text-[#f7f7ff] leading-tight truncate mb-1">
+        {item.name}
+      </h3>
+
+      {/* Timestamp */}
+      <p className="text-xs text-[#b9baa3]/50 mb-4">
+        Updated{" "}
+        {new Date(item.updatedAt).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })}
+      </p>
+
+      {/* Spacer to push actions to bottom */}
+      <div className="flex-1" />
+
+      {/* Actions — aligned with FrameCard/CampaignCard footer pattern */}
+      <div className="flex items-center gap-2 pt-3 border-t border-slate-700/30">
         <button
           type="button"
           onClick={onEdit}
           className="
-            flex-1 rounded-lg px-3 py-1.5 text-sm font-medium
-            border border-coral-400/40 bg-coral-400/10 text-coral-400
-            hover:bg-coral-400/20 hover:border-coral-400
+            flex-1 rounded-lg px-3 py-2 text-sm font-semibold
+            bg-coral-400/10 text-coral-400
+            hover:bg-coral-400/20
             transition-colors
-            focus:outline-none focus:ring-2 focus:ring-coral-400 focus:ring-offset-2 focus:ring-offset-slate-900
+            focus:outline-none focus:ring-2 focus:ring-coral-400
+            focus:ring-offset-2 focus:ring-offset-slate-900
           "
         >
           Edit
@@ -174,14 +180,14 @@ function HomebrewCard({ item, onEdit, onDelete, isDeleting }: HomebrewCardProps)
               type="button"
               onClick={() => { onDelete(); setShowConfirm(false); }}
               disabled={isDeleting}
-              className="rounded-lg px-2.5 py-1.5 text-xs font-medium bg-[#fe5f55]/20 border border-[#fe5f55]/40 text-[#fe5f55] hover:bg-[#fe5f55]/30 transition-colors disabled:opacity-40"
+              className="rounded-lg px-2.5 py-2 text-xs font-medium bg-[#fe5f55]/20 border border-[#fe5f55]/40 text-[#fe5f55] hover:bg-[#fe5f55]/30 transition-colors disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-[#fe5f55]"
             >
               {isDeleting ? "..." : "Confirm"}
             </button>
             <button
               type="button"
               onClick={() => setShowConfirm(false)}
-              className="rounded-lg px-2 py-1.5 text-xs text-parchment-500 hover:text-[#b9baa3] transition-colors"
+              className="rounded-lg px-2 py-2 text-xs text-[#b9baa3]/50 hover:text-[#b9baa3] transition-colors"
             >
               Cancel
             </button>
@@ -191,18 +197,19 @@ function HomebrewCard({ item, onEdit, onDelete, isDeleting }: HomebrewCardProps)
             type="button"
             onClick={() => setShowConfirm(true)}
             className="
-              rounded-lg px-3 py-1.5 text-sm font-medium
-              text-parchment-600 border border-slate-700/40
-              hover:text-[#fe5f55] hover:border-[#fe5f55]/40
+              rounded-lg px-3 py-2 text-sm font-medium
+              text-[#b9baa3]/50 border border-slate-700/30
+              hover:text-[#fe5f55] hover:border-[#fe5f55]/30
               transition-colors
-              focus:outline-none focus:ring-2 focus:ring-[#fe5f55] focus:ring-offset-2 focus:ring-offset-slate-900
+              focus:outline-none focus:ring-2 focus:ring-[#fe5f55]
+              focus:ring-offset-2 focus:ring-offset-slate-900
             "
           >
             Delete
           </button>
         )}
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -281,6 +288,7 @@ export default function HomebrewListPage() {
   const { isAuthenticated, isReady, isLoading: authLoading } = useAuthStore();
   const { data: items, isLoading, isError } = useHomebrewList();
   const deleteMutation = useDeleteHomebrew();
+  const { data: frames, isLoading: framesLoading } = useFrames();
 
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [query, setQuery] = useState("");
@@ -358,6 +366,113 @@ export default function HomebrewListPage() {
             </button>
           </div>
         </div>
+
+        {/* ─── Campaign Frames section ──────────────────────────────────── */}
+        <section className="mb-8">
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <div className="flex items-center gap-3">
+              <h2 className="font-serif text-xl font-semibold text-[#f7f7ff]">
+                Campaign Frames
+              </h2>
+              {!framesLoading && frames && (
+                <span className="text-xs text-[#577399]/70">
+                  {frames.length} frame{frames.length !== 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {frames && frames.length > 0 && (
+                <Link
+                  href="/homebrew/frames"
+                  className="
+                    text-sm font-medium text-[#577399]
+                    hover:text-[#577399]/80 hover:underline
+                    transition-colors
+                  "
+                >
+                  View all
+                </Link>
+              )}
+              <Link
+                href="/homebrew/frames/new"
+                className="
+                  flex items-center gap-1.5
+                  rounded-lg border border-[#577399]/50 bg-[#577399]/10
+                  px-3.5 py-1.5 text-sm font-semibold text-[#577399]
+                  hover:bg-[#577399]/20 hover:border-[#577399]
+                  transition-colors
+                  focus:outline-none focus:ring-2 focus:ring-[#577399]
+                  focus:ring-offset-2 focus:ring-offset-[#0a100d]
+                "
+              >
+                <span aria-hidden="true">+</span>
+                New Frame
+              </Link>
+            </div>
+          </div>
+
+          {/* Frames loading */}
+          {framesLoading && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {[0, 1, 2].map((i) => (
+                <FrameCardSkeleton key={i} />
+              ))}
+            </div>
+          )}
+
+          {/* Frames empty state */}
+          {!framesLoading && (!frames || frames.length === 0) && (
+            <div
+              className="rounded-xl border border-dashed border-[#577399]/30 p-8 text-center space-y-3"
+              style={{ background: "rgba(87,115,153,0.03)" }}
+            >
+              <p className="text-sm text-parchment-500">
+                No campaign frames yet.
+              </p>
+              <p className="text-xs text-parchment-600 max-w-md mx-auto leading-relaxed">
+                Frames bundle homebrew content, SRD restrictions, and custom extensions
+                into reusable packages you can attach to any campaign.
+              </p>
+              <Link
+                href="/homebrew/frames/new"
+                className="
+                  inline-flex items-center gap-1.5 mt-1
+                  text-sm font-semibold text-[#577399]
+                  hover:text-[#577399]/80 hover:underline
+                  transition-colors
+                "
+              >
+                <span aria-hidden="true">+</span> Create Your First Frame
+              </Link>
+            </div>
+          )}
+
+          {/* Frames grid — show up to 3 most recent */}
+          {!framesLoading && frames && frames.length > 0 && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {frames.slice(0, 3).map((frame) => (
+                <FrameCard key={frame.frameId} frame={frame} />
+              ))}
+            </div>
+          )}
+
+          {/* "See more" link when there are more than 3 */}
+          {!framesLoading && frames && frames.length > 3 && (
+            <div className="mt-3 text-center">
+              <Link
+                href="/homebrew/frames"
+                className="text-sm text-[#577399] hover:underline transition-colors"
+              >
+                View all {frames.length} frames
+              </Link>
+            </div>
+          )}
+        </section>
+
+        {/* ─── Homebrew Content ─────────────────────────────────────────── */}
+        <h2 className="font-serif text-xl font-semibold text-[#f7f7ff] mb-4">
+          Homebrew Content
+        </h2>
 
         {/* Type filter tabs with gradient scroll affordance */}
         <ScrollFadeTabs className="mb-5">

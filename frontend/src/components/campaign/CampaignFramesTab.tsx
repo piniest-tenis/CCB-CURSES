@@ -124,7 +124,7 @@ function AttachedFrameCard({
       {/* Header: frame name + detach button */}
       <div className="flex items-start justify-between gap-3">
         <Link
-          href={`/frames/${attachment.frameId}`}
+          href={`/homebrew/frames/${attachment.frameId}`}
           className="
             font-serif text-lg font-semibold text-[#f7f7ff]
             leading-tight min-w-0 truncate
@@ -376,7 +376,7 @@ function AttachFrameDropdown({
               </p>
               {(allFrames ?? []).length === 0 && (
                 <Link
-                  href="/frames/new"
+                  href="/homebrew/frames/new"
                   className="
                     mt-2 inline-block text-xs font-semibold text-[#577399]
                     hover:text-[#577399]/80 transition-colors
@@ -738,7 +738,7 @@ export function CampaignFramesTab({ campaignId, isGm }: CampaignFramesTabProps) 
             </p>
             {isGm && (
               <Link
-                href="/frames"
+                href="/homebrew/frames"
                 className="
                   mt-1 text-sm font-semibold text-[#577399]
                   hover:text-[#577399]/80 transition-colors

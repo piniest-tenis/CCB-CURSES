@@ -195,6 +195,20 @@ export interface Character extends CharacterSummary {
   domainVault: string[];   // all unlocked cardIds
   classFeatureState: ClassFeatureState;
   traitBonuses: Record<string, number>;
+  /**
+   * Permanent ancestry-granted bonuses and penalties to core trait scores,
+   * applied at character creation on top of the player-assigned traitBonuses array.
+   * Keys are CoreStatName values (e.g. "agility"). Values are additive deltas.
+   * Tracked separately from traitBonuses so the player-assigned array remains auditable.
+   */
+  ancestryTraitBonuses: Record<string, number>;
+  /**
+   * Ancestry-granted permanent roll modifiers: advantage or disadvantage on all
+   * rolls using a specific trait. Each entry grants one stack of the modifier.
+   * Multiple entries for the same trait/type are cumulative (though the SRD
+   * treats stacked advantage/disadvantage as a single advantage/disadvantage).
+   */
+  ancestryRollModifiers: Array<{ trait: CoreStatName; type: "advantage" | "disadvantage" }>;
   notes: string | null;
   avatarKey: string | null;
   /**
@@ -329,14 +343,31 @@ export interface ClassData extends ClassSummary {
  * or once-per-session effects are described in traitDescription prose instead.
  *
  * stat:        Which character stat is modified.
- * amount:      Additive integer delta (positive = increase).
+ *              - Flat numeric stats: "armor" | "hp" | "stress" | "evasion" | "hope" | "hopeMax"
+ *              - Core trait scores:  "trait:<traitName>" e.g. "trait:agility"
+ *                (permanent score delta applied at creation, stacks with player-assigned array)
+ *              - Roll modifiers:     "rollAdvantage:<traitName>" | "rollDisadvantage:<traitName>"
+ *                Grant advantage or disadvantage on all rolls using a specific trait.
+ *                e.g. "rollAdvantage:agility". amount is ignored (always 1 stack per bonus entry).
+ * amount:      Additive integer delta (positive = increase). For roll modifiers, use 1.
  * traitIndex:  0 for first/only trait, 1 for second trait (ancestries only).
  * condition:   Optional human-readable qualifier (stored for display; does NOT
  *              change the flat-bonus semantics — if a condition is present and
  *              non-trivial, the bonus should NOT be in this list).
  */
+export type MechanicalBonusStat =
+  | "armor"
+  | "hp"
+  | "stress"
+  | "evasion"
+  | "hope"
+  | "hopeMax"
+  | `trait:${CoreStatName}`
+  | `rollAdvantage:${CoreStatName}`
+  | `rollDisadvantage:${CoreStatName}`;
+
 export interface MechanicalBonus {
-  stat: "armor" | "hp" | "stress" | "evasion" | "hope" | "hopeMax";
+  stat: MechanicalBonusStat;
   amount: number;
   traitIndex: 0 | 1;
   condition?: string;
@@ -1111,7 +1142,7 @@ export type FrameRestrictableContentType = "class" | "community" | "ancestry" | 
  * The kinds of custom type extensions a frame can define.
  * These extend the universe of values available to homebrew within the frame.
  */
-export type FrameExtensionType = "damageType" | "adversaryType" | "condition" | "domain";
+export type FrameExtensionType = "damageType" | "adversaryType" | "condition" | "domain" | "houseRule";
 
 // ─── Frame Core ──────────────────────────────────────────────────────────────
 

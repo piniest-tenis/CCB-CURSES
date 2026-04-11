@@ -120,8 +120,8 @@ export function FrameCard({ frame }: FrameCardProps) {
         </span>
 
         <Link
-          href={`/frames/${frame.frameId}`}
-          aria-label={`View frame: ${frame.name}`}
+          href={`/homebrew/frames/${frame.frameId}`}
+          aria-label={`Details for frame: ${frame.name}`}
           className="
             rounded-lg px-4 py-2 text-sm font-semibold
             bg-[#577399] text-[#f7f7ff]
@@ -131,7 +131,7 @@ export function FrameCard({ frame }: FrameCardProps) {
             focus:ring-offset-2 focus:ring-offset-slate-900
           "
         >
-          View
+          Details
         </Link>
       </div>
     </article>

@@ -78,11 +78,6 @@ const DiceLog = dynamic(
   { ssr: false }
 );
 
-const CampaignFramesTab = dynamic(
-  () => import("@/components/campaign/CampaignFramesTab").then((m) => m.CampaignFramesTab),
-  { ssr: false }
-);
-
 const DiceRollerPanel = dynamic(
   () => import("@/components/dice/DiceRollerPanel").then((m) => m.DiceRollerPanel),
   { ssr: false }
@@ -398,7 +393,6 @@ const GM_TABS: { id: CampaignTab; label: string; icon: string }[] = [
   { id: "command", label: "Command", icon: "🎯" },
   { id: "adversaries", label: "Adversaries", icon: "👹" },
   { id: "encounter", label: "Encounter", icon: "⚔️" },
-  { id: "frames", label: "Frames", icon: "🖼" },
 ];
 
 interface GmTabBarProps {
@@ -758,7 +752,13 @@ export default function CampaignDetailClient() {
   // Extract the real campaign ID from the browser URL.
   // useParams() returns "__placeholder__" in a static export; usePathname()
   // always reflects the actual browser URL path.
-  const campaignId = pathname?.split("/")[2] ?? "";
+  const rawCampaignId = pathname?.split("/")[2] ?? "";
+  // Guard: only treat as a valid campaign ID if it looks like a UUID.
+  // This prevents the dynamic [id] route from firing API calls when
+  // CloudFront SPA rewrite briefly renders this component for static
+  // routes like /campaigns/new.
+  const isValidCampaignId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawCampaignId);
+  const campaignId = isValidCampaignId ? rawCampaignId : "";
   const router = useRouter();
 
   const { isAuthenticated, isReady, isLoading: authLoading, user } = useAuthStore();
@@ -1527,19 +1527,6 @@ export default function CampaignDetailClient() {
                 </div>
               )}
 
-              {/* Frames tab (visible to all members, GM gets edit controls) */}
-              {activeTab === "frames" && (
-                <div
-                  id="tabpanel-frames"
-                  role="tabpanel"
-                  aria-labelledby="tab-frames"
-                >
-                  <CampaignFramesTab
-                    campaignId={campaignId}
-                    isGm={isGm}
-                  />
-                </div>
-              )}
             </>
           )}
         </main>

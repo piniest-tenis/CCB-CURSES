@@ -1,21 +1,22 @@
 "use client";
 
 /**
- * src/app/frames/new/page.tsx
+ * src/app/frames/[id]/edit/FrameEditClient.tsx
  *
- * Create new campaign frame form.
- * Supports all frame metadata fields: name, author, complexity, pitch,
- * tone & feel, overview, themes (tag input), and touchstones (tag input).
+ * Edit form for an existing campaign frame.
+ * Pre-populates all fields from the current frame data.
+ * Validates ownership (creatorUserId === current user).
  * On success, redirects to /frames/{frameId}.
- * Full accessibility: labels, aria-describedby for errors, focus management.
  */
 
-import React, { useEffect, useId, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useEffect, useId, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
-import { useCreateFrame } from "@/hooks/useFrames";
+import { useFrameDetail, useUpdateFrame } from "@/hooks/useFrames";
 import type { FrameComplexityRating } from "@shared/types";
+
+// ── Constants ─────────────────────────────────────────────────────────────────
 
 const MAX_NAME_LENGTH     = 100;
 const MAX_AUTHOR_LENGTH   = 100;
@@ -31,36 +32,48 @@ const COMPLEXITY_OPTIONS: { value: FrameComplexityRating; label: string }[] = [
   { value: "extreme",  label: "Extreme" },
 ];
 
-export default function NewFramePage() {
+// ── Component ─────────────────────────────────────────────────────────────────
+
+export default function FrameEditClient() {
+  const pathname = usePathname();
+  // useParams() returns "__placeholder__" in a static export; usePathname()
+  // always reflects the actual browser URL path.
+  // Path: /homebrew/frames/[id]/edit -> segment index 3
+  const rawFrameId = pathname?.split("/")[3] ?? "";
+  // Guard: only treat as a valid frame ID if it looks like a UUID.
+  const frameId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawFrameId) ? rawFrameId : "";
+
   const router = useRouter();
-  const { isAuthenticated, isReady, isLoading: authLoading } = useAuthStore();
-  const createMutation = useCreateFrame();
+  const { user, isAuthenticated, isReady, isLoading: authLoading } = useAuthStore();
+
+  const { data: frame, isLoading: frameLoading, isError: frameError, error: frameFetchError } =
+    useFrameDetail(frameId || undefined);
+  const updateMutation = useUpdateFrame(frameId);
 
   // ── Form state ────────────────────────────────────────────────────────────
-  const [name, setName]             = useState("");
-  const [author, setAuthor]         = useState("");
-  const [complexity, setComplexity] = useState<FrameComplexityRating | "">("");
-  const [pitch, setPitch]           = useState("");
+  const [name, setName]               = useState("");
+  const [author, setAuthor]           = useState("");
+  const [complexity, setComplexity]   = useState<FrameComplexityRating | "">("");
+  const [pitch, setPitch]             = useState("");
   const [toneAndFeel, setToneAndFeel] = useState("");
-  const [overview, setOverview]     = useState("");
-  const [themes, setThemes]         = useState<string[]>([]);
-  const [themeInput, setThemeInput] = useState("");
+  const [overview, setOverview]       = useState("");
+  const [themes, setThemes]           = useState<string[]>([]);
+  const [themeInput, setThemeInput]   = useState("");
   const [touchstones, setTouchstones] = useState<string[]>([]);
   const [touchstoneInput, setTouchstoneInput] = useState("");
+  const [initialized, setInitialized] = useState(false);
 
   // ── IDs for a11y ──────────────────────────────────────────────────────────
-  const nameId           = useId();
-  const authorId         = useId();
-  const complexityId     = useId();
-  const pitchId          = useId();
-  const toneId           = useId();
-  const overviewId       = useId();
-  const themesId         = useId();
-  const touchstonesId    = useId();
-  const nameErrorId      = useId();
-  const formErrorId      = useId();
-
-  const nameInputRef = useRef<HTMLInputElement>(null);
+  const nameId        = useId();
+  const authorId      = useId();
+  const complexityId  = useId();
+  const pitchId       = useId();
+  const toneId        = useId();
+  const overviewId    = useId();
+  const themesId      = useId();
+  const touchstonesId = useId();
+  const nameErrorId   = useId();
+  const formErrorId   = useId();
 
   // ── Auth guard ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -69,12 +82,22 @@ export default function NewFramePage() {
     }
   }, [isReady, isAuthenticated, router]);
 
-  // Focus name input on mount
+  // ── Pre-fill form once frame data loads ───────────────────────────────────
   useEffect(() => {
-    nameInputRef.current?.focus();
-  }, []);
+    if (frame && !initialized) {
+      setName(frame.name);
+      setAuthor(frame.author ?? "");
+      setComplexity(frame.complexity ?? "");
+      setPitch(frame.pitch ?? "");
+      setToneAndFeel(frame.toneAndFeel ?? "");
+      setOverview(frame.overview ?? "");
+      setThemes(frame.themes ?? []);
+      setTouchstones(frame.touchstones ?? []);
+      setInitialized(true);
+    }
+  }, [frame, initialized]);
 
-  // ── Loading / auth check ──────────────────────────────────────────────────
+  // ── Loading state ─────────────────────────────────────────────────────────
   if (!isReady || authLoading || !isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a100d]">
@@ -86,10 +109,119 @@ export default function NewFramePage() {
     );
   }
 
+  if (frameLoading) {
+    return (
+      <div className="min-h-screen bg-[#0a100d] flex flex-col">
+        <header className="border-b border-slate-800/60">
+          <div className="mx-auto max-w-2xl px-4 py-4">
+            <Link
+              href={`/homebrew/frames/${frameId}`}
+              className="
+                flex items-center gap-2 text-sm text-[#b9baa3]/60
+                hover:text-[#b9baa3] transition-colors
+                focus:outline-none focus:ring-2 focus:ring-[#577399] rounded
+              "
+              aria-label="Back to frame"
+            >
+              <span aria-hidden="true">&larr;</span>
+              Back to Frame
+            </Link>
+          </div>
+        </header>
+        <div className="flex flex-1 items-center justify-center">
+          <div
+            aria-label="Loading frame data"
+            className="h-8 w-8 animate-spin rounded-full border-2 border-[#577399] border-t-transparent"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // ── Fetch error state ─────────────────────────────────────────────────────
+  if (frameError) {
+    return (
+      <div className="min-h-screen bg-[#0a100d] flex flex-col">
+        <header className="border-b border-slate-800/60">
+          <div className="mx-auto max-w-2xl px-4 py-4">
+            <Link
+              href={`/homebrew/frames/${frameId}`}
+              className="
+                flex items-center gap-2 text-sm text-[#b9baa3]/60
+                hover:text-[#b9baa3] transition-colors
+                focus:outline-none focus:ring-2 focus:ring-[#577399] rounded
+              "
+              aria-label="Back to frame"
+            >
+              <span aria-hidden="true">&larr;</span>
+              Back to Frame
+            </Link>
+          </div>
+        </header>
+        <main className="flex-1 mx-auto w-full max-w-2xl px-4 py-10">
+          <div
+            role="alert"
+            className="rounded-lg border border-[#fe5f55]/40 bg-[#fe5f55]/10 px-4 py-3"
+          >
+            <p className="text-sm text-[#fe5f55]">
+              {frameFetchError?.message ?? "Failed to load frame data. Please try again."}
+            </p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // ── Ownership check ───────────────────────────────────────────────────────
+  if (frame && user && frame.creatorUserId !== user.userId) {
+    return (
+      <div className="min-h-screen bg-[#0a100d] flex flex-col">
+        <header className="border-b border-slate-800/60">
+          <div className="mx-auto max-w-2xl px-4 py-4">
+            <Link
+              href={`/homebrew/frames/${frameId}`}
+              className="
+                flex items-center gap-2 text-sm text-[#b9baa3]/60
+                hover:text-[#b9baa3] transition-colors
+                focus:outline-none focus:ring-2 focus:ring-[#577399] rounded
+              "
+              aria-label="Back to frame"
+            >
+              <span aria-hidden="true">&larr;</span>
+              Back to Frame
+            </Link>
+          </div>
+        </header>
+        <main className="flex-1 mx-auto w-full max-w-2xl px-4 py-10">
+          <div className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-6 shadow-card-fantasy text-center space-y-4">
+            <h1 className="font-serif text-2xl font-semibold text-[#f7f7ff]">
+              Permission Denied
+            </h1>
+            <p className="text-sm text-[#b9baa3]">
+              You don&apos;t have permission to edit this frame.
+            </p>
+            <Link
+              href={`/homebrew/frames/${frameId}`}
+              className="
+                inline-block rounded-lg px-5 py-2.5 text-sm font-medium
+                border border-slate-700/60 text-[#b9baa3]/60
+                hover:border-slate-600 hover:text-[#b9baa3]
+                transition-colors
+                focus:outline-none focus:ring-2 focus:ring-[#577399]
+              "
+            >
+              Return to Frame
+            </Link>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   // ── Derived values ────────────────────────────────────────────────────────
-  const nameValue  = name.trim();
+  const nameValue   = name.trim();
   const isNameEmpty = nameValue.length === 0;
-  const canSubmit  = !isNameEmpty && !createMutation.isPending;
+  const canSubmit   = !isNameEmpty && !updateMutation.isPending;
 
   // ── Tag helpers ───────────────────────────────────────────────────────────
   const addTheme = () => {
@@ -135,18 +267,18 @@ export default function NewFramePage() {
     e.preventDefault();
     if (!canSubmit) return;
 
-    const frame = await createMutation.mutateAsync({
+    await updateMutation.mutateAsync({
       name: nameValue,
-      ...(author.trim()      ? { author: author.trim() }           : {}),
-      ...(complexity          ? { complexity }                      : {}),
-      ...(pitch.trim()        ? { pitch: pitch.trim() }             : {}),
-      ...(toneAndFeel.trim()  ? { toneAndFeel: toneAndFeel.trim() } : {}),
-      ...(overview.trim()     ? { overview: overview.trim() }       : {}),
-      ...(themes.length > 0   ? { themes }                          : {}),
-      ...(touchstones.length > 0 ? { touchstones }                  : {}),
+      author:      author.trim()      || undefined,
+      complexity:  complexity          || undefined,
+      pitch:       pitch.trim()        || undefined,
+      toneAndFeel: toneAndFeel.trim()  || undefined,
+      overview:    overview.trim()     || undefined,
+      themes:      themes.length > 0   ? themes      : undefined,
+      touchstones: touchstones.length > 0 ? touchstones : undefined,
     });
 
-    router.push(`/frames/${frame.frameId}`);
+    router.push(`/homebrew/frames/${frameId}`);
   };
 
   // ── Shared input class ────────────────────────────────────────────────────
@@ -159,16 +291,16 @@ export default function NewFramePage() {
       <header className="border-b border-slate-800/60">
         <div className="mx-auto max-w-2xl px-4 py-4">
           <Link
-            href="/frames"
+            href={`/homebrew/frames/${frameId}`}
             className="
               flex items-center gap-2 text-sm text-[#b9baa3]/60
               hover:text-[#b9baa3] transition-colors
               focus:outline-none focus:ring-2 focus:ring-[#577399] rounded
             "
-            aria-label="Back to campaign frames"
+            aria-label="Back to frame"
           >
             <span aria-hidden="true">&larr;</span>
-            Campaign Frames
+            Back to Frame
           </Link>
         </div>
       </header>
@@ -177,10 +309,10 @@ export default function NewFramePage() {
         {/* Page heading */}
         <div className="mb-8">
           <h1 className="font-serif text-3xl font-semibold text-[#f7f7ff]">
-            Create Campaign Frame
+            Edit Campaign Frame
           </h1>
           <p className="mt-2 text-sm text-[#b9baa3]/60">
-            Define the rules, tone, and content for a reusable campaign frame.
+            Update the metadata for your campaign frame.
           </p>
         </div>
 
@@ -203,7 +335,6 @@ export default function NewFramePage() {
               <span className="sr-only">(required)</span>
             </label>
             <input
-              ref={nameInputRef}
               id={nameId}
               type="text"
               value={name}
@@ -557,15 +688,15 @@ export default function NewFramePage() {
           </div>
 
           {/* ── Submission error ──────────────────────────────────────────── */}
-          {createMutation.isError && (
+          {updateMutation.isError && (
             <div
               id={formErrorId}
               role="alert"
               className="rounded-lg border border-[#fe5f55]/40 bg-[#fe5f55]/10 px-4 py-3"
             >
               <p className="text-sm text-[#fe5f55]">
-                {createMutation.error?.message ??
-                  "Failed to create frame. Please try again."}
+                {updateMutation.error?.message ??
+                  "Failed to save changes. Please try again."}
               </p>
             </div>
           )}
@@ -573,7 +704,7 @@ export default function NewFramePage() {
           {/* ── Actions ──────────────────────────────────────────────────── */}
           <div className="flex items-center justify-end gap-3 pt-2">
             <Link
-              href="/frames"
+              href={`/homebrew/frames/${frameId}`}
               className="
                 rounded-lg px-5 py-2.5 text-sm font-medium
                 border border-slate-700/60 text-[#b9baa3]/60
@@ -588,7 +719,7 @@ export default function NewFramePage() {
             <button
               type="submit"
               disabled={!canSubmit}
-              aria-describedby={createMutation.isError ? formErrorId : undefined}
+              aria-describedby={updateMutation.isError ? formErrorId : undefined}
               className="
                 rounded-lg px-6 py-2.5 font-semibold text-sm
                 bg-[#577399] text-[#f7f7ff]
@@ -599,16 +730,16 @@ export default function NewFramePage() {
                 focus:ring-offset-2 focus:ring-offset-slate-900
               "
             >
-              {createMutation.isPending ? (
+              {updateMutation.isPending ? (
                 <span className="flex items-center gap-2">
                   <span
                     aria-hidden="true"
                     className="h-3.5 w-3.5 animate-spin rounded-full border border-[#f7f7ff] border-t-transparent"
                   />
-                  Creating...
+                  Saving...
                 </span>
               ) : (
-                "Create Frame"
+                "Save Changes"
               )}
             </button>
           </div>
