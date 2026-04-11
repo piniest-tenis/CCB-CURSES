@@ -183,12 +183,17 @@ const config: Config = {
           "0%, 100%": { boxShadow: "0 0 0px rgba(249,104,84,0)" },
           "50%":      { boxShadow: "0 0 12px rgba(249,104,84,0.4), 0 0 4px rgba(249,104,84,0.2)" },
         },
+        "slide-up": {
+          from: { transform: "translateY(100%)" },
+          to:   { transform: "translateY(0)" },
+        },
       },
       animation: {
         "fade-in":              "fade-in 0.2s ease-out",
         shimmer:                "shimmer 1.5s infinite",
         "pulse-glow-goldenrod": "pulse-glow-goldenrod 2.4s ease-in-out infinite",
         "coral-pulse":          "coral-pulse 2.4s ease-in-out infinite",
+        "slide-up":             "slide-up 0.25s ease-out",
       },
     },
   },

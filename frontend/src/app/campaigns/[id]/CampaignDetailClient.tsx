@@ -752,7 +752,13 @@ export default function CampaignDetailClient() {
   // Extract the real campaign ID from the browser URL.
   // useParams() returns "__placeholder__" in a static export; usePathname()
   // always reflects the actual browser URL path.
-  const campaignId = pathname?.split("/")[2] ?? "";
+  const rawCampaignId = pathname?.split("/")[2] ?? "";
+  // Guard: only treat as a valid campaign ID if it looks like a UUID.
+  // This prevents the dynamic [id] route from firing API calls when
+  // CloudFront SPA rewrite briefly renders this component for static
+  // routes like /campaigns/new.
+  const isValidCampaignId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawCampaignId);
+  const campaignId = isValidCampaignId ? rawCampaignId : "";
   const router = useRouter();
 
   const { isAuthenticated, isReady, isLoading: authLoading, user } = useAuthStore();
@@ -1520,6 +1526,7 @@ export default function CampaignDetailClient() {
                   />
                 </div>
               )}
+
             </>
           )}
         </main>

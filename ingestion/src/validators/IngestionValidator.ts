@@ -26,6 +26,7 @@ import type {
   DomainCard,
   RuleEntry,
   ValidationResult,
+  MechanicalBonusStat,
 } from "@shared/types";
 
 // Optionally import SRD validators if compliance module is available
@@ -291,6 +292,58 @@ export function validateAncestry(data: AncestryData): ValidationResult {
       "required-field",
       "secondTraitDescription is required — ancestries must have exactly 2 traits"
     );
+  }
+
+  // Validate mechanicalBonuses entries if present
+  if (data.mechanicalBonuses && data.mechanicalBonuses.length > 0) {
+    const CORE_STAT_NAMES = new Set(["agility", "strength", "finesse", "instinct", "presence", "knowledge"]);
+    const FLAT_STATS = new Set(["armor", "hp", "stress", "evasion", "hope", "hopeMax"]);
+
+    function isValidMechanicalBonusStat(s: string): s is MechanicalBonusStat {
+      if (FLAT_STATS.has(s)) return true;
+      if (s.startsWith("trait:")) return CORE_STAT_NAMES.has(s.slice("trait:".length));
+      if (s.startsWith("rollAdvantage:")) return CORE_STAT_NAMES.has(s.slice("rollAdvantage:".length));
+      if (s.startsWith("rollDisadvantage:")) return CORE_STAT_NAMES.has(s.slice("rollDisadvantage:".length));
+      return false;
+    }
+
+    for (let i = 0; i < data.mechanicalBonuses.length; i++) {
+      const b = data.mechanicalBonuses[i];
+      const field = `mechanicalBonuses[${i}]`;
+
+      if (!isValidMechanicalBonusStat(b.stat)) {
+        addError(result, field, "invalid-value",
+          `Unknown stat "${b.stat}". Valid: armor, hp, stress, evasion, hope, hopeMax, trait:<coreStat>, rollAdvantage:<coreStat>, rollDisadvantage:<coreStat>`
+        );
+      }
+
+      if (b.traitIndex !== 0 && b.traitIndex !== 1) {
+        addError(result, field, "invalid-value",
+          `traitIndex must be 0 or 1, got ${b.traitIndex}`
+        );
+      }
+
+      // Roll modifiers don't use the amount field in a meaningful way; warn if non-1
+      const isRollMod = b.stat.startsWith("rollAdvantage:") || b.stat.startsWith("rollDisadvantage:");
+      if (isRollMod && b.amount !== 1) {
+        addWarning(result, field, `Roll modifier amount should be 1 (got ${b.amount}); amount is ignored for roll modifiers`);
+      }
+
+      // Trait score bonuses: warn if the magnitude is unusually large (>2 is atypical per SRD)
+      if (b.stat.startsWith("trait:") && Math.abs(b.amount) > 2) {
+        addWarning(result, field,
+          `Trait score bonus/penalty of ${b.amount} is unusually large. SRD advancement grants +1 per tier; consider keeping ancestry trait bonuses at ±1 or ±2.`
+        );
+      }
+    }
+
+    // Soft warning: trait score modifiers are balance-sensitive per Homebrew Kit p.6
+    const hasTraitScoreBonus = data.mechanicalBonuses.some((b) => b.stat.startsWith("trait:"));
+    if (hasTraitScoreBonus) {
+      addWarning(result, "mechanicalBonuses",
+        "Ancestry includes trait score bonus/penalty (Homebrew Kit p.6 advisory: use sparingly to avoid \"best class\" pairings)"
+      );
+    }
   }
 
   return result;

@@ -17,12 +17,27 @@ import {
   useUpdateCampaign,
   useDeleteCampaign,
 } from "@/hooks/useCampaigns";
+import dynamic from "next/dynamic";
 import type {
   DayOfWeek,
   RecurrenceFrequency,
   SessionSlot,
   SessionSchedule,
 } from "@/types/campaign";
+
+// Lazy-load the frames management panel (attach/detach/conflicts)
+const CampaignFramesTab = dynamic(
+  () => import("@/components/campaign/CampaignFramesTab").then((mod) => mod.CampaignFramesTab),
+  {
+    loading: () => (
+      <div className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-6 space-y-4 animate-pulse">
+        <div className="h-6 w-40 rounded bg-slate-700/60" />
+        <div className="h-4 w-64 rounded bg-slate-700/40" />
+        <div className="h-24 w-full rounded-lg bg-slate-700/30" />
+      </div>
+    ),
+  },
+);
 
 const MAX_NAME_LENGTH        = 80;
 const MAX_DESCRIPTION_LENGTH = 500;
@@ -406,7 +421,9 @@ export default function CampaignSettingsClient() {
   // useParams() returns "__placeholder__" in a static export; usePathname()
   // always reflects the actual browser URL path.
   // Path: /campaigns/[id]/settings → segment index 2
-  const campaignId = pathname?.split("/")[2] ?? "";
+  const rawCampaignId = pathname?.split("/")[2] ?? "";
+  // Guard: only treat as a valid campaign ID if it looks like a UUID.
+  const campaignId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawCampaignId) ? rawCampaignId : "";
   const router = useRouter();
 
   const { isAuthenticated, isReady, isLoading: authLoading } = useAuthStore();
@@ -625,6 +642,11 @@ export default function CampaignSettingsClient() {
                 Curses! content (Faction Favors panel, Curses! conditions) will be hidden for all characters in this campaign.
               </p>
             )}
+          </section>
+
+          {/* Campaign Frames management (attach/detach/conflicts) */}
+          <section aria-label="Campaign frames">
+            <CampaignFramesTab campaignId={campaignId} isGm={true} />
           </section>
 
           {/* Schedule editor */}

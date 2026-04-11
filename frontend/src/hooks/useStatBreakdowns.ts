@@ -95,6 +95,24 @@ function proficiencyForLevel(level: number): number {
 
 // ─── Main hook ────────────────────────────────────────────────────────────────
 
+export interface AncestryTraitModifier {
+  /** The core stat name (e.g. "agility"). */
+  trait: string;
+  /** Additive score delta (positive = bonus, negative = penalty). */
+  amount: number;
+  /** Display name of the ancestry that grants this modifier. */
+  ancestryName: string;
+}
+
+export interface AncestryRollModifier {
+  /** The core stat name (e.g. "agility"). */
+  trait: string;
+  /** "advantage" or "disadvantage" */
+  type: "advantage" | "disadvantage";
+  /** Display name of the ancestry that grants this modifier. */
+  ancestryName: string;
+}
+
 export interface StatBreakdowns {
   evasion:      TooltipLine[];
   armor:        TooltipLine[];
@@ -103,6 +121,10 @@ export interface StatBreakdowns {
   hp:           TooltipLine[];
   stress:       TooltipLine[];
   hope:         TooltipLine[];
+  /** Permanent ancestry-granted core trait score deltas, for display in Heritage section. */
+  ancestryTraitModifiers: AncestryTraitModifier[];
+  /** Ancestry-granted advantage/disadvantage on specific trait rolls. */
+  ancestryRollModifiers: AncestryRollModifier[];
 }
 
 export function useStatBreakdowns(): StatBreakdowns {
@@ -462,6 +484,44 @@ export function useStatBreakdowns(): StatBreakdowns {
   }
   hopeLines.push({ label: "= Max Hope", value: String(hopeMax), isTotal: true });
 
+  // ── 8. Ancestry trait score modifiers & roll modifiers ─────────────────────
+  //
+  // Collect all ancestry-granted trait score deltas and roll advantage/
+  // disadvantage entries from the stored mechanicalBonuses on the ancestry
+  // record(s). For mixed ancestry, top ancestry contributes traitIndex=0 and
+  // bottom ancestry contributes traitIndex=1.
+
+  const ancestryTraitModifiers: AncestryTraitModifier[] = [];
+  const ancestryRollModifiers: AncestryRollModifier[] = [];
+
+  function collectAncestryModifiers(
+    bonuses: Array<{ stat: string; amount: number; traitIndex: number }> | undefined,
+    name: string,
+    filterTraitIndex?: 0 | 1
+  ): void {
+    if (!bonuses) return;
+    for (const b of bonuses) {
+      if (filterTraitIndex !== undefined && b.traitIndex !== filterTraitIndex) continue;
+      if (b.stat.startsWith("trait:")) {
+        const trait = b.stat.slice("trait:".length);
+        ancestryTraitModifiers.push({ trait, amount: b.amount, ancestryName: name });
+      } else if (b.stat.startsWith("rollAdvantage:")) {
+        const trait = b.stat.slice("rollAdvantage:".length);
+        ancestryRollModifiers.push({ trait, type: "advantage", ancestryName: name });
+      } else if (b.stat.startsWith("rollDisadvantage:")) {
+        const trait = b.stat.slice("rollDisadvantage:".length);
+        ancestryRollModifiers.push({ trait, type: "disadvantage", ancestryName: name });
+      }
+    }
+  }
+
+  if (isMixed) {
+    collectAncestryModifiers(ancestryData?.mechanicalBonuses, ancestryData?.name ?? "ancestry", 0);
+    collectAncestryModifiers(bottomAncestryData?.mechanicalBonuses, bottomAncestryData?.name ?? "ancestry", 1);
+  } else {
+    collectAncestryModifiers(ancestryData?.mechanicalBonuses, ancestryData?.name ?? "ancestry");
+  }
+
   return {
     evasion:      evasionLines,
     armor:        armorLines,
@@ -470,6 +530,8 @@ export function useStatBreakdowns(): StatBreakdowns {
     hp:           hpLines,
     stress:       stressLines,
     hope:         hopeLines,
+    ancestryTraitModifiers,
+    ancestryRollModifiers,
   };
 }
 
@@ -487,4 +549,6 @@ const EMPTY_BREAKDOWNS: StatBreakdowns = {
   hp:           [],
   stress:       [],
   hope:         [],
+  ancestryTraitModifiers: [],
+  ancestryRollModifiers:  [],
 };
