@@ -3,7 +3,7 @@
 /**
  * src/app/character/[id]/page.tsx
  *
- * Character sheet page — protected, loads the CharacterSheet component.
+ * Character sheet page - protected, loads the CharacterSheet component.
  */
 
 import { useRouter, usePathname } from "next/navigation";
@@ -36,7 +36,7 @@ export default function CharacterPage() {
     }
   }, [isReady, isAuthenticated, router]);
 
-  // Character data loading state — used to drive the interstitial overlay.
+  // Character data loading state - used to drive the interstitial overlay.
   const { isLoading: charLoading, data: character } = useCharacter(
     isAuthenticated ? characterId : undefined
   );
@@ -53,7 +53,7 @@ export default function CharacterPage() {
     return () => { setCampaignId(null); };
   }, [character?.campaignId, setCampaignId]);
 
-  // ── WebSocket — send dice rolls to all campaign connections (incl. OBS) ──────
+  // ── WebSocket - send dice rolls to all campaign connections (incl. OBS) ──────
   // Only connects when campaignId and characterId are available (player must be
   // assigned to a campaign). sendDiceRoll fans out via the dice_roll WS handler.
   // onForceCrit: received when the GM arms/disarms a force-crit for this character.

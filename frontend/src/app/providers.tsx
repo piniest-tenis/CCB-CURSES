@@ -53,7 +53,7 @@ function handleAuthError(error: unknown): void {
   if (!useAuthStore.getState().isReady) return;
 
   if (error.status === 401) {
-    // Token is invalid or expired and couldn't be refreshed — clear the session.
+    // Token is invalid or expired and couldn't be refreshed - clear the session.
     useAuthStore.getState().signOut();
     window.location.href = "/auth/login";
     return;
@@ -61,12 +61,12 @@ function handleAuthError(error: unknown): void {
 
   if (error.status === 403) {
     // Patreon-gate and character-limit 403s are handled locally by the
-    // mutation hooks / UI — do NOT redirect away from the page.
+    // mutation hooks / UI - do NOT redirect away from the page.
     if (error.code === "PATREON_REQUIRED") return;
     if (error.code === "CHARACTER_LIMIT_REACHED") return;
 
     // The user is authenticated but lacks permission for this resource.
-    // Do NOT call signOut() — that would destroy the refresh token and force a
+    // Do NOT call signOut() - that would destroy the refresh token and force a
     // full re-login even though the session is perfectly valid.
     // Redirect to dashboard; page-level guards handle further access control.
     window.location.href = "/dashboard";
@@ -93,7 +93,7 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
   const setUser    = useAuthStore((s) => s.setUser);
   const pathname   = usePathname();
 
-  // OBS overlay pages are standalone — no auth required, no interstitial.
+  // OBS overlay pages are standalone - no auth required, no interstitial.
   const isObs = pathname?.startsWith("/obs") ?? false;
   // Auth pages don't need the Patreon CTA banner
   const isAuthPage = pathname?.startsWith("/auth") ?? false;
@@ -127,7 +127,7 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
         window.history.replaceState({}, "", url.pathname);
       })
       .catch(() => {
-        // Non-fatal — the next page load or focus event will pick it up
+        // Non-fatal - the next page load or focus event will pick it up
       });
   }, [isReady, isAuthenticated, setUser]);
 

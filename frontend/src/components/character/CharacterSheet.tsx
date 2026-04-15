@@ -1833,10 +1833,15 @@ function CharacterSheetContent({
     activeCharacter?.campaignId ?? undefined,
   );
 
-  // Show Curses! content if the user has it enabled OR the campaign has it enabled
+  // Show Curses! content when:
+  //   a) the user has explicitly enabled it in their profile preferences, OR
+  //   b) the character belongs to a campaign AND that campaign has Curses! content enabled.
+  // The campaign flag only applies when campaign data is present — it never defaults to true
+  // for characters outside a campaign, which would bypass the user's own preference.
   const showCursesContent =
     userPrefs?.cursesEnabled === true ||
-    (campaignData?.cursesContentEnabled ?? true) === true;
+    (activeCharacter?.campaignId != null &&
+      campaignData?.cursesContentEnabled === true);
 
   // Compute dice color overrides from character → user → system cascade
   const diceColorOverrides = React.useMemo(() => {
@@ -1941,9 +1946,12 @@ function CharacterSheetContent({
       <SheetDivider spellcastTrait={spellcastTrait} />
 
       {/* Favors — per-faction social currency (Curses! content) */}
-      {showCursesContent && <FavorsPanel />}
-
-      <SheetDivider spellcastTrait={spellcastTrait} />
+      {showCursesContent && (
+        <>
+          <FavorsPanel />
+          <SheetDivider spellcastTrait={spellcastTrait} />
+        </>
+      )}
 
       {/* Companion (shown only if companionState is not null) */}
       <CompanionPanel onRollQueued={handleRollQueued} />

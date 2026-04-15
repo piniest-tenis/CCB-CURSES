@@ -95,7 +95,7 @@ export default function LoginPage() {
         router.replace("/dashboard");
         return;
       }
-      // outcome === "redirecting" — browser is navigating away; keep the
+      // outcome === "redirecting" - browser is navigating away; keep the
       // loading state active so the button stays disabled during the redirect.
     } catch (err: unknown) {
       const message =
@@ -107,7 +107,7 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-slate-950 px-4 overflow-hidden">
-      {/* Background video — preload="none" so it doesn't compete for
+      {/* Background video - preload="none" so it doesn't compete for
           bandwidth with the JS/CSS needed for interactivity. A poster
           image or the gradient overlay covers the gap. */}
       <video
@@ -129,7 +129,7 @@ export default function LoginPage() {
             "linear-gradient(rgba(10, 16, 13, 0.8) 0%, rgba(10, 16, 13, 0.85) 80%, rgba(10, 16, 13, 0.95) 100%)",
         }}
       />
-      {/* Content — sits above video + overlay */}
+      {/* Content - sits above video + overlay */}
       <div className="relative z-10 w-full max-w-sm space-y-6">
         {/* Branding */}
         <div className="text-center">

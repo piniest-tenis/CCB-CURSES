@@ -800,6 +800,7 @@ function toCharacterResponse(
     customConditions: record.customConditions ?? [],
     levelUpHistory: record.levelUpHistory ?? {},
     markedTraits: record.markedTraits ?? [],
+    diceColors: record.diceColors,
     // ── Multiclass fields (SRD p.43) ──────────────────────────────────────
     multiclassClassId:           record.multiclassClassId ?? null,
     multiclassClassName:         enrichment?.multiclassClassName ?? record.multiclassClassName ?? null,

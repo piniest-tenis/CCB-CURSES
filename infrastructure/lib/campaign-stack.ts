@@ -146,6 +146,14 @@ export class CampaignStack extends cdk.Stack {
       handler: "index.handler",
       code: lambda.Code.fromAsset("../backend/dist/campaigns-handler"),
       logGroup: makeLambdaLogGroup("campaigns"),
+      environment: {
+        ...commonLambdaProps.environment,
+        // HMAC secret for signing/verifying campaign share tokens
+        SHARE_TOKEN_SECRET: process.env["SHARE_TOKEN_SECRET"] ?? "",
+        FRONTEND_URL: (isProd
+                        ? process.env["FRONTEND_URL_PROD"]
+                        : process.env["FRONTEND_URL_DEV"]) ?? "",
+      },
     } as lambda.FunctionProps);
 
     this.campaignsTable.grantReadWriteData(campaignsHandler);
@@ -182,6 +190,8 @@ export class CampaignStack extends cdk.Stack {
       { method: apigwv2.HttpMethod.POST, path: "/campaigns/{campaignId}/characters" },
       { method: apigwv2.HttpMethod.POST, path: "/campaigns/{campaignId}/characters/new" },
       { method: apigwv2.HttpMethod.DELETE, path: "/campaigns/{campaignId}/characters/{characterId}" },
+      // Share — generate campaign share token (GM only)
+      { method: apigwv2.HttpMethod.GET, path: "/campaigns/{campaignId}/share" },
     ];
 
     for (const route of campaignRoutes) {
@@ -192,6 +202,14 @@ export class CampaignStack extends cdk.Stack {
         authorizer: jwtAuthorizer,
       });
     }
+
+    // Public campaign view — share-token validated in-handler (no JWT authorizer)
+    httpApi.addRoutes({
+      path: "/campaigns/{campaignId}/view",
+      methods: [apigwv2.HttpMethod.GET],
+      integration: campaignsIntegration,
+      // No JWT authorizer — campaign share token validated in handler
+    });
 
     // -------------------------------------------------------------------------
     // 7. WebSocket API

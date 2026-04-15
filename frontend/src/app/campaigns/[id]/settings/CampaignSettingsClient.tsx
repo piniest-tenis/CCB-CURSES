@@ -3,7 +3,7 @@
 /**
  * src/app/campaigns/[id]/settings/CampaignSettingsClient.tsx
  *
- * Campaign Settings page — GM only.
+ * Campaign Settings page - GM only.
  * Pre-filled edit form for name + description + session schedule.
  * Danger zone: Delete Campaign with confirm dialog.
  * Non-GMs are redirected to the campaign detail page.
@@ -24,23 +24,23 @@ import type {
   SessionSchedule,
 } from "@/types/campaign";
 
-const MAX_NAME_LENGTH        = 80;
+const MAX_NAME_LENGTH = 80;
 const MAX_DESCRIPTION_LENGTH = 500;
 
 const DAYS: { value: DayOfWeek; label: string }[] = [
-  { value: "monday",    label: "Mon" },
-  { value: "tuesday",   label: "Tue" },
+  { value: "monday", label: "Mon" },
+  { value: "tuesday", label: "Tue" },
   { value: "wednesday", label: "Wed" },
-  { value: "thursday",  label: "Thu" },
-  { value: "friday",    label: "Fri" },
-  { value: "saturday",  label: "Sat" },
-  { value: "sunday",    label: "Sun" },
+  { value: "thursday", label: "Thu" },
+  { value: "friday", label: "Fri" },
+  { value: "saturday", label: "Sat" },
+  { value: "sunday", label: "Sun" },
 ];
 
 const FREQUENCIES: { value: RecurrenceFrequency; label: string }[] = [
-  { value: "weekly",    label: "Weekly" },
-  { value: "biweekly",  label: "Every two weeks" },
-  { value: "monthly",   label: "Monthly" },
+  { value: "weekly", label: "Weekly" },
+  { value: "biweekly", label: "Every two weeks" },
+  { value: "monthly", label: "Monthly" },
 ];
 
 // Common IANA timezones for the selector
@@ -158,7 +158,9 @@ function ScheduleSlotEditor({
           >
             <option value="">No timezone</option>
             {TIMEZONES.map((tz) => (
-              <option key={tz} value={tz}>{tz}</option>
+              <option key={tz} value={tz}>
+                {tz}
+              </option>
             ))}
           </select>
         </div>
@@ -167,7 +169,10 @@ function ScheduleSlotEditor({
       {/* Description */}
       <div>
         <label className="block text-xs text-[#b9baa3]/50 mb-1.5">
-          Label <span className="text-[#b9baa3]/30">(optional, e.g. "Evening session")</span>
+          Label{" "}
+          <span className="text-[#b9baa3]/30">
+            (optional, e.g. "Evening session")
+          </span>
         </label>
         <input
           type="text"
@@ -197,14 +202,16 @@ function ScheduleEditor({
 
   const defaultSchedule: SessionSchedule = {
     frequency: "weekly",
-    slots: [{ day: "wednesday", time: null, timezone: null, description: null }],
+    slots: [
+      { day: "wednesday", time: null, timezone: null, description: null },
+    ],
     reminderOffsetMinutes: 0,
     reminderEnabled: false,
   };
 
   const handleToggle = useCallback(() => {
     onChange(enabled ? null : defaultSchedule);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, onChange]);
 
   const handleFrequency = useCallback(
@@ -212,32 +219,40 @@ function ScheduleEditor({
       if (!schedule) return;
       onChange({ ...schedule, frequency });
     },
-    [schedule, onChange]
+    [schedule, onChange],
   );
 
   const handleSlotChange = useCallback(
     (index: number, updated: SessionSlot) => {
       if (!schedule) return;
-      const newSlots = schedule.slots.map((s, i) => (i === index ? updated : s));
+      const newSlots = schedule.slots.map((s, i) =>
+        i === index ? updated : s,
+      );
       onChange({ ...schedule, slots: newSlots });
     },
-    [schedule, onChange]
+    [schedule, onChange],
   );
 
   const handleAddSlot = useCallback(() => {
     if (!schedule) return;
     onChange({
       ...schedule,
-      slots: [...schedule.slots, { day: "friday", time: null, timezone: null, description: null }],
+      slots: [
+        ...schedule.slots,
+        { day: "friday", time: null, timezone: null, description: null },
+      ],
     });
   }, [schedule, onChange]);
 
   const handleRemoveSlot = useCallback(
     (index: number) => {
       if (!schedule || schedule.slots.length <= 1) return;
-      onChange({ ...schedule, slots: schedule.slots.filter((_, i) => i !== index) });
+      onChange({
+        ...schedule,
+        slots: schedule.slots.filter((_, i) => i !== index),
+      });
     },
-    [schedule, onChange]
+    [schedule, onChange],
   );
 
   const handleReminderEnabled = useCallback(
@@ -245,7 +260,7 @@ function ScheduleEditor({
       if (!schedule) return;
       onChange({ ...schedule, reminderEnabled: val });
     },
-    [schedule, onChange]
+    [schedule, onChange],
   );
 
   const REMINDER_OPTIONS = [0, 60, 120, 240, 480, 1440, 2880, 4320, 10080];
@@ -257,7 +272,9 @@ function ScheduleEditor({
     >
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-serif text-lg font-semibold text-[#f7f7ff]">Session Schedule</h2>
+          <h2 className="font-serif text-lg font-semibold text-[#f7f7ff]">
+            Session Schedule
+          </h2>
           <p className="text-sm text-[#b9baa3]/50 mt-0.5">
             Set recurring session days and times for your campaign.
           </p>
@@ -291,7 +308,9 @@ function ScheduleEditor({
         <div className="space-y-5">
           {/* Frequency */}
           <div>
-            <label className="block text-sm font-semibold text-[#f7f7ff] mb-2">Frequency</label>
+            <label className="block text-sm font-semibold text-[#f7f7ff] mb-2">
+              Frequency
+            </label>
             <div className="flex flex-wrap gap-2">
               {FREQUENCIES.map(({ value, label }) => (
                 <button
@@ -341,7 +360,9 @@ function ScheduleEditor({
           <div className="rounded-lg border border-slate-700/40 bg-slate-900/40 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-[#f7f7ff]">Email Reminders</p>
+                <p className="text-sm font-semibold text-[#f7f7ff]">
+                  Email Reminders
+                </p>
                 <p className="text-xs text-[#b9baa3]/40 mt-0.5">
                   Notify campaign members before each session.
                 </p>
@@ -364,7 +385,9 @@ function ScheduleEditor({
                   aria-hidden="true"
                   className={[
                     "pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-200",
-                    schedule.reminderEnabled ? "translate-x-5" : "translate-x-0",
+                    schedule.reminderEnabled
+                      ? "translate-x-5"
+                      : "translate-x-0",
                   ].join(" ")}
                 />
               </button>
@@ -372,11 +395,16 @@ function ScheduleEditor({
 
             {schedule.reminderEnabled && (
               <div>
-                <label className="block text-xs text-[#b9baa3]/50 mb-1.5">Send reminder</label>
+                <label className="block text-xs text-[#b9baa3]/50 mb-1.5">
+                  Send reminder
+                </label>
                 <select
                   value={schedule.reminderOffsetMinutes}
                   onChange={(e) =>
-                    onChange({ ...schedule, reminderOffsetMinutes: Number(e.target.value) })
+                    onChange({
+                      ...schedule,
+                      reminderOffsetMinutes: Number(e.target.value),
+                    })
                   }
                   className="w-full rounded border border-slate-700/60 bg-slate-950 px-2.5 py-1.5 text-sm text-[#f7f7ff] focus:outline-none focus:ring-1 focus:ring-[#577399] transition-colors"
                 >
@@ -415,17 +443,17 @@ export default function CampaignSettingsClient() {
   const updateMutation = useUpdateCampaign(campaignId);
   const deleteMutation = useDeleteCampaign();
 
-  const [name,          setName]          = useState("");
-  const [description,   setDescription]   = useState("");
-  const [schedule,      setSchedule]      = useState<SessionSchedule | null>(null);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [schedule, setSchedule] = useState<SessionSchedule | null>(null);
   const [cursesContent, setCursesContent] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [saveSuccess,   setSaveSuccess]   = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
-  const nameId      = useId();
-  const descId      = useId();
+  const nameId = useId();
+  const descId = useId();
   const formErrorId = useId();
-  const delErrorId  = useId();
+  const delErrorId = useId();
 
   // Auth guard
   useEffect(() => {
@@ -458,14 +486,14 @@ export default function CampaignSettingsClient() {
   }
 
   const nameValue = name.trim();
-  const canSave   = nameValue.length > 0 && !updateMutation.isPending;
+  const canSave = nameValue.length > 0 && !updateMutation.isPending;
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSave) return;
 
     await updateMutation.mutateAsync({
-      name:        nameValue,
+      name: nameValue,
       description: description.trim() || null,
       schedule,
       cursesContentEnabled: cursesContent,
@@ -528,14 +556,20 @@ export default function CampaignSettingsClient() {
                   htmlFor={nameId}
                   className="block text-sm font-semibold text-[#f7f7ff] mb-1.5"
                 >
-                  Campaign Name <span className="text-[#fe5f55]" aria-hidden="true">*</span>
+                  Campaign Name{" "}
+                  <span className="text-[#fe5f55]" aria-hidden="true">
+                    *
+                  </span>
                   <span className="sr-only">(required)</span>
                 </label>
                 <input
                   id={nameId}
                   type="text"
                   value={name}
-                  onChange={(e) => { setName(e.target.value); setSaveSuccess(false); }}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    setSaveSuccess(false);
+                  }}
                   maxLength={MAX_NAME_LENGTH}
                   required
                   aria-required="true"
@@ -559,12 +593,18 @@ export default function CampaignSettingsClient() {
                   htmlFor={descId}
                   className="block text-sm font-semibold text-[#f7f7ff] mb-1.5"
                 >
-                  Description <span className="font-normal text-[#b9baa3]/50">(optional)</span>
+                  Description{" "}
+                  <span className="font-normal text-[#b9baa3]/50">
+                    (optional)
+                  </span>
                 </label>
                 <textarea
                   id={descId}
                   value={description}
-                  onChange={(e) => { setDescription(e.target.value); setSaveSuccess(false); }}
+                  onChange={(e) => {
+                    setDescription(e.target.value);
+                    setSaveSuccess(false);
+                  }}
                   maxLength={MAX_DESCRIPTION_LENGTH}
                   rows={4}
                   disabled={isLoading}
@@ -594,14 +634,18 @@ export default function CampaignSettingsClient() {
                   Curses! Campaign Frame
                 </h2>
                 <p className="text-sm text-[#b9baa3]/50 mt-0.5">
-                  Enable Curses! homebrew content for this campaign (Faction Favors, extra conditions, etc.).
+                  Enable Curses! homebrew content for this campaign (Faction
+                  Favors, extra conditions, etc.).
                 </p>
               </div>
               <button
                 type="button"
                 role="switch"
                 aria-checked={cursesContent}
-                onClick={() => { setCursesContent((v) => !v); setSaveSuccess(false); }}
+                onClick={() => {
+                  setCursesContent((v) => !v);
+                  setSaveSuccess(false);
+                }}
                 className={[
                   "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full",
                   "border-2 transition-colors duration-200",
@@ -622,7 +666,8 @@ export default function CampaignSettingsClient() {
             </div>
             {!cursesContent && (
               <p className="text-xs text-[#b9baa3]/40 leading-snug">
-                Curses! content (Faction Favors panel, Curses! conditions) will be hidden for all characters in this campaign.
+                Curses! content (Faction Favors panel, Curses! conditions) will
+                be hidden for all characters in this campaign.
               </p>
             )}
           </section>
@@ -632,7 +677,11 @@ export default function CampaignSettingsClient() {
 
           {/* Error */}
           {updateMutation.isError && (
-            <div id={formErrorId} role="alert" className="rounded-lg border border-[#fe5f55]/40 bg-[#fe5f55]/10 px-4 py-3">
+            <div
+              id={formErrorId}
+              role="alert"
+              className="rounded-lg border border-[#fe5f55]/40 bg-[#fe5f55]/10 px-4 py-3"
+            >
               <p className="text-sm text-[#fe5f55]">
                 {updateMutation.error?.message ?? "Failed to save changes."}
               </p>
@@ -641,8 +690,14 @@ export default function CampaignSettingsClient() {
 
           {/* Success */}
           {saveSuccess && (
-            <div role="status" aria-live="polite" className="rounded-lg border border-green-700/40 bg-green-900/20 px-4 py-3">
-              <p className="text-sm text-green-400">Changes saved successfully.</p>
+            <div
+              role="status"
+              aria-live="polite"
+              className="rounded-lg border border-green-700/40 bg-green-900/20 px-4 py-3"
+            >
+              <p className="text-sm text-green-400">
+                Changes saved successfully.
+              </p>
             </div>
           )}
 
@@ -650,7 +705,9 @@ export default function CampaignSettingsClient() {
             <button
               type="submit"
               disabled={!canSave}
-              aria-describedby={updateMutation.isError ? formErrorId : undefined}
+              aria-describedby={
+                updateMutation.isError ? formErrorId : undefined
+              }
               className="
                 rounded-lg px-6 py-2.5 font-semibold text-sm
                 bg-[#577399] text-[#f7f7ff]
@@ -663,7 +720,10 @@ export default function CampaignSettingsClient() {
             >
               {updateMutation.isPending ? (
                 <span className="flex items-center gap-2">
-                  <span aria-hidden="true" className="h-3.5 w-3.5 animate-spin rounded-full border border-[#f7f7ff] border-t-transparent" />
+                  <span
+                    aria-hidden="true"
+                    className="h-3.5 w-3.5 animate-spin rounded-full border border-[#f7f7ff] border-t-transparent"
+                  />
                   Saving…
                 </span>
               ) : (
@@ -682,11 +742,16 @@ export default function CampaignSettingsClient() {
             Danger Zone
           </h2>
           <p className="text-sm text-[#b9baa3]/60">
-            Permanently deletes this campaign and removes all members. This cannot be undone.
+            Permanently deletes this campaign and removes all members. This
+            cannot be undone.
           </p>
 
           {deleteMutation.isError && (
-            <div id={delErrorId} role="alert" className="rounded-lg border border-[#fe5f55]/40 bg-[#fe5f55]/10 px-4 py-3">
+            <div
+              id={delErrorId}
+              role="alert"
+              className="rounded-lg border border-[#fe5f55]/40 bg-[#fe5f55]/10 px-4 py-3"
+            >
               <p className="text-sm text-[#fe5f55]">
                 {deleteMutation.error?.message ?? "Failed to delete campaign."}
               </p>
@@ -716,14 +781,17 @@ export default function CampaignSettingsClient() {
             >
               <p className="text-sm font-semibold text-[#fe5f55]">
                 Are you absolutely sure? This will permanently delete{" "}
-                <strong>&ldquo;{campaign?.name}&rdquo;</strong> and cannot be undone.
+                <strong>&ldquo;{campaign?.name}&rdquo;</strong> and cannot be
+                undone.
               </p>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={handleDelete}
                   disabled={deleteMutation.isPending}
-                  aria-describedby={deleteMutation.isError ? delErrorId : undefined}
+                  aria-describedby={
+                    deleteMutation.isError ? delErrorId : undefined
+                  }
                   className="
                     rounded-lg px-5 py-2.5 text-sm font-semibold
                     bg-[#fe5f55] text-white
@@ -735,7 +803,10 @@ export default function CampaignSettingsClient() {
                 >
                   {deleteMutation.isPending ? (
                     <span className="flex items-center gap-2">
-                      <span aria-hidden="true" className="h-3.5 w-3.5 animate-spin rounded-full border border-white border-t-transparent" />
+                      <span
+                        aria-hidden="true"
+                        className="h-3.5 w-3.5 animate-spin rounded-full border border-white border-t-transparent"
+                      />
                       Deleting…
                     </span>
                   ) : (

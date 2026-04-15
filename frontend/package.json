@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:srd-index": "node scripts/build-srd-index.mjs",
+    "test:srd-search": "node scripts/test-srd-search.mjs",
     "build:prod": "node scripts/build-prod.mjs",
     "deploy:dev": "next build && node scripts/deploy-s3.mjs",
     "deploy:prod": "node scripts/build-prod.mjs && node scripts/_deploy-prod.mjs",
@@ -14,7 +16,10 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "screenshot:marketing": "node scripts/screenshot-marketing.mjs",
+    "screenshot:marketing:mobile": "node scripts/screenshot-marketing.mjs --mobile",
+    "screenshot:diag": "node scripts/screenshot-diag.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-cloudfront": "^3.1013.0",
@@ -32,6 +37,8 @@
     "@tanstack/react-query-devtools": "^5.51.1",
     "amazon-cognito-identity-js": "^6.3.12",
     "clsx": "^2.1.1",
+    "fuse.js": "^7.3.0",
+    "minisearch": "^7.2.0",
     "next": "14.2.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

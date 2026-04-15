@@ -26,13 +26,14 @@ import type { RollResult, ActionOutcome, DieSize, DieSpec, RollRequest, DieRole 
 
 const ALL_SIZES: DieSize[] = ["d4", "d6", "d8", "d10", "d12", "d20"];
 
-// Maps die size to public image path (no d20 clean image available)
+// Maps die size to public image path
 const DIE_IMAGE: Partial<Record<DieSize, string>> = {
   d4:  "/images/dice/d4-clean.png",
   d6:  "/images/dice/d6-clean.png",
   d8:  "/images/dice/d8-clean.png",
   d10: "/images/dice/d10-clean.png",
   d12: "/images/dice/d12-clean.png",
+  d20: "/images/dice/d20-clean.png",
 };
 
 // ─── Outcome display helpers ──────────────────────────────────────────────────

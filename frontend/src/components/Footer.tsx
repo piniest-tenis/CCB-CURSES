@@ -7,7 +7,7 @@ import Link from "next/link";
  * Includes:
  *   - Discord community link
  *   - Legal page links (Terms, Privacy, Code of Conduct)
- *   - Man in Jumpsuit Productions logo
+ *   - Man in Jumpsuit logo
  *
  * WCAG AA compliant:
  *   - All text ≥ 4.5:1 contrast against #0a100d
@@ -40,12 +40,12 @@ export function Footer() {
             href="https://maninjumpsuit.com"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Man in Jumpsuit Productions website (opens in new tab)"
+            aria-label="Man in Jumpsuit website (opens in new tab)"
             className={`min-h-[44px] flex items-center py-2 opacity-60 hover:opacity-80 transition-opacity ${focusRing}`}
           >
             <Image
               src="/images/man-in-jumpsuit-logo-white-transparent.png"
-              alt="Man in Jumpsuit Productions"
+              alt="Man in Jumpsuit"
               width={80}
               height={24}
               className="object-contain"
@@ -55,7 +55,10 @@ export function Footer() {
         </div>
         {/* Bottom row: legal links + copyright */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm text-parchment-500 gap-2 sm:gap-0">
-          <nav aria-label="Legal" className="flex flex-col sm:flex-row gap-1 sm:gap-6">
+          <nav
+            aria-label="Legal"
+            className="flex flex-col sm:flex-row gap-1 sm:gap-6"
+          >
             <Link
               href="/terms"
               className={`min-h-[44px] flex items-center py-2 hover:text-parchment-400 transition-colors ${focusRing}`}
@@ -76,7 +79,7 @@ export function Footer() {
             </Link>
           </nav>
           <small className="text-parchment-500 text-center sm:text-right">
-            &copy; {new Date().getFullYear()} Man in Jumpsuit Productions
+            &copy; {new Date().getFullYear()} Man in Jumpsuit
           </small>
         </div>
       </div>

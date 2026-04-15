@@ -49,6 +49,15 @@ function resolveWikiLinks(text: string): string {
   });
 }
 
+// ─── Context: track whether we are inside a class entry ──────────────────────
+//
+// When rendering a class SRD entry, the H4 renderer adds an ornamental SVG
+// divider before subclass-name headings, and the H3 renderer adds one before
+// "BACKGROUND QUESTIONS".  This context prevents false positives in non-class
+// content (appendix domain cards, adversaries, etc.).
+
+const InsideClassEntryContext = createContext(false);
+
 // ─── Context: track whether we are currently inside a list item ───────────────
 //
 // react-markdown v10 renders:  ul > li > p > text
@@ -107,6 +116,111 @@ function makeComponents(linkClassName: string, inlineParagraphs: boolean): Compo
         : <span className="block">{children}</span>;
     },
 
+    // ── Headings ──────────────────────────────────────────────────────────────
+    // Tailwind preflight strips default heading styles.  Re-apply semantic
+    // headings with classes so they can be further themed via wrapper CSS
+    // (e.g. .prose-srd h2 { … }).
+    h1({ children }) {
+      return <h1 className="mt-6 mb-3 text-2xl font-bold">{children}</h1>;
+    },
+    h2({ children }) {
+      return <h2 className="mt-5 mb-2 text-xl font-bold">{children}</h2>;
+    },
+    h3({ children }) {
+      // Add ornamental divider before "BACKGROUND QUESTIONS" in class entries.
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      const isClassEntry = useContext(InsideClassEntryContext);
+      const text = typeof children === "string"
+        ? children
+        : Array.isArray(children)
+          ? children.map((c) => (typeof c === "string" ? c : "")).join("")
+          : "";
+      const upper = text.toUpperCase().trim();
+      const isDivider = isClassEntry && upper === "BACKGROUND QUESTIONS";
+      return (
+        <h3 className={`mt-4 mb-2 text-lg font-semibold${isDivider ? " srd-class-section-break" : ""}`}>
+          {children}
+        </h3>
+      );
+    },
+    h4({ children }) {
+      // Add ornamental divider before subclass name headings in class entries.
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      const isClassEntry = useContext(InsideClassEntryContext);
+      if (!isClassEntry) {
+        return <h4 className="mt-3 mb-1.5 text-base font-semibold">{children}</h4>;
+      }
+      const text = typeof children === "string"
+        ? children
+        : Array.isArray(children)
+          ? children.map((c) => (typeof c === "string" ? c : "")).join("")
+          : "";
+      const upper = text.toUpperCase().trim();
+      // Subclass names: proper-noun H4s. Exclude tier labels, step labels,
+      // and ranger companion headings.
+      const isSubclassName =
+        upper.length > 0 &&
+        !upper.startsWith("TIER ") &&
+        !upper.startsWith("STEP ") &&
+        !upper.includes("COMPANION") &&
+        !upper.includes("WORKING WITH") &&
+        !upper.includes("USING ") &&
+        !upper.includes("ATTACKING ") &&
+        !upper.includes("TAKING ") &&
+        !upper.includes("LEVELING ");
+      return (
+        <h4 className={`mt-3 mb-1.5 text-base font-semibold${isSubclassName ? " srd-class-section-break" : ""}`}>
+          {children}
+        </h4>
+      );
+    },
+    h5({ children }) {
+      return <h5 className="mt-3 mb-1 text-sm font-semibold">{children}</h5>;
+    },
+    h6({ children }) {
+      return <h6 className="mt-2 mb-1 text-sm font-medium">{children}</h6>;
+    },
+
+    // ── Block elements ────────────────────────────────────────────────────────
+    blockquote({ children }) {
+      return (
+        <blockquote className="my-3 border-l-4 border-gold-400/40 pl-4 italic text-[#b9baa3]/70">
+          {children}
+        </blockquote>
+      );
+    },
+    hr() {
+      return <hr className="my-6 border-t border-slate-700/60" />;
+    },
+
+    // ── Tables ────────────────────────────────────────────────────────────────
+    table({ children }) {
+      return (
+        <div className="my-4 overflow-x-auto rounded-lg border border-slate-700/60">
+          <table className="min-w-full text-sm">{children}</table>
+        </div>
+      );
+    },
+    thead({ children }) {
+      return <thead className="border-b border-slate-700/60 bg-slate-800/50">{children}</thead>;
+    },
+    tbody({ children }) {
+      return <tbody className="divide-y divide-slate-700/30">{children}</tbody>;
+    },
+    tr({ children }) {
+      return <tr>{children}</tr>;
+    },
+    th({ children }) {
+      return (
+        <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-[#f7f7ff]/80">
+          {children}
+        </th>
+      );
+    },
+    td({ children }) {
+      return <td className="px-3 py-2 text-[#b9baa3]/85">{children}</td>;
+    },
+
     // Restore list styles stripped by Tailwind preflight.
     // list-outside keeps the bullet in the gutter; text wraps flush with the
     // first character, not back under the bullet.
@@ -130,6 +244,28 @@ function makeComponents(linkClassName: string, inlineParagraphs: boolean): Compo
           <li className="leading-relaxed">{children}</li>
         </InsideLiContext.Provider>
       );
+    },
+
+    // ── Inline code & code blocks ─────────────────────────────────────────────
+    code({ children, className }) {
+      // Fenced code block: rendered as <pre><code class="language-*">
+      const isBlock = className?.startsWith("language-");
+      if (isBlock) {
+        return (
+          <code className={`block overflow-x-auto rounded bg-slate-800/60 p-3 text-xs leading-relaxed text-[#b9baa3]/90 ${className}`}>
+            {children}
+          </code>
+        );
+      }
+      // Inline code
+      return (
+        <code className="rounded bg-slate-800/60 px-1.5 py-0.5 text-[0.875em] text-[#f7f7ff]/80">
+          {children}
+        </code>
+      );
+    },
+    pre({ children }) {
+      return <pre className="my-3">{children}</pre>;
     },
   };
 }
@@ -157,6 +293,12 @@ interface MarkdownContentProps {
    * handles this automatically — you do NOT need inline={true} there.
    */
   inline?: boolean;
+  /**
+   * When true, enables class-entry-specific ornamental SVG dividers before
+   * subclass name headings (H4) and "BACKGROUND QUESTIONS" (H3).
+   * Only pass this for class SRD chunks.
+   */
+  isClassEntry?: boolean;
 }
 
 export function MarkdownContent({
@@ -164,17 +306,20 @@ export function MarkdownContent({
   className = "",
   linkClassName = "underline decoration-[#577399]/60 hover:decoration-[#577399] text-[#8fbad6] hover:text-[#b0d0e6] transition-colors",
   inline = false,
+  isClassEntry = false,
 }: MarkdownContentProps) {
   const processed = resolveWikiLinks(stripObsidianComments(children));
 
   return (
-    <div className={className}>
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        components={makeComponents(linkClassName, inline)}
-      >
-        {processed}
-      </ReactMarkdown>
-    </div>
+    <InsideClassEntryContext.Provider value={isClassEntry}>
+      <div className={className}>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={makeComponents(linkClassName, inline)}
+        >
+          {processed}
+        </ReactMarkdown>
+      </div>
+    </InsideClassEntryContext.Provider>
   );
 }

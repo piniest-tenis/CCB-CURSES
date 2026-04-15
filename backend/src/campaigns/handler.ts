@@ -28,6 +28,11 @@ import {
   queryItems,
   keys,
 } from "../common/dynamodb";
+import {
+  signCampaignShareToken,
+  verifyCampaignShareToken,
+  signShareToken,
+} from "../characters/helpers";
 import type {
   Campaign,
   CampaignMemberRole,
@@ -1522,6 +1527,121 @@ async function getInvitePreview(
   return createSuccessResponse(preview);
 }
 
+// ─── Campaign Share Token ─────────────────────────────────────────────────────
+
+/**
+ * GET /campaigns/{campaignId}/share
+ * Generate a campaign share token. Only callable by campaign GMs.
+ * Returns { campaignToken, shareUrl } — the token grants read-only access to
+ * all characters in the campaign without requiring authentication.
+ */
+async function getCampaignShareToken(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<APIGatewayProxyResultV2> {
+  const userId = extractUserId(event);
+  const campaignId = requirePathParam(event, "campaignId");
+
+  // Only GMs can generate campaign share tokens
+  const member = await assertCampaignMember(campaignId, userId);
+  if (member.role !== "gm") {
+    throw AppError.forbidden("Only GMs can generate campaign share tokens");
+  }
+
+  const campaignToken = signCampaignShareToken(campaignId, userId);
+
+  const frontendUrl =
+    process.env["FRONTEND_URL"] ?? "https://ccb.curses.show";
+  const shareUrl = `${frontendUrl}/campaign/${campaignId}?token=${campaignToken}`;
+
+  return createSuccessResponse({ campaignToken, shareUrl });
+}
+
+// ─── Public Campaign View ─────────────────────────────────────────────────────
+
+/**
+ * GET /campaigns/{campaignId}/view?token=<campaign-share-token>
+ * Public (no JWT required) endpoint. Verifies the campaign share token,
+ * then returns the campaign name and all character summaries + per-character
+ * share tokens so the Twitch Extension can render them without authentication.
+ */
+async function getSharedCampaign(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<APIGatewayProxyResultV2> {
+  const campaignId = requirePathParam(event, "campaignId");
+  const token = event.queryStringParameters?.["token"];
+
+  if (!token) {
+    throw AppError.unauthorized("Campaign share token is required");
+  }
+
+  // Verify the token — throws on failure
+  verifyCampaignShareToken(token, campaignId);
+
+  // Query all items in the campaign partition
+  const allItems = await queryItems<CampaignPartitionItem>(
+    CAMPAIGNS_TABLE,
+    "PK = :pk",
+    { ":pk": `CAMPAIGN#${campaignId}` }
+  );
+
+  let campaignMeta: CampaignRecord | null = null;
+  const characterRecords: CampaignCharacterRecord[] = [];
+
+  for (const item of allItems) {
+    if (item.SK === "METADATA") {
+      campaignMeta = item as CampaignRecord;
+    } else if (item.SK.startsWith("CHARACTER#")) {
+      characterRecords.push(item as CampaignCharacterRecord);
+    }
+  }
+
+  if (!campaignMeta) {
+    throw AppError.notFound("Campaign", campaignId);
+  }
+
+  // Fetch character records and generate per-character share tokens
+  const characters: Array<{
+    characterId: string;
+    userId: string;
+    name: string;
+    className: string;
+    level: number;
+    avatarUrl: string | null;
+    portraitUrl: string | null;
+  }> = [];
+  const shareTokens: Record<string, string> = {};
+
+  for (const cr of characterRecords) {
+    const charRecord = await getItem<CharacterRecord>(
+      CHARACTERS_TABLE,
+      { PK: `USER#${cr.userId}`, SK: `CHARACTER#${cr.characterId}` }
+    );
+    if (charRecord) {
+      characters.push({
+        characterId: cr.characterId,
+        userId: cr.userId,
+        name: charRecord.name,
+        className: charRecord.className,
+        level: charRecord.level,
+        avatarUrl: charRecord.avatarUrl ?? null,
+        portraitUrl: charRecord.portraitUrl ?? null,
+      });
+      // Generate a character-level share token so the extension can
+      // fetch live data for each character independently
+      shareTokens[cr.characterId] = signShareToken(cr.characterId, cr.userId);
+    }
+  }
+
+  return createSuccessResponse({
+    campaign: {
+      campaignId: campaignMeta.campaignId,
+      name: campaignMeta.name,
+    },
+    characters,
+    shareTokens,
+  });
+}
+
 // ─── Main Handler ─────────────────────────────────────────────────────────────
 
 async function campaignsHandler(
@@ -1577,6 +1697,12 @@ async function campaignsHandler(
 
     case "DELETE /campaigns/{campaignId}/characters/{characterId}":
       return removeCharacter(event);
+
+    case "GET /campaigns/{campaignId}/share":
+      return getCampaignShareToken(event);
+
+    case "GET /campaigns/{campaignId}/view":
+      return getSharedCampaign(event);
 
     default:
       return {

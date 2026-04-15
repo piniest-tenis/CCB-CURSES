@@ -263,8 +263,13 @@ function PublicStatTooltip({
           ref={popoverRef}
           id={popoverId}
           role="tooltip"
-          onMouseEnter={() => { inPopover.current = true; }}
-          onMouseLeave={() => { inPopover.current = false; setOpen(false); }}
+          onMouseEnter={() => {
+            inPopover.current = true;
+          }}
+          onMouseLeave={() => {
+            inPopover.current = false;
+            setOpen(false);
+          }}
           className="
             absolute bottom-full left-1/2 mb-2 z-50
             -translate-x-1/2
@@ -287,16 +292,26 @@ function PublicStatTooltip({
                 key={i}
                 className={[
                   "flex items-baseline justify-between gap-2",
-                  line.isTotal ? "mt-1.5 pt-1.5 border-t border-[#577399]/30" : "",
+                  line.isTotal
+                    ? "mt-1.5 pt-1.5 border-t border-[#577399]/30"
+                    : "",
                 ].join(" ")}
               >
-                <dt className={line.isTotal ? "text-[#b9cfe8] font-semibold" : "text-[#b9baa3]"}>
+                <dt
+                  className={
+                    line.isTotal
+                      ? "text-[#b9cfe8] font-semibold"
+                      : "text-[#b9baa3]"
+                  }
+                >
                   {line.label}
                 </dt>
                 <dd
                   className={[
                     "tabular-nums font-mono shrink-0",
-                    line.isTotal ? "text-[#f7f7ff] font-bold" : "text-[#f7f7ff]",
+                    line.isTotal
+                      ? "text-[#f7f7ff] font-bold"
+                      : "text-[#f7f7ff]",
                   ].join(" ")}
                 >
                   {line.value}
@@ -354,23 +369,27 @@ function StatCard({
 
   // Nameplate — always white bg, left-border accent for modifier status
   const nameplateStyle: React.CSSProperties = isPenalty
-    ? { background: "#f7f7ff", borderLeftWidth: "3px", borderLeftColor: "#f87171" }
+    ? {
+        background: "#f7f7ff",
+        borderLeftWidth: "3px",
+        borderLeftColor: "#f87171",
+      }
     : isBonus
-    ? { background: "#f7f7ff", borderLeftWidth: "3px", borderLeftColor: "#2dd4bf" }
-    : { background: "#f7f7ff" };
+      ? {
+          background: "#f7f7ff",
+          borderLeftWidth: "3px",
+          borderLeftColor: "#2dd4bf",
+        }
+      : { background: "#f7f7ff" };
 
   const nameplateColor = isPenalty
     ? "#dc2626"
     : isBonus
-    ? "#0d9488"
-    : "#0a100d";
+      ? "#0d9488"
+      : "#0a100d";
 
   // Value color on the card face
-  const valueColor = isPenalty
-    ? "#dc2626"
-    : isBonus
-    ? "#0f766e"
-    : "#0a100d";
+  const valueColor = isPenalty ? "#dc2626" : isBonus ? "#0f766e" : "#0a100d";
 
   const card = (
     <div
@@ -395,7 +414,7 @@ function StatCard({
             <span
               className="font-bold leading-none select-none"
               style={{
-                fontFamily: "'jetsam-collection-basilea', serif",
+                fontFamily: "'Heavitas', serif",
                 fontSize: "6rem",
                 color: valueColor,
                 filter: "drop-shadow(0 1px 0 rgba(249,236,216,0.6))",
@@ -419,8 +438,15 @@ function StatCard({
           >
             {label}
             {hasModifier && (
-              <span style={{ marginLeft: "0.2em", fontSize: "0.75em", opacity: 0.8 }}>
-                ({isPenalty ? "▾" : "▴"}{Math.abs(total)})
+              <span
+                style={{
+                  marginLeft: "0.2em",
+                  fontSize: "0.75em",
+                  opacity: 0.8,
+                }}
+              >
+                ({isPenalty ? "▾" : "▴"}
+                {Math.abs(total)})
               </span>
             )}
           </span>
@@ -923,7 +949,7 @@ function PublicSheetContent() {
           <Link
             href="/"
             className="flex items-center hover:opacity-85 transition-opacity focus:outline-none focus:ring-2 focus:ring-[#fbbf24] rounded"
-            aria-label="Curses! — home"
+            aria-label="Curses! | Home"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img

@@ -2,50 +2,47 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   darkMode: "class",
-  content: [
-    "./src/**/*.{js,ts,jsx,tsx}",
-    "../shared/src/**/*.{js,ts}",
-  ],
+  content: ["./src/**/*.{js,ts,jsx,tsx}", "../shared/src/**/*.{js,ts}"],
   theme: {
     extend: {
       colors: {
         // CSS variable–based semantic tokens (used in @apply directives)
-        border:      "hsl(var(--border))",
-        input:       "hsl(var(--input))",
-        ring:        "hsl(var(--ring))",
-        background:  "hsl(var(--background))",
-        foreground:  "hsl(var(--foreground))",
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT:    "hsl(var(--primary))",
+          DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
-          DEFAULT:    "hsl(var(--secondary))",
+          DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
         },
         destructive: {
-          DEFAULT:    "hsl(var(--destructive))",
+          DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
         },
         muted: {
-          DEFAULT:    "hsl(var(--muted))",
+          DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
         },
         accent: {
-          DEFAULT:    "hsl(var(--accent))",
+          DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
         },
         popover: {
-          DEFAULT:    "hsl(var(--popover))",
+          DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
         },
         card: {
-          DEFAULT:    "hsl(var(--card))",
+          DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
         // Deep burgundy — primary brand / headers
         burgundy: {
-          50:  "#fdf2f4",
+          50: "#fdf2f4",
           100: "#fce7ea",
           200: "#f9d0d8",
           300: "#f4a8b8",
@@ -59,7 +56,7 @@ const config: Config = {
         },
         // Warm gold — accents, XP dots, highlights
         gold: {
-          50:  "#fffbeb",
+          50: "#fffbeb",
           100: "#fef3c7",
           200: "#fde68a",
           300: "#fcd34d",
@@ -73,7 +70,7 @@ const config: Config = {
         },
         // Parchment / cream — text on dark
         parchment: {
-          50:  "#fefce8",
+          50: "#fefce8",
           100: "#fef9c3",
           200: "#fef08a",
           300: "#f5e6a3",
@@ -87,7 +84,7 @@ const config: Config = {
         // Slate dark backgrounds — use Tailwind's built-in slate scale
         // plus extra custom shades
         slate: {
-          50:  "#f8fafc",
+          50: "#f8fafc",
           100: "#f1f5f9",
           200: "#e2e8f0",
           300: "#cbd5e1",
@@ -103,7 +100,7 @@ const config: Config = {
         },
         // Coral — homebrew indicator badge color
         coral: {
-          50:  "#fff5f3",
+          50: "#fff5f3",
           100: "#ffe8e4",
           200: "#ffd5ce",
           300: "#ffb5aa",
@@ -117,7 +114,7 @@ const config: Config = {
         },
         // Steel blue — SRD indicator/filter accent
         steel: {
-          50:  "#f4f6f9",
+          50: "#f4f6f9",
           100: "#e8edf3",
           200: "#cdd7e5",
           300: "#a3b6cf",
@@ -132,26 +129,36 @@ const config: Config = {
       },
       fontFamily: {
         // double-pica — header font (Adobe Typekit)
-        serif:   ['"double-pica"', "Georgia", "Cambria", "serif"],
+        serif: ['"double-pica"', "Georgia", "Cambria", "serif"],
         // double-pica-sc — true small-caps variant for section headings
-        "serif-sc": ['"double-pica-sc"', '"double-pica"', "Georgia", "Cambria", "serif"],
-        // sofia-pro-narrow — body/UI font (Adobe Typekit) — condensed sans-serif
-        sans:    ['"sofia-pro-narrow"', '"Sofia Pro Narrow"', "Inter", "system-ui", "sans-serif"],
-        // mestiza-sans — readable body font for small text below 18px (Adobe Typekit)
-        body:    ['"mestiza-sans"', '"sofia-pro-narrow"', "Inter", "system-ui", "sans-serif"],
-        // jetsam-collection-basilea — attention-getting display font (Adobe Typekit)
-        display: ['"jetsam-collection-basilea"', '"double-pica"', "Georgia", "serif"],
-        mono:    ['"JetBrains Mono"', '"Fira Code"', "monospace"],
+        "serif-sc": [
+          '"double-pica-sc"',
+          '"double-pica"',
+          "Georgia",
+          "Cambria",
+          "serif",
+        ],
+        // Overpass — body/UI font (Google Fonts, weight 500 default)
+        sans: ['"Overpass"', "Inter", "system-ui", "sans-serif"],
+        // Overpass — readable body font (Google Fonts)
+        body: ['"Overpass"', "Inter", "system-ui", "sans-serif"],
+        // Heavitas — self-hosted attention-getting display font
+        display: ['"Heavitas"', '"double-pica"', "Georgia", "serif"],
+        mono: ['"JetBrains Mono"', '"Fira Code"', "monospace"],
       },
       boxShadow: {
-        card:      "0 2px 8px rgba(0,0,0,0.55), 0 0 0 1px rgba(74,10,20,0.35)",
-        sheet:     "0 4px 24px rgba(0,0,0,0.7), 0 0 0 1px rgba(74,10,20,0.25)",
-        "glow-gold": "0 0 14px rgba(212,169,74,0.45), 0 0 4px rgba(212,169,74,0.25)",
-        "glow-coral": "0 0 14px rgba(249,104,84,0.45), 0 0 4px rgba(249,104,84,0.25)",
+        card: "0 2px 8px rgba(0,0,0,0.55), 0 0 0 1px rgba(74,10,20,0.35)",
+        sheet: "0 4px 24px rgba(0,0,0,0.7), 0 0 0 1px rgba(74,10,20,0.25)",
+        "glow-gold":
+          "0 0 14px rgba(212,169,74,0.45), 0 0 4px rgba(212,169,74,0.25)",
+        "glow-coral":
+          "0 0 14px rgba(249,104,84,0.45), 0 0 4px rgba(249,104,84,0.25)",
         // Legacy aliases kept for compat with older components
-        "card-fantasy":       "0 2px 8px rgba(0,0,0,0.6), 0 0 0 1px rgba(157,35,71,0.3)",
-        "card-fantasy-hover": "0 4px 16px rgba(0,0,0,0.8), 0 0 0 1px rgba(202,138,4,0.5)",
-        "glow-burgundy":      "0 0 12px rgba(157,35,71,0.5)",
+        "card-fantasy":
+          "0 2px 8px rgba(0,0,0,0.6), 0 0 0 1px rgba(157,35,71,0.3)",
+        "card-fantasy-hover":
+          "0 4px 16px rgba(0,0,0,0.8), 0 0 0 1px rgba(202,138,4,0.5)",
+        "glow-burgundy": "0 0 12px rgba(157,35,71,0.5)",
       },
       backgroundImage: {
         "parchment-texture":
@@ -169,26 +176,66 @@ const config: Config = {
       keyframes: {
         "fade-in": {
           from: { opacity: "0", transform: "translateY(4px)" },
-          to:   { opacity: "1", transform: "translateY(0)" },
+          to: { opacity: "1", transform: "translateY(0)" },
         },
         shimmer: {
-          "0%":   { backgroundPosition: "-200% 0" },
+          "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
         },
         "pulse-glow-goldenrod": {
-          "0%, 100%": { color: "rgba(218,165,32,0.45)", textShadow: "0 0 0px rgba(218,165,32,0)" },
-          "50%":      { color: "rgba(218,165,32,0.9)",  textShadow: "0 0 8px rgba(218,165,32,0.6), 0 0 2px rgba(218,165,32,0.4)" },
+          "0%, 100%": {
+            color: "rgba(218,165,32,0.45)",
+            textShadow: "0 0 0px rgba(218,165,32,0)",
+          },
+          "50%": {
+            color: "#daa520e6",
+            textShadow:
+              "0 0 8px rgba(218,165,32,0.6), 0 0 2px rgba(218,165,32,0.4)",
+          },
         },
         "coral-pulse": {
           "0%, 100%": { boxShadow: "0 0 0px rgba(249,104,84,0)" },
-          "50%":      { boxShadow: "0 0 12px rgba(249,104,84,0.4), 0 0 4px rgba(249,104,84,0.2)" },
+          "50%": {
+            boxShadow:
+              "0 0 12px rgba(249,104,84,0.4), 0 0 4px rgba(249,104,84,0.2)",
+          },
+        },
+        "danger-pulse": {
+          "0%, 100%": { borderColor: "rgba(254,95,85,0.2)" },
+          "50%": { borderColor: "rgba(254,95,85,0.7)" },
+        },
+        "stat-flash-down": {
+          "0%": { opacity: "1" },
+          "20%": { opacity: "0.4", backgroundColor: "rgba(254,95,85,0.35)" },
+          "100%": { opacity: "1", backgroundColor: "transparent" },
+        },
+        "stat-flash-up": {
+          "0%": { opacity: "1" },
+          "20%": { opacity: "0.4", backgroundColor: "rgba(52,211,153,0.35)" },
+          "100%": { opacity: "1", backgroundColor: "transparent" },
+        },
+        // Play button halo breathes — expands outward and fades
+        "gold-ring-pulse": {
+          "0%, 100%": {
+            boxShadow:
+              "0 0 0 0px rgba(218,165,32,0.55), 0 0 18px rgba(218,165,32,0.35)",
+          },
+          "50%": {
+            boxShadow:
+              "0 0 0 6px rgba(218,165,32,0.0), 0 0 28px rgba(218,165,32,0.6)",
+          },
         },
       },
       animation: {
-        "fade-in":              "fade-in 0.2s ease-out",
-        shimmer:                "shimmer 1.5s infinite",
-        "pulse-glow-goldenrod": "pulse-glow-goldenrod 2.4s ease-in-out infinite",
-        "coral-pulse":          "coral-pulse 2.4s ease-in-out infinite",
+        "fade-in": "fade-in 0.2s ease-out",
+        shimmer: "shimmer 1.5s infinite",
+        "pulse-glow-goldenrod":
+          "pulse-glow-goldenrod 2.4s ease-in-out infinite",
+        "coral-pulse": "coral-pulse 2.4s ease-in-out infinite",
+        "danger-pulse": "danger-pulse 1.6s ease-in-out infinite",
+        "stat-flash-down": "stat-flash-down 0.4s ease-out forwards",
+        "stat-flash-up": "stat-flash-up 0.4s ease-out forwards",
+        "gold-ring-pulse": "gold-ring-pulse 2.4s ease-in-out infinite",
       },
     },
   },

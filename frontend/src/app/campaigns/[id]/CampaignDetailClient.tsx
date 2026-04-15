@@ -3,7 +3,7 @@
 /**
  * src/app/campaigns/[id]/CampaignDetailClient.tsx
  *
- * Campaign Detail Page — the main session view.
+ * Campaign Detail Page - the main session view.
  *
  * Layout:
  *   Header  → campaign name, [Invite] [Settings] buttons (GM only)
@@ -28,6 +28,7 @@ import { useRouter, usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useAuthStore } from "@/store/authStore";
 import { useCampaignDetail, useRemoveMember, useAddCharacterToCampaign, useRemoveCharacterFromCampaign, useUpdateCampaign } from "@/hooks/useCampaigns";
+import { apiClient } from "@/lib/api";
 import { useCampaignStore } from "@/store/campaignStore";
 import { useCampaignNav, type CampaignTab } from "@/hooks/useCampaignNav";
 import { useGameWebSocket, type DiceColorOverrides } from "@/hooks/useGameWebSocket";
@@ -85,6 +86,16 @@ const DiceRollerPanel = dynamic(
 
 const CommandCenterTab = dynamic(
   () => import("@/components/campaign/CommandCenterTab").then((m) => m.CommandCenterTab),
+  { ssr: false }
+);
+
+const PartyOverviewSidebar = dynamic(
+  () => import("@/components/campaign/PartyOverviewSidebar").then((m) => m.PartyOverviewSidebar),
+  { ssr: false }
+);
+
+const PartyOverviewToggle = dynamic(
+  () => import("@/components/campaign/PartyOverviewToggle").then((m) => m.PartyOverviewToggle),
   { ssr: false }
 );
 
@@ -218,7 +229,7 @@ function SheetPingWrapper({ characterId, characterName, isGm, onPingField, viewe
       className={isGm ? "relative select-none touch-manipulation" : "relative"}
       aria-label={
         isGm
-          ? "Character sheet — right-click or long-press any element to ping a player"
+          ? "Character sheet - right-click or long-press any element to ping a player"
           : undefined
       }
     >
@@ -226,7 +237,7 @@ function SheetPingWrapper({ characterId, characterName, isGm, onPingField, viewe
         <div className="mb-3 rounded-lg border border-[#DAA520]/30 bg-[#DAA520]/5 px-4 py-2 flex items-start justify-between gap-3">
           <p className="text-xs text-[#DAA520]/80">
             <span aria-hidden="true">♛ </span>
-            GM View — Right-click or long-press any element to ping the player.
+            GM View - Right-click or long-press any element to ping the player.
             Keyboard: focus an element then press{" "}
             <kbd className="font-mono bg-slate-800 border border-slate-700 rounded px-1">Alt+P</kbd>
           </p>
@@ -386,7 +397,7 @@ function AssignCharacterPanel({ campaignId }: AssignCharacterPanelProps) {
 // ─── GM Tab Bar (desktop) ─────────────────────────────────────────────────────
 // Allows the GM to switch between Characters, Adversaries, Encounter, and
 // Environments tabs. Players only see the Characters view (no tab bar shown).
-// On mobile, replaced by the bottom nav — this bar is hidden on sm and below.
+// On mobile, replaced by the bottom nav - this bar is hidden on sm and below.
 
 const GM_TABS: { id: CampaignTab; label: string; icon: string }[] = [
   { id: "characters", label: "Characters", icon: "👤" },
@@ -773,11 +784,34 @@ export default function CampaignDetailClient() {
   const [forceCritCharId, setForceCritCharId] = useState<string | null>(null);
   /** Mobile: party drawer open state. */
   const [drawerOpen, setDrawerOpen] = useState(false);
+  /** Party overview sidebar open state (all roles). */
+  const [partyOverviewOpen, setPartyOverviewOpen] = useState(false);
   /** GM-only: overflow menu open state on mobile. */
   const [overflowOpen, setOverflowOpen] = useState(false);
   const overflowRef = useRef<HTMLDivElement>(null);
 
   const titleId = useId();
+
+  // Campaign share state (for "Share Campaign" clipboard button)
+  type ShareState = "idle" | "loading" | "copied" | "error";
+  const [campaignShareState, setCampaignShareState] = useState<ShareState>("idle");
+
+  const handleShareCampaign = useCallback(async () => {
+    if (campaignShareState === "loading") return;
+    setCampaignShareState("loading");
+    try {
+      const data = await apiClient.get<{
+        campaignToken: string;
+        shareUrl: string;
+      }>(`/campaigns/${campaignId}/share`);
+      await navigator.clipboard.writeText(data.shareUrl);
+      setCampaignShareState("copied");
+      setTimeout(() => setCampaignShareState("idle"), 2500);
+    } catch {
+      setCampaignShareState("error");
+      setTimeout(() => setCampaignShareState("idle"), 2500);
+    }
+  }, [campaignId, campaignShareState]);
 
   // Encounter count for tab badge
   const encounterAdversaries = useEncounterStore(
@@ -818,6 +852,16 @@ export default function CampaignDetailClient() {
   useEffect(() => {
     setDrawerOpen(false);
   }, [selectedCharacterId]);
+
+  // Close party overview bottom sheet when the party drawer opens (mobile),
+  // and vice versa, to avoid double-modal confusion.
+  useEffect(() => {
+    if (drawerOpen) setPartyOverviewOpen(false);
+  }, [drawerOpen]);
+
+  useEffect(() => {
+    if (partyOverviewOpen) setDrawerOpen(false);
+  }, [partyOverviewOpen]);
 
   // ── Derived state ───────────────────────────────────────────────────────────
   const isGm        = campaign?.callerRole === "gm";
@@ -999,7 +1043,7 @@ export default function CampaignDetailClient() {
               }
             />
 
-            {/* Force-crit toggle — GM only, players with a character only */}
+            {/* Force-crit toggle - GM only, players with a character only */}
             {isGm && charId && member.role === "player" && (
               <button
                 type="button"
@@ -1085,7 +1129,7 @@ export default function CampaignDetailClient() {
               />
             )}
 
-            {/* Crit Armed pill — shown in header when a crit is armed */}
+            {/* Crit Armed pill - shown in header when a crit is armed */}
             {isGm && forceCritCharId && (
               <button
                 type="button"
@@ -1129,7 +1173,7 @@ export default function CampaignDetailClient() {
                 <span className="sm:hidden" aria-hidden="true">🎲</span>
               </button>
 
-              {/* Invite — hidden on mobile (in overflow) */}
+              {/* Invite - hidden on mobile (in overflow) */}
               <button
                 type="button"
                 onClick={() => setShowInviteModal(true)}
@@ -1146,7 +1190,48 @@ export default function CampaignDetailClient() {
                 Invite
               </button>
 
-              {/* OBS links + Settings — hidden on mobile (in overflow) */}
+              {/* Share Campaign - clipboard copy, hidden on mobile (in overflow) */}
+              <button
+                type="button"
+                onClick={handleShareCampaign}
+                disabled={campaignShareState === "loading"}
+                className={[
+                  "hidden sm:inline-flex items-center gap-1.5",
+                  "rounded-lg px-4 py-2 text-sm font-semibold",
+                  "border transition-colors",
+                  "focus:outline-none focus:ring-2 focus:ring-[#577399]",
+                  "disabled:opacity-50 disabled:cursor-wait",
+                  campaignShareState === "copied"
+                    ? "border-green-500/50 bg-green-500/10 text-green-400"
+                    : campaignShareState === "error"
+                      ? "border-red-500/50 bg-red-500/10 text-red-400"
+                      : "border-[#577399]/50 bg-[#577399]/10 text-[#577399] hover:bg-[#577399]/20 hover:border-[#577399]",
+                ].join(" ")}
+                aria-label={
+                  campaignShareState === "copied"
+                    ? "Campaign share link copied!"
+                    : campaignShareState === "error"
+                      ? "Failed to copy share link"
+                      : "Copy campaign share link for Twitch extension"
+                }
+              >
+                {campaignShareState === "loading" ? (
+                  <i className="fa-solid fa-arrows-rotate text-[11px] animate-spin" aria-hidden="true" />
+                ) : campaignShareState === "copied" ? (
+                  <i className="fa-solid fa-check text-[11px]" aria-hidden="true" />
+                ) : campaignShareState === "error" ? (
+                  <i className="fa-solid fa-circle-exclamation text-[11px]" aria-hidden="true" />
+                ) : (
+                  <i className="fa-solid fa-share-nodes text-[11px]" aria-hidden="true" />
+                )}
+                {campaignShareState === "copied"
+                  ? "Copied!"
+                  : campaignShareState === "error"
+                    ? "Failed"
+                    : "Share"}
+              </button>
+
+              {/* OBS links + Settings - hidden on mobile (in overflow) */}
               <a
                 href={`/obs/dice?campaign=${campaignId}`}
                 target="_blank"
@@ -1230,6 +1315,27 @@ export default function CampaignDetailClient() {
                       className="w-full text-left px-4 py-2.5 text-sm text-[#f7f7ff] hover:bg-slate-700/60 transition-colors"
                     >
                       Invite players
+                    </button>
+                    <button
+                      role="menuitem"
+                      type="button"
+                      disabled={campaignShareState === "loading"}
+                      onClick={() => { handleShareCampaign(); setOverflowOpen(false); }}
+                      className={[
+                        "w-full text-left px-4 py-2.5 text-sm transition-colors",
+                        "disabled:opacity-50 disabled:cursor-wait",
+                        campaignShareState === "copied"
+                          ? "text-green-400"
+                          : campaignShareState === "error"
+                            ? "text-red-400"
+                            : "text-[#f7f7ff] hover:bg-slate-700/60",
+                      ].join(" ")}
+                    >
+                      {campaignShareState === "copied"
+                        ? "Link copied!"
+                        : campaignShareState === "error"
+                          ? "Share failed"
+                          : "Share campaign"}
                     </button>
                     <a
                       role="menuitem"
@@ -1323,14 +1429,14 @@ export default function CampaignDetailClient() {
                           compact
                         />
                       </div>
-                      {/* Full tracker always visible on Encounter tab (desktop) — skip on other tabs on mobile */}
+                      {/* Full tracker always visible on Encounter tab (desktop) - skip on other tabs on mobile */}
                       <div className="block sm:hidden" />
                     </>
                   )}
                 </div>
               )}
 
-              {/* GM Tab Bar — desktop only (sm+) */}
+              {/* GM Tab Bar - desktop only (sm+) */}
               {isGm && (
                 <GmTabBar
                   activeTab={activeTab}
@@ -1403,7 +1509,7 @@ export default function CampaignDetailClient() {
 
                   {selectedCharacterId && (
                     <>
-                      {/* Viewer mode banner — GM viewing a player's sheet */}
+                      {/* Viewer mode banner - GM viewing a player's sheet */}
                       {isViewerMode && (
                         <div className="flex items-center gap-2 rounded-lg bg-[#577399]/15 border border-[#577399]/30 px-3 py-1.5 text-xs text-[#577399] mb-2">
                           <span>♛ Viewing {selectedMemberName}&apos;s Sheet</span>
@@ -1530,7 +1636,7 @@ export default function CampaignDetailClient() {
         <MobileBottomNav
           activeTab={activeTab}
           onTabChange={(tab) => {
-            // "Characters" just opens the party drawer without navigating —
+            // "Characters" just opens the party drawer without navigating -
             // the GM picks a character, and selecting one navigates normally.
             if (tab === "characters") {
               setDrawerOpen(true);
@@ -1551,7 +1657,7 @@ export default function CampaignDetailClient() {
         />
       )}
 
-      {/* Dice log — mobile: docked strip above bottom nav; desktop: floating panel */}
+      {/* Dice log - mobile: docked strip above bottom nav; desktop: floating panel */}
       <DiceLog characterName={isGm ? "GM" : undefined} mobileBottomOffset={isGm ? 56 : 0} />
 
       {/* GM 3D dice roller panel */}
@@ -1561,6 +1667,26 @@ export default function CampaignDetailClient() {
           onClose={() => setGmDiceOpen(false)}
           colorOverrides={effectiveDiceColorOverrides}
         />
+      )}
+
+      {/* Party Overview sidebar + toggle (all roles) */}
+      {campaign && (
+        <>
+          <PartyOverviewToggle
+            isOpen={partyOverviewOpen}
+            onToggle={() => setPartyOverviewOpen((v) => !v)}
+          />
+          <PartyOverviewSidebar
+            isOpen={partyOverviewOpen}
+            onClose={() => setPartyOverviewOpen(false)}
+            characters={campaign.characters ?? []}
+            currentFear={campaign.currentFear ?? 0}
+            onSelectCharacter={(charId) => {
+              navigateToCharacter(charId);
+              setPartyOverviewOpen(false);
+            }}
+          />
+        </>
       )}
     </div>
   );

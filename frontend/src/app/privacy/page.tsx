@@ -26,10 +26,16 @@ export default function PrivacyPolicyPage() {
             &larr; Back to Dashboard
           </Link>
           <nav className="flex gap-4 text-xs text-[#b9baa3]/40">
-            <Link href="/terms" className="hover:text-[#b9baa3]/70 transition-colors">
+            <Link
+              href="/terms"
+              className="hover:text-[#b9baa3]/70 transition-colors"
+            >
               Terms
             </Link>
-            <Link href="/conduct" className="hover:text-[#b9baa3]/70 transition-colors">
+            <Link
+              href="/conduct"
+              className="hover:text-[#b9baa3]/70 transition-colors"
+            >
               Code of Conduct
             </Link>
           </nav>
@@ -49,11 +55,14 @@ export default function PrivacyPolicyPage() {
           {/* Intro */}
           <section>
             <p>
-              This Privacy Policy explains how <strong className="text-[#f7f7ff]">Man in Jumpsuit
-              Productions</strong> (&ldquo;we,&rdquo; &ldquo;us,&rdquo; &ldquo;our&rdquo;) collects,
+              This Privacy Policy explains how{" "}
+              <strong className="text-[#f7f7ff]">Man in Jumpsuit</strong>{" "}
+              (&ldquo;we,&rdquo; &ldquo;us,&rdquo; &ldquo;our&rdquo;) collects,
               uses, stores, and protects your information when you use{" "}
-              <strong className="text-[#f7f7ff]">Curses! Custom Character Builder</strong> (&ldquo;CCB,&rdquo;
-              &ldquo;the Service&rdquo;), available at{" "}
+              <strong className="text-[#f7f7ff]">
+                Curses! Custom Character Builder
+              </strong>{" "}
+              (&ldquo;CCB,&rdquo; &ldquo;the Service&rdquo;), available at{" "}
               <a
                 href="https://ccb.curses.show"
                 className="text-[#577399] hover:underline"
@@ -65,8 +74,9 @@ export default function PrivacyPolicyPage() {
               .
             </p>
             <p className="mt-3">
-              We believe in transparency and simplicity. We collect only what we need to run the
-              Service, we never sell your data, and we give you control over your information.
+              We believe in transparency and simplicity. We collect only what we
+              need to run the Service, we never sell your data, and we give you
+              control over your information.
             </p>
           </section>
 
@@ -81,26 +91,29 @@ export default function PrivacyPolicyPage() {
             </h3>
             <ul className="ml-6 space-y-2 list-disc marker:text-[#577399]/50">
               <li>
-                <strong className="text-[#f7f7ff]">Account information:</strong> When you register,
-                we collect your email address and a display name. If you sign in with Google, we
-                receive your email address and name from Google.
+                <strong className="text-[#f7f7ff]">Account information:</strong>{" "}
+                When you register, we collect your email address and a display
+                name. If you sign in with Google, we receive your email address
+                and name from Google.
               </li>
               <li>
-                <strong className="text-[#f7f7ff]">Character data:</strong> Character names,
-                stats, equipment, backstories, class and subclass selections, and other information
-                you enter while building characters.
+                <strong className="text-[#f7f7ff]">Character data:</strong>{" "}
+                Character names, stats, equipment, backstories, class and
+                subclass selections, and other information you enter while
+                building characters.
               </li>
               <li>
-                <strong className="text-[#f7f7ff]">Campaign data:</strong> Campaign names,
-                descriptions, session schedules, and associated character assignments.
+                <strong className="text-[#f7f7ff]">Campaign data:</strong>{" "}
+                Campaign names, descriptions, session schedules, and associated
+                character assignments.
               </li>
               <li>
-                <strong className="text-[#f7f7ff]">Uploaded images:</strong> Character portraits
-                and avatar images you upload.
+                <strong className="text-[#f7f7ff]">Uploaded images:</strong>{" "}
+                Character portraits and avatar images you upload.
               </li>
               <li>
-                <strong className="text-[#f7f7ff]">Preferences:</strong> Display settings such as
-                custom dice colors.
+                <strong className="text-[#f7f7ff]">Preferences:</strong> Display
+                settings such as custom dice colors.
               </li>
             </ul>
 
@@ -109,14 +122,15 @@ export default function PrivacyPolicyPage() {
             </h3>
             <ul className="ml-6 space-y-2 list-disc marker:text-[#577399]/50">
               <li>
-                <strong className="text-[#f7f7ff]">Google OAuth:</strong> If you choose to sign in
-                with Google, we receive your name and email address. We do not receive your Google
-                password.
+                <strong className="text-[#f7f7ff]">Google OAuth:</strong> If you
+                choose to sign in with Google, we receive your name and email
+                address. We do not receive your Google password.
               </li>
               <li>
-                <strong className="text-[#f7f7ff]">Patreon:</strong> If you choose to link your
-                Patreon account, we receive your Patreon user ID and current membership tier status.
-                We use this solely to determine which features to unlock. We do not receive your
+                <strong className="text-[#f7f7ff]">Patreon:</strong> If you
+                choose to link your Patreon account, we receive your Patreon
+                user ID and current membership tier status. We use this solely
+                to determine which features to unlock. We do not receive your
                 Patreon payment details.
               </li>
             </ul>
@@ -126,14 +140,20 @@ export default function PrivacyPolicyPage() {
             </h3>
             <ul className="ml-6 space-y-2 list-disc marker:text-[#577399]/50">
               <li>
-                <strong className="text-[#f7f7ff]">Authentication tokens:</strong> When you sign
-                in, secure tokens are stored in your browser to keep you logged in. These are
-                functional &mdash; not tracking cookies.
+                <strong className="text-[#f7f7ff]">
+                  Authentication tokens:
+                </strong>{" "}
+                When you sign in, secure tokens are stored in your browser to
+                keep you logged in. These are functional &mdash; not tracking
+                cookies.
               </li>
             </ul>
             <p className="mt-3">
-              <strong className="text-[#f7f7ff]">We do not use analytics cookies, advertising
-              trackers, or any third-party tracking scripts.</strong> We do not serve advertisements.
+              <strong className="text-[#f7f7ff]">
+                We do not use analytics cookies, advertising trackers, or any
+                third-party tracking scripts.
+              </strong>{" "}
+              We do not serve advertisements.
             </p>
           </section>
 
@@ -146,14 +166,21 @@ export default function PrivacyPolicyPage() {
             <ul className="mt-3 ml-6 space-y-1.5 list-disc marker:text-[#577399]/50">
               <li>Create and manage your account</li>
               <li>Store and display your characters and campaigns</li>
-              <li>Render public character sheet pages when you choose to share them</li>
+              <li>
+                Render public character sheet pages when you choose to share
+                them
+              </li>
               <li>Determine your Patreon membership tier for feature access</li>
               <li>Display your uploaded images within the Service</li>
-              <li>Communicate with you about your account if necessary (e.g., security issues)</li>
+              <li>
+                Communicate with you about your account if necessary (e.g.,
+                security issues)
+              </li>
             </ul>
             <p className="mt-3">
-              We do not use your data for advertising, profiling, automated decision-making, or any
-              purpose unrelated to operating the Service.
+              We do not use your data for advertising, profiling, automated
+              decision-making, or any purpose unrelated to operating the
+              Service.
             </p>
           </section>
 
@@ -162,34 +189,45 @@ export default function PrivacyPolicyPage() {
             <h2 className="font-serif text-2xl font-semibold text-[#f7f7ff] mb-3">
               3. How We Store and Protect Your Data
             </h2>
-            <p>Your data is stored using Amazon Web Services (AWS) infrastructure:</p>
+            <p>
+              Your data is stored using Amazon Web Services (AWS)
+              infrastructure:
+            </p>
             <ul className="mt-3 ml-6 space-y-2 list-disc marker:text-[#577399]/50">
               <li>
-                <strong className="text-[#f7f7ff]">Authentication:</strong> Managed by{" "}
-                <strong className="text-[#f7f7ff]">AWS Cognito</strong>, which handles secure
-                password hashing, token issuance, and login flows. We never store your password
-                in plain text.
+                <strong className="text-[#f7f7ff]">Authentication:</strong>{" "}
+                Managed by{" "}
+                <strong className="text-[#f7f7ff]">AWS Cognito</strong>, which
+                handles secure password hashing, token issuance, and login
+                flows. We never store your password in plain text.
               </li>
               <li>
-                <strong className="text-[#f7f7ff]">Character and campaign data:</strong> Stored in{" "}
-                <strong className="text-[#f7f7ff]">AWS DynamoDB</strong>, a managed database
-                service with encryption at rest.
+                <strong className="text-[#f7f7ff]">
+                  Character and campaign data:
+                </strong>{" "}
+                Stored in{" "}
+                <strong className="text-[#f7f7ff]">AWS DynamoDB</strong>, a
+                managed database service with encryption at rest.
               </li>
               <li>
-                <strong className="text-[#f7f7ff]">Uploaded images:</strong> Stored in{" "}
-                <strong className="text-[#f7f7ff]">AWS S3</strong> with encryption at rest. Images
-                are served through <strong className="text-[#f7f7ff]">AWS CloudFront</strong> (a
+                <strong className="text-[#f7f7ff]">Uploaded images:</strong>{" "}
+                Stored in <strong className="text-[#f7f7ff]">AWS S3</strong>{" "}
+                with encryption at rest. Images are served through{" "}
+                <strong className="text-[#f7f7ff]">AWS CloudFront</strong> (a
                 content delivery network) for performance.
               </li>
             </ul>
             <p className="mt-3">
-              All data is stored in the <strong className="text-[#f7f7ff]">United States
-              (us-east-2 region)</strong>. Data is transmitted over HTTPS (TLS encryption) between
-              your browser and our servers.
+              All data is stored in the{" "}
+              <strong className="text-[#f7f7ff]">
+                United States (us-east-2 region)
+              </strong>
+              . Data is transmitted over HTTPS (TLS encryption) between your
+              browser and our servers.
             </p>
             <p className="mt-3">
-              While we take reasonable measures to protect your data, no system is 100% secure. We
-              cannot guarantee absolute security.
+              While we take reasonable measures to protect your data, no system
+              is 100% secure. We cannot guarantee absolute security.
             </p>
           </section>
 
@@ -199,28 +237,36 @@ export default function PrivacyPolicyPage() {
               4. Who We Share Data With
             </h2>
             <p className="font-semibold text-[#f7f7ff]">
-              We do not sell, rent, or trade your personal information to anyone.
+              We do not sell, rent, or trade your personal information to
+              anyone.
             </p>
-            <p className="mt-3">We share data only in these limited circumstances:</p>
+            <p className="mt-3">
+              We share data only in these limited circumstances:
+            </p>
             <ul className="mt-3 ml-6 space-y-2 list-disc marker:text-[#577399]/50">
               <li>
-                <strong className="text-[#f7f7ff]">Infrastructure providers:</strong> AWS processes
-                your data as part of hosting the Service. AWS acts as a data processor on our behalf
-                under their standard terms of service.
+                <strong className="text-[#f7f7ff]">
+                  Infrastructure providers:
+                </strong>{" "}
+                AWS processes your data as part of hosting the Service. AWS acts
+                as a data processor on our behalf under their standard terms of
+                service.
               </li>
               <li>
-                <strong className="text-[#f7f7ff]">Public sharing:</strong> If you share a character
-                sheet via a public URL, the character data on that page is visible to anyone with the
-                link. This is an opt-in action you control.
+                <strong className="text-[#f7f7ff]">Public sharing:</strong> If
+                you share a character sheet via a public URL, the character data
+                on that page is visible to anyone with the link. This is an
+                opt-in action you control.
               </li>
               <li>
-                <strong className="text-[#f7f7ff]">Campaign members:</strong> If you join a
-                campaign, other members of that campaign can see your character data associated with
-                the campaign.
+                <strong className="text-[#f7f7ff]">Campaign members:</strong> If
+                you join a campaign, other members of that campaign can see your
+                character data associated with the campaign.
               </li>
               <li>
-                <strong className="text-[#f7f7ff]">Legal requirements:</strong> We may disclose data
-                if required by law, regulation, or valid legal process.
+                <strong className="text-[#f7f7ff]">Legal requirements:</strong>{" "}
+                We may disclose data if required by law, regulation, or valid
+                legal process.
               </li>
             </ul>
           </section>
@@ -231,13 +277,16 @@ export default function PrivacyPolicyPage() {
               5. Cookies and Local Storage
             </h2>
             <p>
-              CCB uses <strong className="text-[#f7f7ff]">authentication tokens</strong> stored in
-              your browser&rsquo;s local storage to maintain your login session. These are strictly
-              necessary for the Service to function and are not used for tracking or analytics.
+              CCB uses{" "}
+              <strong className="text-[#f7f7ff]">authentication tokens</strong>{" "}
+              stored in your browser&rsquo;s local storage to maintain your
+              login session. These are strictly necessary for the Service to
+              function and are not used for tracking or analytics.
             </p>
             <p className="mt-3">
-              We do not use third-party cookies, advertising cookies, or social media tracking
-              pixels. There is no cookie consent banner because we do not use optional cookies.
+              We do not use third-party cookies, advertising cookies, or social
+              media tracking pixels. There is no cookie consent banner because
+              we do not use optional cookies.
             </p>
           </section>
 
@@ -249,33 +298,40 @@ export default function PrivacyPolicyPage() {
             <p>You have the right to:</p>
             <ul className="mt-3 ml-6 space-y-2 list-disc marker:text-[#577399]/50">
               <li>
-                <strong className="text-[#f7f7ff]">Access your data:</strong> You can view all
-                character, campaign, and profile data through the Service&rsquo;s interface at any
-                time.
+                <strong className="text-[#f7f7ff]">Access your data:</strong>{" "}
+                You can view all character, campaign, and profile data through
+                the Service&rsquo;s interface at any time.
               </li>
               <li>
-                <strong className="text-[#f7f7ff]">Correct your data:</strong> You can edit your
-                display name, character information, and other data directly in the app.
+                <strong className="text-[#f7f7ff]">Correct your data:</strong>{" "}
+                You can edit your display name, character information, and other
+                data directly in the app.
               </li>
               <li>
-                <strong className="text-[#f7f7ff]">Delete your data:</strong> You can delete
-                individual characters or campaigns, or delete your entire account. Account deletion
-                permanently removes all of your data from our systems, including all characters,
-                campaigns, and uploaded images.
+                <strong className="text-[#f7f7ff]">Delete your data:</strong>{" "}
+                You can delete individual characters or campaigns, or delete
+                your entire account. Account deletion permanently removes all of
+                your data from our systems, including all characters, campaigns,
+                and uploaded images.
               </li>
               <li>
-                <strong className="text-[#f7f7ff]">Unlink third-party accounts:</strong> You can
-                disconnect your Patreon account at any time through your profile settings.
+                <strong className="text-[#f7f7ff]">
+                  Unlink third-party accounts:
+                </strong>{" "}
+                You can disconnect your Patreon account at any time through your
+                profile settings.
               </li>
               <li>
-                <strong className="text-[#f7f7ff]">Request a copy of your data:</strong> Contact us
-                through Discord or our website to request a copy of the personal data we hold about
-                you.
+                <strong className="text-[#f7f7ff]">
+                  Request a copy of your data:
+                </strong>{" "}
+                Contact us through Discord or our website to request a copy of
+                the personal data we hold about you.
               </li>
             </ul>
             <p className="mt-3">
-              We honor these rights regardless of your location. You do not need to be in a specific
-              jurisdiction to exercise them.
+              We honor these rights regardless of your location. You do not need
+              to be in a specific jurisdiction to exercise them.
             </p>
           </section>
 
@@ -285,14 +341,16 @@ export default function PrivacyPolicyPage() {
               7. Data Retention
             </h2>
             <p>
-              We retain your data for as long as your account is active. If you delete your account,
-              we delete all associated data (profile, characters, campaigns, images) from our
-              production systems. Some data may persist in encrypted backups for a limited period
+              We retain your data for as long as your account is active. If you
+              delete your account, we delete all associated data (profile,
+              characters, campaigns, images) from our production systems. Some
+              data may persist in encrypted backups for a limited period
               (typically up to 30 days) before being automatically purged.
             </p>
             <p className="mt-3">
-              If your account is inactive for an extended period, we may contact you before taking
-              any action on your account. We will not delete inactive accounts without notice.
+              If your account is inactive for an extended period, we may contact
+              you before taking any action on your account. We will not delete
+              inactive accounts without notice.
             </p>
           </section>
 
@@ -302,14 +360,15 @@ export default function PrivacyPolicyPage() {
               8. Children&rsquo;s Privacy (COPPA)
             </h2>
             <p>
-              CCB is not intended for children under 13 years of age. We do not knowingly collect
-              personal information from children under 13. If you are a parent or guardian and
-              believe your child under 13 has provided us with personal information, please contact
-              us immediately and we will delete the account and associated data.
+              CCB is not intended for children under 13 years of age. We do not
+              knowingly collect personal information from children under 13. If
+              you are a parent or guardian and believe your child under 13 has
+              provided us with personal information, please contact us
+              immediately and we will delete the account and associated data.
             </p>
             <p className="mt-3">
-              Users between 13 and 18 may use the Service with the consent of a parent or legal
-              guardian.
+              Users between 13 and 18 may use the Service with the consent of a
+              parent or legal guardian.
             </p>
           </section>
 
@@ -319,14 +378,16 @@ export default function PrivacyPolicyPage() {
               9. International Users
             </h2>
             <p>
-              CCB is hosted in the United States. If you access the Service from outside the United
-              States, your data will be transferred to and stored in the US. By using the Service,
-              you consent to this transfer.
+              CCB is hosted in the United States. If you access the Service from
+              outside the United States, your data will be transferred to and
+              stored in the US. By using the Service, you consent to this
+              transfer.
             </p>
             <p className="mt-3">
-              While we are not subject to the EU General Data Protection Regulation (GDPR), we
-              follow GDPR-inspired practices as a matter of principle: we minimize data collection,
-              provide access and deletion rights, and are transparent about how data is handled.
+              While we are not subject to the EU General Data Protection
+              Regulation (GDPR), we follow GDPR-inspired practices as a matter
+              of principle: we minimize data collection, provide access and
+              deletion rights, and are transparent about how data is handled.
             </p>
           </section>
 
@@ -336,9 +397,10 @@ export default function PrivacyPolicyPage() {
               10. Changes to This Policy
             </h2>
             <p>
-              We may update this Privacy Policy from time to time. When we make material changes, we
-              will update the &ldquo;Last updated&rdquo; date at the top of this page. We encourage
-              you to review this page periodically. Continued use of the Service after changes
+              We may update this Privacy Policy from time to time. When we make
+              material changes, we will update the &ldquo;Last updated&rdquo;
+              date at the top of this page. We encourage you to review this page
+              periodically. Continued use of the Service after changes
               constitutes acceptance of the updated policy.
             </p>
           </section>
@@ -349,8 +411,8 @@ export default function PrivacyPolicyPage() {
               11. Contact Us
             </h2>
             <p>
-              If you have questions about this Privacy Policy or want to exercise your data rights,
-              you can reach us through:
+              If you have questions about this Privacy Policy or want to
+              exercise your data rights, you can reach us through:
             </p>
             <ul className="mt-3 ml-6 space-y-1.5 list-disc marker:text-[#577399]/50">
               <li>

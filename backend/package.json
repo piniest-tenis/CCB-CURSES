@@ -1,7 +1,7 @@
 {
   "name": "daggerheart-backend",
   "version": "1.0.0",
-  "description": "Daggerheart Character Platform — Lambda backend",
+  "description": "Daggerheart Character Platform - Lambda backend",
   "private": true,
   "engines": {
     "node": ">=20.0.0"

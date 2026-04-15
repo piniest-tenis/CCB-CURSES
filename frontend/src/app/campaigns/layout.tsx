@@ -9,7 +9,7 @@
  * Grandfathered users or those with an active paid Patreon membership
  * pass through normally.
  *
- * When gated, children are NOT rendered at all — the user sees a clean
+ * When gated, children are NOT rendered at all - the user sees a clean
  * centered card with a crown icon, explanation, CTA, and a back link.
  */
 
@@ -111,8 +111,11 @@ export default function CampaignsLayout({
             Campaigns Require a Paid Membership
           </h1>
           <p className="mt-2 text-sm text-[#b9baa3]/60 leading-relaxed">
-            Access to campaigns, session scheduling, and advanced features is available with a{" "}
-            <span className="font-semibold text-gold-400">paid monthly membership</span>{" "}
+            Access to campaigns, session scheduling, and advanced features is
+            available with a{" "}
+            <span className="font-semibold text-gold-400">
+              paid monthly membership
+            </span>{" "}
             to the CursesAP Patreon.
           </p>
 

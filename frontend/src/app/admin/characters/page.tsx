@@ -129,7 +129,7 @@ function ShareButton({ characterId }: { characterId: string }) {
         const data = await apiClient.get<{ shareToken: string; shareUrl: string }>(
           `/admin/characters/${characterId}/share`
         );
-        // Build the public URL using the share token — rewrite to /public path
+        // Build the public URL using the share token - rewrite to /public path
         // regardless of what FRONTEND_URL the API was configured with.
         const origin = typeof window !== "undefined" ? window.location.origin : "";
         const url = `${origin}/character/${characterId}/public?token=${data.shareToken}`;
@@ -484,7 +484,7 @@ export default function AdminCharactersPage() {
       router.replace("/auth/login");
       return;
     }
-    // Only redirect away from admin once the refresh has settled — the token
+    // Only redirect away from admin once the refresh has settled - the token
     // may not contain the cognito:groups claim until after refresh completes.
     if (refreshState === "pending") return;
     if (!isAdmin) {
@@ -538,7 +538,7 @@ export default function AdminCharactersPage() {
     );
   }
 
-  // Hold the spinner until the forced token refresh settles — the admin claim
+  // Hold the spinner until the forced token refresh settles - the admin claim
   // may not be present in the old token, causing a false "Access denied".
   if (refreshState === "pending") {
     return (
@@ -739,7 +739,7 @@ export default function AdminCharactersPage() {
                       group
                     "
                   >
-                    {/* Clickable cells — navigate to character sheet */}
+                    {/* Clickable cells - navigate to character sheet */}
                     <Link
                       href={`/character/${c.characterId}`}
                       className="contents"
@@ -755,7 +755,7 @@ export default function AdminCharactersPage() {
                           ? c.ancestryId
                               .replace(/-/g, " ")
                               .replace(/\b\w/g, (ch) => ch.toUpperCase())
-                          : <span className="text-parchment-600">—</span>}
+                          : <span className="text-parchment-600">-</span>}
                       </span>
                       <span className="text-sm text-parchment-500 truncate">
                         {c.ownerName}
@@ -767,11 +767,11 @@ export default function AdminCharactersPage() {
                         {c.level}
                       </span>
                     </Link>
-                    {/* Campaign cell — outside the Link so click doesn't navigate */}
+                    {/* Campaign cell - outside the Link so click doesn't navigate */}
                     <div className="flex items-center justify-start">
                       <CampaignCell character={c} onRefetch={() => refetch()} />
                     </div>
-                    {/* Share button — outside the Link so click doesn't navigate */}
+                    {/* Share button - outside the Link so click doesn't navigate */}
                     <div className="flex items-center justify-end">
                       <ShareButton characterId={c.characterId} />
                     </div>
