@@ -13,7 +13,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { AppHeader } from "@/components/AppHeader";
 import { Footer } from "@/components/Footer";
@@ -56,15 +56,16 @@ export function WorkshopLayout({
   backHref = "/homebrew",
 }: WorkshopLayoutProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { isAuthenticated, isReady, isLoading: authLoading } = useAuthStore();
   const [mobileTab, setMobileTab] = useState<MobileTab>("edit");
 
   // Auth guard
   useEffect(() => {
     if (isReady && !isAuthenticated) {
-      router.replace("/auth/login");
+      router.replace(`/auth/login?return_to=${pathname ?? "/homebrew"}`);
     }
-  }, [isReady, isAuthenticated, router]);
+  }, [isReady, isAuthenticated, router, pathname]);
 
   // Listen for SHOW_PREVIEW_EVENT dispatched from form "Preview Markdown" buttons
   useEffect(() => {

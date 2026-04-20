@@ -50,7 +50,11 @@ function CallbackHandler() {
     handleGoogleCallbackAsync(code).then(async (result) => {
       if (result.ok && result.tokens) {
         await signInWithGoogle(result.tokens);
-        router.replace("/dashboard");
+        // Honour a return_to destination stashed by the login page before the
+        // Google OAuth redirect. Clear it regardless so it never leaks.
+        const returnTo = sessionStorage.getItem("dh_return_to") ?? "/dashboard";
+        sessionStorage.removeItem("dh_return_to");
+        router.replace(returnTo);
       } else {
         setError(result.error ?? "Sign in failed.");
       }

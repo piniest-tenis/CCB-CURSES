@@ -246,3 +246,71 @@ export function useRemoveCharacterFromCampaign(
     },
   });
 }
+
+// ─── Pregen Types ─────────────────────────────────────────────────────────────
+
+export interface PregenSummary {
+  pregenId:      string;
+  name:          string;
+  className:     string;
+  subclassName:  string | null;
+  ancestryName:  string | null;
+  communityName: string | null;
+  domains:       string[];
+  nativeLevel:   number;
+}
+
+export interface PregensResponse {
+  pregens:          PregenSummary[];
+  requiredLevel:    number | null;
+  userHasCharacter: boolean;
+}
+
+export interface ImportPregenInput {
+  pregenId: string;
+  level?:   number;
+}
+
+export interface ImportPregenResponse {
+  imported:    true;
+  characterId: string;
+  campaignId:  string;
+  level:       number;
+  pregenId:    string;
+}
+
+// ─── useCampaignPregens ───────────────────────────────────────────────────────
+// GET /campaigns/{id}/pregens — list available pre-generated characters
+
+export function useCampaignPregens(
+  campaignId: string | undefined
+): UseQueryResult<PregensResponse> {
+  return useQuery({
+    queryKey: [...campaignKeys.detail(campaignId ?? ""), "pregens"] as const,
+    queryFn:  () => apiClient.get<PregensResponse>(`/campaigns/${campaignId}/pregens`),
+    enabled:  Boolean(campaignId),
+    staleTime: 30_000,
+  });
+}
+
+// ─── useImportPregen ──────────────────────────────────────────────────────────
+// POST /campaigns/{id}/pregens/import — import a pregen as a real character
+
+export function useImportPregen(
+  campaignId: string
+): UseMutationResult<ImportPregenResponse, Error, ImportPregenInput> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: ImportPregenInput) =>
+      apiClient.post<ImportPregenResponse>(`/campaigns/${campaignId}/pregens/import`, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: campaignKeys.detail(campaignId) });
+      queryClient.invalidateQueries({ queryKey: campaignKeys.lists() });
+      // Also invalidate the pregens list since one is now taken
+      queryClient.invalidateQueries({
+        queryKey: [...campaignKeys.detail(campaignId), "pregens"],
+      });
+    },
+  });
+}

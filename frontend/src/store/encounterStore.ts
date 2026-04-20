@@ -313,3 +313,8 @@ export const useEncounterStore = create<EncounterStore>((set, get) => ({
   // ── clearEncounter ───────────────────────────────────────────────────────
   clearEncounter: () => set({ encounter: null, rollLog: [] }),
 }));
+
+// Expose for screenshot tooling (mirrors diceStore pattern)
+if (typeof window !== "undefined") {
+  (window as unknown as Record<string, unknown>).__encounterStore = useEncounterStore;
+}

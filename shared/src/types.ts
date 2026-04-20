@@ -944,6 +944,13 @@ export interface Campaign {
    * for existing campaigns; new campaigns inherit the GM's cursesEnabled pref.
    */
   cursesContentEnabled?: boolean;
+  /**
+   * When set, new characters joining this campaign must be at this level.
+   * Pre-generated characters are imported at this level; custom characters
+   * that don't match see a validation prompt to use the level-up wizard.
+   * Null means no level restriction (any level is allowed).
+   */
+  requiredLevel?: number | null;
   createdAt: string;
   updatedAt: string;
 }

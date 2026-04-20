@@ -289,7 +289,7 @@ export default function HomebrewListPage() {
   // Auth guard
   useEffect(() => {
     if (isReady && !isAuthenticated) {
-      router.replace("/auth/login");
+      router.replace("/auth/login?return_to=/homebrew");
     }
   }, [isReady, isAuthenticated, router]);
 

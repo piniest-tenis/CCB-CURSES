@@ -1872,6 +1872,48 @@ function CharacterSheetContent({
 
   return (
     <div className="mx-auto max-w-4xl space-y-4 pb-20">
+      {/* Level restriction warning banner */}
+      {campaignData?.requiredLevel != null &&
+        activeCharacter.level !== campaignData.requiredLevel && (
+        <div
+          role="alert"
+          className="
+            flex items-start gap-3 rounded-xl border border-amber-600/40
+            bg-amber-950/40 px-4 py-3 text-sm
+          "
+        >
+          <span className="mt-0.5 text-amber-400 flex-shrink-0" aria-hidden="true">&#x26A0;</span>
+          <div>
+            <p className="font-semibold text-amber-300">
+              Level Mismatch
+            </p>
+            <p className="mt-0.5 text-amber-200/70">
+              This campaign requires Level {campaignData.requiredLevel} characters,
+              but this character is Level {activeCharacter.level}.
+              {activeCharacter.level < campaignData.requiredLevel
+                ? " Use the level-up wizard to advance your character."
+                : " Your character exceeds the campaign's level requirement."}
+            </p>
+            {activeCharacter.level < campaignData.requiredLevel && (
+              <DisabledInViewerMode hideInstead>
+              <button
+                type="button"
+                onClick={() => setLevelUpOpen(true)}
+                className="
+                  mt-2 rounded-lg bg-amber-700/50 border border-amber-600/50
+                  px-4 py-1.5 text-xs font-semibold text-amber-100
+                  hover:bg-amber-700/70 transition-colors
+                  focus:outline-none focus:ring-2 focus:ring-amber-500
+                "
+              >
+                Open Level-Up Wizard
+              </button>
+              </DisabledInViewerMode>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="flex items-center justify-between">
         <DisabledInViewerMode hideInstead>

@@ -34,7 +34,7 @@ export default function NewCampaignPage() {
   // Auth guard
   useEffect(() => {
     if (isReady && !isAuthenticated) {
-      router.replace("/auth/login");
+      router.replace("/auth/login?return_to=/campaigns/new");
     }
   }, [isReady, isAuthenticated, router]);
 

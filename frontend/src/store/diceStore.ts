@@ -233,3 +233,8 @@ export const useDiceStore = create<DiceStoreExtended>((set, get) => ({
   // Clears animation state without computing a result or broadcasting anything.
   finishAnimation: () => set({ isRolling: false, pendingRequest: null, seededValues: null }),
 }));
+
+// Expose store on window for screenshot tooling (read by scripts/screenshot-marketing.mjs)
+if (typeof window !== "undefined") {
+  (window as unknown as Record<string, unknown>).__diceStore = useDiceStore;
+}

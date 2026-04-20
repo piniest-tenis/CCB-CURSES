@@ -32,9 +32,9 @@ export default function CharacterPage() {
   // (it isn't persisted) so we must wait for initialize() to complete first.
   useEffect(() => {
     if (isReady && !isAuthenticated) {
-      router.replace("/auth/login");
+      router.replace(`/auth/login?return_to=/character/${characterId}`);
     }
-  }, [isReady, isAuthenticated, router]);
+  }, [isReady, isAuthenticated, router, characterId]);
 
   // Character data loading state - used to drive the interstitial overlay.
   const { isLoading: charLoading, data: character } = useCharacter(

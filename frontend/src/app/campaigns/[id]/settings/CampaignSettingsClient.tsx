@@ -17,6 +17,15 @@ import {
   useUpdateCampaign,
   useDeleteCampaign,
 } from "@/hooks/useCampaigns";
+import {
+  useAdminPregens,
+  useUserPregens,
+  useCampaignPregenPool,
+  useAddToPregenPool,
+  useRemoveFromPregenPool,
+  type PregenManagementSummary,
+  type CampaignPoolPregen,
+} from "@/hooks/usePregens";
 import type {
   DayOfWeek,
   RecurrenceFrequency,
@@ -447,6 +456,7 @@ export default function CampaignSettingsClient() {
   const [description, setDescription] = useState("");
   const [schedule, setSchedule] = useState<SessionSchedule | null>(null);
   const [cursesContent, setCursesContent] = useState(true);
+  const [requiredLevel, setRequiredLevel] = useState<number | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -457,8 +467,8 @@ export default function CampaignSettingsClient() {
 
   // Auth guard
   useEffect(() => {
-    if (isReady && !isAuthenticated) router.replace("/auth/login");
-  }, [isReady, isAuthenticated, router]);
+    if (isReady && !isAuthenticated) router.replace(`/auth/login?return_to=${pathname}`);
+  }, [isReady, isAuthenticated, router, pathname]);
 
   // Role guard: redirect non-GMs
   useEffect(() => {
@@ -474,6 +484,7 @@ export default function CampaignSettingsClient() {
       setDescription(campaign.description ?? "");
       setSchedule(campaign.schedule ?? null);
       setCursesContent(campaign.cursesContentEnabled ?? true);
+      setRequiredLevel(campaign.requiredLevel ?? null);
     }
   }, [campaign]);
 
@@ -482,8 +493,246 @@ export default function CampaignSettingsClient() {
       <div className="flex min-h-screen items-center justify-center bg-[#0a100d]">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#577399] border-t-transparent" />
       </div>
-    );
-  }
+  );
+}
+
+// ─── PregenPoolSection ─────────────────────────────────────────────────────────
+// Inline component for managing which pre-gens are available in this campaign.
+// GMs can add from system-wide or their own personal pregens.
+
+function PregenPoolSection({ campaignId }: { campaignId: string }) {
+  const [showAdd, setShowAdd] = useState(false);
+  const [sourceTab, setSourceTab] = useState<"system" | "mine">("system");
+
+  const { data: poolData, isLoading: poolLoading } =
+    useCampaignPregenPool(campaignId || undefined);
+  const { data: systemData } = useAdminPregens();
+  const { data: userData } = useUserPregens();
+
+  const addMutation = useAddToPregenPool(campaignId);
+  const removeMutation = useRemoveFromPregenPool(campaignId);
+
+  const poolPregenIds = new Set(
+    (poolData?.pregens ?? []).map((p) => p.pregenId)
+  );
+
+  // Available pregens not already in the pool
+  const systemAvailable = (systemData?.pregens ?? []).filter(
+    (p) => !poolPregenIds.has(p.pregenId)
+  );
+  const userAvailable = (userData?.pregens ?? []).filter(
+    (p) => !poolPregenIds.has(p.pregenId)
+  );
+
+  const handleAdd = useCallback(
+    (pregen: PregenManagementSummary) => {
+      addMutation.mutate({
+        pregenId: pregen.pregenId,
+        source: pregen.scope,
+        ownerId: pregen.ownerId ?? undefined,
+      });
+    },
+    [addMutation]
+  );
+
+  const handleRemove = useCallback(
+    (pregenId: string) => {
+      if (!window.confirm("Remove this pre-gen from the campaign pool?")) return;
+      removeMutation.mutate(pregenId);
+    },
+    [removeMutation]
+  );
+
+  if (!campaignId) return null;
+
+  return (
+    <section
+      aria-label="Pre-gen character pool"
+      className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-6 space-y-4"
+    >
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="font-serif text-lg font-semibold text-[#f7f7ff]">
+            Pre-gen Pool
+          </h2>
+          <p className="text-sm text-[#b9baa3]/60 mt-1">
+            Choose which pre-generated characters players can import when joining this campaign.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowAdd(!showAdd)}
+          className="
+            rounded-lg border border-[#577399]/50 px-4 py-2
+            text-sm font-semibold text-[#577399]
+            hover:bg-[#577399]/10 transition-colors
+            focus:outline-none focus:ring-2 focus:ring-[#577399]
+          "
+        >
+          {showAdd ? "Close" : "Add Pre-gen"}
+        </button>
+      </div>
+
+      {/* Current pool */}
+      {poolLoading ? (
+        <div className="h-10 rounded-lg bg-slate-700/40 animate-pulse" />
+      ) : (poolData?.pregens ?? []).length === 0 ? (
+        <p className="text-sm text-[#b9baa3]/40 italic py-2">
+          No pre-generated characters in this campaign&apos;s pool yet.
+          {" "}Players will see the legacy hardcoded pregens as a fallback.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {(poolData?.pregens ?? []).map((p) => (
+            <div
+              key={p.pregenId}
+              className="
+                flex items-center justify-between rounded-lg
+                border border-slate-700/60 bg-slate-800/60 px-4 py-3
+              "
+            >
+              <div>
+                <p className="text-sm font-semibold text-[#f7f7ff]">
+                  {p.name}
+                </p>
+                <p className="text-xs text-[#b9baa3]/50 mt-0.5">
+                  {p.ancestryName ?? "—"} {p.className}
+                  {p.subclassName ? ` (${p.subclassName})` : ""}
+                  {" · "}Lv{p.nativeLevel}
+                  {" · "}{p.scope === "system" ? "System" : "Personal"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleRemove(p.pregenId)}
+                disabled={removeMutation.isPending}
+                className="
+                  rounded px-3 py-1.5 text-xs font-medium
+                  border border-[#fe5f55]/40 text-[#fe5f55]/70
+                  hover:bg-[#fe5f55]/10 hover:text-[#fe5f55]
+                  disabled:opacity-40 transition-colors
+                  focus:outline-none focus:ring-2 focus:ring-[#fe5f55]
+                "
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add pre-gen panel */}
+      {showAdd && (
+        <div className="rounded-lg border border-[#577399]/30 bg-slate-800/40 p-4 space-y-3">
+          <div className="flex rounded-lg border border-slate-700/60 overflow-hidden" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={sourceTab === "system"}
+              onClick={() => setSourceTab("system")}
+              className={`flex-1 px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors
+                ${sourceTab === "system"
+                  ? "bg-[#577399]/30 text-[#f7f7ff]"
+                  : "bg-slate-800/60 text-[#b9baa3]/50 hover:text-[#b9baa3]/80"
+                }`}
+            >
+              System Pregens
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={sourceTab === "mine"}
+              onClick={() => setSourceTab("mine")}
+              className={`flex-1 px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors
+                ${sourceTab === "mine"
+                  ? "bg-[#577399]/30 text-[#f7f7ff]"
+                  : "bg-slate-800/60 text-[#b9baa3]/50 hover:text-[#b9baa3]/80"
+                }`}
+            >
+              My Pregens
+            </button>
+          </div>
+
+          {addMutation.isError && (
+            <p role="alert" className="text-sm text-[#fe5f55]">
+              {addMutation.error?.message ?? "Failed to add pre-gen."}
+            </p>
+          )}
+
+          {sourceTab === "system" && (
+            systemAvailable.length === 0 ? (
+              <p className="text-xs text-[#b9baa3]/40 italic py-2">
+                No system pre-gens available to add.
+              </p>
+            ) : (
+              <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                {systemAvailable.map((p) => (
+                  <button
+                    key={p.pregenId}
+                    type="button"
+                    onClick={() => handleAdd(p)}
+                    disabled={addMutation.isPending}
+                    className="
+                      w-full text-left rounded-lg border border-slate-700/60
+                      bg-slate-800/60 px-3 py-2 transition-colors
+                      hover:border-[#577399]/50 hover:bg-[#577399]/5
+                      disabled:opacity-40
+                      focus:outline-none focus:ring-2 focus:ring-[#577399]
+                    "
+                  >
+                    <p className="text-sm font-semibold text-[#b9baa3]">
+                      {p.name}
+                    </p>
+                    <p className="text-xs text-[#b9baa3]/50">
+                      {p.ancestryName} {p.className}
+                      {p.subclassName ? ` (${p.subclassName})` : ""}
+                      {" · "}Lv{p.nativeLevel}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )
+          )}
+
+          {sourceTab === "mine" && (
+            userAvailable.length === 0 ? (
+              <p className="text-xs text-[#b9baa3]/40 italic py-2">
+                No personal pre-gens available to add.
+              </p>
+            ) : (
+              <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                {userAvailable.map((p) => (
+                  <button
+                    key={p.pregenId}
+                    type="button"
+                    onClick={() => handleAdd(p)}
+                    disabled={addMutation.isPending}
+                    className="
+                      w-full text-left rounded-lg border border-slate-700/60
+                      bg-slate-800/60 px-3 py-2 transition-colors
+                      hover:border-[#577399]/50 hover:bg-[#577399]/5
+                      disabled:opacity-40
+                      focus:outline-none focus:ring-2 focus:ring-[#577399]
+                    "
+                  >
+                    <p className="text-sm font-semibold text-[#b9baa3]">
+                      {p.name}
+                    </p>
+                    <p className="text-xs text-[#b9baa3]/50">
+                      {p.ancestryName} {p.className}
+                      {p.subclassName ? ` (${p.subclassName})` : ""}
+                      {" · "}Lv{p.nativeLevel}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
 
   const nameValue = name.trim();
   const canSave = nameValue.length > 0 && !updateMutation.isPending;
@@ -497,6 +746,7 @@ export default function CampaignSettingsClient() {
       description: description.trim() || null,
       schedule,
       cursesContentEnabled: cursesContent,
+      requiredLevel,
     });
 
     setSaveSuccess(true);
@@ -672,6 +922,63 @@ export default function CampaignSettingsClient() {
             )}
           </section>
 
+          {/* Required Level restriction */}
+          <section
+            aria-label="Character level restriction"
+            className="rounded-xl border border-steel-400/30 bg-slate-900/80 p-6 shadow-card-fantasy space-y-3"
+          >
+            <div>
+              <h2 className="font-serif text-lg font-semibold text-[#f7f7ff]">
+                Required Character Level
+              </h2>
+              <p className="text-sm text-[#b9baa3]/50 mt-0.5">
+                Restrict new characters joining this campaign to a specific level.
+                Pre-generated characters will be imported at this level.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <select
+                value={requiredLevel ?? ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setRequiredLevel(val === "" ? null : Number(val));
+                  setSaveSuccess(false);
+                }}
+                className="
+                  rounded-lg border border-slate-700/60 bg-slate-800
+                  px-3 py-2 text-sm text-[#f7f7ff] w-40
+                  focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2
+                  focus:ring-offset-slate-900
+                "
+              >
+                <option value="">No restriction</option>
+                {Array.from({ length: 10 }, (_, i) => i + 1).map((lv) => (
+                  <option key={lv} value={lv}>
+                    Level {lv}
+                  </option>
+                ))}
+              </select>
+              {requiredLevel !== null && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRequiredLevel(null);
+                    setSaveSuccess(false);
+                  }}
+                  className="text-xs text-[#b9baa3]/50 hover:text-[#b9baa3] transition-colors"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            {requiredLevel !== null && (
+              <p className="text-xs text-[#b9baa3]/40 leading-snug">
+                Characters that don&apos;t match Level {requiredLevel} will see a
+                warning on their character sheet prompting them to level up.
+              </p>
+            )}
+          </section>
+
           {/* Schedule editor */}
           <ScheduleEditor schedule={schedule} onChange={setSchedule} />
 
@@ -732,6 +1039,9 @@ export default function CampaignSettingsClient() {
             </button>
           </div>
         </form>
+
+        {/* Pre-gen Pool Management */}
+        <PregenPoolSection campaignId={campaign?.campaignId ?? ""} />
 
         {/* Danger zone */}
         <section

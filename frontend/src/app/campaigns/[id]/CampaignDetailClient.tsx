@@ -27,7 +27,8 @@ import React, { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useAuthStore } from "@/store/authStore";
-import { useCampaignDetail, useRemoveMember, useAddCharacterToCampaign, useRemoveCharacterFromCampaign, useUpdateCampaign } from "@/hooks/useCampaigns";
+import { useCampaignDetail, useRemoveMember, useAddCharacterToCampaign, useRemoveCharacterFromCampaign, useUpdateCampaign, useCampaignPregens, useImportPregen } from "@/hooks/useCampaigns";
+import type { PregenSummary } from "@/hooks/useCampaigns";
 import { apiClient } from "@/lib/api";
 import { useCampaignStore } from "@/store/campaignStore";
 import { useCampaignNav, type CampaignTab } from "@/hooks/useCampaignNav";
@@ -280,6 +281,7 @@ function SheetPingWrapper({ characterId, characterName, isGm, onPingField, viewe
 
 // ─── AssignCharacterPanel ──────────────────────────────────────────────────────
 // Shown to players who have joined a campaign but not yet assigned a character.
+// Offers two tabs: "My Characters" (existing) and "Pre-generated" (import pregens).
 
 interface AssignCharacterPanelProps {
   campaignId: string;
@@ -289,8 +291,18 @@ function AssignCharacterPanel({ campaignId }: AssignCharacterPanelProps) {
   const selectId = useId();
   const router = useRouter();
   const [selectedId, setSelectedId] = useState("");
+  const [tab, setTab] = useState<"mine" | "pregen">("mine");
   const { data: myChars, isLoading: charsLoading } = useCharacters();
   const addMutation = useAddCharacterToCampaign(campaignId);
+
+  // Pregen data
+  const { data: pregensData, isLoading: pregensLoading } = useCampaignPregens(campaignId);
+  const importMutation = useImportPregen(campaignId);
+  const [selectedPregenId, setSelectedPregenId] = useState("");
+  const [importLevel, setImportLevel] = useState<number>(10);
+  const levelSelectId = useId();
+
+  const requiredLevel = pregensData?.requiredLevel ?? null;
 
   // Only show characters not already assigned to another campaign
   const available = (myChars?.characters ?? []).filter(
@@ -301,6 +313,16 @@ function AssignCharacterPanel({ campaignId }: AssignCharacterPanelProps) {
     if (!selectedId) return;
     addMutation.mutate({ characterId: selectedId });
   }, [selectedId, addMutation]);
+
+  const handleImportPregen = useCallback(() => {
+    if (!selectedPregenId) return;
+    importMutation.mutate({
+      pregenId: selectedPregenId,
+      level: requiredLevel ?? importLevel,
+    });
+  }, [selectedPregenId, importMutation, requiredLevel, importLevel]);
+
+  const selectedPregen = pregensData?.pregens.find((p) => p.pregenId === selectedPregenId);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] px-4">
@@ -313,84 +335,260 @@ function AssignCharacterPanel({ campaignId }: AssignCharacterPanelProps) {
         <div className="space-y-1 text-center">
           <p className="font-serif text-xl text-[#f7f7ff]">Assign your character</p>
           <p className="text-sm text-[#b9baa3]/60">
-            Choose which of your characters joins this campaign.
+            Choose an existing character or select a pre-generated one.
           </p>
         </div>
 
-        {charsLoading ? (
-          <div className="h-10 rounded-lg bg-slate-700/40 animate-pulse" />
-        ) : available.length === 0 ? (
-          <div className="space-y-3">
-            <p className="text-sm text-[#b9baa3]/40 italic text-center">
-              You have no available characters.
-            </p>
-            <button
-              type="button"
-              onClick={() => router.push("/characters/new")}
-              className="
-                w-full rounded-lg border border-[#577399]/40 bg-[#577399]/10
-                px-4 py-2 text-sm font-semibold text-[#577399]
-                hover:bg-[#577399]/20 transition-colors
-                focus:outline-none focus:ring-2 focus:ring-[#577399]
-              "
-            >
-              Create a character →
-            </button>
-          </div>
-        ) : (
+        {/* Tab switcher */}
+        <div className="flex rounded-lg border border-slate-700/60 overflow-hidden" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "mine"}
+            onClick={() => setTab("mine")}
+            className={`flex-1 px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors
+              ${tab === "mine"
+                ? "bg-[#577399]/30 text-[#f7f7ff]"
+                : "bg-slate-800/60 text-[#b9baa3]/50 hover:text-[#b9baa3]/80"
+              }`}
+          >
+            My Characters
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "pregen"}
+            onClick={() => setTab("pregen")}
+            className={`flex-1 px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors
+              ${tab === "pregen"
+                ? "bg-[#577399]/30 text-[#f7f7ff]"
+                : "bg-slate-800/60 text-[#b9baa3]/50 hover:text-[#b9baa3]/80"
+              }`}
+          >
+            Pre-generated
+          </button>
+        </div>
+
+        {/* My Characters tab */}
+        {tab === "mine" && (
           <>
-            <div className="space-y-1">
-              <label
-                htmlFor={selectId}
-                className="block text-xs font-semibold uppercase tracking-widest text-[#b9baa3]/50"
-              >
-                Character
-              </label>
-              <select
-                id={selectId}
-                value={selectedId}
-                onChange={(e) => setSelectedId(e.target.value)}
-                className="
-                  w-full rounded-lg border border-slate-700/60 bg-slate-800
-                  px-3 py-2 text-sm text-[#f7f7ff]
-                  focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2
-                  focus:ring-offset-slate-900
-                "
-              >
-                <option value="">Select a character…</option>
-                {available.map((c) => (
-                  <option key={c.characterId} value={c.characterId}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {charsLoading ? (
+              <div className="h-10 rounded-lg bg-slate-700/40 animate-pulse" />
+            ) : available.length === 0 ? (
+              <div className="space-y-3">
+                <p className="text-sm text-[#b9baa3]/40 italic text-center">
+                  You have no available characters.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => router.push("/characters/new")}
+                  className="
+                    w-full rounded-lg border border-[#577399]/40 bg-[#577399]/10
+                    px-4 py-2 text-sm font-semibold text-[#577399]
+                    hover:bg-[#577399]/20 transition-colors
+                    focus:outline-none focus:ring-2 focus:ring-[#577399]
+                  "
+                >
+                  Create a character
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-1">
+                  <label
+                    htmlFor={selectId}
+                    className="block text-xs font-semibold uppercase tracking-widest text-[#b9baa3]/50"
+                  >
+                    Character
+                  </label>
+                  <select
+                    id={selectId}
+                    value={selectedId}
+                    onChange={(e) => setSelectedId(e.target.value)}
+                    className="
+                      w-full rounded-lg border border-slate-700/60 bg-slate-800
+                      px-3 py-2 text-sm text-[#f7f7ff]
+                      focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2
+                      focus:ring-offset-slate-900
+                    "
+                  >
+                    <option value="">Select a character…</option>
+                    {available.map((c) => (
+                      <option key={c.characterId} value={c.characterId}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            {addMutation.isError && (
-              <p role="alert" className="text-sm text-[#fe5f55]">
-                {(addMutation.error as Error)?.message ?? "Failed to assign character."}
-              </p>
+                {addMutation.isError && (
+                  <p role="alert" className="text-sm text-[#fe5f55]">
+                    {(addMutation.error as Error)?.message ?? "Failed to assign character."}
+                  </p>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleAssign}
+                  disabled={!selectedId || addMutation.isPending}
+                  className="
+                    w-full rounded-lg bg-[#577399] px-4 py-2
+                    text-sm font-semibold text-white
+                    hover:bg-[#577399]/80 disabled:opacity-40
+                    transition-colors
+                    focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2
+                    focus:ring-offset-slate-900
+                  "
+                >
+                  {addMutation.isPending ? "Assigning…" : "Assign Character"}
+                </button>
+              </>
             )}
+          </>
+        )}
 
-            <button
-              type="button"
-              onClick={handleAssign}
-              disabled={!selectedId || addMutation.isPending}
-              className="
-                w-full rounded-lg bg-[#577399] px-4 py-2
-                text-sm font-semibold text-white
-                hover:bg-[#577399]/80 disabled:opacity-40
-                transition-colors
-                focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2
-                focus:ring-offset-slate-900
-              "
-            >
-              {addMutation.isPending ? "Assigning…" : "Assign Character"}
-            </button>
+        {/* Pre-generated tab */}
+        {tab === "pregen" && (
+          <>
+            {pregensLoading ? (
+              <div className="h-10 rounded-lg bg-slate-700/40 animate-pulse" />
+            ) : !pregensData || pregensData.pregens.length === 0 ? (
+              <p className="text-sm text-[#b9baa3]/40 italic text-center py-4">
+                No pre-generated characters available.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {/* Pregen list */}
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                  {pregensData.pregens.map((p) => (
+                    <PregenCard
+                      key={p.pregenId}
+                      pregen={p}
+                      selected={selectedPregenId === p.pregenId}
+                      onSelect={() => setSelectedPregenId(
+                        selectedPregenId === p.pregenId ? "" : p.pregenId
+                      )}
+                    />
+                  ))}
+                </div>
+
+                {/* Level selector (only if no campaign restriction) */}
+                {selectedPregenId && !requiredLevel && (
+                  <div className="space-y-1">
+                    <label
+                      htmlFor={levelSelectId}
+                      className="block text-xs font-semibold uppercase tracking-widest text-[#b9baa3]/50"
+                    >
+                      Import at Level
+                    </label>
+                    <select
+                      id={levelSelectId}
+                      value={importLevel}
+                      onChange={(e) => setImportLevel(Number(e.target.value))}
+                      className="
+                        w-full rounded-lg border border-slate-700/60 bg-slate-800
+                        px-3 py-2 text-sm text-[#f7f7ff]
+                        focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2
+                        focus:ring-offset-slate-900
+                      "
+                    >
+                      {Array.from({ length: 10 }, (_, i) => i + 1).map((lv) => (
+                        <option key={lv} value={lv}>
+                          Level {lv}{lv === 10 ? " (native)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Show required level info */}
+                {selectedPregenId && requiredLevel && (
+                  <p className="text-xs text-[#b9baa3]/50 text-center">
+                    Campaign requires Level {requiredLevel}. Character will be imported at this level.
+                  </p>
+                )}
+
+                {importMutation.isError && (
+                  <p role="alert" className="text-sm text-[#fe5f55]">
+                    {(importMutation.error as Error)?.message ?? "Failed to import character."}
+                  </p>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleImportPregen}
+                  disabled={!selectedPregenId || importMutation.isPending}
+                  className="
+                    w-full rounded-lg bg-[#577399] px-4 py-2
+                    text-sm font-semibold text-white
+                    hover:bg-[#577399]/80 disabled:opacity-40
+                    transition-colors
+                    focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2
+                    focus:ring-offset-slate-900
+                  "
+                >
+                  {importMutation.isPending ? "Importing…" : "Import Character"}
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>
     </div>
+  );
+}
+
+// ─── PregenCard ───────────────────────────────────────────────────────────────
+
+interface PregenCardProps {
+  pregen: PregenSummary;
+  selected: boolean;
+  onSelect: () => void;
+}
+
+function PregenCard({ pregen, selected, onSelect }: PregenCardProps) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      className={`
+        w-full text-left rounded-lg border px-3 py-2.5 transition-colors
+        focus:outline-none focus:ring-2 focus:ring-[#577399]
+        ${selected
+          ? "border-[#577399] bg-[#577399]/15"
+          : "border-slate-700/60 bg-slate-800/60 hover:border-slate-600"
+        }
+      `}
+    >
+      <div className="flex items-center justify-between">
+        <div>
+          <p className={`text-sm font-semibold ${selected ? "text-[#f7f7ff]" : "text-[#b9baa3]"}`}>
+            {pregen.name}
+          </p>
+          <p className="text-xs text-[#b9baa3]/50 mt-0.5">
+            {pregen.ancestryName} {pregen.className}
+            {pregen.subclassName ? ` (${pregen.subclassName})` : ""}
+          </p>
+          <p className="text-xs text-[#b9baa3]/40 mt-0.5">
+            {pregen.communityName} · {pregen.domains.join(", ")}
+          </p>
+        </div>
+        <div className={`
+          h-4 w-4 rounded-full border-2 flex-shrink-0
+          ${selected
+            ? "border-[#577399] bg-[#577399]"
+            : "border-slate-600"
+          }
+        `}>
+          {selected && (
+            <div className="h-full w-full flex items-center justify-center">
+              <div className="h-1.5 w-1.5 rounded-full bg-white" />
+            </div>
+          )}
+        </div>
+      </div>
+    </button>
   );
 }
 
@@ -820,8 +1018,8 @@ export default function CampaignDetailClient() {
 
   // Auth guard
   useEffect(() => {
-    if (isReady && !isAuthenticated) router.replace("/auth/login");
-  }, [isReady, isAuthenticated, router]);
+    if (isReady && !isAuthenticated) router.replace(`/auth/login?return_to=${pathname}`);
+  }, [isReady, isAuthenticated, router, pathname]);
 
   // Track active campaign in store
   useEffect(() => {
@@ -862,6 +1060,13 @@ export default function CampaignDetailClient() {
   useEffect(() => {
     if (partyOverviewOpen) setDrawerOpen(false);
   }, [partyOverviewOpen]);
+
+  // Close party overview when navigating away from the character sheet view.
+  useEffect(() => {
+    if (activeTab !== "characters" || !selectedCharacterId) {
+      setPartyOverviewOpen(false);
+    }
+  }, [activeTab, selectedCharacterId]);
 
   // ── Derived state ───────────────────────────────────────────────────────────
   const isGm        = campaign?.callerRole === "gm";
@@ -1669,8 +1874,8 @@ export default function CampaignDetailClient() {
         />
       )}
 
-      {/* Party Overview sidebar + toggle (all roles) */}
-      {campaign && (
+      {/* Party Overview sidebar + toggle — only shown when viewing a character sheet */}
+      {campaign && activeTab === "characters" && selectedCharacterId && (
         <>
           <PartyOverviewToggle
             isOpen={partyOverviewOpen}

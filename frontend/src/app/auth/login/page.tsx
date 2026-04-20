@@ -4,11 +4,13 @@
  * src/app/auth/login/page.tsx
  *
  * Login page. React Hook Form + Zod validation. Calls authStore.signIn.
+ * Supports a `return_to` query param so users are sent back to the page
+ * they were trying to reach before being redirected here.
  */
 
-import React, { useState } from "react";
+import React, { Suspense, useState } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -36,8 +38,25 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 // Page
 // ---------------------------------------------------------------------------
 
-export default function LoginPage() {
+/**
+ * Validate and sanitise the `return_to` param so we only ever redirect to
+ * same-origin paths (never to an external URL).
+ */
+function safeReturnTo(raw: string | null): string {
+  if (!raw) return "/dashboard";
+  // Must start with "/" and must not start with "//" (protocol-relative URL).
+  if (raw.startsWith("/") && !raw.startsWith("//")) return raw;
+  return "/dashboard";
+}
+
+// ---------------------------------------------------------------------------
+// Inner component (needs useSearchParams → must be inside Suspense)
+// ---------------------------------------------------------------------------
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = safeReturnTo(searchParams.get("return_to"));
   const { signIn, isLoading } = useAuthStore();
   const [googleLoading, setGoogleLoading] = useState(false);
 
@@ -54,7 +73,7 @@ export default function LoginPage() {
   const onSubmit = async (values: LoginFormValues) => {
     try {
       await signIn(values.email, values.password);
-      router.replace("/dashboard");
+      router.replace(returnTo);
     } catch (err: unknown) {
       const message =
         err instanceof Error
@@ -88,16 +107,23 @@ export default function LoginPage() {
       // existing SRP session and skip the OAuth redirect.
       const { idToken } = useAuthStore.getState();
       const { startGoogleLogin } = await import("@/lib/auth");
+      // Persist return_to so the OAuth callback page can redirect there after
+      // exchanging the code for tokens.
+      if (returnTo !== "/dashboard") {
+        sessionStorage.setItem("dh_return_to", returnTo);
+      }
       const outcome = await startGoogleLogin(idToken);
       // A valid session already exists in this browser (e.g. another tab is
-      // open). Skip the OAuth round-trip and go straight to the dashboard.
+      // open). Skip the OAuth round-trip and go straight to the destination.
       if (outcome === "reused") {
-        router.replace("/dashboard");
+        sessionStorage.removeItem("dh_return_to");
+        router.replace(returnTo);
         return;
       }
       // outcome === "redirecting" - browser is navigating away; keep the
       // loading state active so the button stays disabled during the redirect.
     } catch (err: unknown) {
+      sessionStorage.removeItem("dh_return_to");
       const message =
         err instanceof Error ? err.message : "Google sign in failed.";
       setError("root", { message });
@@ -332,5 +358,23 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Page export — LoginForm uses useSearchParams so it must live inside Suspense
+// ---------------------------------------------------------------------------
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-slate-950">
+          <p className="text-base text-parchment-600">Loading...</p>
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

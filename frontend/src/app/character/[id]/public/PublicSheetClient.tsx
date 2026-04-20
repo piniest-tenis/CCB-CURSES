@@ -26,6 +26,7 @@
  */
 
 import React, { Suspense, useState } from "react";
+import ReactDOM from "react-dom";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -215,12 +216,30 @@ function PublicStatTooltip({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = React.useState(false);
+  const [coords, setCoords] = React.useState<{
+    top: number;
+    left: number;
+  } | null>(null);
   const triggerRef = React.useRef<HTMLDivElement>(null);
   const popoverRef = React.useRef<HTMLDivElement>(null);
   const popoverId = React.useId();
   const inPopover = React.useRef(false);
 
-  const handleMouseEnter = () => setOpen(true);
+  // Compute position from trigger bounding rect so the portal can place itself correctly
+  const updateCoords = React.useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    setCoords({
+      // Position above the trigger; the popover translates itself left by 50% via CSS
+      top: rect.top + window.scrollY - 8, // 8px gap (mb-2 equivalent)
+      left: rect.left + window.scrollX + rect.width / 2,
+    });
+  }, []);
+
+  const handleMouseEnter = () => {
+    updateCoords();
+    setOpen(true);
+  };
   const handleMouseLeave = () => {
     setTimeout(() => {
       if (!inPopover.current) setOpen(false);
@@ -247,83 +266,109 @@ function PublicStatTooltip({
     };
   }, [open]);
 
+  // Recompute position on scroll / resize while open
+  React.useEffect(() => {
+    if (!open) return;
+    const refresh = () => updateCoords();
+    window.addEventListener("scroll", refresh, true);
+    window.addEventListener("resize", refresh);
+    return () => {
+      window.removeEventListener("scroll", refresh, true);
+      window.removeEventListener("resize", refresh);
+    };
+  }, [open, updateCoords]);
+
+  const popover =
+    open && coords
+      ? ReactDOM.createPortal(
+          <div
+            ref={popoverRef}
+            id={popoverId}
+            role="tooltip"
+            onMouseEnter={() => {
+              inPopover.current = true;
+            }}
+            onMouseLeave={() => {
+              inPopover.current = false;
+              setOpen(false);
+            }}
+            style={{
+              position: "absolute",
+              top: coords.top,
+              left: coords.left,
+              transform: "translate(-50%, -100%)",
+              zIndex: 9999,
+              width: "14rem", // w-56
+            }}
+            className="
+              rounded-lg border border-[#577399]/40 bg-slate-900 shadow-xl
+              text-[#f7f7ff] text-xs
+            "
+          >
+            <span
+              aria-hidden="true"
+              className="
+                absolute -bottom-1.5 left-1/2 -translate-x-1/2
+                h-3 w-3 rotate-45
+                border-b border-r border-[#577399]/40 bg-slate-900
+              "
+            />
+            <dl className="p-3 space-y-1.5">
+              {lines.map((line, i) => (
+                <div
+                  key={i}
+                  className={[
+                    "flex items-baseline justify-between gap-2",
+                    line.isTotal
+                      ? "mt-1.5 pt-1.5 border-t border-[#577399]/30"
+                      : "",
+                  ].join(" ")}
+                >
+                  <dt
+                    className={
+                      line.isTotal
+                        ? "text-[#b9cfe8] font-semibold"
+                        : "text-[#b9baa3]"
+                    }
+                  >
+                    {line.label}
+                  </dt>
+                  <dd
+                    className={[
+                      "tabular-nums font-mono shrink-0",
+                      line.isTotal
+                        ? "text-[#f7f7ff] font-bold"
+                        : "text-[#f7f7ff]",
+                    ].join(" ")}
+                  >
+                    {line.value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <p className="px-3 pb-2.5 text-[11px] text-[#577399] border-t border-[#577399]/20 pt-1.5">
+              SRD p. 3, 23, 29
+            </p>
+          </div>,
+          document.body,
+        )
+      : null;
+
   return (
     <div
       ref={triggerRef}
-      className="relative cursor-default select-none"
+      className="cursor-default select-none"
       aria-describedby={open ? popoverId : undefined}
       aria-label={ariaLabel}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      onTouchStart={() => setOpen((prev) => !prev)}
+      onTouchStart={() => {
+        updateCoords();
+        setOpen((prev) => !prev);
+      }}
     >
       {children}
-      {open && (
-        <div
-          ref={popoverRef}
-          id={popoverId}
-          role="tooltip"
-          onMouseEnter={() => {
-            inPopover.current = true;
-          }}
-          onMouseLeave={() => {
-            inPopover.current = false;
-            setOpen(false);
-          }}
-          className="
-            absolute bottom-full left-1/2 mb-2 z-50
-            -translate-x-1/2
-            w-56
-            rounded-lg border border-[#577399]/40 bg-slate-900 shadow-xl
-            text-[#f7f7ff] text-xs
-          "
-        >
-          <span
-            aria-hidden="true"
-            className="
-              absolute -bottom-1.5 left-1/2 -translate-x-1/2
-              h-3 w-3 rotate-45
-              border-b border-r border-[#577399]/40 bg-slate-900
-            "
-          />
-          <dl className="p-3 space-y-1.5">
-            {lines.map((line, i) => (
-              <div
-                key={i}
-                className={[
-                  "flex items-baseline justify-between gap-2",
-                  line.isTotal
-                    ? "mt-1.5 pt-1.5 border-t border-[#577399]/30"
-                    : "",
-                ].join(" ")}
-              >
-                <dt
-                  className={
-                    line.isTotal
-                      ? "text-[#b9cfe8] font-semibold"
-                      : "text-[#b9baa3]"
-                  }
-                >
-                  {line.label}
-                </dt>
-                <dd
-                  className={[
-                    "tabular-nums font-mono shrink-0",
-                    line.isTotal
-                      ? "text-[#f7f7ff] font-bold"
-                      : "text-[#f7f7ff]",
-                  ].join(" ")}
-                >
-                  {line.value}
-                </dd>
-              </div>
-            ))}
-          </dl>
-          <p className="px-3 pb-2.5 text-[11px] text-[#577399] border-t border-[#577399]/20 pt-1.5">
-            SRD p. 3, 23, 29
-          </p>
-        </div>
-      )}
+      {popover}
     </div>
   );
 }
@@ -415,10 +460,10 @@ function StatCard({
               className="font-bold leading-none select-none"
               style={{
                 fontFamily: "'Heavitas', serif",
-                fontSize: "6rem",
+                fontSize: "3.5rem",
                 color: valueColor,
+                letterSpacing: "0.1ch",
                 filter: "drop-shadow(0 1px 0 rgba(249,236,216,0.6))",
-                transform: "translateY(-1.5rem)",
                 display: "block",
               }}
             >
@@ -557,11 +602,14 @@ function useDomainCards(loadout: string[]): {
 
 function SectionCard({
   title,
+  headerRight,
   children,
   className = "",
   style,
 }: {
   title?: string;
+  /** Content rendered at the trailing edge of the header row (mobile only). */
+  headerRight?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
@@ -610,6 +658,12 @@ function SectionCard({
           >
             {title}
           </h2>
+          {/* Trailing slot — mobile only */}
+          {headerRight && (
+            <div className="sm:hidden ml-auto flex items-center gap-2 pb-1">
+              {headerRight}
+            </div>
+          )}
         </div>
       )}
       {children}
@@ -1032,7 +1086,7 @@ function PublicSheetContent() {
                 {/* Portrait */}
                 <div
                   aria-hidden="true"
-                  className="h-24 w-24 shrink-0 rounded-full bg-slate-850 flex items-center justify-center text-3xl font-bold text-parchment-500 uppercase overflow-hidden"
+                  className="h-14 w-14 shrink-0 rounded-full bg-slate-850 flex items-center justify-center text-xl font-bold text-parchment-500 uppercase overflow-hidden"
                   style={{
                     border: "3px solid transparent",
                     outline: "2px solid #cb2d56",
@@ -1070,8 +1124,11 @@ function PublicSheetContent() {
                   <h1
                     className="font-display font-bold text-parchment-100 leading-tight"
                     style={{
-                      fontSize: "2.5rem",
+                      fontSize: "1.6rem",
                       letterSpacing: "-0.01em",
+                      maxWidth: "80vw",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
                       textShadow: [
                         "0 1px 3px rgba(0,0,0,0.8)",
                         "0 0 40px rgba(203,45,86,0.28)",
@@ -1081,37 +1138,6 @@ function PublicSheetContent() {
                   >
                     {character.name}
                   </h1>
-
-                  {/* Class / subclass / community / ancestry — wiki-linked */}
-                  <div className="mt-1.5 flex flex-wrap gap-1.5 text-base text-parchment-400">
-                    {character.classId && character.className && (
-                      <Link
-                        href={`/classes/${encodeURIComponent(character.classId)}`}
-                        className="hover:text-gold-300 transition-colors underline underline-offset-2 decoration-parchment-700 hover:decoration-gold-600"
-                        aria-label={`${character.className} class wiki`}
-                      >
-                        {character.className}
-                      </Link>
-                    )}
-                    {character.subclassName && (
-                      <>
-                        <span className="text-parchment-700">·</span>
-                        <span>{character.subclassName}</span>
-                      </>
-                    )}
-                    {character.communityName && (
-                      <>
-                        <span className="text-parchment-700">·</span>
-                        <span>{character.communityName}</span>
-                      </>
-                    )}
-                    {character.ancestryName && (
-                      <>
-                        <span className="text-parchment-700">·</span>
-                        <span>{character.ancestryName}</span>
-                      </>
-                    )}
-                  </div>
 
                   {/* Multiclass (if present) */}
                   {character.multiclassClassName && (
@@ -1154,6 +1180,37 @@ function PublicSheetContent() {
                   >
                     {character.level}
                   </span>
+                </div>
+
+                {/* Class / subclass / community / ancestry — own line below portrait row */}
+                <div className="w-full flex flex-wrap gap-1.5 text-base text-parchment-400 mt-1">
+                  {character.classId && character.className && (
+                    <Link
+                      href={`/classes/${encodeURIComponent(character.classId)}`}
+                      className="hover:text-gold-300 transition-colors underline underline-offset-2 decoration-parchment-700 hover:decoration-gold-600"
+                      aria-label={`${character.className} class wiki`}
+                    >
+                      {character.className}
+                    </Link>
+                  )}
+                  {character.subclassName && (
+                    <>
+                      <span className="text-parchment-700">·</span>
+                      <span>{character.subclassName}</span>
+                    </>
+                  )}
+                  {character.communityName && (
+                    <>
+                      <span className="text-parchment-700">·</span>
+                      <span>{character.communityName}</span>
+                    </>
+                  )}
+                  {character.ancestryName && (
+                    <>
+                      <span className="text-parchment-700">·</span>
+                      <span>{character.ancestryName}</span>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -1217,6 +1274,38 @@ function PublicSheetContent() {
             {/* ── 2. Core stats ─────────────────────────────────────────── */}
             <SectionCard
               title="Stats"
+              headerRight={
+                <>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs uppercase tracking-wider text-parchment-600">
+                      Ev
+                    </span>
+                    <span
+                      className="rounded border px-2 py-0.5 text-xs font-bold text-parchment-100"
+                      style={{
+                        background: "rgba(87,115,153,0.15)",
+                        borderColor: "rgba(87,115,153,0.30)",
+                      }}
+                    >
+                      {character.derivedStats.evasion}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs uppercase tracking-wider text-parchment-600">
+                      AS
+                    </span>
+                    <span
+                      className="rounded border px-2 py-0.5 text-xs font-bold text-parchment-100"
+                      style={{
+                        background: "rgba(87,115,153,0.15)",
+                        borderColor: "rgba(87,115,153,0.30)",
+                      }}
+                    >
+                      {character.derivedStats.armor}
+                    </span>
+                  </div>
+                </>
+              }
               style={{
                 background:
                   "linear-gradient(145deg, rgba(15,28,50,0.97) 0%, rgba(12,20,38,0.98) 60%, rgba(8,15,30,1) 100%)",
@@ -1229,8 +1318,8 @@ function PublicSheetContent() {
                 ].join(", "),
               }}
             >
-              {/* Derived stats as pills */}
-              <div className="mb-4 flex flex-wrap gap-3">
+              {/* Derived stats as pills — hidden on mobile (shown in header instead) */}
+              <div className="hidden sm:flex mb-4 flex-wrap gap-3">
                 <div className="flex items-center gap-2">
                   <span className="text-sm uppercase tracking-wider text-parchment-600">
                     Evasion

@@ -61,6 +61,13 @@ export interface Campaign {
    * Defaults to true for existing campaigns.
    */
   cursesContentEnabled?: boolean;
+  /**
+   * When set, new characters joining this campaign must be at this level.
+   * Pre-generated characters are imported at this level; custom characters
+   * that don't match see a validation prompt to use the level-up wizard.
+   * Null means no level restriction (any level is allowed).
+   */
+  requiredLevel?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -169,6 +176,8 @@ export interface UpdateCampaignInput {
   fear?: number;
   /** Whether this campaign uses Curses! content (Faction Favors, etc.). */
   cursesContentEnabled?: boolean;
+  /** Restrict new characters to a specific level (null to remove restriction). */
+  requiredLevel?: number | null;
 }
 
 export interface CreateInviteInput {

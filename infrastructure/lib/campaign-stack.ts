@@ -161,6 +161,21 @@ export class CampaignStack extends cdk.Stack {
     dataStack.usersTable.grantReadData(campaignsHandler);
 
     // -------------------------------------------------------------------------
+    // 5b. Pregens HTTP Lambda
+    // -------------------------------------------------------------------------
+    const pregensHandler = new lambda.Function(this, "PregensHandler", {
+      ...commonLambdaProps,
+      functionName: `daggerheart-pregens-${stage}`,
+      description: "Pre-generated character management — admin, user, and campaign pool",
+      handler: "index.handler",
+      code: lambda.Code.fromAsset("../backend/dist/pregens-handler"),
+      logGroup: makeLambdaLogGroup("pregens"),
+    } as lambda.FunctionProps);
+
+    dataStack.charactersTable.grantReadWriteData(pregensHandler);
+    this.campaignsTable.grantReadWriteData(pregensHandler);
+
+    // -------------------------------------------------------------------------
     // 6. HTTP Routes for Campaign endpoints
     // -------------------------------------------------------------------------
     const campaignsIntegration = new apigwv2Integrations.HttpLambdaIntegration(
@@ -192,6 +207,9 @@ export class CampaignStack extends cdk.Stack {
       { method: apigwv2.HttpMethod.DELETE, path: "/campaigns/{campaignId}/characters/{characterId}" },
       // Share — generate campaign share token (GM only)
       { method: apigwv2.HttpMethod.GET, path: "/campaigns/{campaignId}/share" },
+      // Pregens — player-facing listing and import (handled by campaigns handler)
+      { method: apigwv2.HttpMethod.GET, path: "/campaigns/{campaignId}/pregens" },
+      { method: apigwv2.HttpMethod.POST, path: "/campaigns/{campaignId}/pregens/import" },
     ];
 
     for (const route of campaignRoutes) {
@@ -210,6 +228,40 @@ export class CampaignStack extends cdk.Stack {
       integration: campaignsIntegration,
       // No JWT authorizer — campaign share token validated in handler
     });
+
+    // -------------------------------------------------------------------------
+    // 6b. HTTP Routes for Pregen management endpoints
+    // -------------------------------------------------------------------------
+    const pregensIntegration = new apigwv2Integrations.HttpLambdaIntegration(
+      "PregensIntegration",
+      pregensHandler
+    );
+
+    const pregenRoutes: Array<{ method: apigwv2.HttpMethod; path: string }> = [
+      // Admin — system-wide pregens
+      { method: apigwv2.HttpMethod.POST, path: "/admin/pregens" },
+      { method: apigwv2.HttpMethod.GET, path: "/admin/pregens" },
+      { method: apigwv2.HttpMethod.GET, path: "/admin/pregens/{pregenId}" },
+      { method: apigwv2.HttpMethod.DELETE, path: "/admin/pregens/{pregenId}" },
+      // User — GM-scoped pregens
+      { method: apigwv2.HttpMethod.POST, path: "/pregens" },
+      { method: apigwv2.HttpMethod.GET, path: "/pregens" },
+      { method: apigwv2.HttpMethod.GET, path: "/pregens/{pregenId}" },
+      { method: apigwv2.HttpMethod.DELETE, path: "/pregens/{pregenId}" },
+      // Campaign pool management
+      { method: apigwv2.HttpMethod.POST, path: "/campaigns/{campaignId}/pregens/pool" },
+      { method: apigwv2.HttpMethod.GET, path: "/campaigns/{campaignId}/pregens/pool" },
+      { method: apigwv2.HttpMethod.DELETE, path: "/campaigns/{campaignId}/pregens/pool/{pregenId}" },
+    ];
+
+    for (const route of pregenRoutes) {
+      httpApi.addRoutes({
+        path: route.path,
+        methods: [route.method],
+        integration: pregensIntegration,
+        authorizer: jwtAuthorizer,
+      });
+    }
 
     // -------------------------------------------------------------------------
     // 7. WebSocket API

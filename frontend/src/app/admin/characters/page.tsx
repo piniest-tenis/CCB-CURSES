@@ -481,7 +481,7 @@ export default function AdminCharactersPage() {
   useEffect(() => {
     if (!isReady) return;
     if (!isAuthenticated) {
-      router.replace("/auth/login");
+      router.replace("/auth/login?return_to=/admin/characters");
       return;
     }
     // Only redirect away from admin once the refresh has settled - the token

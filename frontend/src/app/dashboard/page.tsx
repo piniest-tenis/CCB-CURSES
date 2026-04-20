@@ -225,6 +225,19 @@ export default function DashboardPage() {
     return sortCharacters(filtered, searchSort.sortKey);
   }, [allChars, searchSort]);
 
+  // Whether to show the World Lore section:
+  // visible if the user has "Curses! Content" enabled in their preferences,
+  // OR if they have at least one character in a campaign that has cursesContentEnabled.
+  const showLorePanel = useMemo(() => {
+    if (user?.preferences?.cursesEnabled === true) return true;
+    const campaignMap = new Map(campaignList.map((c) => [c.campaignId, c]));
+    return allChars.some(
+      (char) =>
+        char.campaignId != null &&
+        campaignMap.get(char.campaignId)?.cursesContentEnabled === true,
+    );
+  }, [user, allChars, campaignList]);
+
   // Most recently updated campaign for session panel
   const topCampaign: CampaignSummary | null = useMemo(() => {
     if (!campaignList.length) return null;
@@ -463,7 +476,7 @@ export default function DashboardPage() {
                   <SessionPanel campaign={topCampaign} />
                 </div>
               </PatreonPaidGate>
-              <LorePanel />
+              {showLorePanel && <LorePanel />}
             </div>
           </main>
 
@@ -488,7 +501,7 @@ export default function DashboardPage() {
                 <SessionPanel campaign={topCampaign} />
               </div>
             </PatreonPaidGate>
-            <LorePanel />
+            {showLorePanel && <LorePanel />}
           </aside>
         </div>
       </div>
