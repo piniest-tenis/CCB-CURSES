@@ -38,6 +38,7 @@ import * as fs from "fs";
 import * as path from "path";
 import type { DomainCard, GrimoireAbility, CharacterSource } from "@shared/types";
 import { toCardId, resolveWikiLink } from "../transformers/SlugTransformer";
+import { tokenExtractor } from "@shared/tokenExtractor";
 
 // ─── Filename parsing ─────────────────────────────────────────────────────────
 
@@ -372,6 +373,9 @@ function parseDomainCardRaw(
   const allText = [description, curseText ?? ""].join("\n");
   const linkedCardIds = extractLinkedCardIds(allText);
 
+  // ── Extract token config ─────────────────────────────────────────────────
+  const tokenConfig = tokenExtractor(description) ?? undefined;
+
   return {
     cardId,
     domain,
@@ -386,5 +390,6 @@ function parseDomainCardRaw(
     linkedCardIds,
     grimoire,
     source,
+    ...(tokenConfig !== undefined ? { tokenConfig } : {}),
   };
 }
