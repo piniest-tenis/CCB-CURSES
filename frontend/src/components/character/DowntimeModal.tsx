@@ -28,7 +28,7 @@
 
 import React, { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { useCharacterAction } from "@/hooks/useCharacter";
+import { useCharacterAction, useCharacterRest } from "@/hooks/useCharacter";
 import { ApiError } from "@/lib/api";
 import { InlineActionError } from "./ActionButton";
 import { useCharacterStore } from "@/store/characterStore";
@@ -187,10 +187,31 @@ function RestActionButton({
 
 export function DowntimeModal({ characterId, open, onClose }: DowntimeModalProps) {
   const [restType, setRestType] = useState<"short" | "long">("short");
+  const [restStarted, setRestStarted] = useState(false);
+  const [restError, setRestError] = useState<string | null>(null);
   const { activeCharacter } = useCharacterStore();
+  const restMutation = useCharacterRest(characterId);
 
   const handleClose = () => {
+    setRestStarted(false);
+    setRestError(null);
     onClose();
+  };
+
+  const handleBeginRest = async () => {
+    setRestError(null);
+    try {
+      await restMutation.mutateAsync(restType);
+      setRestStarted(true);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setRestError(err.message);
+      } else if (err instanceof Error) {
+        setRestError(err.message);
+      } else {
+        setRestError("An unexpected error occurred starting the rest.");
+      }
+    }
   };
 
   const shortRestActions: RestActionButtonProps[] = [
@@ -304,7 +325,14 @@ export function DowntimeModal({ characterId, open, onClose }: DowntimeModalProps
 
           {/* Body */}
           <div className="space-y-4">
-            <RestTypeToggle value={restType} onChange={setRestType} />
+            <RestTypeToggle
+              value={restType}
+              onChange={(v) => {
+                setRestType(v);
+                setRestStarted(false);
+                setRestError(null);
+              }}
+            />
 
             {/* Contextual note */}
             <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-3 text-sm text-parchment-400">
@@ -321,12 +349,49 @@ export function DowntimeModal({ characterId, open, onClose }: DowntimeModalProps
               )}
             </div>
 
-            {/* Individual action buttons */}
-            <div className="space-y-2">
-              {actions.map((action) => (
-                <RestActionButton key={action.label} {...action} />
-              ))}
-            </div>
+            {/* Begin Rest button — calls POST /rest to process token rest actions */}
+            {!restStarted && (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={handleBeginRest}
+                  disabled={restMutation.isPending}
+                  aria-busy={restMutation.isPending}
+                  className="
+                    w-full rounded-lg py-2.5 font-semibold text-sm
+                    bg-burgundy-800 text-parchment-200 hover:bg-burgundy-700
+                    transition-colors disabled:opacity-50 disabled:cursor-wait
+                    focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-2 focus:ring-offset-slate-900
+                  "
+                >
+                  {restMutation.isPending ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span
+                        aria-hidden="true"
+                        className="inline-block h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"
+                      />
+                      Beginning rest…
+                    </span>
+                  ) : (
+                    `Begin ${restType === "short" ? "Short" : "Long"} Rest`
+                  )}
+                </button>
+                {restError && (
+                  <p role="alert" className="text-sm text-red-400 mt-1">
+                    {restError}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Individual action buttons — shown after rest is started */}
+            {restStarted && (
+              <div className="space-y-2">
+                {actions.map((action) => (
+                  <RestActionButton key={action.label} {...action} />
+                ))}
+              </div>
+            )}
 
             <button
               onClick={handleClose}

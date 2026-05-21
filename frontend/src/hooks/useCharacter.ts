@@ -14,7 +14,7 @@ import {
 } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 import { useCharacterStore } from "@/store/characterStore";
-import type { Character, CharacterSummary, LevelUpChoices } from "@shared/types";
+import type { Character, CharacterSummary, LevelUpChoices, RestType } from "@shared/types";
 
 // ─── Query keys ───────────────────────────────────────────────────────────────
 
@@ -255,6 +255,35 @@ export function useCharacterLevelUp(
       queryClient.setQueryData(characterKeys.detail(characterId), updated);
       setCharacter(updated);
       queryClient.invalidateQueries({ queryKey: characterKeys.lists() });
+    },
+  });
+}
+
+// ─── useCharacterRest ─────────────────────────────────────────────────────────
+
+/**
+ * Mutation hook for POST /characters/{id}/rest.
+ * Triggers token rest processing on the backend (fill-to-cap, clear, add-1)
+ * and syncs the updated character into both the TanStack Query cache and the
+ * Zustand character store.
+ */
+export function useCharacterRest(
+  characterId: string
+): UseMutationResult<Character, Error, RestType> {
+  const queryClient = useQueryClient();
+  const { setCharacter } = useCharacterStore();
+
+  return useMutation({
+    mutationFn: (restType: RestType) =>
+      apiClient
+        .post<{ restType: RestType; character: Character; cleared: unknown; actionsAvailable: unknown }>(
+          `/characters/${characterId}/rest`,
+          { restType }
+        )
+        .then((result) => result.character),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(characterKeys.detail(characterId), updated);
+      setCharacter(updated);
     },
   });
 }
