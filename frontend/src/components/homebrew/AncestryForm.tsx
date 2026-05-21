@@ -18,7 +18,7 @@
  */
 
 import React, { useCallback, useId, useMemo, useState } from "react";
-import type { HomebrewMarkdownInput, MechanicalBonus } from "@shared/types";
+import type { HomebrewMarkdownInput, MechanicalBonus, MechanicalBonusStat } from "@shared/types";
 import { INPUT_CLS, LABEL_CLS, TEXTAREA_CLS, BTN_SECONDARY, SOFT_WARNING_CLS } from "./styles";
 import { SHOW_PREVIEW_EVENT } from "./WorkshopLayout";
 
@@ -45,7 +45,7 @@ export interface AncestryFormProps {
 }
 
 interface BonusRow {
-  stat: MechanicalBonus["stat"];
+  stat: MechanicalBonusStat;
   amount: number;
   traitIndex: 0 | 1;
   condition: string;
@@ -53,14 +53,49 @@ interface BonusRow {
 
 // ─── Stat options ─────────────────────────────────────────────────────────────
 
-const STAT_OPTIONS: MechanicalBonus["stat"][] = [
-  "armor",
-  "hp",
-  "stress",
-  "evasion",
-  "hope",
-  "hopeMax",
+const CORE_STAT_NAMES = ["agility", "strength", "finesse", "instinct", "presence", "knowledge"] as const;
+
+interface StatOption {
+  value: MechanicalBonusStat;
+  label: string;
+  group: string;
+  /** Roll modifiers don't use the amount field */
+  noAmount?: boolean;
+}
+
+const STAT_OPTIONS: StatOption[] = [
+  // Flat stat bonuses
+  { value: "hp",       label: "HP (max slots)",      group: "Flat Stats" },
+  { value: "stress",   label: "Stress (max slots)",  group: "Flat Stats" },
+  { value: "armor",    label: "Armor score",          group: "Flat Stats" },
+  { value: "evasion",  label: "Evasion",              group: "Flat Stats" },
+  { value: "hope",     label: "Hope (starting)",      group: "Flat Stats" },
+  { value: "hopeMax",  label: "Hope (max)",           group: "Flat Stats" },
+  // Trait score bonuses/penalties
+  ...CORE_STAT_NAMES.map((t) => ({
+    value: `trait:${t}` as MechanicalBonusStat,
+    label: `${t.charAt(0).toUpperCase() + t.slice(1)} score bonus/penalty`,
+    group: "Trait Score",
+  })),
+  // Roll advantage/disadvantage
+  ...CORE_STAT_NAMES.map((t) => ({
+    value: `rollAdvantage:${t}` as MechanicalBonusStat,
+    label: `Advantage on ${t.charAt(0).toUpperCase() + t.slice(1)} rolls`,
+    group: "Roll Modifiers",
+    noAmount: true,
+  })),
+  ...CORE_STAT_NAMES.map((t) => ({
+    value: `rollDisadvantage:${t}` as MechanicalBonusStat,
+    label: `Disadvantage on ${t.charAt(0).toUpperCase() + t.slice(1)} rolls`,
+    group: "Roll Modifiers",
+    noAmount: true,
+  })),
 ];
+
+/** Returns true if the selected stat type does not use an amount field. */
+function isNoAmountStat(stat: MechanicalBonusStat): boolean {
+  return stat.startsWith("rollAdvantage:") || stat.startsWith("rollDisadvantage:");
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -138,7 +173,7 @@ export function AncestryForm({
   const addBonus = useCallback(() => {
     setBonuses((prev) => [
       ...prev,
-      { stat: "hp", amount: 1, traitIndex: 0, condition: "" },
+      { stat: "hp" as MechanicalBonusStat, amount: 1, traitIndex: 0, condition: "" },
     ]);
   }, []);
 
@@ -289,65 +324,85 @@ export function AncestryForm({
           </p>
         )}
 
-        {bonuses.map((bonus, idx) => (
-          <div
-            key={idx}
-            className="flex flex-wrap items-end gap-2 rounded-lg border border-slate-700/40 bg-slate-900/40 p-3"
-          >
-            <div className="min-w-[100px] flex-1">
-              <label className={LABEL_CLS}>Stat</label>
-              <select
-                value={bonus.stat}
-                onChange={(e) => updateBonus(idx, { stat: e.target.value as MechanicalBonus["stat"] })}
-                className={INPUT_CLS}
-              >
-                {STAT_OPTIONS.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="w-20">
-              <label className={LABEL_CLS}>Amount</label>
-              <input
-                type="number"
-                value={bonus.amount}
-                onChange={(e) => updateBonus(idx, { amount: Number(e.target.value) })}
-                className={INPUT_CLS}
-              />
-            </div>
-            <div className="w-20">
-              <label className={LABEL_CLS}>Trait #</label>
-              <select
-                value={bonus.traitIndex}
-                onChange={(e) => updateBonus(idx, { traitIndex: Number(e.target.value) as 0 | 1 })}
-                className={INPUT_CLS}
-              >
-                <option value={0}>0</option>
-                <option value={1}>1</option>
-              </select>
-            </div>
-            <div className="flex-1 min-w-[120px]">
-              <label className={LABEL_CLS}>Condition</label>
-              <input
-                type="text"
-                value={bonus.condition}
-                onChange={(e) => updateBonus(idx, { condition: e.target.value })}
-                placeholder="Optional"
-                className={INPUT_CLS}
-              />
-            </div>
-            <button
-              type="button"
-              onClick={() => removeBonus(idx)}
-              className="rounded-lg border border-[#fe5f55]/30 px-3 py-2 text-xs text-[#fe5f55]/60 hover:text-[#fe5f55] hover:border-[#fe5f55]/50 transition-colors"
-              aria-label={`Remove bonus ${idx + 1}`}
+        {bonuses.map((bonus, idx) => {
+          const noAmount = isNoAmountStat(bonus.stat);
+          // Group STAT_OPTIONS by group name for the optgroup select
+          const groups = Array.from(new Set(STAT_OPTIONS.map((o) => o.group)));
+          return (
+            <div
+              key={idx}
+              className="flex flex-wrap items-end gap-2 rounded-lg border border-slate-700/40 bg-slate-900/40 p-3"
             >
-              Remove
-            </button>
-          </div>
-        ))}
+              <div className="min-w-[180px] flex-1">
+                <label className={LABEL_CLS}>Bonus Type</label>
+                <select
+                  value={bonus.stat}
+                  onChange={(e) => {
+                    const newStat = e.target.value as MechanicalBonusStat;
+                    // When switching to a no-amount type, reset amount to 1
+                    updateBonus(idx, {
+                      stat: newStat,
+                      amount: isNoAmountStat(newStat) ? 1 : bonus.amount,
+                    });
+                  }}
+                  className={INPUT_CLS}
+                >
+                  {groups.map((group) => (
+                    <optgroup key={group} label={group}>
+                      {STAT_OPTIONS.filter((o) => o.group === group).map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+              {!noAmount && (
+                <div className="w-24">
+                  <label className={LABEL_CLS}>Amount</label>
+                  <input
+                    type="number"
+                    value={bonus.amount}
+                    onChange={(e) => updateBonus(idx, { amount: Number(e.target.value) })}
+                    className={INPUT_CLS}
+                  />
+                </div>
+              )}
+              <div className="w-28">
+                <label className={LABEL_CLS}>Trait # <span className="text-parchment-600 font-normal">(mixed)</span></label>
+                <select
+                  value={bonus.traitIndex}
+                  onChange={(e) => updateBonus(idx, { traitIndex: Number(e.target.value) as 0 | 1 })}
+                  className={INPUT_CLS}
+                >
+                  <option value={0}>Feature 1</option>
+                  <option value={1}>Feature 2</option>
+                </select>
+              </div>
+              {!noAmount && (
+                <div className="flex-1 min-w-[120px]">
+                  <label className={LABEL_CLS}>Condition</label>
+                  <input
+                    type="text"
+                    value={bonus.condition}
+                    onChange={(e) => updateBonus(idx, { condition: e.target.value })}
+                    placeholder="Optional"
+                    className={INPUT_CLS}
+                  />
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => removeBonus(idx)}
+                className="rounded-lg border border-[#fe5f55]/30 px-3 py-2 text-xs text-[#fe5f55]/60 hover:text-[#fe5f55] hover:border-[#fe5f55]/50 transition-colors"
+                aria-label={`Remove bonus ${idx + 1}`}
+              >
+                Remove
+              </button>
+            </div>
+          );
+        })}
       </div>
 
       {/* ── Balance guardrails (soft warnings) ──────────────────────── */}
@@ -371,6 +426,20 @@ export function AncestryForm({
         if (bonuses.length > 3) {
           warnings.push(
             `${bonuses.length} mechanical bonuses is unusually high. SRD ancestries typically have 0-2 bonuses.`
+          );
+        }
+        const hasTraitScoreBonus = bonuses.some((b) => b.stat.startsWith("trait:"));
+        const hasRollModifier = bonuses.some(
+          (b) => b.stat.startsWith("rollAdvantage:") || b.stat.startsWith("rollDisadvantage:")
+        );
+        if (hasTraitScoreBonus) {
+          warnings.push(
+            "Trait score bonuses/penalties are balance-sensitive (Homebrew Kit p.6). Use sparingly to avoid a \"best class\" pairing with this ancestry."
+          );
+        }
+        if (hasRollModifier) {
+          warnings.push(
+            "Roll advantage/disadvantage on a trait affects every roll using that trait. Consider limiting to narrow contexts if used in Mixed Ancestry."
           );
         }
         if (warnings.length === 0) return null;

@@ -3,7 +3,7 @@
 /**
  * src/app/campaigns/[id]/CampaignDetailClient.tsx
  *
- * Campaign Detail Page - the main session view.
+ * Campaign Detail Page — the main session view.
  *
  * Layout:
  *   Header  → campaign name, [Invite] [Settings] buttons (GM only)
@@ -27,10 +27,7 @@ import React, { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useAuthStore } from "@/store/authStore";
-import { useCampaignDetail, useRemoveMember, useAddCharacterToCampaign, useRemoveCharacterFromCampaign, useUpdateCampaign, useCampaignPregens, useImportPregen } from "@/hooks/useCampaigns";
-import type { PregenSummary } from "@/hooks/useCampaigns";
-import { apiClient } from "@/lib/api";
-import { useUserPregens, useCreateUserPregen } from "@/hooks/usePregens";
+import { useCampaignDetail, useRemoveMember, useAddCharacterToCampaign, useRemoveCharacterFromCampaign, useUpdateCampaign } from "@/hooks/useCampaigns";
 import { useCampaignStore } from "@/store/campaignStore";
 import { useCampaignNav, type CampaignTab } from "@/hooks/useCampaignNav";
 import { useGameWebSocket, type DiceColorOverrides } from "@/hooks/useGameWebSocket";
@@ -42,8 +39,6 @@ import type { PingEvent, RollRequestPayload } from "@/types/campaign";
 import type { Adversary } from "@/types/adversary";
 import type { RollResult } from "@/types/dice";
 import { MemberCard } from "@/components/campaign/MemberCard";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBookmark } from "@fortawesome/free-solid-svg-icons";
 import { useCharacters } from "@/hooks/useCharacter";
 import { SheetContextMenu, type ContextMenuPosition } from "@/components/campaign/SheetContextMenu";
 import { CondensedCharacterCard } from "@/components/campaign/CondensedCharacterCard";
@@ -90,16 +85,6 @@ const DiceRollerPanel = dynamic(
 
 const CommandCenterTab = dynamic(
   () => import("@/components/campaign/CommandCenterTab").then((m) => m.CommandCenterTab),
-  { ssr: false }
-);
-
-const PartyOverviewSidebar = dynamic(
-  () => import("@/components/campaign/PartyOverviewSidebar").then((m) => m.PartyOverviewSidebar),
-  { ssr: false }
-);
-
-const PartyOverviewToggle = dynamic(
-  () => import("@/components/campaign/PartyOverviewToggle").then((m) => m.PartyOverviewToggle),
   { ssr: false }
 );
 
@@ -233,7 +218,7 @@ function SheetPingWrapper({ characterId, characterName, isGm, onPingField, viewe
       className={isGm ? "relative select-none touch-manipulation" : "relative"}
       aria-label={
         isGm
-          ? "Character sheet - right-click or long-press any element to ping a player"
+          ? "Character sheet — right-click or long-press any element to ping a player"
           : undefined
       }
     >
@@ -241,7 +226,7 @@ function SheetPingWrapper({ characterId, characterName, isGm, onPingField, viewe
         <div className="mb-3 rounded-lg border border-[#DAA520]/30 bg-[#DAA520]/5 px-4 py-2 flex items-start justify-between gap-3">
           <p className="text-xs text-[#DAA520]/80">
             <span aria-hidden="true">♛ </span>
-            GM View - Right-click or long-press any element to ping the player.
+            GM View — Right-click or long-press any element to ping the player.
             Keyboard: focus an element then press{" "}
             <kbd className="font-mono bg-slate-800 border border-slate-700 rounded px-1">Alt+P</kbd>
           </p>
@@ -284,7 +269,6 @@ function SheetPingWrapper({ characterId, characterName, isGm, onPingField, viewe
 
 // ─── AssignCharacterPanel ──────────────────────────────────────────────────────
 // Shown to players who have joined a campaign but not yet assigned a character.
-// Offers two tabs: "My Characters" (existing) and "Pre-generated" (import pregens).
 
 interface AssignCharacterPanelProps {
   campaignId: string;
@@ -294,24 +278,8 @@ function AssignCharacterPanel({ campaignId }: AssignCharacterPanelProps) {
   const selectId = useId();
   const router = useRouter();
   const [selectedId, setSelectedId] = useState("");
-  const [tab, setTab] = useState<"mine" | "pregen">("mine");
   const { data: myChars, isLoading: charsLoading } = useCharacters();
   const addMutation = useAddCharacterToCampaign(campaignId);
-
-  // Pregen data
-  const { data: pregensData, isLoading: pregensLoading } = useCampaignPregens(campaignId);
-  const importMutation = useImportPregen(campaignId);
-  const [selectedPregenId, setSelectedPregenId] = useState("");
-  const [importLevel, setImportLevel] = useState<number>(10);
-  const levelSelectId = useId();
-
-  const requiredLevel = pregensData?.requiredLevel ?? null;
-  const selectedPregen = pregensData?.pregens.find((p) => p.pregenId === selectedPregenId);
-
-  // Effective level for the selected pregen: GM-preset per-pregen level takes priority,
-  // then campaign-wide requiredLevel, then the free-choice importLevel.
-  const pregenSelectedLevel = selectedPregen?.selectedLevel ?? null;
-  const effectiveLevel = pregenSelectedLevel ?? requiredLevel;
 
   // Only show characters not already assigned to another campaign
   const available = (myChars?.characters ?? []).filter(
@@ -322,14 +290,6 @@ function AssignCharacterPanel({ campaignId }: AssignCharacterPanelProps) {
     if (!selectedId) return;
     addMutation.mutate({ characterId: selectedId });
   }, [selectedId, addMutation]);
-
-  const handleImportPregen = useCallback(() => {
-    if (!selectedPregenId) return;
-    importMutation.mutate({
-      pregenId: selectedPregenId,
-      level: effectiveLevel ?? importLevel,
-    });
-  }, [selectedPregenId, importMutation, effectiveLevel, importLevel]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] px-4">
@@ -342,204 +302,80 @@ function AssignCharacterPanel({ campaignId }: AssignCharacterPanelProps) {
         <div className="space-y-1 text-center">
           <p className="font-serif text-xl text-[#f7f7ff]">Assign your character</p>
           <p className="text-sm text-[#b9baa3]/60">
-            Choose an existing character or select a pre-generated one.
+            Choose which of your characters joins this campaign.
           </p>
         </div>
 
-        {/* Tab switcher */}
-        <div className="flex rounded-lg border border-slate-700/60 overflow-hidden" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "mine"}
-            onClick={() => setTab("mine")}
-            className={`flex-1 px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors
-              ${tab === "mine"
-                ? "bg-[#577399]/30 text-[#f7f7ff]"
-                : "bg-slate-800/60 text-[#b9baa3]/50 hover:text-[#b9baa3]/80"
-              }`}
-          >
-            My Characters
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "pregen"}
-            onClick={() => setTab("pregen")}
-            className={`flex-1 px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors
-              ${tab === "pregen"
-                ? "bg-[#577399]/30 text-[#f7f7ff]"
-                : "bg-slate-800/60 text-[#b9baa3]/50 hover:text-[#b9baa3]/80"
-              }`}
-          >
-            Pre-generated
-          </button>
-        </div>
-
-        {/* My Characters tab */}
-        {tab === "mine" && (
+        {charsLoading ? (
+          <div className="h-10 rounded-lg bg-slate-700/40 animate-pulse" />
+        ) : available.length === 0 ? (
+          <div className="space-y-3">
+            <p className="text-sm text-[#b9baa3]/40 italic text-center">
+              You have no available characters.
+            </p>
+            <button
+              type="button"
+              onClick={() => router.push("/characters/new")}
+              className="
+                w-full rounded-lg border border-[#577399]/40 bg-[#577399]/10
+                px-4 py-2 text-sm font-semibold text-[#577399]
+                hover:bg-[#577399]/20 transition-colors
+                focus:outline-none focus:ring-2 focus:ring-[#577399]
+              "
+            >
+              Create a character →
+            </button>
+          </div>
+        ) : (
           <>
-            {charsLoading ? (
-              <div className="h-10 rounded-lg bg-slate-700/40 animate-pulse" />
-            ) : available.length === 0 ? (
-              <div className="space-y-3">
-                <p className="text-sm text-[#b9baa3]/40 italic text-center">
-                  You have no available characters.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => router.push("/characters/new")}
-                  className="
-                    w-full rounded-lg border border-[#577399]/40 bg-[#577399]/10
-                    px-4 py-2 text-sm font-semibold text-[#577399]
-                    hover:bg-[#577399]/20 transition-colors
-                    focus:outline-none focus:ring-2 focus:ring-[#577399]
-                  "
-                >
-                  Create a character
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="space-y-1">
-                  <label
-                    htmlFor={selectId}
-                    className="block text-xs font-semibold uppercase tracking-widest text-[#b9baa3]/50"
-                  >
-                    Character
-                  </label>
-                  <select
-                    id={selectId}
-                    value={selectedId}
-                    onChange={(e) => setSelectedId(e.target.value)}
-                    className="
-                      w-full rounded-lg border border-slate-700/60 bg-slate-800
-                      px-3 py-2 text-sm text-[#f7f7ff]
-                      focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2
-                      focus:ring-offset-slate-900
-                    "
-                  >
-                    <option value="">Select a character…</option>
-                    {available.map((c) => (
-                      <option key={c.characterId} value={c.characterId}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            <div className="space-y-1">
+              <label
+                htmlFor={selectId}
+                className="block text-xs font-semibold uppercase tracking-widest text-[#b9baa3]/50"
+              >
+                Character
+              </label>
+              <select
+                id={selectId}
+                value={selectedId}
+                onChange={(e) => setSelectedId(e.target.value)}
+                className="
+                  w-full rounded-lg border border-slate-700/60 bg-slate-800
+                  px-3 py-2 text-sm text-[#f7f7ff]
+                  focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2
+                  focus:ring-offset-slate-900
+                "
+              >
+                <option value="">Select a character…</option>
+                {available.map((c) => (
+                  <option key={c.characterId} value={c.characterId}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-                {addMutation.isError && (
-                  <p role="alert" className="text-sm text-[#fe5f55]">
-                    {(addMutation.error as Error)?.message ?? "Failed to assign character."}
-                  </p>
-                )}
-
-                <button
-                  type="button"
-                  onClick={handleAssign}
-                  disabled={!selectedId || addMutation.isPending}
-                  className="
-                    w-full rounded-lg bg-[#577399] px-4 py-2
-                    text-sm font-semibold text-white
-                    hover:bg-[#577399]/80 disabled:opacity-40
-                    transition-colors
-                    focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2
-                    focus:ring-offset-slate-900
-                  "
-                >
-                  {addMutation.isPending ? "Assigning…" : "Assign Character"}
-                </button>
-              </>
-            )}
-          </>
-        )}
-
-        {/* Pre-generated tab */}
-        {tab === "pregen" && (
-          <>
-            {pregensLoading ? (
-              <div className="h-10 rounded-lg bg-slate-700/40 animate-pulse" />
-            ) : !pregensData || pregensData.pregens.length === 0 || pregensData.pregens.every((p) => p.claimed) ? (
-              <p className="text-sm text-[#b9baa3]/40 italic text-center py-4">
-                No pre-generated characters available.
+            {addMutation.isError && (
+              <p role="alert" className="text-sm text-[#fe5f55]">
+                {(addMutation.error as Error)?.message ?? "Failed to assign character."}
               </p>
-            ) : (
-              <div className="space-y-4">
-                {/* Pregen list */}
-                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                  {pregensData.pregens.map((p) => (
-                    <PregenCard
-                      key={p.pregenId}
-                      pregen={p}
-                      selected={selectedPregenId === p.pregenId}
-                      onSelect={() => setSelectedPregenId(
-                        selectedPregenId === p.pregenId ? "" : p.pregenId
-                      )}
-                    />
-                  ))}
-                </div>
-
-                {/* Level selector (only if no effective level restriction) */}
-                {selectedPregenId && !effectiveLevel && (
-                  <div className="space-y-1">
-                    <label
-                      htmlFor={levelSelectId}
-                      className="block text-xs font-semibold uppercase tracking-widest text-[#b9baa3]/50"
-                    >
-                      Import at Level
-                    </label>
-                    <select
-                      id={levelSelectId}
-                      value={importLevel}
-                      onChange={(e) => setImportLevel(Number(e.target.value))}
-                      className="
-                        w-full rounded-lg border border-slate-700/60 bg-slate-800
-                        px-3 py-2 text-sm text-[#f7f7ff]
-                        focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2
-                        focus:ring-offset-slate-900
-                      "
-                    >
-                      {Array.from({ length: 10 }, (_, i) => i + 1).map((lv) => (
-                        <option key={lv} value={lv}>
-                          Level {lv}{lv === 10 ? " (native)" : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {/* Show effective level info */}
-                {selectedPregenId && effectiveLevel && (
-                  <p className="text-xs text-[#b9baa3]/50 text-center">
-                    {pregenSelectedLevel
-                      ? `This character is set to Level ${pregenSelectedLevel}. It will be imported at that level.`
-                      : `Campaign requires Level ${requiredLevel}. Character will be imported at this level.`}
-                  </p>
-                )}
-
-                {importMutation.isError && (
-                  <p role="alert" className="text-sm text-[#fe5f55]">
-                    {(importMutation.error as Error)?.message ?? "Failed to import character."}
-                  </p>
-                )}
-
-                <button
-                  type="button"
-                  onClick={handleImportPregen}
-                  disabled={!selectedPregenId || selectedPregen?.claimed || importMutation.isPending}
-                  className="
-                    w-full rounded-lg bg-[#577399] px-4 py-2
-                    text-sm font-semibold text-white
-                    hover:bg-[#577399]/80 disabled:opacity-40
-                    transition-colors
-                    focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2
-                    focus:ring-offset-slate-900
-                  "
-                >
-                  {importMutation.isPending ? "Importing…" : "Import Character"}
-                </button>
-              </div>
             )}
+
+            <button
+              type="button"
+              onClick={handleAssign}
+              disabled={!selectedId || addMutation.isPending}
+              className="
+                w-full rounded-lg bg-[#577399] px-4 py-2
+                text-sm font-semibold text-white
+                hover:bg-[#577399]/80 disabled:opacity-40
+                transition-colors
+                focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2
+                focus:ring-offset-slate-900
+              "
+            >
+              {addMutation.isPending ? "Assigning…" : "Assign Character"}
+            </button>
           </>
         )}
       </div>
@@ -547,71 +383,10 @@ function AssignCharacterPanel({ campaignId }: AssignCharacterPanelProps) {
   );
 }
 
-// ─── PregenCard ───────────────────────────────────────────────────────────────
-
-interface PregenCardProps {
-  pregen: PregenSummary;
-  selected: boolean;
-  onSelect: () => void;
-}
-
-function PregenCard({ pregen, selected, onSelect }: PregenCardProps) {
-  const claimed = pregen.claimed;
-  return (
-    <button
-      type="button"
-      onClick={claimed ? undefined : onSelect}
-      aria-pressed={!claimed && selected}
-      disabled={claimed}
-      className={`
-        w-full text-left rounded-lg border px-3 py-2.5 transition-colors
-        focus:outline-none focus:ring-2 focus:ring-[#577399]
-        ${claimed
-          ? "border-slate-700/30 bg-slate-800/30 cursor-not-allowed opacity-50"
-          : selected
-            ? "border-[#577399] bg-[#577399]/15"
-            : "border-slate-700/60 bg-slate-800/60 hover:border-slate-600"
-        }
-      `}
-    >
-      <div className="flex items-center justify-between gap-2">
-        <div className="min-w-0">
-          <p className={`text-sm font-semibold truncate ${selected && !claimed ? "text-[#f7f7ff]" : "text-[#b9baa3]"}`}>
-            {pregen.name}
-          </p>
-          <p className="text-xs text-[#b9baa3]/50 mt-0.5 truncate">
-            {pregen.ancestryName} {pregen.className}
-            {pregen.subclassName ? ` (${pregen.subclassName})` : ""}
-          </p>
-          <p className="text-xs text-[#b9baa3]/40 mt-0.5 truncate">
-            {pregen.communityName} · {pregen.domains.join(", ")}
-          </p>
-        </div>
-        {claimed ? (
-          <span className="shrink-0 text-xs font-medium text-[#b9baa3]/40 border border-slate-700/40 rounded px-2 py-0.5 whitespace-nowrap">
-            Already chosen
-          </span>
-        ) : (
-          <div className={`
-            h-4 w-4 rounded-full border-2 flex-shrink-0
-            ${selected ? "border-[#577399] bg-[#577399]" : "border-slate-600"}
-          `}>
-            {selected && (
-              <div className="h-full w-full flex items-center justify-center">
-                <div className="h-1.5 w-1.5 rounded-full bg-white" />
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </button>
-  );
-}
-
 // ─── GM Tab Bar (desktop) ─────────────────────────────────────────────────────
 // Allows the GM to switch between Characters, Adversaries, Encounter, and
 // Environments tabs. Players only see the Characters view (no tab bar shown).
-// On mobile, replaced by the bottom nav - this bar is hidden on sm and below.
+// On mobile, replaced by the bottom nav — this bar is hidden on sm and below.
 
 const GM_TABS: { id: CampaignTab; label: string; icon: string }[] = [
   { id: "characters", label: "Characters", icon: "👤" },
@@ -977,7 +752,13 @@ export default function CampaignDetailClient() {
   // Extract the real campaign ID from the browser URL.
   // useParams() returns "__placeholder__" in a static export; usePathname()
   // always reflects the actual browser URL path.
-  const campaignId = pathname?.split("/")[2] ?? "";
+  const rawCampaignId = pathname?.split("/")[2] ?? "";
+  // Guard: only treat as a valid campaign ID if it looks like a UUID.
+  // This prevents the dynamic [id] route from firing API calls when
+  // CloudFront SPA rewrite briefly renders this component for static
+  // routes like /campaigns/new.
+  const isValidCampaignId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawCampaignId);
+  const campaignId = isValidCampaignId ? rawCampaignId : "";
   const router = useRouter();
 
   const { isAuthenticated, isReady, isLoading: authLoading, user } = useAuthStore();
@@ -985,36 +766,6 @@ export default function CampaignDetailClient() {
   const removeMemberMutation = useRemoveMember(campaignId);
   const removeCharacterMutation = useRemoveCharacterFromCampaign(campaignId);
   const updateCampaignMutation = useUpdateCampaign(campaignId);
-
-  // Pregen management (GM only)
-  const createPregenMutation = useCreateUserPregen();
-  const { data: userPregenData } = useUserPregens();
-  const pregenSourceIds = React.useMemo(
-    () =>
-      new Set(
-        (userPregenData?.pregens ?? [])
-          .map((p) => p.sourceCharacterId)
-          .filter(Boolean) as string[]
-      ),
-    [userPregenData]
-  );
-  const [importingCharId, setImportingCharId] = useState<string | null>(null);
-
-  const handleImportAsPregen = useCallback(
-    async (characterId: string) => {
-      setImportingCharId(characterId);
-      try {
-        const fullCharacter = await apiClient.get(`/characters/${characterId}`);
-        await createPregenMutation.mutateAsync({
-          character: fullCharacter as import("@shared/types").Character,
-          sourceCharacterId: characterId,
-        });
-      } finally {
-        setImportingCharId(null);
-      }
-    },
-    [createPregenMutation]
-  );
   const { setActiveCampaign } = useCampaignStore();
   const {
     activeTab, selectedCharacterId, showFullSheet,
@@ -1028,34 +779,11 @@ export default function CampaignDetailClient() {
   const [forceCritCharId, setForceCritCharId] = useState<string | null>(null);
   /** Mobile: party drawer open state. */
   const [drawerOpen, setDrawerOpen] = useState(false);
-  /** Party overview sidebar open state (all roles). */
-  const [partyOverviewOpen, setPartyOverviewOpen] = useState(false);
   /** GM-only: overflow menu open state on mobile. */
   const [overflowOpen, setOverflowOpen] = useState(false);
   const overflowRef = useRef<HTMLDivElement>(null);
 
   const titleId = useId();
-
-  // Campaign share state (for "Share Campaign" clipboard button)
-  type ShareState = "idle" | "loading" | "copied" | "error";
-  const [campaignShareState, setCampaignShareState] = useState<ShareState>("idle");
-
-  const handleShareCampaign = useCallback(async () => {
-    if (campaignShareState === "loading") return;
-    setCampaignShareState("loading");
-    try {
-      const data = await apiClient.get<{
-        campaignToken: string;
-        shareUrl: string;
-      }>(`/campaigns/${campaignId}/share`);
-      await navigator.clipboard.writeText(data.shareUrl);
-      setCampaignShareState("copied");
-      setTimeout(() => setCampaignShareState("idle"), 2500);
-    } catch {
-      setCampaignShareState("error");
-      setTimeout(() => setCampaignShareState("idle"), 2500);
-    }
-  }, [campaignId, campaignShareState]);
 
   // Encounter count for tab badge
   const encounterAdversaries = useEncounterStore(
@@ -1064,8 +792,8 @@ export default function CampaignDetailClient() {
 
   // Auth guard
   useEffect(() => {
-    if (isReady && !isAuthenticated) router.replace(`/auth/login?return_to=${pathname}`);
-  }, [isReady, isAuthenticated, router, pathname]);
+    if (isReady && !isAuthenticated) router.replace("/auth/login");
+  }, [isReady, isAuthenticated, router]);
 
   // Track active campaign in store
   useEffect(() => {
@@ -1096,23 +824,6 @@ export default function CampaignDetailClient() {
   useEffect(() => {
     setDrawerOpen(false);
   }, [selectedCharacterId]);
-
-  // Close party overview bottom sheet when the party drawer opens (mobile),
-  // and vice versa, to avoid double-modal confusion.
-  useEffect(() => {
-    if (drawerOpen) setPartyOverviewOpen(false);
-  }, [drawerOpen]);
-
-  useEffect(() => {
-    if (partyOverviewOpen) setDrawerOpen(false);
-  }, [partyOverviewOpen]);
-
-  // Close party overview when navigating away from the character sheet view.
-  useEffect(() => {
-    if (activeTab !== "characters" || !selectedCharacterId) {
-      setPartyOverviewOpen(false);
-    }
-  }, [activeTab, selectedCharacterId]);
 
   // ── Derived state ───────────────────────────────────────────────────────────
   const isGm        = campaign?.callerRole === "gm";
@@ -1292,20 +1003,33 @@ export default function CampaignDetailClient() {
                     }
                   : undefined
               }
-              onImportAsPregen={
-                isGm && member.characterId
-                  ? () => handleImportAsPregen(member.characterId!)
-                  : undefined
-              }
-              isImportingPregen={importingCharId === member.characterId}
-              isAlreadyPregen={pregenSourceIds.has(member.characterId ?? "")}
-              onForceCrit={
-                isGm && charId && member.role === "player"
-                  ? () => handleForceCritToggle(charId)
-                  : undefined
-              }
-              isCritArmed={forceCritCharId === charId}
             />
+
+            {/* Force-crit toggle — GM only, players with a character only */}
+            {isGm && charId && member.role === "player" && (
+              <button
+                type="button"
+                onClick={() => handleForceCritToggle(charId)}
+                title={
+                  forceCritCharId === charId
+                    ? `Disarm forced critical for ${memberChar?.name ?? "this player"}`
+                    : `Force next roll to critical for ${memberChar?.name ?? "this player"}`
+                }
+                aria-pressed={forceCritCharId === charId}
+                className={[
+                  "mt-1 w-full flex items-center justify-center gap-1.5",
+                  "rounded-md px-2 py-1 text-xs font-semibold",
+                  "border transition-colors",
+                  "focus:outline-none focus:ring-2 focus:ring-[#DAA520] focus:ring-offset-1 focus:ring-offset-slate-900",
+                  forceCritCharId === charId
+                    ? "border-[#DAA520] bg-[#DAA520]/20 text-[#DAA520]"
+                    : "border-slate-700/50 bg-transparent text-[#b9baa3]/40 hover:border-[#DAA520]/50 hover:text-[#DAA520]/60",
+                ].join(" ")}
+              >
+                <span aria-hidden="true">⚡</span>
+                {forceCritCharId === charId ? "Crit Armed" : "Force Crit"}
+              </button>
+            )}
           </div>
         );
       })}
@@ -1367,7 +1091,7 @@ export default function CampaignDetailClient() {
               />
             )}
 
-            {/* Crit Armed pill - shown in header when a crit is armed */}
+            {/* Crit Armed pill — shown in header when a crit is armed */}
             {isGm && forceCritCharId && (
               <button
                 type="button"
@@ -1411,7 +1135,7 @@ export default function CampaignDetailClient() {
                 <span className="sm:hidden" aria-hidden="true">🎲</span>
               </button>
 
-              {/* Invite - hidden on mobile (in overflow) */}
+              {/* Invite — hidden on mobile (in overflow) */}
               <button
                 type="button"
                 onClick={() => setShowInviteModal(true)}
@@ -1428,48 +1152,7 @@ export default function CampaignDetailClient() {
                 Invite
               </button>
 
-              {/* Share Campaign - clipboard copy, hidden on mobile (in overflow) */}
-              <button
-                type="button"
-                onClick={handleShareCampaign}
-                disabled={campaignShareState === "loading"}
-                className={[
-                  "hidden sm:inline-flex items-center gap-1.5",
-                  "rounded-lg px-4 py-2 text-sm font-semibold",
-                  "border transition-colors",
-                  "focus:outline-none focus:ring-2 focus:ring-[#577399]",
-                  "disabled:opacity-50 disabled:cursor-wait",
-                  campaignShareState === "copied"
-                    ? "border-green-500/50 bg-green-500/10 text-green-400"
-                    : campaignShareState === "error"
-                      ? "border-red-500/50 bg-red-500/10 text-red-400"
-                      : "border-[#577399]/50 bg-[#577399]/10 text-[#577399] hover:bg-[#577399]/20 hover:border-[#577399]",
-                ].join(" ")}
-                aria-label={
-                  campaignShareState === "copied"
-                    ? "Campaign share link copied!"
-                    : campaignShareState === "error"
-                      ? "Failed to copy share link"
-                      : "Copy campaign share link for Twitch extension"
-                }
-              >
-                {campaignShareState === "loading" ? (
-                  <i className="fa-solid fa-arrows-rotate text-[11px] animate-spin" aria-hidden="true" />
-                ) : campaignShareState === "copied" ? (
-                  <i className="fa-solid fa-check text-[11px]" aria-hidden="true" />
-                ) : campaignShareState === "error" ? (
-                  <i className="fa-solid fa-circle-exclamation text-[11px]" aria-hidden="true" />
-                ) : (
-                  <i className="fa-solid fa-share-nodes text-[11px]" aria-hidden="true" />
-                )}
-                {campaignShareState === "copied"
-                  ? "Copied!"
-                  : campaignShareState === "error"
-                    ? "Failed"
-                    : "Share"}
-              </button>
-
-              {/* OBS links + Settings - hidden on mobile (in overflow) */}
+              {/* OBS links + Settings — hidden on mobile (in overflow) */}
               <a
                 href={`/obs/dice?campaign=${campaignId}`}
                 target="_blank"
@@ -1553,27 +1236,6 @@ export default function CampaignDetailClient() {
                       className="w-full text-left px-4 py-2.5 text-sm text-[#f7f7ff] hover:bg-slate-700/60 transition-colors"
                     >
                       Invite players
-                    </button>
-                    <button
-                      role="menuitem"
-                      type="button"
-                      disabled={campaignShareState === "loading"}
-                      onClick={() => { handleShareCampaign(); setOverflowOpen(false); }}
-                      className={[
-                        "w-full text-left px-4 py-2.5 text-sm transition-colors",
-                        "disabled:opacity-50 disabled:cursor-wait",
-                        campaignShareState === "copied"
-                          ? "text-green-400"
-                          : campaignShareState === "error"
-                            ? "text-red-400"
-                            : "text-[#f7f7ff] hover:bg-slate-700/60",
-                      ].join(" ")}
-                    >
-                      {campaignShareState === "copied"
-                        ? "Link copied!"
-                        : campaignShareState === "error"
-                          ? "Share failed"
-                          : "Share campaign"}
                     </button>
                     <a
                       role="menuitem"
@@ -1667,14 +1329,14 @@ export default function CampaignDetailClient() {
                           compact
                         />
                       </div>
-                      {/* Full tracker always visible on Encounter tab (desktop) - skip on other tabs on mobile */}
+                      {/* Full tracker always visible on Encounter tab (desktop) — skip on other tabs on mobile */}
                       <div className="block sm:hidden" />
                     </>
                   )}
                 </div>
               )}
 
-              {/* GM Tab Bar - desktop only (sm+) */}
+              {/* GM Tab Bar — desktop only (sm+) */}
               {isGm && (
                 <GmTabBar
                   activeTab={activeTab}
@@ -1747,24 +1409,10 @@ export default function CampaignDetailClient() {
 
                   {selectedCharacterId && (
                     <>
-                      {/* Viewer mode banner - GM viewing a player's sheet */}
+                      {/* Viewer mode banner — GM viewing a player's sheet */}
                       {isViewerMode && (
-                        <div className="flex items-center justify-between gap-2 rounded-lg bg-[#577399]/15 border border-[#577399]/30 px-3 py-1.5 text-xs text-[#577399] mb-2">
+                        <div className="flex items-center gap-2 rounded-lg bg-[#577399]/15 border border-[#577399]/30 px-3 py-1.5 text-xs text-[#577399] mb-2">
                           <span>♛ Viewing {selectedMemberName}&apos;s Sheet</span>
-                          <button
-                            type="button"
-                            onClick={() => handleImportAsPregen(selectedCharacterId!)}
-                            disabled={importingCharId === selectedCharacterId || pregenSourceIds.has(selectedCharacterId!)}
-                            title={pregenSourceIds.has(selectedCharacterId!) ? "Already imported as pre-gen" : "Import as pre-gen"}
-                            aria-label={pregenSourceIds.has(selectedCharacterId!) ? "Already imported as pre-gen" : "Import as pre-gen"}
-                            className="w-6 h-6 flex items-center justify-center rounded transition-colors hover:bg-[#577399]/20 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#577399]"
-                          >
-                            {importingCharId === selectedCharacterId ? (
-                              <span aria-hidden="true" className="inline-block h-3 w-3 animate-spin rounded-full border border-current border-t-transparent" />
-                            ) : (
-                              <FontAwesomeIcon icon={faBookmark} className="h-3 w-3" />
-                            )}
-                          </button>
                         </div>
                       )}
 
@@ -1878,6 +1526,7 @@ export default function CampaignDetailClient() {
                   />
                 </div>
               )}
+
             </>
           )}
         </main>
@@ -1888,7 +1537,7 @@ export default function CampaignDetailClient() {
         <MobileBottomNav
           activeTab={activeTab}
           onTabChange={(tab) => {
-            // "Characters" just opens the party drawer without navigating -
+            // "Characters" just opens the party drawer without navigating —
             // the GM picks a character, and selecting one navigates normally.
             if (tab === "characters") {
               setDrawerOpen(true);
@@ -1909,7 +1558,7 @@ export default function CampaignDetailClient() {
         />
       )}
 
-      {/* Dice log - mobile: docked strip above bottom nav; desktop: floating panel */}
+      {/* Dice log — mobile: docked strip above bottom nav; desktop: floating panel */}
       <DiceLog characterName={isGm ? "GM" : undefined} mobileBottomOffset={isGm ? 56 : 0} />
 
       {/* GM 3D dice roller panel */}
@@ -1919,26 +1568,6 @@ export default function CampaignDetailClient() {
           onClose={() => setGmDiceOpen(false)}
           colorOverrides={effectiveDiceColorOverrides}
         />
-      )}
-
-      {/* Party Overview sidebar + toggle — only shown when viewing a character sheet */}
-      {campaign && activeTab === "characters" && selectedCharacterId && (
-        <>
-          <PartyOverviewToggle
-            isOpen={partyOverviewOpen}
-            onToggle={() => setPartyOverviewOpen((v) => !v)}
-          />
-          <PartyOverviewSidebar
-            isOpen={partyOverviewOpen}
-            onClose={() => setPartyOverviewOpen(false)}
-            characters={campaign.characters ?? []}
-            currentFear={campaign.currentFear ?? 0}
-            onSelectCharacter={(charId) => {
-              navigateToCharacter(charId);
-              setPartyOverviewOpen(false);
-            }}
-          />
-        </>
       )}
     </div>
   );

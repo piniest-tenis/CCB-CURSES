@@ -56,6 +56,7 @@ import type {
   Character,
   CharacterSummary,
   CoreStats,
+  CoreStatName,
   DerivedStats,
   CharacterTrackers,
   DamageThresholds,
@@ -534,7 +535,6 @@ interface ClassRecord {
   connectionQuestions?: string[];
   mechanicalNotes?: string;
   source?: string;
-  subclasses?: Array<{ subclassId: string; spellcastTrait: string }>;
 }
 
 interface GameDataRecord {
@@ -623,14 +623,38 @@ function buildPortraitKey(
  *
  * Each bonus is additive. The caller is responsible for passing safe initial
  * values (all stats ≥ 0) and for re-deriving any downstream stats afterwards.
+ *
+ * New bonus types handled:
+ *  - "trait:<statName>"             → populates ancestryTraitBonuses (permanent core trait delta)
+ *  - "rollAdvantage:<statName>"     → appends to ancestryRollModifiers
+ *  - "rollDisadvantage:<statName>"  → appends to ancestryRollModifiers
  */
 function applyMechanicalBonuses(
   bonuses: MechanicalBonus[],
   derivedStats: DerivedStats,
   trackers: CharacterTrackers,
-  character: { hope: number; hopeMax: number }
+  character: { hope: number; hopeMax: number },
+  ancestryTraitBonuses: Record<string, number>,
+  ancestryRollModifiers: Array<{ trait: CoreStatName; type: "advantage" | "disadvantage" }>
 ): void {
   for (const bonus of bonuses) {
+    // Handle namespaced trait and roll-modifier stats
+    if (bonus.stat.startsWith("trait:")) {
+      const traitName = bonus.stat.slice("trait:".length) as CoreStatName;
+      ancestryTraitBonuses[traitName] = (ancestryTraitBonuses[traitName] ?? 0) + bonus.amount;
+      continue;
+    }
+    if (bonus.stat.startsWith("rollAdvantage:")) {
+      const traitName = bonus.stat.slice("rollAdvantage:".length) as CoreStatName;
+      ancestryRollModifiers.push({ trait: traitName, type: "advantage" });
+      continue;
+    }
+    if (bonus.stat.startsWith("rollDisadvantage:")) {
+      const traitName = bonus.stat.slice("rollDisadvantage:".length) as CoreStatName;
+      ancestryRollModifiers.push({ trait: traitName, type: "disadvantage" });
+      continue;
+    }
+
     switch (bonus.stat) {
       case "armor":
         derivedStats.armor += bonus.amount;
@@ -780,6 +804,8 @@ function toCharacterResponse(
     domainVault: record.domainVault ?? [],
     classFeatureState: record.classFeatureState ?? {},
     traitBonuses: record.traitBonuses ?? {},
+    ancestryTraitBonuses: record.ancestryTraitBonuses ?? {},
+    ancestryRollModifiers: record.ancestryRollModifiers ?? [],
     notes: record.notes ?? null,
     avatarKey: record.avatarKey ?? null,
     avatarUrl: buildAvatarUrl(record.avatarKey),
@@ -801,7 +827,6 @@ function toCharacterResponse(
     customConditions: record.customConditions ?? [],
     levelUpHistory: record.levelUpHistory ?? {},
     markedTraits: record.markedTraits ?? [],
-    diceColors: record.diceColors,
     // ── Multiclass fields (SRD p.43) ──────────────────────────────────────
     multiclassClassId:           record.multiclassClassId ?? null,
     multiclassClassName:         enrichment?.multiclassClassName ?? record.multiclassClassName ?? null,
@@ -809,8 +834,6 @@ function toCharacterResponse(
     multiclassDomainId:          record.multiclassDomainId ?? null,
     multiclassClassFeatureIndex: record.multiclassClassFeatureIndex ?? null,
     campaignId: record.campaignId ?? null,
-    // ── Token system ──────────────────────────────────────────────────────
-    spellcastTrait: record.spellcastTrait ?? null,
   };
 }
 
@@ -940,12 +963,6 @@ async function createCharacter(
     ? await lookupClass(input.classId)
     : null;
 
-  // Derive spellcastTrait from the chosen subclass (if any).
-  // Stored denormalized so backend action handlers stay pure (no DynamoDB lookup).
-  const spellcastTrait = input.subclassId && classRecord
-    ? ((classRecord.subclasses ?? []).find((sc) => sc.subclassId === input.subclassId)?.spellcastTrait as import("@shared/types").CoreStatName | undefined ?? null)
-    : null;
-
   // Look up ancestry and community in parallel (needed for mechanicalBonuses)
   const [ancestryRecord, communityRecord] = await Promise.all([
     input.ancestryId
@@ -999,8 +1016,15 @@ async function createCharacter(
   // character root, not on derivedStats/trackers.
   const hopeHolder = { hope: 2, hopeMax: 6 };
 
+  // Containers for the new ancestry-specific trait and roll-modifier outputs.
+  // Only ancestry bonuses (not community) produce these — community bonuses
+  // only affect flat stats. We re-run with ancestry bonuses only so we can
+  // capture trait/roll entries without community noise.
+  const ancestryTraitBonuses: Record<string, number> = {};
+  const ancestryRollModifiers: Array<{ trait: CoreStatName; type: "advantage" | "disadvantage" }> = [];
+
   if (allBonuses.length > 0) {
-    applyMechanicalBonuses(allBonuses, derivedStats, defaultTrackers, hopeHolder);
+    applyMechanicalBonuses(allBonuses, derivedStats, defaultTrackers, hopeHolder, ancestryTraitBonuses, ancestryRollModifiers);
     // Sync armor tracker max to the (possibly bumped) armor score
     defaultTrackers.armor.max = derivedStats.armor;
     // Clamp baseEvasion if not already set
@@ -1042,6 +1066,8 @@ async function createCharacter(
     domainVault: [],
     classFeatureState: defaultFeatureState,
     traitBonuses: {},
+    ancestryTraitBonuses,
+    ancestryRollModifiers,
     notes: null,
     avatarKey: null,
     avatarUrl: null,    // computed from avatarKey at read-time; null in storage
@@ -1071,8 +1097,6 @@ async function createCharacter(
     multiclassClassFeatureIndex: null,
     // ── Campaign (unassigned at creation) ─────────────────────────────────
     campaignId: null,
-    // ── Token system ──────────────────────────────────────────────────────
-    spellcastTrait,
   };
 
   // ── SRD Validation ─────────────────────────────────────────────────────────
@@ -1652,8 +1676,6 @@ const LevelUpSchema = z.object({
   exchangeCardId:  z.string().nullable().optional(),
   newSubclassId:   z.string().nullable().optional(),
   newClassId:      z.string().nullable().optional(),
-  /** New spellcast trait when subclass changes. Must accompany newSubclassId. */
-  spellcastTrait:  z.enum(["agility","strength","finesse","instinct","presence","knowledge"]).nullable().optional(),
 });
 
 async function levelUpCharacter(
@@ -1686,13 +1708,7 @@ async function levelUpCharacter(
 
   // Apply optional identity changes from advancement choices
   if (body.newSubclassId) {
-    updatedCharacter = {
-      ...updatedCharacter,
-      subclassId: body.newSubclassId,
-      // Update denormalized spellcast trait alongside the new subclass.
-      // The frontend resolves spellcastTrait from classData at selection time.
-      spellcastTrait: body.spellcastTrait ?? updatedCharacter.spellcastTrait,
-    };
+    updatedCharacter = { ...updatedCharacter, subclassId: body.newSubclassId };
   }
 
   const updatedRecord: CharacterRecord = {

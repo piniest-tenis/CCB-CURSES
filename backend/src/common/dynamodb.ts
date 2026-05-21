@@ -42,6 +42,9 @@ export const CAMPAIGNS_TABLE =
 export const CONNECTIONS_TABLE =
   process.env["CONNECTIONS_TABLE"] ?? "daggerheart-connections-dev";
 
+export const FRAMES_TABLE =
+  process.env["FRAMES_TABLE"] ?? "daggerheart-frames-dev";
+
 
 
 const rawClient = new DynamoDBClient({
@@ -520,5 +523,43 @@ export const keys = {
   homebrewConsumable: (userId: string, slug: string) => ({
     PK: `CONSUMABLE#hb-${userId}-${slug}`,
     SK: "METADATA",
+  }),
+
+  // ─── Campaign Frame Key Builders ──────────────────────────────────────────
+
+  /** Full key for a campaign frame's metadata record. */
+  frame: (frameId: string) => ({
+    PK: `FRAME#${frameId}`,
+    SK: "METADATA",
+  }),
+
+  /** Full key for a frame content reference record. */
+  frameContent: (frameId: string, contentType: string, contentId: string) => ({
+    PK: `FRAME#${frameId}`,
+    SK: `CONTENT#${contentType}#${contentId}`,
+  }),
+
+  /** Full key for a frame SRD restriction/alteration record. */
+  frameRestriction: (frameId: string, contentType: string, contentId: string) => ({
+    PK: `FRAME#${frameId}`,
+    SK: `RESTRICTION#${contentType}#${contentId}`,
+  }),
+
+  /** Full key for a frame custom type extension record. */
+  frameExtension: (frameId: string, extensionType: string, slug: string) => ({
+    PK: `FRAME#${frameId}`,
+    SK: `EXTENSION#${extensionType}#${slug}`,
+  }),
+
+  /** Full key for a campaign↔frame attachment record (stored in Campaigns table). */
+  campaignFrame: (campaignId: string, frameId: string) => ({
+    PK: `CAMPAIGN#${campaignId}`,
+    SK: `FRAME#${frameId}`,
+  }),
+
+  /** Full key for a per-item conflict resolution record (stored in Campaigns table). */
+  campaignConflict: (campaignId: string, contentType: string, normalizedName: string) => ({
+    PK: `CAMPAIGN#${campaignId}`,
+    SK: `CONFLICT#${contentType}#${normalizedName}`,
   }),
 };

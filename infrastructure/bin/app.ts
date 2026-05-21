@@ -17,6 +17,7 @@ import { StorageStack } from "../lib/storage-stack";
 import { ApiStack } from "../lib/api-stack";
 import { CampaignStack } from "../lib/campaign-stack";
 import { HomebrewStack } from "../lib/homebrew-stack";
+import { FramesStack } from "../lib/frames-stack";
 import { FrontendStack } from "../lib/frontend-stack";
 
 const app = new cdk.App();
@@ -53,7 +54,7 @@ const corsAllowedOrigins = isProd
   ? [
       "https://ccb.curses.show",
       "https://localhost:8080",
-      "*.ext-twitch.tv",                      // Twitch extension iframes (all subdomains)
+      "https://ajls8isp75nequgerzql4vipnfrzzi.ext-twitch.tv",
     ]
   : [
       "http://localhost:3000",
@@ -71,6 +72,15 @@ const campaignStack = new CampaignStack(app, `DaggerheartCampaign-${stage}`, {
 });
 
 new HomebrewStack(app, `DaggerheartHomebrew-${stage}`, {
+  ...stackProps,
+  authStack,
+  dataStack,
+  campaignStack,
+  httpApi: apiStack.httpApi,
+  corsAllowedOrigins,
+});
+
+new FramesStack(app, `DaggerheartFrames-${stage}`, {
   ...stackProps,
   authStack,
   dataStack,

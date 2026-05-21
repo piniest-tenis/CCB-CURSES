@@ -4,14 +4,8 @@
  * src/app/campaigns/[id]/settings/CampaignSettingsClient.tsx
  *
  * Campaign Settings page — GM only.
- * Sections (in page order):
- *   1. General (name, description)
- *   2. Session Schedule
- *   3. Campaign Rules (Curses! frame toggle + required character level)
- *   4. Save button
- *   5. Pre-gen Pool  ← outside the save form; uses its own mutations
- *   6. Danger Zone
- *
+ * Pre-filled edit form for name + description + session schedule.
+ * Danger zone: Delete Campaign with confirm dialog.
  * Non-GMs are redirected to the campaign detail page.
  */
 
@@ -23,22 +17,7 @@ import {
   useUpdateCampaign,
   useDeleteCampaign,
 } from "@/hooks/useCampaigns";
-import {
-  useAdminPregens,
-  useUserPregens,
-  useCampaignPregenPool,
-  useAddToPregenPool,
-  useRemoveFromPregenPool,
-  useUpdatePoolPregen,
-  useLevelUpUserPregen,
-  useLevelUpAdminPregen,
-  useUserPregenDetail,
-  useAdminPregenDetail,
-  type PregenManagementSummary,
-} from "@/hooks/usePregens";
-import { useCreateCharacter } from "@/hooks/useCharacter";
-import type { LevelUpInput } from "@/hooks/useCharacter";
-import { LevelUpWizard } from "@/components/character/LevelUpWizard";
+import dynamic from "next/dynamic";
 import type {
   DayOfWeek,
   RecurrenceFrequency,
@@ -46,23 +25,37 @@ import type {
   SessionSchedule,
 } from "@/types/campaign";
 
-const MAX_NAME_LENGTH = 80;
+// Lazy-load the frames management panel (attach/detach/conflicts)
+const CampaignFramesTab = dynamic(
+  () => import("@/components/campaign/CampaignFramesTab").then((mod) => mod.CampaignFramesTab),
+  {
+    loading: () => (
+      <div className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-6 space-y-4 animate-pulse">
+        <div className="h-6 w-40 rounded bg-slate-700/60" />
+        <div className="h-4 w-64 rounded bg-slate-700/40" />
+        <div className="h-24 w-full rounded-lg bg-slate-700/30" />
+      </div>
+    ),
+  },
+);
+
+const MAX_NAME_LENGTH        = 80;
 const MAX_DESCRIPTION_LENGTH = 500;
 
 const DAYS: { value: DayOfWeek; label: string }[] = [
-  { value: "monday", label: "Mon" },
-  { value: "tuesday", label: "Tue" },
+  { value: "monday",    label: "Mon" },
+  { value: "tuesday",   label: "Tue" },
   { value: "wednesday", label: "Wed" },
-  { value: "thursday", label: "Thu" },
-  { value: "friday", label: "Fri" },
-  { value: "saturday", label: "Sat" },
-  { value: "sunday", label: "Sun" },
+  { value: "thursday",  label: "Thu" },
+  { value: "friday",    label: "Fri" },
+  { value: "saturday",  label: "Sat" },
+  { value: "sunday",    label: "Sun" },
 ];
 
 const FREQUENCIES: { value: RecurrenceFrequency; label: string }[] = [
-  { value: "weekly", label: "Weekly" },
-  { value: "biweekly", label: "Every two weeks" },
-  { value: "monthly", label: "Monthly" },
+  { value: "weekly",    label: "Weekly" },
+  { value: "biweekly",  label: "Every two weeks" },
+  { value: "monthly",   label: "Monthly" },
 ];
 
 // Common IANA timezones for the selector
@@ -98,7 +91,7 @@ function formatReminderOffset(minutes: number): string {
   return mins === 0 ? `${hrs}h before` : `${hrs}h ${mins}m before`;
 }
 
-// ─── ScheduleSlotEditor ──────────────────────────────────────────────────────
+// ─── ScheduleSlotEditor ─────────────────────────────────────────────────────────
 
 function ScheduleSlotEditor({
   slot,
@@ -180,21 +173,16 @@ function ScheduleSlotEditor({
           >
             <option value="">No timezone</option>
             {TIMEZONES.map((tz) => (
-              <option key={tz} value={tz}>
-                {tz}
-              </option>
+              <option key={tz} value={tz}>{tz}</option>
             ))}
           </select>
         </div>
       </div>
 
-      {/* Label */}
+      {/* Description */}
       <div>
         <label className="block text-xs text-[#b9baa3]/50 mb-1.5">
-          Label{" "}
-          <span className="text-[#b9baa3]/30">
-            (optional, e.g. &ldquo;Evening session&rdquo;)
-          </span>
+          Label <span className="text-[#b9baa3]/30">(optional, e.g. "Evening session")</span>
         </label>
         <input
           type="text"
@@ -211,7 +199,7 @@ function ScheduleSlotEditor({
   );
 }
 
-// ─── ScheduleEditor ──────────────────────────────────────────────────────────
+// ─── ScheduleEditor ─────────────────────────────────────────────────────────────
 
 function ScheduleEditor({
   schedule,
@@ -224,16 +212,14 @@ function ScheduleEditor({
 
   const defaultSchedule: SessionSchedule = {
     frequency: "weekly",
-    slots: [
-      { day: "wednesday", time: null, timezone: null, description: null },
-    ],
+    slots: [{ day: "wednesday", time: null, timezone: null, description: null }],
     reminderOffsetMinutes: 0,
     reminderEnabled: false,
   };
 
   const handleToggle = useCallback(() => {
     onChange(enabled ? null : defaultSchedule);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, onChange]);
 
   const handleFrequency = useCallback(
@@ -241,40 +227,32 @@ function ScheduleEditor({
       if (!schedule) return;
       onChange({ ...schedule, frequency });
     },
-    [schedule, onChange],
+    [schedule, onChange]
   );
 
   const handleSlotChange = useCallback(
     (index: number, updated: SessionSlot) => {
       if (!schedule) return;
-      const newSlots = schedule.slots.map((s, i) =>
-        i === index ? updated : s,
-      );
+      const newSlots = schedule.slots.map((s, i) => (i === index ? updated : s));
       onChange({ ...schedule, slots: newSlots });
     },
-    [schedule, onChange],
+    [schedule, onChange]
   );
 
   const handleAddSlot = useCallback(() => {
     if (!schedule) return;
     onChange({
       ...schedule,
-      slots: [
-        ...schedule.slots,
-        { day: "friday", time: null, timezone: null, description: null },
-      ],
+      slots: [...schedule.slots, { day: "friday", time: null, timezone: null, description: null }],
     });
   }, [schedule, onChange]);
 
   const handleRemoveSlot = useCallback(
     (index: number) => {
       if (!schedule || schedule.slots.length <= 1) return;
-      onChange({
-        ...schedule,
-        slots: schedule.slots.filter((_, i) => i !== index),
-      });
+      onChange({ ...schedule, slots: schedule.slots.filter((_, i) => i !== index) });
     },
-    [schedule, onChange],
+    [schedule, onChange]
   );
 
   const handleReminderEnabled = useCallback(
@@ -282,7 +260,7 @@ function ScheduleEditor({
       if (!schedule) return;
       onChange({ ...schedule, reminderEnabled: val });
     },
-    [schedule, onChange],
+    [schedule, onChange]
   );
 
   const REMINDER_OPTIONS = [0, 60, 120, 240, 480, 1440, 2880, 4320, 10080];
@@ -294,9 +272,7 @@ function ScheduleEditor({
     >
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-serif text-lg font-semibold text-[#f7f7ff]">
-            Session Schedule
-          </h2>
+          <h2 className="font-serif text-lg font-semibold text-[#f7f7ff]">Session Schedule</h2>
           <p className="text-sm text-[#b9baa3]/50 mt-0.5">
             Set recurring session days and times for your campaign.
           </p>
@@ -330,9 +306,7 @@ function ScheduleEditor({
         <div className="space-y-5">
           {/* Frequency */}
           <div>
-            <label className="block text-sm font-semibold text-[#f7f7ff] mb-2">
-              Frequency
-            </label>
+            <label className="block text-sm font-semibold text-[#f7f7ff] mb-2">Frequency</label>
             <div className="flex flex-wrap gap-2">
               {FREQUENCIES.map(({ value, label }) => (
                 <button
@@ -382,9 +356,7 @@ function ScheduleEditor({
           <div className="rounded-lg border border-slate-700/40 bg-slate-900/40 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-[#f7f7ff]">
-                  Email Reminders
-                </p>
+                <p className="text-sm font-semibold text-[#f7f7ff]">Email Reminders</p>
                 <p className="text-xs text-[#b9baa3]/40 mt-0.5">
                   Notify campaign members before each session.
                 </p>
@@ -399,7 +371,7 @@ function ScheduleEditor({
                   "border-2 transition-colors duration-200",
                   "focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2 focus:ring-offset-slate-900",
                   schedule.reminderEnabled
-                    ? "border-[#577399] bg-[#577399]"
+                    ? "border-[#daa520] bg-[#daa520]"
                     : "border-slate-600 bg-slate-700",
                 ].join(" ")}
               >
@@ -407,9 +379,7 @@ function ScheduleEditor({
                   aria-hidden="true"
                   className={[
                     "pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-200",
-                    schedule.reminderEnabled
-                      ? "translate-x-5"
-                      : "translate-x-0",
+                    schedule.reminderEnabled ? "translate-x-5" : "translate-x-0",
                   ].join(" ")}
                 />
               </button>
@@ -417,16 +387,11 @@ function ScheduleEditor({
 
             {schedule.reminderEnabled && (
               <div>
-                <label className="block text-xs text-[#b9baa3]/50 mb-1.5">
-                  Send reminder
-                </label>
+                <label className="block text-xs text-[#b9baa3]/50 mb-1.5">Send reminder</label>
                 <select
                   value={schedule.reminderOffsetMinutes}
                   onChange={(e) =>
-                    onChange({
-                      ...schedule,
-                      reminderOffsetMinutes: Number(e.target.value),
-                    })
+                    onChange({ ...schedule, reminderOffsetMinutes: Number(e.target.value) })
                   }
                   className="w-full rounded border border-slate-700/60 bg-slate-950 px-2.5 py-1.5 text-sm text-[#f7f7ff] focus:outline-none focus:ring-1 focus:ring-[#577399] transition-colors"
                 >
@@ -448,518 +413,7 @@ function ScheduleEditor({
   );
 }
 
-// ─── PregenPoolSection ───────────────────────────────────────────────────────
-// GMs curate which pre-generated characters players can import when joining
-// this campaign. Sources: system-wide pregens (admin-managed) and personal
-// pregens (GM-managed). GMs can create a new personal pregen via the builder
-// without leaving the campaign settings flow.
-
-function PregenPoolSection({ campaignId }: { campaignId: string }) {
-  const router = useRouter();
-  const [showPicker, setShowPicker] = useState(false);
-  const [sourceTab, setSourceTab] = useState<"system" | "mine">("system");
-  const [pendingPregen, setPendingPregen] = useState<PregenManagementSummary | null>(null);
-  // editingLevel: which pool entry is having its level changed inline
-  const [editingLevelId, setEditingLevelId] = useState<string | null>(null);
-  // levelUpTarget: which pool entry has the level-up wizard open
-  const [levelUpTarget, setLevelUpTarget] = useState<PregenManagementSummary | null>(null);
-
-  const { data: poolData, isLoading: poolLoading } =
-    useCampaignPregenPool(campaignId || undefined);
-  const { data: systemData } = useAdminPregens();
-  const { data: userData } = useUserPregens();
-
-  const addMutation = useAddToPregenPool(campaignId);
-  const removeMutation = useRemoveFromPregenPool(campaignId);
-  const updateLevelMutation = useUpdatePoolPregen(campaignId);
-  const createCharacterMutation = useCreateCharacter();
-  const levelUpUserMutation = useLevelUpUserPregen();
-  const levelUpAdminMutation = useLevelUpAdminPregen();
-
-  const poolPregenIds = new Set(
-    (poolData?.pregens ?? []).map((p) => p.pregenId),
-  );
-
-  // Available pregens not already in the pool
-  const systemAvailable = (systemData?.pregens ?? []).filter(
-    (p) => !poolPregenIds.has(p.pregenId),
-  );
-  const userAvailable = (userData?.pregens ?? []).filter(
-    (p) => !poolPregenIds.has(p.pregenId),
-  );
-
-  const handleAdd = useCallback(
-    (pregen: PregenManagementSummary, selectedLevel?: number) => {
-      addMutation.mutate({
-        pregenId: pregen.pregenId,
-        source: pregen.scope,
-        ownerId: pregen.ownerId ?? undefined,
-        selectedLevel,
-      });
-      setPendingPregen(null);
-    },
-    [addMutation],
-  );
-
-  const handlePregenClick = useCallback(
-    (pregen: PregenManagementSummary) => {
-      const levels = pregen.availableLevels ?? [pregen.nativeLevel];
-      if (levels.length > 1) {
-        setPendingPregen(pregen);
-      } else {
-        handleAdd(pregen, levels[0]);
-      }
-    },
-    [handleAdd],
-  );
-
-  const handleRemove = useCallback(
-    (pregenId: string) => {
-      if (!window.confirm("Remove this pre-gen from the campaign pool?")) return;
-      removeMutation.mutate(pregenId);
-    },
-    [removeMutation],
-  );
-
-  async function handleCreatePregen() {
-    const char = await createCharacterMutation.mutateAsync({ name: "New Pre-gen" });
-    const returnTo = encodeURIComponent(`/campaigns/${campaignId}/settings`);
-    router.push(`/character/${char.characterId}/build?pregenMode=user&returnTo=${returnTo}`);
-  }
-
-  if (!campaignId) return null;
-
-  return (
-    <>
-      <section
-        aria-label="Pre-gen character pool"
-        className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-6 space-y-4"
-      >
-        {/* Section header */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="font-serif text-lg font-semibold text-[#f7f7ff]">
-              Pre-gen Character Pool
-            </h2>
-            <p className="text-sm text-[#b9baa3]/60 mt-1 leading-snug">
-              Characters in this pool are available for players to import when
-              joining the campaign. Add from system-wide pre-gens or your own
-              personal pre-gens.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowPicker((v) => !v)}
-            aria-expanded={showPicker}
-            className="
-              shrink-0 rounded-lg border border-[#577399]/50 px-4 py-2
-              text-sm font-semibold text-[#577399]
-              hover:bg-[#577399]/10 transition-colors
-              focus:outline-none focus:ring-2 focus:ring-[#577399]
-            "
-          >
-            {showPicker ? "Close" : "Add to Pool"}
-          </button>
-        </div>
-
-        {/* Current pool list */}
-        {poolLoading ? (
-          <div className="h-10 rounded-lg bg-slate-700/40 animate-pulse" />
-        ) : (poolData?.pregens ?? []).length === 0 ? (
-          <p className="text-sm text-[#b9baa3]/40 italic py-2">
-            No pre-generated characters in this campaign&apos;s pool yet.{" "}
-            Players will see the legacy default characters as a fallback.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {(poolData?.pregens ?? []).map((p) => {
-              const isEditingLevel = editingLevelId === p.pregenId;
-              const multiLevel = (p.availableLevels ?? []).length > 1;
-              return (
-                <div
-                  key={p.pregenId}
-                  className="
-                    flex items-center justify-between rounded-lg
-                    border border-slate-700/60 bg-slate-800/60 px-4 py-3
-                  "
-                >
-                  <div className="min-w-0 flex-1 pr-3">
-                    <p className="text-sm font-semibold text-[#f7f7ff] truncate">
-                      {p.name}
-                    </p>
-                    <p className="text-xs text-[#b9baa3]/50 mt-0.5">
-                      {p.ancestryName ?? "—"} {p.className}
-                      {p.subclassName ? ` (${p.subclassName})` : ""}
-                      {" · "}
-                      {p.scope === "system" ? "System" : "Personal"}
-                    </p>
-
-                    {/* Level control */}
-                    <div className="mt-2 flex items-center gap-2">
-                      {multiLevel && isEditingLevel ? (
-                        <>
-                          <select
-                            autoFocus
-                            value={p.selectedLevel ?? p.nativeLevel}
-                            onChange={(e) => {
-                              updateLevelMutation.mutate(
-                                { pregenId: p.pregenId, selectedLevel: Number(e.target.value) },
-                                { onSuccess: () => setEditingLevelId(null) }
-                              );
-                            }}
-                            disabled={updateLevelMutation.isPending}
-                            className="rounded border border-slate-700/60 bg-slate-950 px-2 py-1 text-xs text-[#f7f7ff] focus:outline-none focus:ring-1 focus:ring-[#577399]"
-                          >
-                            {(p.availableLevels ?? [p.nativeLevel]).map((lv) => (
-                              <option key={lv} value={lv}>
-                                Level {lv}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            type="button"
-                            onClick={() => setEditingLevelId(null)}
-                            className="text-xs text-[#b9baa3]/50 hover:text-[#b9baa3] transition-colors"
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => multiLevel ? setEditingLevelId(p.pregenId) : undefined}
-                          disabled={!multiLevel}
-                          className={[
-                            "inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium border transition-colors",
-                            multiLevel
-                              ? "border-[#577399]/40 text-[#577399] hover:bg-[#577399]/10 cursor-pointer"
-                              : "border-slate-700/40 text-[#b9baa3]/50 cursor-default",
-                          ].join(" ")}
-                        >
-                          Lv{p.selectedLevel ?? p.nativeLevel}
-                          {multiLevel && <span aria-hidden="true" className="opacity-60">▾</span>}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="shrink-0 flex items-center gap-2">
-                  {p.nativeLevel < 10 && (
-                    <button
-                      type="button"
-                      onClick={() => setLevelUpTarget(p)}
-                      className="
-                        shrink-0 rounded px-3 py-1.5 text-xs font-medium
-                        border border-[#b9baa3]/30 text-[#b9baa3]/70
-                        hover:bg-[#b9baa3]/10 hover:text-[#b9baa3]
-                        transition-colors
-                        focus:outline-none focus:ring-2 focus:ring-[#577399]
-                      "
-                    >
-                      Level Up
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const mode = p.scope === "system" ? "admin" : "user";
-                      const returnTo = encodeURIComponent(`/campaigns/${campaignId}/settings`);
-                      router.push(`/character/${p.pregenId}/build?pregenMode=${mode}&returnTo=${returnTo}&editExisting=true`);
-                    }}
-                    className="
-                      shrink-0 rounded px-3 py-1.5 text-xs font-medium
-                      border border-[#577399]/40 text-[#577399]/70
-                      hover:bg-[#577399]/10 hover:text-[#577399]
-                      transition-colors
-                      focus:outline-none focus:ring-2 focus:ring-[#577399]
-                    "
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleRemove(p.pregenId)}
-                    disabled={removeMutation.isPending}
-                    className="
-                      shrink-0 rounded px-3 py-1.5 text-xs font-medium
-                      border border-[#fe5f55]/40 text-[#fe5f55]/70
-                      hover:bg-[#fe5f55]/10 hover:text-[#fe5f55]
-                      disabled:opacity-40 transition-colors
-                      focus:outline-none focus:ring-2 focus:ring-[#fe5f55]
-                    "
-                  >
-                    Remove
-                  </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Picker panel */}
-        {showPicker && (
-          <div className="rounded-lg border border-[#577399]/30 bg-slate-800/40 p-4 space-y-3">
-            {/* Source tabs */}
-            <div
-              className="flex rounded-lg border border-slate-700/60 overflow-hidden"
-              role="tablist"
-              aria-label="Pre-gen source"
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={sourceTab === "system"}
-                onClick={() => setSourceTab("system")}
-                className={`flex-1 px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors
-                  ${
-                    sourceTab === "system"
-                      ? "bg-[#577399]/30 text-[#f7f7ff]"
-                      : "bg-slate-800/60 text-[#b9baa3]/50 hover:text-[#b9baa3]/80"
-                  }`}
-              >
-                System Pregens
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={sourceTab === "mine"}
-                onClick={() => setSourceTab("mine")}
-                className={`flex-1 px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors
-                  ${
-                    sourceTab === "mine"
-                      ? "bg-[#577399]/30 text-[#f7f7ff]"
-                      : "bg-slate-800/60 text-[#b9baa3]/50 hover:text-[#b9baa3]/80"
-                  }`}
-              >
-                My Pregens
-              </button>
-            </div>
-
-            {addMutation.isError && (
-              <p role="alert" className="text-sm text-[#fe5f55]">
-                {addMutation.error?.message ?? "Failed to add pre-gen."}
-              </p>
-            )}
-
-            {/* System pregens tab */}
-            {sourceTab === "system" &&
-              (systemAvailable.length === 0 ? (
-                <p className="text-xs text-[#b9baa3]/40 italic py-2">
-                  No system pre-gens available to add.
-                </p>
-              ) : (
-                <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                  {systemAvailable.map((p) => (
-                    <button
-                      key={p.pregenId}
-                      type="button"
-                      onClick={() => handlePregenClick(p)}
-                      disabled={addMutation.isPending}
-                      className="
-                        w-full text-left rounded-lg border border-slate-700/60
-                        bg-slate-800/60 px-3 py-2 transition-colors
-                        hover:border-[#577399]/50 hover:bg-[#577399]/5
-                        disabled:opacity-40
-                        focus:outline-none focus:ring-2 focus:ring-[#577399]
-                      "
-                    >
-                      <p className="text-sm font-semibold text-[#b9baa3]">
-                        {p.name}
-                      </p>
-                      <p className="text-xs text-[#b9baa3]/50">
-                        {p.ancestryName} {p.className}
-                        {p.subclassName ? ` (${p.subclassName})` : ""}
-                        {" · "}Lv{p.nativeLevel}
-                        {(p.availableLevels ?? []).length > 1 && (
-                          <span className="ml-1 text-[#577399]">
-                            (Lvls {(p.availableLevels ?? []).join(", ")})
-                          </span>
-                        )}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              ))}
-
-            {/* My pregens tab */}
-            {sourceTab === "mine" && (
-              <div className="space-y-3">
-                {/* Create shortcut — always visible on the "mine" tab */}
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-[#b9baa3]/50">
-                    Personal pre-gens you have created
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => void handleCreatePregen()}
-                    disabled={createCharacterMutation.isPending}
-                    className="
-                      text-xs font-semibold text-[#577399]
-                      border border-[#577399]/40 rounded px-2.5 py-1
-                      hover:bg-[#577399]/10 transition-colors
-                      focus:outline-none focus:ring-2 focus:ring-[#577399]
-                      disabled:opacity-50
-                    "
-                  >
-                    {createCharacterMutation.isPending ? "Creating..." : "+ Create Personal Pre-gen"}
-                  </button>
-                </div>
-
-                {userAvailable.length === 0 ? (
-                  <p className="text-xs text-[#b9baa3]/40 italic py-1">
-                    No personal pre-gens available to add. Use the button above
-                    to create one.
-                  </p>
-                ) : (
-                  <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                    {userAvailable.map((p) => (
-                      <button
-                        key={p.pregenId}
-                        type="button"
-                        onClick={() => handlePregenClick(p)}
-                        disabled={addMutation.isPending}
-                        className="
-                          w-full text-left rounded-lg border border-slate-700/60
-                          bg-slate-800/60 px-3 py-2 transition-colors
-                          hover:border-[#577399]/50 hover:bg-[#577399]/5
-                          disabled:opacity-40
-                          focus:outline-none focus:ring-2 focus:ring-[#577399]
-                        "
-                      >
-                        <p className="text-sm font-semibold text-[#b9baa3]">
-                          {p.name}
-                        </p>
-                        <p className="text-xs text-[#b9baa3]/50">
-                          {p.ancestryName} {p.className}
-                          {p.subclassName ? ` (${p.subclassName})` : ""}
-                          {" · "}Lv{p.nativeLevel}
-                          {(p.availableLevels ?? []).length > 1 && (
-                            <span className="ml-1 text-[#577399]">
-                              (Lvls {(p.availableLevels ?? []).join(", ")})
-                            </span>
-                          )}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </section>
-
-      {/* Level picker modal */}
-      {pendingPregen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-          onClick={(e) => { if (e.target === e.currentTarget) setPendingPregen(null); }}
-        >
-          <div className="w-full max-w-sm mx-4 rounded-xl border border-slate-700/60 bg-slate-900 shadow-2xl">
-            <div className="px-5 py-4 border-b border-slate-700/40">
-              <h2 className="font-serif text-lg font-semibold text-[#f7f7ff]">
-                Choose Level
-              </h2>
-              <p className="text-sm text-[#b9baa3] mt-1">
-                Add <span className="text-[#f7f7ff] font-medium">{pendingPregen.name}</span> at which level?
-              </p>
-            </div>
-            <div className="px-5 py-4 flex flex-wrap gap-2">
-              {(pendingPregen.availableLevels ?? [pendingPregen.nativeLevel]).map((lv) => (
-                <button
-                  key={lv}
-                  type="button"
-                  onClick={() => handleAdd(pendingPregen, lv)}
-                  disabled={addMutation.isPending}
-                  className="px-4 py-2 rounded-lg border border-[#577399]/50 text-sm font-semibold text-[#577399] hover:bg-[#577399]/10 transition-colors disabled:opacity-40"
-                >
-                  Level {lv}
-                </button>
-              ))}
-            </div>
-            <div className="px-5 py-3 border-t border-slate-700/40 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setPendingPregen(null)}
-                className="text-sm text-[#b9baa3] hover:text-[#f7f7ff] transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Level Up Wizard */}
-      {levelUpTarget && (
-        <PoolPregenLevelUpWizard
-          pregen={levelUpTarget}
-          levelUpUserMutation={levelUpUserMutation}
-          levelUpAdminMutation={levelUpAdminMutation}
-          onClose={() => setLevelUpTarget(null)}
-        />
-      )}
-    </>
-  );
-}
-
-// ─── PoolPregenLevelUpWizard ─────────────────────────────────────────────────
-
-function PoolPregenLevelUpWizard({
-  pregen,
-  levelUpUserMutation,
-  levelUpAdminMutation,
-  onClose,
-}: {
-  pregen: PregenManagementSummary;
-  levelUpUserMutation: ReturnType<typeof useLevelUpUserPregen>;
-  levelUpAdminMutation: ReturnType<typeof useLevelUpAdminPregen>;
-  onClose: () => void;
-}) {
-  const isAdmin = pregen.scope === "system";
-  const { data: adminData, isLoading: adminLoading } = useAdminPregenDetail(
-    isAdmin ? pregen.pregenId : undefined
-  );
-  const { data: userData, isLoading: userLoading } = useUserPregenDetail(
-    !isAdmin ? pregen.pregenId : undefined
-  );
-
-  const isLoading = isAdmin ? adminLoading : userLoading;
-  const character = isAdmin
-    ? adminData?.pregen?.character
-    : userData?.pregen?.character;
-
-  if (isLoading || !character) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#577399] border-t-transparent" />
-      </div>
-    );
-  }
-
-  async function handleSave(input: LevelUpInput) {
-    if (isAdmin) {
-      await levelUpAdminMutation.mutateAsync({ pregenId: pregen.pregenId, input });
-    } else {
-      await levelUpUserMutation.mutateAsync({ pregenId: pregen.pregenId, input });
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm overflow-y-auto p-4">
-      <div className="w-full max-w-2xl">
-        <LevelUpWizard
-          character={character}
-          onClose={onClose}
-          onSave={handleSave}
-        />
-      </div>
-    </div>
-  );
-}
-
-// ─── CampaignSettingsClient ──────────────────────────────────────────────────
+// ─── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function CampaignSettingsClient() {
   const pathname = usePathname();
@@ -967,7 +421,9 @@ export default function CampaignSettingsClient() {
   // useParams() returns "__placeholder__" in a static export; usePathname()
   // always reflects the actual browser URL path.
   // Path: /campaigns/[id]/settings → segment index 2
-  const campaignId = pathname?.split("/")[2] ?? "";
+  const rawCampaignId = pathname?.split("/")[2] ?? "";
+  // Guard: only treat as a valid campaign ID if it looks like a UUID.
+  const campaignId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawCampaignId) ? rawCampaignId : "";
   const router = useRouter();
 
   const { isAuthenticated, isReady, isLoading: authLoading } = useAuthStore();
@@ -976,24 +432,22 @@ export default function CampaignSettingsClient() {
   const updateMutation = useUpdateCampaign(campaignId);
   const deleteMutation = useDeleteCampaign();
 
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [schedule, setSchedule] = useState<SessionSchedule | null>(null);
+  const [name,          setName]          = useState("");
+  const [description,   setDescription]   = useState("");
+  const [schedule,      setSchedule]      = useState<SessionSchedule | null>(null);
   const [cursesContent, setCursesContent] = useState(true);
-  const [requiredLevel, setRequiredLevel] = useState<number | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveSuccess,   setSaveSuccess]   = useState(false);
 
-  const nameId = useId();
-  const descId = useId();
+  const nameId      = useId();
+  const descId      = useId();
   const formErrorId = useId();
-  const delErrorId = useId();
+  const delErrorId  = useId();
 
   // Auth guard
   useEffect(() => {
-    if (isReady && !isAuthenticated)
-      router.replace(`/auth/login?return_to=${pathname}`);
-  }, [isReady, isAuthenticated, router, pathname]);
+    if (isReady && !isAuthenticated) router.replace("/auth/login");
+  }, [isReady, isAuthenticated, router]);
 
   // Role guard: redirect non-GMs
   useEffect(() => {
@@ -1009,7 +463,6 @@ export default function CampaignSettingsClient() {
       setDescription(campaign.description ?? "");
       setSchedule(campaign.schedule ?? null);
       setCursesContent(campaign.cursesContentEnabled ?? true);
-      setRequiredLevel(campaign.requiredLevel ?? null);
     }
   }, [campaign]);
 
@@ -1022,18 +475,17 @@ export default function CampaignSettingsClient() {
   }
 
   const nameValue = name.trim();
-  const canSave = nameValue.length > 0 && !updateMutation.isPending;
+  const canSave   = nameValue.length > 0 && !updateMutation.isPending;
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSave) return;
 
     await updateMutation.mutateAsync({
-      name: nameValue,
+      name:        nameValue,
       description: description.trim() || null,
       schedule,
       cursesContentEnabled: cursesContent,
-      requiredLevel,
     });
 
     setSaveSuccess(true);
@@ -1067,23 +519,19 @@ export default function CampaignSettingsClient() {
       </header>
 
       <main className="mx-auto max-w-2xl px-4 py-10 space-y-10">
-        {/* Page title */}
         <div>
           <h1 className="font-serif text-3xl font-semibold text-[#f7f7ff]">
             Campaign Settings
           </h1>
           <p className="mt-2 text-sm text-[#b9baa3]/60">
-            Configure your campaign details, schedule, and rules. Only the GM
-            can access this page.
+            Edit campaign details. Only GMs can access this page.
           </p>
         </div>
 
-        {/* ── Save form ── */}
+        {/* Edit form */}
         <form onSubmit={handleSave} noValidate className="space-y-8">
-
-          {/* 1. General — name + description */}
           <section
-            aria-label="General campaign details"
+            aria-label="Edit campaign"
             className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-6 shadow-card-fantasy space-y-6"
           >
             <h2 className="font-serif text-lg font-semibold text-[#f7f7ff]">
@@ -1097,20 +545,14 @@ export default function CampaignSettingsClient() {
                   htmlFor={nameId}
                   className="block text-sm font-semibold text-[#f7f7ff] mb-1.5"
                 >
-                  Campaign Name{" "}
-                  <span className="text-[#fe5f55]" aria-hidden="true">
-                    *
-                  </span>
+                  Campaign Name <span className="text-[#fe5f55]" aria-hidden="true">*</span>
                   <span className="sr-only">(required)</span>
                 </label>
                 <input
                   id={nameId}
                   type="text"
                   value={name}
-                  onChange={(e) => {
-                    setName(e.target.value);
-                    setSaveSuccess(false);
-                  }}
+                  onChange={(e) => { setName(e.target.value); setSaveSuccess(false); }}
                   maxLength={MAX_NAME_LENGTH}
                   required
                   aria-required="true"
@@ -1134,18 +576,12 @@ export default function CampaignSettingsClient() {
                   htmlFor={descId}
                   className="block text-sm font-semibold text-[#f7f7ff] mb-1.5"
                 >
-                  Description{" "}
-                  <span className="font-normal text-[#b9baa3]/50">
-                    (optional)
-                  </span>
+                  Description <span className="font-normal text-[#b9baa3]/50">(optional)</span>
                 </label>
                 <textarea
                   id={descId}
                   value={description}
-                  onChange={(e) => {
-                    setDescription(e.target.value);
-                    setSaveSuccess(false);
-                  }}
+                  onChange={(e) => { setDescription(e.target.value); setSaveSuccess(false); }}
                   maxLength={MAX_DESCRIPTION_LENGTH}
                   rows={4}
                   disabled={isLoading}
@@ -1164,56 +600,31 @@ export default function CampaignSettingsClient() {
             </div>
           </section>
 
-          {/* 2. Session Schedule */}
-          <ScheduleEditor schedule={schedule} onChange={setSchedule} />
-
-          {/* 3. Campaign Rules — Curses! frame + required level */}
+          {/* Curses! Campaign Frame toggle */}
           <section
-            aria-label="Campaign rules"
-            className="rounded-xl border border-[#577399]/30 bg-slate-900/80 p-6 shadow-card-fantasy space-y-6"
+            aria-label="Curses! content settings"
+            className="rounded-xl border border-coral-400/30 bg-slate-900/80 p-6 shadow-card-fantasy space-y-3"
           >
-            <div>
-              <h2 className="font-serif text-lg font-semibold text-[#f7f7ff]">
-                Campaign Rules
-              </h2>
-              <p className="text-sm text-[#b9baa3]/50 mt-0.5">
-                Content settings and character restrictions that apply to all
-                members of this campaign.
-              </p>
-            </div>
-
-            {/* Curses! Campaign Frame toggle */}
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-[#f7f7ff]">
+                <h2 className="font-serif text-lg font-semibold text-[#f7f7ff]">
                   Curses! Campaign Frame
+                </h2>
+                <p className="text-sm text-[#b9baa3]/50 mt-0.5">
+                  Enable Curses! homebrew content for this campaign (Faction Favors, extra conditions, etc.).
                 </p>
-                <p className="text-xs text-[#b9baa3]/50 mt-0.5 leading-snug">
-                  Enables Curses! homebrew content for all characters in this
-                  campaign — Faction Favors, extra conditions, and more.
-                </p>
-                {!cursesContent && (
-                  <p className="text-xs text-[#b9baa3]/40 mt-1 leading-snug">
-                    Curses! panels and conditions will be hidden for all
-                    characters in this campaign.
-                  </p>
-                )}
               </div>
               <button
                 type="button"
                 role="switch"
                 aria-checked={cursesContent}
-                aria-label="Enable Curses! campaign frame"
-                onClick={() => {
-                  setCursesContent((v) => !v);
-                  setSaveSuccess(false);
-                }}
+                onClick={() => { setCursesContent((v) => !v); setSaveSuccess(false); }}
                 className={[
                   "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full",
                   "border-2 transition-colors duration-200",
-                  "focus:outline-none focus:ring-2 focus:ring-[#577399] focus:ring-offset-2 focus:ring-offset-slate-900",
+                  "focus:outline-none focus:ring-2 focus:ring-coral-400 focus:ring-offset-2 focus:ring-offset-slate-900",
                   cursesContent
-                    ? "border-[#577399] bg-[#577399]"
+                    ? "border-coral-400 bg-coral-400"
                     : "border-slate-600 bg-slate-700",
                 ].join(" ")}
               >
@@ -1226,89 +637,34 @@ export default function CampaignSettingsClient() {
                 />
               </button>
             </div>
-
-            {/* Divider */}
-            <div className="border-t border-slate-700/40" />
-
-            {/* Required character level */}
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm font-semibold text-[#f7f7ff]">
-                  Required Character Level
-                </p>
-                <p className="text-xs text-[#b9baa3]/50 mt-0.5 leading-snug">
-                  Restrict characters joining this campaign to a specific level.
-                  Pre-gens in the pool will be imported at this level when a
-                  player joins.
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <select
-                  value={requiredLevel ?? ""}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setRequiredLevel(val === "" ? null : Number(val));
-                    setSaveSuccess(false);
-                  }}
-                  aria-label="Required character level"
-                  className="
-                    rounded-lg border border-slate-700/60 bg-slate-800
-                    px-3 py-2 text-sm text-[#f7f7ff] w-40
-                    focus:outline-none focus:ring-2 focus:ring-[#577399]
-                    focus:ring-offset-2 focus:ring-offset-slate-900
-                  "
-                >
-                  <option value="">No restriction</option>
-                  {Array.from({ length: 10 }, (_, i) => i + 1).map((lv) => (
-                    <option key={lv} value={lv}>
-                      Level {lv}
-                    </option>
-                  ))}
-                </select>
-                {requiredLevel !== null && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setRequiredLevel(null);
-                      setSaveSuccess(false);
-                    }}
-                    className="text-xs text-[#b9baa3]/50 hover:text-[#b9baa3] transition-colors"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-              {requiredLevel !== null && (
-                <p className="text-xs text-[#b9baa3]/40 leading-snug">
-                  Characters that do not match Level {requiredLevel} will see a
-                  prompt on their character sheet to level up before joining.
-                </p>
-              )}
-            </div>
+            {!cursesContent && (
+              <p className="text-xs text-[#b9baa3]/40 leading-snug">
+                Curses! content (Faction Favors panel, Curses! conditions) will be hidden for all characters in this campaign.
+              </p>
+            )}
           </section>
 
-          {/* Save button + status messages */}
+          {/* Campaign Frames management (attach/detach/conflicts) */}
+          <section aria-label="Campaign frames">
+            <CampaignFramesTab campaignId={campaignId} isGm={true} />
+          </section>
+
+          {/* Schedule editor */}
+          <ScheduleEditor schedule={schedule} onChange={setSchedule} />
+
+          {/* Error */}
           {updateMutation.isError && (
-            <div
-              id={formErrorId}
-              role="alert"
-              className="rounded-lg border border-[#fe5f55]/40 bg-[#fe5f55]/10 px-4 py-3"
-            >
+            <div id={formErrorId} role="alert" className="rounded-lg border border-[#fe5f55]/40 bg-[#fe5f55]/10 px-4 py-3">
               <p className="text-sm text-[#fe5f55]">
                 {updateMutation.error?.message ?? "Failed to save changes."}
               </p>
             </div>
           )}
 
+          {/* Success */}
           {saveSuccess && (
-            <div
-              role="status"
-              aria-live="polite"
-              className="rounded-lg border border-green-700/40 bg-green-900/20 px-4 py-3"
-            >
-              <p className="text-sm text-green-400">
-                Changes saved successfully.
-              </p>
+            <div role="status" aria-live="polite" className="rounded-lg border border-green-700/40 bg-green-900/20 px-4 py-3">
+              <p className="text-sm text-green-400">Changes saved successfully.</p>
             </div>
           )}
 
@@ -1316,9 +672,7 @@ export default function CampaignSettingsClient() {
             <button
               type="submit"
               disabled={!canSave}
-              aria-describedby={
-                updateMutation.isError ? formErrorId : undefined
-              }
+              aria-describedby={updateMutation.isError ? formErrorId : undefined}
               className="
                 rounded-lg px-6 py-2.5 font-semibold text-sm
                 bg-[#577399] text-[#f7f7ff]
@@ -1331,10 +685,7 @@ export default function CampaignSettingsClient() {
             >
               {updateMutation.isPending ? (
                 <span className="flex items-center gap-2">
-                  <span
-                    aria-hidden="true"
-                    className="h-3.5 w-3.5 animate-spin rounded-full border border-[#f7f7ff] border-t-transparent"
-                  />
+                  <span aria-hidden="true" className="h-3.5 w-3.5 animate-spin rounded-full border border-[#f7f7ff] border-t-transparent" />
                   Saving…
                 </span>
               ) : (
@@ -1344,30 +695,20 @@ export default function CampaignSettingsClient() {
           </div>
         </form>
 
-        {/* ── Pre-gen Pool (outside the save form — own mutations) ── */}
-        <PregenPoolSection campaignId={campaign?.campaignId ?? ""} />
-
-        {/* ── Danger Zone ── */}
+        {/* Danger zone */}
         <section
           aria-label="Danger zone"
           className="rounded-xl border border-[#fe5f55]/30 bg-slate-900/80 p-6 space-y-4"
         >
-          <div>
-            <h2 className="font-serif text-lg font-semibold text-[#fe5f55]">
-              Danger Zone
-            </h2>
-            <p className="text-sm text-[#b9baa3]/60 mt-1">
-              Permanently deletes this campaign and removes all members. This
-              cannot be undone.
-            </p>
-          </div>
+          <h2 className="font-serif text-lg font-semibold text-[#fe5f55]">
+            Danger Zone
+          </h2>
+          <p className="text-sm text-[#b9baa3]/60">
+            Permanently deletes this campaign and removes all members. This cannot be undone.
+          </p>
 
           {deleteMutation.isError && (
-            <div
-              id={delErrorId}
-              role="alert"
-              className="rounded-lg border border-[#fe5f55]/40 bg-[#fe5f55]/10 px-4 py-3"
-            >
+            <div id={delErrorId} role="alert" className="rounded-lg border border-[#fe5f55]/40 bg-[#fe5f55]/10 px-4 py-3">
               <p className="text-sm text-[#fe5f55]">
                 {deleteMutation.error?.message ?? "Failed to delete campaign."}
               </p>
@@ -1397,17 +738,14 @@ export default function CampaignSettingsClient() {
             >
               <p className="text-sm font-semibold text-[#fe5f55]">
                 Are you absolutely sure? This will permanently delete{" "}
-                <strong>&ldquo;{campaign?.name}&rdquo;</strong> and cannot be
-                undone.
+                <strong>&ldquo;{campaign?.name}&rdquo;</strong> and cannot be undone.
               </p>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={handleDelete}
                   disabled={deleteMutation.isPending}
-                  aria-describedby={
-                    deleteMutation.isError ? delErrorId : undefined
-                  }
+                  aria-describedby={deleteMutation.isError ? delErrorId : undefined}
                   className="
                     rounded-lg px-5 py-2.5 text-sm font-semibold
                     bg-[#fe5f55] text-white
@@ -1419,10 +757,7 @@ export default function CampaignSettingsClient() {
                 >
                   {deleteMutation.isPending ? (
                     <span className="flex items-center gap-2">
-                      <span
-                        aria-hidden="true"
-                        className="h-3.5 w-3.5 animate-spin rounded-full border border-white border-t-transparent"
-                      />
+                      <span aria-hidden="true" className="h-3.5 w-3.5 animate-spin rounded-full border border-white border-t-transparent" />
                       Deleting…
                     </span>
                   ) : (
