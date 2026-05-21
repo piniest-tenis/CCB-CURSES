@@ -273,6 +273,7 @@ export const handlePostCharacter = withErrorHandling(
       activeArmorId: null,
       levelUpHistory: {},
       markedTraits: [],
+      spellcastTrait: null,
     };
 
     // 7. Save to DynamoDB

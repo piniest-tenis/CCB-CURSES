@@ -534,6 +534,7 @@ interface ClassRecord {
   connectionQuestions?: string[];
   mechanicalNotes?: string;
   source?: string;
+  subclasses?: Array<{ subclassId: string; spellcastTrait: string }>;
 }
 
 interface GameDataRecord {
@@ -808,6 +809,8 @@ function toCharacterResponse(
     multiclassDomainId:          record.multiclassDomainId ?? null,
     multiclassClassFeatureIndex: record.multiclassClassFeatureIndex ?? null,
     campaignId: record.campaignId ?? null,
+    // ── Token system ──────────────────────────────────────────────────────
+    spellcastTrait: record.spellcastTrait ?? null,
   };
 }
 
@@ -937,6 +940,12 @@ async function createCharacter(
     ? await lookupClass(input.classId)
     : null;
 
+  // Derive spellcastTrait from the chosen subclass (if any).
+  // Stored denormalized so backend action handlers stay pure (no DynamoDB lookup).
+  const spellcastTrait = input.subclassId && classRecord
+    ? ((classRecord.subclasses ?? []).find((sc) => sc.subclassId === input.subclassId)?.spellcastTrait as import("@shared/types").CoreStatName | undefined ?? null)
+    : null;
+
   // Look up ancestry and community in parallel (needed for mechanicalBonuses)
   const [ancestryRecord, communityRecord] = await Promise.all([
     input.ancestryId
@@ -1062,6 +1071,8 @@ async function createCharacter(
     multiclassClassFeatureIndex: null,
     // ── Campaign (unassigned at creation) ─────────────────────────────────
     campaignId: null,
+    // ── Token system ──────────────────────────────────────────────────────
+    spellcastTrait,
   };
 
   // ── SRD Validation ─────────────────────────────────────────────────────────
@@ -1641,6 +1652,8 @@ const LevelUpSchema = z.object({
   exchangeCardId:  z.string().nullable().optional(),
   newSubclassId:   z.string().nullable().optional(),
   newClassId:      z.string().nullable().optional(),
+  /** New spellcast trait when subclass changes. Must accompany newSubclassId. */
+  spellcastTrait:  z.enum(["agility","strength","finesse","instinct","presence","knowledge"]).nullable().optional(),
 });
 
 async function levelUpCharacter(
@@ -1673,7 +1686,13 @@ async function levelUpCharacter(
 
   // Apply optional identity changes from advancement choices
   if (body.newSubclassId) {
-    updatedCharacter = { ...updatedCharacter, subclassId: body.newSubclassId };
+    updatedCharacter = {
+      ...updatedCharacter,
+      subclassId: body.newSubclassId,
+      // Update denormalized spellcast trait alongside the new subclass.
+      // The frontend resolves spellcastTrait from classData at selection time.
+      spellcastTrait: body.spellcastTrait ?? updatedCharacter.spellcastTrait,
+    };
   }
 
   const updatedRecord: CharacterRecord = {

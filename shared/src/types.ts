@@ -266,6 +266,13 @@ export interface Character extends CharacterSummary {
    * UserPreferences.diceColors and the system defaults.
    */
   diceColors?: DiceColorPrefs;
+  /**
+   * The core stat used as this character's Spellcast Trait, denormalized from
+   * the chosen subclass at character creation and updated on subclass change.
+   * Null when the character has no subclass or the subclass has no spellcast trait.
+   * Required by the Token Cap Resolver and backend action handlers to keep them pure.
+   */
+  spellcastTrait: CoreStatName | null;
 }
 
 // ─── Class & Subclass ─────────────────────────────────────────────────────────
@@ -351,6 +358,8 @@ export interface CommunityData {
   source: CharacterSource;
   /** Flat stat bonuses granted at character creation. Absent when there are none. */
   mechanicalBonuses?: MechanicalBonus[];
+  /** Token behaviour for the token pool associated with this community, if any. */
+  tokenConfig?: TokenConfig;
 }
 
 export interface AncestryData {
@@ -364,6 +373,37 @@ export interface AncestryData {
   source: CharacterSource;
   /** Flat stat bonuses granted at character creation. Absent when there are none. */
   mechanicalBonuses?: MechanicalBonus[];
+}
+
+// ─── Token System ─────────────────────────────────────────────────────────────
+
+/**
+ * Describes how a single token pool (per domain card) behaves.
+ *
+ * `maxStat` determines the cap at runtime:
+ *   - A `CoreStatName` → the character's current value for that core stat.
+ *   - `'level'`        → the character's current level.
+ *   - `'tier'`         → the tier derived from the character's level (1–4).
+ *   - `'spellcast'`    → the character's spellcast core stat value
+ *                        (null if `spellcastTrait` is null).
+ *   - A `number`       → fixed cap.
+ *   - `null`           → uncapped.
+ *
+ * `restAction` is optional; omitting it means the token pool resets only
+ * through explicit card or class-feature effects.
+ */
+export interface TokenConfig {
+  maxStat:
+    | CoreStatName
+    | "level"
+    | "tier"
+    | "spellcast"
+    | number
+    | null;
+  restAction?: {
+    trigger: "long-rest" | "short-rest" | "session-start";
+    effect: "fill-to-cap" | "clear" | "add-1";
+  };
 }
 
 // ─── Domain Cards ─────────────────────────────────────────────────────────────
@@ -387,6 +427,8 @@ export interface DomainCard {
   linkedCardIds: string[];
   grimoire: GrimoireAbility[];
   source: CharacterSource;
+  /** Token behaviour for the token pool associated with this card, if any. */
+  tokenConfig?: TokenConfig;
 }
 
 export interface DomainSummary {
