@@ -544,6 +544,8 @@ interface GameDataRecord {
   name: string;
   type: string;
   mechanicalBonuses?: MechanicalBonus[];
+  /** Token behaviour for community traits that have a token pool. */
+  tokenConfig?: import("@shared/types").TokenConfig;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -1325,9 +1327,20 @@ async function takeRest(
 
   const { restType } = parseBody(event, RestSchema);
 
+  // Build tokenConfigs map for community token rest effects.
+  // Key: "community/{communityId}" — matches the cardTokens key used on the frontend.
+  const tokenConfigs: Record<string, import("@shared/types").TokenConfig> = {};
+  if (existing.communityId) {
+    const communityRecord = await lookupGameData("COMMUNITY", existing.communityId);
+    if (communityRecord?.tokenConfig) {
+      tokenConfigs[`community/${existing.communityId}`] = communityRecord.tokenConfig;
+    }
+  }
+
   const { character: updatedCharacter, cleared } = applyRest(
     existing as unknown as Character,
-    restType
+    restType,
+    Object.keys(tokenConfigs).length > 0 ? tokenConfigs : undefined
   );
 
   const updatedRecord: CharacterRecord = {

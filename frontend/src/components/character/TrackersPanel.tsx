@@ -42,7 +42,9 @@ import { ALL_ARMOR, ALL_TIER1_WEAPONS } from "@/lib/srdEquipment";
 import type { SRDArmor, SRDWeapon } from "@/lib/srdEquipment";
 import { DiceRollButton } from "@/components/dice/DiceRollButton";
 import type { RollRequest, DieSize, RollBonus } from "@/types/dice";
-import type { CoreStatName } from "@shared/types";
+import type { CoreStatName, TokenConfig } from "@shared/types";
+import { resolveTokenCap } from "@shared/tokenResolver";
+import { cardHasTokens, statLabel, type StatLabelKey } from "@/lib/tokenUtils";
 
 // ─── Props helper: characterId is provided by TrackersPanel from the store ────
 
@@ -1882,6 +1884,142 @@ function ExperiencesList() {
 }
 
 // ─── TraitsSection ────────────────────────────────────────────────────────────
+// ─── CommunityTokenTracker ────────────────────────────────────────────────────
+// Renders a token tracker for a community trait that has a tokenConfig.
+// Uses the namespaced key "community/{communityId}" in cardTokens.
+
+interface CommunityTokenTrackerProps {
+  communityId: string;
+  communityName: string;
+  characterId: string;
+  tokenConfig: TokenConfig;
+}
+
+function CommunityTokenTracker({
+  communityId,
+  communityName,
+  characterId,
+  tokenConfig,
+}: CommunityTokenTrackerProps) {
+  const { activeCharacter } = useCharacterStore();
+  const spendAction = useActionButton(characterId);
+  const addAction = useActionButton(characterId);
+  const clearAction = useActionButton(characterId);
+
+  const cardId = `community/${communityId}`;
+  const cardTokens = activeCharacter?.cardTokens ?? {};
+  const count = cardTokens[cardId] ?? 0;
+
+  const resolvedCap = activeCharacter
+    ? resolveTokenCap(tokenConfig, activeCharacter)
+    : null;
+
+  const isPending =
+    spendAction.isPending || addAction.isPending || clearAction.isPending;
+  const inlineError =
+    spendAction.inlineError ?? addAction.inlineError ?? clearAction.inlineError;
+  const errorId = React.useId();
+
+  const pipCount = resolvedCap != null ? resolvedCap : 8;
+  const atCap = resolvedCap != null && count >= resolvedCap;
+  const atZero = count <= 0;
+
+  const capStatKey =
+    tokenConfig.maxStat != null && typeof tokenConfig.maxStat !== "number"
+      ? (tokenConfig.maxStat as StatLabelKey)
+      : null;
+  const capLabel = capStatKey ? statLabel(capStatKey) : null;
+  const countDisplay =
+    resolvedCap != null
+      ? capLabel
+        ? `${count} / ${resolvedCap} (${capLabel})`
+        : `${count} / ${resolvedCap}`
+      : `${count}`;
+
+  return (
+    <div className="mt-2 flex flex-col gap-1">
+      <div className="flex items-center gap-2">
+        <span className="text-xs uppercase tracking-wider text-parchment-600">
+          Tokens
+        </span>
+        <div
+          role="spinbutton"
+          aria-valuenow={count}
+          aria-valuemin={0}
+          aria-valuemax={resolvedCap ?? 99}
+          aria-label={`Token count for ${communityName}`}
+          aria-describedby={inlineError ? errorId : undefined}
+          className="flex items-center gap-1"
+        >
+          <button
+            type="button"
+            onClick={() => spendAction.fire("spend-token", { cardId })}
+            disabled={isPending || atZero}
+            aria-label={`Remove token from ${communityName}`}
+            className="
+              min-h-[44px] min-w-[44px] rounded border border-burgundy-800 bg-slate-900
+              text-sm text-parchment-500 hover:bg-burgundy-900/30
+              disabled:opacity-50 disabled:cursor-not-allowed
+              transition-colors flex items-center justify-center
+              focus:outline-none focus:ring-1 focus:ring-gold-500
+            "
+          >
+            −
+          </button>
+          <span className="min-w-[4rem] text-center text-sm font-bold text-parchment-200 tabular-nums">
+            {countDisplay}
+          </span>
+          <button
+            type="button"
+            onClick={() => addAction.fire("add-token", { cardId })}
+            disabled={isPending || atCap}
+            aria-label={`Add token to ${communityName}`}
+            className="
+              min-h-[44px] min-w-[44px] rounded border border-gold-800 bg-slate-900
+              text-sm text-gold-600 hover:bg-gold-900/20
+              disabled:opacity-50 disabled:cursor-not-allowed
+              transition-colors flex items-center justify-center
+              focus:outline-none focus:ring-1 focus:ring-gold-500
+            "
+          >
+            +
+          </button>
+          <button
+            type="button"
+            onClick={() => clearAction.fire("clear-tokens", { cardId })}
+            disabled={isPending}
+            aria-label={`Clear all tokens from ${communityName}`}
+            title="Clear all tokens"
+            className="
+              min-h-[44px] min-w-[44px] rounded border border-slate-700 bg-slate-900
+              text-sm text-parchment-600 hover:bg-coral-400/15 hover:text-coral-400 hover:border-coral-400/40
+              disabled:opacity-50 disabled:cursor-wait
+              transition-colors flex items-center justify-center
+              focus:outline-none focus:ring-1 focus:ring-gold-500
+              ml-1
+            "
+          >
+            ×
+          </button>
+        </div>
+      </div>
+
+      {pipCount > 0 && (
+        <div className="flex gap-1 ml-0.5" aria-hidden="true">
+          {Array.from({ length: pipCount }, (_, i) => (
+            <span
+              key={i}
+              className={`h-2 w-2 rounded-full ${i < count ? "bg-[#DAA520]" : "bg-slate-700"}`}
+            />
+          ))}
+        </div>
+      )}
+
+      <InlineActionError message={inlineError} id={errorId} />
+    </div>
+  );
+}
+
 // Displays ancestry and community features as read-only named text.
 // Per SRD, these are not "Traits" — Traits are the six core stats.
 // Ancestry/Community confer named Features, not numerical Trait bonuses.
@@ -1891,6 +2029,8 @@ interface HeritageFeatureProps {
   featureText: string; // rule text describing the feature
   sourceName: string; // e.g. "Drakona", "Seaborne"
   sourceLabel: string; // "Ancestry" or "Community"
+  /** Optional token tracker rendered below the feature text (community only). */
+  tokenTracker?: React.ReactNode;
 }
 
 function HeritageFeature({
@@ -1898,6 +2038,7 @@ function HeritageFeature({
   featureText,
   sourceName,
   sourceLabel,
+  tokenTracker,
 }: HeritageFeatureProps) {
   return (
     <article
@@ -1918,12 +2059,16 @@ function HeritageFeature({
 
       {/* Feature text — the actual rule description */}
       <p className="text-sm text-[#b9baa3] leading-snug">{featureText}</p>
+
+      {/* Token tracker — only rendered when community has a tokenConfig */}
+      {tokenTracker}
     </article>
   );
 }
 
 function HeritageSection() {
   const { activeCharacter } = useCharacterStore();
+  const characterId = useCharacterId();
 
   if (!activeCharacter) return null;
 
@@ -1941,6 +2086,7 @@ function HeritageSection() {
     featureText: string;
     sourceName: string;
     sourceLabel: string;
+    tokenTracker?: React.ReactNode;
   }[] = [];
 
   if (ancestryData) {
@@ -1969,6 +2115,15 @@ function HeritageSection() {
       featureText: communityData.traitDescription,
       sourceName: communityData.name,
       sourceLabel: "Community",
+      tokenTracker:
+        communityData.tokenConfig && communityId ? (
+          <CommunityTokenTracker
+            communityId={communityId}
+            communityName={communityData.name}
+            characterId={characterId}
+            tokenConfig={communityData.tokenConfig}
+          />
+        ) : undefined,
     });
   }
 
@@ -1994,6 +2149,7 @@ function HeritageSection() {
               featureText={feature.featureText}
               sourceName={feature.sourceName}
               sourceLabel={feature.sourceLabel}
+              tokenTracker={feature.tokenTracker}
             />
           </div>
         ))}
