@@ -1,0 +1,3 @@
+A dense, herbal scented and somewhat malleable stone found in deposits throughout [[Tidwell]]. Not much is known of its origin, though there are a number of species such as [[Teetles]] and [[Soojakarp]] who thrive on the microscopic plant and animal life that comprise roughly 40% of the mass of these stones. Sallidean Stone is a living thing, similar to a coral in a sense, but it is shapeable and can be carved without destroying the organisms within.
+
+Major deposits of Sallidean Stone can be found in [[Danitra Hill]], underwater in the [[Vaiknelaht Bay]], and in the hills outside [[Monaster]].

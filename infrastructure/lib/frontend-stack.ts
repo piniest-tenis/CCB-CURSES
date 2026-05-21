@@ -177,6 +177,13 @@ function handler(event) {
     // in app.ts and its ARN is passed in via frontendCertificateArn.
     // -----------------------------------------------------------------------
     const prodDomain = "ccb.curses.show";
+    const apiOrigin = new origins.HttpOrigin(
+      cdk.Fn.select(2, cdk.Fn.split("/", apiStack.httpApi.apiEndpoint)),
+      {
+        originPath: `/${stage}`,
+        protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
+      }
+    );
     const certificate =
       isProd && frontendCertificateArn
         ? acm.Certificate.fromCertificateArn(
@@ -225,7 +232,39 @@ function handler(event) {
 
         // Additional cache behavior for static assets — long TTL
         additionalBehaviors: {
-          "/_next/static/*": {
+          "api/*": {
+            origin: apiOrigin,
+            viewerProtocolPolicy:
+              cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+            cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+            originRequestPolicy:
+              cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+            compress: true,
+            allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+            cachedMethods: cloudfront.CachedMethods.CACHE_GET_HEAD_OPTIONS,
+            functionAssociations: [
+              {
+                function: new cloudfront.Function(this, "ApiPathRewriteFunction", {
+                  functionName: `daggerheart-api-rewrite-${stage}`,
+                  comment: "Strip /api prefix before proxying to API Gateway",
+                  code: cloudfront.FunctionCode.fromInline(`
+function handler(event) {
+  var request = event.request;
+  if (request.uri.startsWith("/api/")) {
+    request.uri = request.uri.slice(4);
+  } else if (request.uri === "/api") {
+    request.uri = "/";
+  }
+  return request;
+}
+                  `.trim()),
+                  runtime: cloudfront.FunctionRuntime.JS_2_0,
+                }),
+                eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+              },
+            ],
+          },
+          "_next/static/*": {
             origin: origins.S3BucketOrigin.withOriginAccessControl(
               this.frontendBucket,
               {

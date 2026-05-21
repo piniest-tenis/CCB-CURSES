@@ -20,7 +20,7 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useCharacter, useUpdateCharacter } from "@/hooks/useCharacter";
 import {
@@ -100,6 +100,11 @@ import { usePatreonGate, usePatreonOAuth } from "@/hooks/usePatreonGate";
 import { useSourceFilterDefault } from "@/hooks/useSourceFilterDefault";
 import { ViewerModeProvider } from "./ViewerModeContext";
 import { DisabledInViewerMode } from "./DisabledInViewerMode";
+
+const SUPPORT_BUG_DISMISSED_KEY = "support-bug-dismissed-v1";
+const SUPPORT_PATREON_URL = "https://patreon.com/CursesAP";
+const SUPPORT_BUG_MESSAGE =
+  "Enjoying the app? You can support its development and the show that inspired it by joining our free Patreon.";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -1697,6 +1702,145 @@ function SaveStatus({ isDirty, isSaving }: SaveStatusProps) {
   );
 }
 
+function SupportBug() {
+  const pathname = usePathname();
+  const { needsPatreon } = usePatreonGate();
+  const [dismissed, setDismissed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(SUPPORT_BUG_DISMISSED_KEY) === "1";
+  });
+  const [open, setOpen] = useState(false);
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearCloseTimer = useCallback(() => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      clearCloseTimer();
+    };
+  }, [clearCloseTimer]);
+
+  const handleDismiss = useCallback(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(SUPPORT_BUG_DISMISSED_KEY, "1");
+    }
+    clearCloseTimer();
+    setDismissed(true);
+    setOpen(false);
+  }, [clearCloseTimer]);
+
+  const handlePointerEnter = useCallback(() => {
+    clearCloseTimer();
+    setOpen(true);
+  }, [clearCloseTimer]);
+
+  const handlePointerLeave = useCallback(() => {
+    clearCloseTimer();
+    closeTimeoutRef.current = setTimeout(() => {
+      setOpen(false);
+      closeTimeoutRef.current = null;
+    }, 180);
+  }, [clearCloseTimer]);
+
+  const handleBlur = useCallback(
+    (event: React.FocusEvent<HTMLDivElement>) => {
+      if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+      clearCloseTimer();
+      setOpen(false);
+    },
+    [clearCloseTimer],
+  );
+
+  const handleToggle = useCallback(() => {
+    clearCloseTimer();
+    setOpen((current) => !current);
+  }, [clearCloseTimer]);
+
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (event.key === "Escape") {
+        clearCloseTimer();
+        setOpen(false);
+      }
+    },
+    [clearCloseTimer],
+  );
+
+  const isCampaignView = pathname?.startsWith("/campaigns/") ?? false;
+
+  if (dismissed || !needsPatreon || !isCampaignView) return null;
+
+  return (
+    <div
+      className="fixed bottom-3 right-3 z-40 sm:bottom-4 sm:right-4"
+      onMouseEnter={handlePointerEnter}
+      onMouseLeave={handlePointerLeave}
+      onFocus={handlePointerEnter}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+    >
+      <div
+        className={[
+          "flex items-end justify-end gap-2 transition-all duration-150 motion-reduce:transition-none",
+          open ? "w-[min(18rem,calc(100vw-1.5rem))]" : "w-auto",
+        ].join(" ")}
+      >
+        {open && (
+          <div
+            id="support-bug-panel"
+            className="rounded-xl border border-steel-400/25 bg-slate-950/95 px-3 py-2 text-left text-xs text-[#b9baa3] shadow-card backdrop-blur-sm"
+            role="note"
+            aria-label="Support the project"
+          >
+            <div className="flex items-start gap-2">
+              <p className="flex-1 pr-1 leading-relaxed">{SUPPORT_BUG_MESSAGE}</p>
+              <button
+                type="button"
+                onClick={handleDismiss}
+                className="mt-0.5 shrink-0 rounded-full p-1 text-[#b9baa3]/45 transition-colors hover:text-[#f7f7ff] focus:outline-none focus:ring-2 focus:ring-steel-400"
+                aria-label="Dismiss support message"
+              >
+                <i className="fa-solid fa-xmark text-[10px]" aria-hidden="true"></i>
+              </button>
+            </div>
+            <a
+              href={SUPPORT_PATREON_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-steel-300 transition-colors hover:text-[#f7f7ff] focus:outline-none focus:ring-2 focus:ring-steel-400"
+            >
+              Join free Patreon
+              <i className="fa-solid fa-arrow-up-right-from-square text-[10px]" aria-hidden="true"></i>
+            </a>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={handleToggle}
+          className={[
+            "flex h-11 min-w-[2.75rem] items-center justify-center rounded-full border px-3 text-[11px] font-semibold uppercase tracking-[0.18em]",
+            "border-steel-400/30 bg-slate-950/85 text-[#b9baa3]/80 shadow-card backdrop-blur-sm transition-colors",
+            "hover:border-steel-400/50 hover:text-[#f7f7ff] focus:outline-none focus:ring-2 focus:ring-steel-400 motion-reduce:transition-none",
+          ].join(" ")}
+          aria-label="Support the project"
+          aria-expanded={open}
+          aria-controls="support-bug-panel"
+          title="Support"
+        >
+          <i className="fa-solid fa-sparkles text-[10px]" aria-hidden="true"></i>
+          <span className="ml-1 hidden sm:inline">Support</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main CharacterSheet ──────────────────────────────────────────────────────
 
 export function CharacterSheet({ characterId, viewerMode = false }: CharacterSheetProps) {
@@ -2047,6 +2191,8 @@ function CharacterSheetContent({
 
       {/* Dice log overlay (fixed lower-left) */}
       <DiceLog />
+
+      <SupportBug />
     </div>
   );
 }

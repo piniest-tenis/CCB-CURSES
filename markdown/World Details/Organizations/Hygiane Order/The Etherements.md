@@ -1,0 +1,3 @@
+Mediums, the weird, and the cursed who study the spirits and the haunts within Forestdown. Research and prolonged study of the spirits, specifically [[The Spirit Ichida]], often leads to obsessions for members of this order. Thus, it routinely conducts purges of its ranks to expel those affected. These members invariably ask to be allowed to enter the Forest alone.
+
+In recent years, this sect has grown increasingly cloistered and paranoid under the leadership of [[Rearcaptain Oramora]]. Their guidance has seen the Etherements take up residence in the destroyed northern tower, where they've begun openly experimenting with [[Madanikuputukas (Tukas)]] and potentially more volatile specimens of the [[Etherotaxia]].

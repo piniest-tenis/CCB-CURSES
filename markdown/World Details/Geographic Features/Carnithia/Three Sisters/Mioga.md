@@ -1,0 +1,1 @@
+A shallow lake, only 12 feet at its deepest. Home to a broad variety of niche species found primarily only at this lake or rarely on the coastline of the other Sisters.

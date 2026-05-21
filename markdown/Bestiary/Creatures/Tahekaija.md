@@ -1,0 +1,1 @@
+A city-sized spider which rules [[The Waste]]. Travelers that seek passage within The Waste are encouraged to ply Tahekaija with offerings of gold, meat and incenses left in piles at its borders. 

@@ -1,0 +1,1 @@
+A golden berried grain which grows in dense clusters. Both the root and the berry are edible, and comprise a large portion of the diet of most sentient species within [Tidwell](Tidwell.md)

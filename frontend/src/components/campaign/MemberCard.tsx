@@ -11,6 +11,13 @@
 "use client";
 
 import React from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faUserMinus,
+  faBookmark,
+  faXmark,
+  faBolt,
+} from "@fortawesome/free-solid-svg-icons";
 import { RoleBadge } from "./RoleBadge";
 import type { CampaignMemberDetail } from "@/types/campaign";
 
@@ -28,6 +35,16 @@ interface MemberCardProps {
   onRemove?: () => void;
   /** GM only: remove the character assignment without removing the player. */
   onUnassignCharacter?: () => void;
+  /** GM only: import this member's character as a personal pre-gen. Only rendered when provided. */
+  onImportAsPregen?: () => Promise<void>;
+  /** Whether the import-as-pregen operation is in progress for this member. */
+  isImportingPregen?: boolean;
+  /** Whether this member's character has already been imported as a pre-gen. */
+  isAlreadyPregen?: boolean;
+  /** GM only: toggle force crit for this member's character. Only rendered when provided. */
+  onForceCrit?: () => void;
+  /** Whether force crit is currently armed for this member's character. */
+  isCritArmed?: boolean;
 }
 
 export function MemberCard({
@@ -41,6 +58,11 @@ export function MemberCard({
   onSelect,
   onRemove,
   onUnassignCharacter,
+  onImportAsPregen,
+  isImportingPregen = false,
+  isAlreadyPregen = false,
+  onForceCrit,
+  isCritArmed = false,
 }: MemberCardProps) {
   const isPrimaryGm = member.userId === primaryGmId;
 
@@ -118,67 +140,146 @@ export function MemberCard({
         </div>
 
         {/* GM actions */}
-        {isGm && (onUnassignCharacter || (!isPrimaryGm && onRemove)) && (
-          <div className="flex flex-col items-end gap-1 shrink-0">
-            {/* Unassign character — shown for any member with a character (including primary GM) */}
-            {onUnassignCharacter && member.characterId && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onUnassignCharacter();
-                }}
-                disabled={isUnassigning}
-                aria-label={`Unassign ${characterName ?? "character"} from ${member.displayName}`}
-                title="Remove this character from the campaign without removing the player"
-                className="
-                  rounded px-2 py-1 text-xs
+        {isGm &&
+          (onUnassignCharacter ||
+            (!isPrimaryGm && onRemove) ||
+            onImportAsPregen ||
+            onForceCrit) && (
+            <div
+              className="flex flex-row items-center gap-1 shrink-0"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Force Crit — only for players with a character */}
+              {onForceCrit && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onForceCrit();
+                  }}
+                  title={
+                    isCritArmed
+                      ? "Disarm forced critical"
+                      : "Force next roll to critical"
+                  }
+                  aria-label={
+                    isCritArmed
+                      ? "Disarm forced critical"
+                      : "Force next roll to critical"
+                  }
+                  aria-pressed={isCritArmed}
+                  className={[
+                    "w-7 h-7 flex items-center justify-center rounded transition-colors",
+                    "focus:outline-none focus:ring-2 focus:ring-[#DAA520]",
+                    isCritArmed
+                      ? "text-[#DAA520] bg-[#DAA520]/20 hover:bg-[#DAA520]/30"
+                      : "text-[#b9baa3]/40 hover:text-[#DAA520]/60 hover:bg-[#DAA520]/10",
+                  ].join(" ")}
+                >
+                  <FontAwesomeIcon icon={faBolt} className="h-3 w-3" />
+                </button>
+              )}
+
+              {/* Unassign character */}
+              {onUnassignCharacter && member.characterId && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onUnassignCharacter();
+                  }}
+                  disabled={isUnassigning}
+                  title={`Unassign ${characterName ?? "character"} from ${member.displayName}`}
+                  aria-label={`Unassign ${characterName ?? "character"} from ${member.displayName}`}
+                  className="
+                  w-7 h-7 flex items-center justify-center rounded transition-colors
                   text-[#DAA520]/60 hover:text-[#DAA520] hover:bg-[#DAA520]/10
                   disabled:opacity-40 disabled:cursor-wait
-                  transition-colors
                   focus:outline-none focus:ring-2 focus:ring-[#DAA520]/60
                 "
-              >
-                {isUnassigning ? (
-                  <span
-                    aria-hidden="true"
-                    className="inline-block h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"
-                  />
-                ) : (
-                  "Unassign"
-                )}
-              </button>
-            )}
-            {/* Remove player from campaign entirely */}
-            {onRemove && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRemove();
-                }}
-                disabled={isRemoving}
-                aria-label={`Remove ${member.displayName} from campaign`}
-                className="
-                  rounded px-2 py-1 text-xs
+                >
+                  {isUnassigning ? (
+                    <span
+                      aria-hidden="true"
+                      className="inline-block h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"
+                    />
+                  ) : (
+                    <FontAwesomeIcon icon={faUserMinus} className="h-3 w-3" />
+                  )}
+                </button>
+              )}
+
+              {/* Import as Pre-gen */}
+              {!!onImportAsPregen && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!isAlreadyPregen && !isImportingPregen)
+                      onImportAsPregen();
+                  }}
+                  disabled={isAlreadyPregen || isImportingPregen}
+                  title={
+                    isAlreadyPregen
+                      ? `${characterName ?? "Character"} already imported as pre-gen`
+                      : `Import ${characterName ?? "character"} as a pre-gen`
+                  }
+                  aria-label={
+                    isAlreadyPregen
+                      ? `${characterName ?? "Character"} already imported as pre-gen`
+                      : `Import ${characterName ?? "character"} as a pre-gen`
+                  }
+                  className={[
+                    "w-7 h-7 flex items-center justify-center rounded transition-colors",
+                    "focus:outline-none focus:ring-2 focus:ring-[#577399]/60 [white-space:nowrap]",
+                    isAlreadyPregen
+                      ? "text-[#577399] opacity-60 cursor-not-allowed"
+                      : isImportingPregen
+                        ? "text-[#b9baa3] opacity-60 cursor-wait"
+                        : "text-[#577399]/60 hover:text-[#577399] hover:bg-[#577399]/10",
+                  ].join(" ")}
+                >
+                  {isImportingPregen ? (
+                    <span
+                      aria-hidden="true"
+                      className="inline-block h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"
+                    />
+                  ) : (
+                    <FontAwesomeIcon icon={faBookmark} className="h-3 w-3" />
+                  )}
+                </button>
+              )}
+
+              {/* Remove player from campaign */}
+              {onRemove && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemove();
+                  }}
+                  disabled={isRemoving}
+                  title={`Remove ${member.displayName} from campaign`}
+                  aria-label={`Remove ${member.displayName} from campaign`}
+                  className="
+                  w-7 h-7 flex items-center justify-center rounded transition-colors
                   text-[#fe5f55]/60 hover:text-[#fe5f55] hover:bg-[#fe5f55]/10
                   disabled:opacity-40 disabled:cursor-wait
-                  transition-colors
                   focus:outline-none focus:ring-2 focus:ring-[#fe5f55]/60
                 "
-              >
-                {isRemoving ? (
-                  <span
-                    aria-hidden="true"
-                    className="inline-block h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"
-                  />
-                ) : (
-                  "Remove"
-                )}
-              </button>
-            )}
-          </div>
-        )}
+                >
+                  {isRemoving ? (
+                    <span
+                      aria-hidden="true"
+                      className="inline-block h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"
+                    />
+                  ) : (
+                    <FontAwesomeIcon icon={faXmark} className="h-3 w-3" />
+                  )}
+                </button>
+              )}
+            </div>
+          )}
       </div>
     </div>
   );

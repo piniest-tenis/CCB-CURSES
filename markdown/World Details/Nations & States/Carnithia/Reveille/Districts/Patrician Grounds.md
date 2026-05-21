@@ -1,0 +1,1 @@
+This is where the senate of Reveille lives and meets. These are elaborate estates replete with large fruit-bearing trees and immaculately maintained grounds surrounding the [Golden Canopy](Golden%20Canopy.md). There are a number of food sellers, clothing stores and perfumeries in this district.

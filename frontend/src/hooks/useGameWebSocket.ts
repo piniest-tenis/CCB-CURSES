@@ -84,6 +84,9 @@ export function useGameWebSocket(
   const reconnectCountRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isUnmountedRef    = useRef(false);
+  // Outbound messages queued while the socket is not yet OPEN (e.g. the WS is
+  // still connecting when a roll resolves). Drained on ws.onopen.
+  const sendQueueRef      = useRef<string[]>([]);
 
   // Keep options callback fresh without re-running connect effect
   const onPingRef       = useRef(options?.onPing);
@@ -114,6 +117,12 @@ export function useGameWebSocket(
       if (isUnmountedRef.current) { ws.close(); return; }
       setIsConnected(true);
       reconnectCountRef.current = 0; // reset backoff on successful connect
+
+      // Drain any messages that were queued while the socket was connecting
+      const queue = sendQueueRef.current.splice(0);
+      for (const msg of queue) {
+        try { ws.send(msg); } catch { /* drop if send fails immediately */ }
+      }
     };
 
     ws.onmessage = (evt: MessageEvent) => {
@@ -201,6 +210,9 @@ export function useGameWebSocket(
         wsRef.current = null;
       }
 
+      // Discard any queued messages — they are no longer relevant after unmount
+      sendQueueRef.current = [];
+
       setIsConnected(false);
     };
   }, [campaignId, characterId, idToken, connect]);
@@ -231,11 +243,9 @@ export function useGameWebSocket(
 
   // ── sendDiceRoll ──────────────────────────────────────────────────────────────
   // Broadcasts a resolved roll result to all campaign participants via WebSocket.
+  // If the socket is still connecting the message is queued and drained on open.
   const sendDiceRoll = useCallback(
     (result: RollResult, colorOverrides?: DiceColorOverrides) => {
-      const ws = wsRef.current;
-      if (!ws || ws.readyState !== WebSocket.OPEN) return;
-
       const message: Record<string, unknown> = {
         action:     "dice_roll",
         campaignId,
@@ -244,10 +254,19 @@ export function useGameWebSocket(
       };
       if (colorOverrides) message.colorOverrides = colorOverrides;
 
-      try {
-        ws.send(JSON.stringify(message));
-      } catch {
-        // Send failed — connection dropped between check and send
+      const payload = JSON.stringify(message);
+      const ws = wsRef.current;
+
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        try {
+          ws.send(payload);
+        } catch {
+          // Send failed — connection dropped between check and send; queue for retry
+          sendQueueRef.current.push(payload);
+        }
+      } else {
+        // Socket is connecting (CONNECTING) or temporarily down — queue the message
+        sendQueueRef.current.push(payload);
       }
     },
     [campaignId, characterId]

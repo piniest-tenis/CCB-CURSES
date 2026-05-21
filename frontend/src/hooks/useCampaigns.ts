@@ -258,6 +258,10 @@ export interface PregenSummary {
   communityName: string | null;
   domains:       string[];
   nativeLevel:   number;
+  /** Level the GM pre-selected when adding to the pool, if any. */
+  selectedLevel?: number;
+  /** True if another player has already imported this pregen in this campaign. */
+  claimed:       boolean;
 }
 
 export interface PregensResponse {

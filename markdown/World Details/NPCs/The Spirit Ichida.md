@@ -1,0 +1,1 @@
+An ancient ghost, old even before the first age. The Spirit Ichida is the embodiment of change. It has historically managed change through death and rebirth. Few have seen The Spirit Ichida, and those that have rarely survive the experience with their sanity intact.

@@ -41,22 +41,36 @@ export class ApiStack extends cdk.Stack {
         removalPolicy: isProd ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
       });
 
-    // -----------------------------------------------------------------------
-    // CORS allowed origins — shared between API Gateway config and Lambda env
-    // -----------------------------------------------------------------------
-    const corsAllowOrigins = isProd
-      ? [
-          "https://ccb.curses.show",
-          "https://localhost:8080",                                      // Twitch extension local test
-          "https://ajls8isp75nequgerzql4vipnfrzzi.ext-twitch.tv",       // Twitch extension hosted test / prod
-        ]
-      : [
-          "http://localhost:3000",
-          "http://localhost:3001",
-          `https://${stage}.curses-ccb.example.com`,
-          // CloudFront domain for the deployed dev frontend
-          "https://d195iz9cwkg00c.cloudfront.net",
-        ];
+     // -----------------------------------------------------------------------
+     // CORS allowed origins
+     //
+     // corsAllowOrigins      — passed to API Gateway corsPreflight (no wildcards allowed)
+     // corsAllowOriginsLambda — passed to Lambda env var; supports *.domain patterns
+     //                          via the custom resolveOrigin() in middleware.ts
+     // -----------------------------------------------------------------------
+     const corsAllowOrigins = isProd
+       ? [
+           "https://ccb.curses.show",
+           "https://localhost:8080",                                      // Twitch extension local test
+           // Twitch extension iframe subdomains — API GW corsPreflight does not
+           // support wildcards so each subdomain must be listed explicitly.
+           // panel/viewer iframe:
+           "https://ajls8isp75nequgerzql4vipnfrzzi.ext-twitch.tv",
+           // config page iframe:
+           "https://qvwsqbl2ndy7h7p7d33mf43c46y7ji.ext-twitch.tv",
+         ]
+       : [
+           "http://localhost:3000",
+           "http://localhost:3001",
+           `https://${stage}.curses-ccb.example.com`,
+           // CloudFront domain for the deployed dev frontend
+           "https://d195iz9cwkg00c.cloudfront.net",
+         ];
+
+     // Lambda sees the wildcard pattern; resolveOrigin() handles the matching.
+     const corsAllowOriginsLambda = isProd
+       ? [...corsAllowOrigins, "*.ext-twitch.tv"]
+       : corsAllowOrigins;
 
     // -----------------------------------------------------------------------
     // Shared Lambda configuration
@@ -84,7 +98,7 @@ export class ApiStack extends cdk.Stack {
         CMS_TABLE: dataStack.cmsTable.tableName,
         // CORS: Lambda responses must echo back the request Origin against this
         // allowlist to stay consistent with API Gateway's corsPreflight config.
-        CORS_ALLOWED_ORIGINS: corsAllowOrigins.join(","),
+        CORS_ALLOWED_ORIGINS: corsAllowOriginsLambda.join(","),
       },
     };
 

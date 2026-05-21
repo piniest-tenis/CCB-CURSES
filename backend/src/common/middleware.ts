@@ -33,8 +33,31 @@ const CORS_ALLOWED_ORIGINS: readonly string[] = (
   .filter(Boolean);
 
 function resolveOrigin(requestOrigin: string | undefined): string | null {
+  console.log("[CORS] resolveOrigin called:", {
+    requestOrigin,
+    allowedOrigins: CORS_ALLOWED_ORIGINS,
+  });
   if (!requestOrigin) return null;
-  return CORS_ALLOWED_ORIGINS.includes(requestOrigin) ? requestOrigin : null;
+  for (const allowed of CORS_ALLOWED_ORIGINS) {
+    if (allowed.startsWith("*.")) {
+      // Wildcard pattern: *.example.com matches https://foo.example.com
+      // Match: origin must be https:// + (anything) + ".example.com"
+      const suffix = allowed.slice(1); // ".example.com"
+      const matches =
+        requestOrigin.startsWith("https://") &&
+        requestOrigin.endsWith(suffix) &&
+        requestOrigin.length > "https://".length + suffix.length;
+      console.log("[CORS] wildcard check:", { allowed, suffix, matches });
+      if (matches) {
+        return requestOrigin;
+      }
+    } else if (allowed === requestOrigin) {
+      console.log("[CORS] exact match:", allowed);
+      return requestOrigin;
+    }
+  }
+  console.log("[CORS] no match found — returning null");
+  return null;
 }
 
 // ─── Shared Response Headers ──────────────────────────────────────────────────

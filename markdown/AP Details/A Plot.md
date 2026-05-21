@@ -1,0 +1,3 @@
+[[The Spirit Ichida]] is attempting to remake the world before [[The Declaimer]] can reset it for the fifth time. It wants nothing more than an escape from the endless cycle of isolation in [[The Invisible City]]. It has been pushing to expand the [[Creep]] in the [[Fifth Age]], with the express intent of overtaking [[Tidwell]] and the [[Tree of Life]] and [[Tree of Strength]].
+
+By doing so, it intends to change them into new entities before [[The Declaimer]] can finish the ritual of resetting the world. They have absolute faith that in doing so, whatever Tidwell becomes, it will not simply be resetting the same story to be replayed to minor variations.

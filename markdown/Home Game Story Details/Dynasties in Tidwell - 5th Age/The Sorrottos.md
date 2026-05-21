@@ -1,0 +1,3 @@
+A family of [Riolan](Riolan.md) that constitute one of [The Four Families](The%20Four%20Families.md) in [Reveille](The%20Land%20of%20Tidwell/World%20Details/Nations%20&%20States/Carnithia/Reveille/Reveille.md). Headed by [Thoms](Thoms.md), the figurehead of the clan. They are seen as loyal patrons of the arts, and invest heavily in their organization. Generally regarded as "the good guys" amongst the power players in [Indigo Market (District)](Indigo%20Market%20(District).md).
+ 
+Primary Motivation: Efficiency

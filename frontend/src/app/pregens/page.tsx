@@ -6,22 +6,25 @@ import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
 import {
   useUserPregens,
-  useCreateUserPregen,
   useDeleteUserPregen,
+  useLevelUpUserPregen,
+  useUserPregenDetail,
+  type PregenManagementSummary,
 } from "@/hooks/usePregens";
-import type { PregenManagementSummary } from "@/hooks/usePregens";
-import type { Character } from "@shared/types";
+import { useCreateCharacter } from "@/hooks/useCharacter";
+import { LevelUpWizard } from "@/components/character/LevelUpWizard";
+import type { LevelUpInput } from "@/hooks/useCharacter";
 
 export default function PregensPage() {
   const { isReady, isAuthenticated } = useAuthStore();
   const router = useRouter();
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [jsonInput, setJsonInput] = useState("");
-  const [parseError, setParseError] = useState<string | null>(null);
 
   const { data, isLoading, isError } = useUserPregens();
-  const createMutation = useCreateUserPregen();
   const deleteMutation = useDeleteUserPregen();
+  const levelUpMutation = useLevelUpUserPregen();
+  const createCharacterMutation = useCreateCharacter();
+
+  const [levelUpTarget, setLevelUpTarget] = useState<PregenManagementSummary | null>(null);
 
   useEffect(() => {
     if (isReady && !isAuthenticated)
@@ -38,28 +41,9 @@ export default function PregensPage() {
 
   const pregens: PregenManagementSummary[] = data?.pregens ?? [];
 
-  function handleCreate() {
-    setParseError(null);
-    let parsed: Character;
-    try {
-      parsed = JSON.parse(jsonInput);
-    } catch {
-      setParseError("Invalid JSON. Please check your input and try again.");
-      return;
-    }
-    createMutation.mutate(
-      { character: parsed },
-      {
-        onSuccess: () => {
-          setShowCreateModal(false);
-          setJsonInput("");
-          setParseError(null);
-        },
-        onError: (err: Error) => {
-          setParseError(err.message || "Failed to create pre-gen.");
-        },
-      }
-    );
+  async function handleCreatePregen() {
+    const char = await createCharacterMutation.mutateAsync({ name: "New Pre-gen" });
+    router.push(`/character/${char.characterId}/build?pregenMode=user&returnTo=/pregens`);
   }
 
   function handleDelete(id: string, name: string) {
@@ -88,10 +72,11 @@ export default function PregensPage() {
             </p>
           </div>
           <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2 rounded bg-[#577399] text-[#f7f7ff] font-medium hover:brightness-110 transition-all shrink-0"
+            onClick={handleCreatePregen}
+            disabled={createCharacterMutation.isPending}
+            className="px-4 py-2 rounded bg-[#577399] text-[#f7f7ff] font-medium hover:brightness-110 transition-all shrink-0 disabled:opacity-50"
           >
-            Create Pre-gen
+            {createCharacterMutation.isPending ? "Creating..." : "Create Pre-gen"}
           </button>
         </div>
 
@@ -134,9 +119,16 @@ export default function PregensPage() {
                         .join(" / ")}
                     </p>
                   </div>
-                  <span className="text-xs font-medium px-2 py-0.5 rounded bg-slate-700 text-[#b9baa3] shrink-0">
-                    Lvl {p.nativeLevel}
-                  </span>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <span className="text-xs font-medium px-2 py-0.5 rounded bg-slate-700 text-[#b9baa3]">
+                      Lvl {p.nativeLevel}
+                    </span>
+                    {p.availableLevels && p.availableLevels.length > 1 && (
+                      <span className="text-xs text-[#577399]">
+                        Lvls {p.availableLevels.join(", ")}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {p.domains && p.domains.length > 0 && (
@@ -152,14 +144,24 @@ export default function PregensPage() {
                   </div>
                 )}
 
-                <div className="mt-auto pt-2 border-t border-slate-700/60 flex justify-end">
-                  <button
-                    onClick={() => handleDelete(p.pregenId, p.name)}
-                    disabled={deleteMutation.isPending}
-                    className="text-sm text-[#fe5f55] hover:text-[#f7f7ff] transition-colors disabled:opacity-50"
-                  >
-                    Delete
-                  </button>
+                <div className="mt-auto pt-2 border-t border-slate-700/60 flex justify-between items-center gap-2">
+                  {p.nativeLevel < 10 && (
+                    <button
+                      onClick={() => setLevelUpTarget(p)}
+                      className="text-sm text-[#577399] hover:text-[#f7f7ff] transition-colors"
+                    >
+                      Level Up
+                    </button>
+                  )}
+                  <div className="ml-auto">
+                    <button
+                      onClick={() => handleDelete(p.pregenId, p.name)}
+                      disabled={deleteMutation.isPending}
+                      className="text-sm text-[#fe5f55] hover:text-[#f7f7ff] transition-colors disabled:opacity-50"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -167,49 +169,56 @@ export default function PregensPage() {
         )}
       </div>
 
-      {/* Create Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-slate-800 border border-slate-700/60 rounded-lg w-full max-w-lg p-6">
-            <h2 className="text-xl font-bold mb-1">Create Pre-gen</h2>
-            <p className="text-sm text-[#b9baa3] mb-4">
-              Paste a Character JSON object below.
-            </p>
-
-            <textarea
-              value={jsonInput}
-              onChange={(e) => setJsonInput(e.target.value)}
-              rows={12}
-              className="w-full rounded bg-slate-900 border border-slate-700/60 text-[#f7f7ff] text-sm font-mono p-3 focus:outline-none focus:border-[#577399] resize-y"
-              placeholder='{ "name": "...", "class": "...", ... }'
-            />
-
-            {parseError && (
-              <p className="text-sm text-[#fe5f55] mt-2">{parseError}</p>
-            )}
-
-            <div className="flex justify-end gap-3 mt-4">
-              <button
-                onClick={() => {
-                  setShowCreateModal(false);
-                  setJsonInput("");
-                  setParseError(null);
-                }}
-                className="px-4 py-2 text-sm rounded border border-slate-700/60 text-[#b9baa3] hover:text-[#f7f7ff] transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCreate}
-                disabled={!jsonInput.trim() || createMutation.isPending}
-                className="px-4 py-2 text-sm rounded bg-[#577399] text-[#f7f7ff] font-medium hover:brightness-110 transition-all disabled:opacity-50"
-              >
-                {createMutation.isPending ? "Creating..." : "Create"}
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Level Up Wizard */}
+      {levelUpTarget && (
+        <LevelUpWizardForPregen
+          pregen={levelUpTarget}
+          scope="user"
+          levelUpMutation={levelUpMutation}
+          onClose={() => setLevelUpTarget(null)}
+        />
       )}
+    </div>
+  );
+}
+
+// ─── LevelUpWizardForPregen ───────────────────────────────────────────────────
+
+function LevelUpWizardForPregen({
+  pregen,
+  scope,
+  levelUpMutation,
+  onClose,
+}: {
+  pregen: PregenManagementSummary;
+  scope: "user" | "admin";
+  levelUpMutation: ReturnType<typeof useLevelUpUserPregen>;
+  onClose: () => void;
+}) {
+  const hookName = scope === "user" ? useUserPregenDetail : useUserPregenDetail;
+  const { data, isLoading } = hookName(pregen.pregenId);
+
+  if (isLoading || !data?.pregen.character) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#577399] border-t-transparent" />
+      </div>
+    );
+  }
+
+  async function handleSave(input: LevelUpInput) {
+    await levelUpMutation.mutateAsync({ pregenId: pregen.pregenId, input });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm overflow-y-auto p-4">
+      <div className="w-full max-w-2xl">
+        <LevelUpWizard
+          character={data.pregen.character}
+          onClose={onClose}
+          onSave={handleSave}
+        />
+      </div>
     </div>
   );
 }

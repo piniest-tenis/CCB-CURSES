@@ -1,0 +1,1 @@
+The trade organization representing the most influential operators of Tidwell's trade. Headquartered in the offices of the [Indigo Market (building)](Indigo%20Market%20(building).md), the Guild of Exchange is led by [The Four Families](The%20Four%20Families.md).

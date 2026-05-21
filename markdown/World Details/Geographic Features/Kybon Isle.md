@@ -1,0 +1,5 @@
+An island far removed from the main continent of Tidwell, with sparse information about its details known to most on the mainland. The [[Vihmarood]] traders of [[Alipinn]] conduct trade here when most of the [[The Land of Tidwell/World Details/Nations & States/The Waste/Varjalune Republic/Varjalune Republic]] is closed off from land travel, but part of their trade compact forbids them from speaking about its residents or populations. In service of this, lading is negotiated only by the captain of the ship. The captain is expressly the only person to set foot on the island itself, and as per the agreement refuses to disclose the nature of his trade partners. 
+
+After negotiations are complete, exchanges of goods take place by scuttling a boat full of the goods to be traded onshore. The following day, the items received in trade are left on a repaired boat moored to a guideline strung from the beaches.
+
+They have shared that the island is picturesque, but dangerous. Stories of sailors meeting their deaths on the Kybon Isle persist from earlier ages of Tidwell, though most have persisted in the form of children's tales.

@@ -1,0 +1,2 @@
+The large cathedral-like cave that serves as the seat of power of the Emperor of Reveille.  
+It is an imposing stone edifice is carved into the side of [Danitra Hill](Danitra%20Hill.md), it's entrance nearly 10 times taller than a typical denizen of [Reveille](The%20Land%20of%20Tidwell/World%20Details/Nations%20&%20States/Carnithia/Reveille/Reveille.md). It bears a number of petroglyphs depicting arrivals via the [Storied Altar](Storied%20Altar.md), adorned with regalia and being celebrated.

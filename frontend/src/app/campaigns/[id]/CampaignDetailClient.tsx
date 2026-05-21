@@ -30,6 +30,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useCampaignDetail, useRemoveMember, useAddCharacterToCampaign, useRemoveCharacterFromCampaign, useUpdateCampaign, useCampaignPregens, useImportPregen } from "@/hooks/useCampaigns";
 import type { PregenSummary } from "@/hooks/useCampaigns";
 import { apiClient } from "@/lib/api";
+import { useUserPregens, useCreateUserPregen } from "@/hooks/usePregens";
 import { useCampaignStore } from "@/store/campaignStore";
 import { useCampaignNav, type CampaignTab } from "@/hooks/useCampaignNav";
 import { useGameWebSocket, type DiceColorOverrides } from "@/hooks/useGameWebSocket";
@@ -41,6 +42,8 @@ import type { PingEvent, RollRequestPayload } from "@/types/campaign";
 import type { Adversary } from "@/types/adversary";
 import type { RollResult } from "@/types/dice";
 import { MemberCard } from "@/components/campaign/MemberCard";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faBookmark } from "@fortawesome/free-solid-svg-icons";
 import { useCharacters } from "@/hooks/useCharacter";
 import { SheetContextMenu, type ContextMenuPosition } from "@/components/campaign/SheetContextMenu";
 import { CondensedCharacterCard } from "@/components/campaign/CondensedCharacterCard";
@@ -303,6 +306,12 @@ function AssignCharacterPanel({ campaignId }: AssignCharacterPanelProps) {
   const levelSelectId = useId();
 
   const requiredLevel = pregensData?.requiredLevel ?? null;
+  const selectedPregen = pregensData?.pregens.find((p) => p.pregenId === selectedPregenId);
+
+  // Effective level for the selected pregen: GM-preset per-pregen level takes priority,
+  // then campaign-wide requiredLevel, then the free-choice importLevel.
+  const pregenSelectedLevel = selectedPregen?.selectedLevel ?? null;
+  const effectiveLevel = pregenSelectedLevel ?? requiredLevel;
 
   // Only show characters not already assigned to another campaign
   const available = (myChars?.characters ?? []).filter(
@@ -318,11 +327,9 @@ function AssignCharacterPanel({ campaignId }: AssignCharacterPanelProps) {
     if (!selectedPregenId) return;
     importMutation.mutate({
       pregenId: selectedPregenId,
-      level: requiredLevel ?? importLevel,
+      level: effectiveLevel ?? importLevel,
     });
-  }, [selectedPregenId, importMutation, requiredLevel, importLevel]);
-
-  const selectedPregen = pregensData?.pregens.find((p) => p.pregenId === selectedPregenId);
+  }, [selectedPregenId, importMutation, effectiveLevel, importLevel]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] px-4">
@@ -452,7 +459,7 @@ function AssignCharacterPanel({ campaignId }: AssignCharacterPanelProps) {
           <>
             {pregensLoading ? (
               <div className="h-10 rounded-lg bg-slate-700/40 animate-pulse" />
-            ) : !pregensData || pregensData.pregens.length === 0 ? (
+            ) : !pregensData || pregensData.pregens.length === 0 || pregensData.pregens.every((p) => p.claimed) ? (
               <p className="text-sm text-[#b9baa3]/40 italic text-center py-4">
                 No pre-generated characters available.
               </p>
@@ -472,8 +479,8 @@ function AssignCharacterPanel({ campaignId }: AssignCharacterPanelProps) {
                   ))}
                 </div>
 
-                {/* Level selector (only if no campaign restriction) */}
-                {selectedPregenId && !requiredLevel && (
+                {/* Level selector (only if no effective level restriction) */}
+                {selectedPregenId && !effectiveLevel && (
                   <div className="space-y-1">
                     <label
                       htmlFor={levelSelectId}
@@ -501,10 +508,12 @@ function AssignCharacterPanel({ campaignId }: AssignCharacterPanelProps) {
                   </div>
                 )}
 
-                {/* Show required level info */}
-                {selectedPregenId && requiredLevel && (
+                {/* Show effective level info */}
+                {selectedPregenId && effectiveLevel && (
                   <p className="text-xs text-[#b9baa3]/50 text-center">
-                    Campaign requires Level {requiredLevel}. Character will be imported at this level.
+                    {pregenSelectedLevel
+                      ? `This character is set to Level ${pregenSelectedLevel}. It will be imported at that level.`
+                      : `Campaign requires Level ${requiredLevel}. Character will be imported at this level.`}
                   </p>
                 )}
 
@@ -517,7 +526,7 @@ function AssignCharacterPanel({ campaignId }: AssignCharacterPanelProps) {
                 <button
                   type="button"
                   onClick={handleImportPregen}
-                  disabled={!selectedPregenId || importMutation.isPending}
+                  disabled={!selectedPregenId || selectedPregen?.claimed || importMutation.isPending}
                   className="
                     w-full rounded-lg bg-[#577399] px-4 py-2
                     text-sm font-semibold text-white
@@ -547,46 +556,53 @@ interface PregenCardProps {
 }
 
 function PregenCard({ pregen, selected, onSelect }: PregenCardProps) {
+  const claimed = pregen.claimed;
   return (
     <button
       type="button"
-      onClick={onSelect}
-      aria-pressed={selected}
+      onClick={claimed ? undefined : onSelect}
+      aria-pressed={!claimed && selected}
+      disabled={claimed}
       className={`
         w-full text-left rounded-lg border px-3 py-2.5 transition-colors
         focus:outline-none focus:ring-2 focus:ring-[#577399]
-        ${selected
-          ? "border-[#577399] bg-[#577399]/15"
-          : "border-slate-700/60 bg-slate-800/60 hover:border-slate-600"
+        ${claimed
+          ? "border-slate-700/30 bg-slate-800/30 cursor-not-allowed opacity-50"
+          : selected
+            ? "border-[#577399] bg-[#577399]/15"
+            : "border-slate-700/60 bg-slate-800/60 hover:border-slate-600"
         }
       `}
     >
-      <div className="flex items-center justify-between">
-        <div>
-          <p className={`text-sm font-semibold ${selected ? "text-[#f7f7ff]" : "text-[#b9baa3]"}`}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className={`text-sm font-semibold truncate ${selected && !claimed ? "text-[#f7f7ff]" : "text-[#b9baa3]"}`}>
             {pregen.name}
           </p>
-          <p className="text-xs text-[#b9baa3]/50 mt-0.5">
+          <p className="text-xs text-[#b9baa3]/50 mt-0.5 truncate">
             {pregen.ancestryName} {pregen.className}
             {pregen.subclassName ? ` (${pregen.subclassName})` : ""}
           </p>
-          <p className="text-xs text-[#b9baa3]/40 mt-0.5">
+          <p className="text-xs text-[#b9baa3]/40 mt-0.5 truncate">
             {pregen.communityName} · {pregen.domains.join(", ")}
           </p>
         </div>
-        <div className={`
-          h-4 w-4 rounded-full border-2 flex-shrink-0
-          ${selected
-            ? "border-[#577399] bg-[#577399]"
-            : "border-slate-600"
-          }
-        `}>
-          {selected && (
-            <div className="h-full w-full flex items-center justify-center">
-              <div className="h-1.5 w-1.5 rounded-full bg-white" />
-            </div>
-          )}
-        </div>
+        {claimed ? (
+          <span className="shrink-0 text-xs font-medium text-[#b9baa3]/40 border border-slate-700/40 rounded px-2 py-0.5 whitespace-nowrap">
+            Already chosen
+          </span>
+        ) : (
+          <div className={`
+            h-4 w-4 rounded-full border-2 flex-shrink-0
+            ${selected ? "border-[#577399] bg-[#577399]" : "border-slate-600"}
+          `}>
+            {selected && (
+              <div className="h-full w-full flex items-center justify-center">
+                <div className="h-1.5 w-1.5 rounded-full bg-white" />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </button>
   );
@@ -969,6 +985,36 @@ export default function CampaignDetailClient() {
   const removeMemberMutation = useRemoveMember(campaignId);
   const removeCharacterMutation = useRemoveCharacterFromCampaign(campaignId);
   const updateCampaignMutation = useUpdateCampaign(campaignId);
+
+  // Pregen management (GM only)
+  const createPregenMutation = useCreateUserPregen();
+  const { data: userPregenData } = useUserPregens();
+  const pregenSourceIds = React.useMemo(
+    () =>
+      new Set(
+        (userPregenData?.pregens ?? [])
+          .map((p) => p.sourceCharacterId)
+          .filter(Boolean) as string[]
+      ),
+    [userPregenData]
+  );
+  const [importingCharId, setImportingCharId] = useState<string | null>(null);
+
+  const handleImportAsPregen = useCallback(
+    async (characterId: string) => {
+      setImportingCharId(characterId);
+      try {
+        const fullCharacter = await apiClient.get(`/characters/${characterId}`);
+        await createPregenMutation.mutateAsync({
+          character: fullCharacter as import("@shared/types").Character,
+          sourceCharacterId: characterId,
+        });
+      } finally {
+        setImportingCharId(null);
+      }
+    },
+    [createPregenMutation]
+  );
   const { setActiveCampaign } = useCampaignStore();
   const {
     activeTab, selectedCharacterId, showFullSheet,
@@ -1246,33 +1292,20 @@ export default function CampaignDetailClient() {
                     }
                   : undefined
               }
+              onImportAsPregen={
+                isGm && member.characterId
+                  ? () => handleImportAsPregen(member.characterId!)
+                  : undefined
+              }
+              isImportingPregen={importingCharId === member.characterId}
+              isAlreadyPregen={pregenSourceIds.has(member.characterId ?? "")}
+              onForceCrit={
+                isGm && charId && member.role === "player"
+                  ? () => handleForceCritToggle(charId)
+                  : undefined
+              }
+              isCritArmed={forceCritCharId === charId}
             />
-
-            {/* Force-crit toggle - GM only, players with a character only */}
-            {isGm && charId && member.role === "player" && (
-              <button
-                type="button"
-                onClick={() => handleForceCritToggle(charId)}
-                title={
-                  forceCritCharId === charId
-                    ? `Disarm forced critical for ${memberChar?.name ?? "this player"}`
-                    : `Force next roll to critical for ${memberChar?.name ?? "this player"}`
-                }
-                aria-pressed={forceCritCharId === charId}
-                className={[
-                  "mt-1 w-full flex items-center justify-center gap-1.5",
-                  "rounded-md px-2 py-1 text-xs font-semibold",
-                  "border transition-colors",
-                  "focus:outline-none focus:ring-2 focus:ring-[#DAA520] focus:ring-offset-1 focus:ring-offset-slate-900",
-                  forceCritCharId === charId
-                    ? "border-[#DAA520] bg-[#DAA520]/20 text-[#DAA520]"
-                    : "border-slate-700/50 bg-transparent text-[#b9baa3]/40 hover:border-[#DAA520]/50 hover:text-[#DAA520]/60",
-                ].join(" ")}
-              >
-                <span aria-hidden="true">⚡</span>
-                {forceCritCharId === charId ? "Crit Armed" : "Force Crit"}
-              </button>
-            )}
           </div>
         );
       })}
@@ -1716,8 +1749,22 @@ export default function CampaignDetailClient() {
                     <>
                       {/* Viewer mode banner - GM viewing a player's sheet */}
                       {isViewerMode && (
-                        <div className="flex items-center gap-2 rounded-lg bg-[#577399]/15 border border-[#577399]/30 px-3 py-1.5 text-xs text-[#577399] mb-2">
+                        <div className="flex items-center justify-between gap-2 rounded-lg bg-[#577399]/15 border border-[#577399]/30 px-3 py-1.5 text-xs text-[#577399] mb-2">
                           <span>♛ Viewing {selectedMemberName}&apos;s Sheet</span>
+                          <button
+                            type="button"
+                            onClick={() => handleImportAsPregen(selectedCharacterId!)}
+                            disabled={importingCharId === selectedCharacterId || pregenSourceIds.has(selectedCharacterId!)}
+                            title={pregenSourceIds.has(selectedCharacterId!) ? "Already imported as pre-gen" : "Import as pre-gen"}
+                            aria-label={pregenSourceIds.has(selectedCharacterId!) ? "Already imported as pre-gen" : "Import as pre-gen"}
+                            className="w-6 h-6 flex items-center justify-center rounded transition-colors hover:bg-[#577399]/20 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#577399]"
+                          >
+                            {importingCharId === selectedCharacterId ? (
+                              <span aria-hidden="true" className="inline-block h-3 w-3 animate-spin rounded-full border border-current border-t-transparent" />
+                            ) : (
+                              <FontAwesomeIcon icon={faBookmark} className="h-3 w-3" />
+                            )}
+                          </button>
                         </div>
                       )}
 

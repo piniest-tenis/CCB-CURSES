@@ -1,0 +1,3 @@
+The three large lakes that define the flats of [[The Land of Tidwell/World Details/Nations & States/Carnithia/Medilaac/Medilaac]] and its surrounding communities. The largest, [[Slioga]] is a major breadbasket supplying the nutrient-dense kelp that serves as a primary nutritional source for much of [[The Land of Tidwell/World Details/Geographic Features/Carnithia/Carnithia|Carnithia]] and the [[Gyhrra Badlands]].
+
+The northern Sister is [[Mioga]], and the western Sister is [[Forcha]].

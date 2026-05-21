@@ -1,0 +1,4 @@
+Species: [[Human]]
+Appearance: Short for a human, tall for most other species. Short blonde hair, and a stern face. Bears a deep scar on her right arm, and wears her dress uniform at all times to cover it.
+
+Rearcaptain Grace Kinder is from [[The Land of Tidwell/World Details/Nations & States/Gyhrra Badlands/Mercy & Ascension]] originally, and is a devout follower of the [[Church of the Revenant God]]. As such, she is often at odds with [[Grandmarshal Pogg]]. She adheres to her duty faithfully, though she often openly questions the purpose of their work given that if the world is changing it must be because the [[Revenant God]] has dreamed it so.

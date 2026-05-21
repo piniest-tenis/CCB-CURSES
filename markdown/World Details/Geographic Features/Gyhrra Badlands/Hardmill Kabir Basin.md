@@ -1,0 +1,1 @@
+The large, shallow salt lake that stretches for miles on the border between [[Carnithia]] and the [Gyhrra Badlands](Gyhrra%20Badlands.md)

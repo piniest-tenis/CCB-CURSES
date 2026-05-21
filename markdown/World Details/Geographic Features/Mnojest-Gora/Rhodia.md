@@ -1,0 +1,1 @@
+The great volcanic mountain upon which [The World Book](The%20World%20Book.md) stands. Nestled in the mountains of [Mnojest-Gora](The%20Land%20of%20Tidwell/World%20Details/Nations%20&%20States/Mnojest-Gora.md). Rhodia holds a special importance in every religion in [Tidwell](Tidwell.md)

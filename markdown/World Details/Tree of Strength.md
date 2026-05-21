@@ -1,0 +1,1 @@
+A tall, straight Sequoia-like tree growing alone in the Waste.

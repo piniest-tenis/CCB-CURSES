@@ -14,6 +14,8 @@ import React from "react";
 import { useCharacter } from "@/hooks/useCharacter";
 import { SlotBar } from "@/components/campaign/shared/SlotBar";
 
+type ShareState = "idle" | "loading" | "copied" | "error";
+
 // ─── Danger states ────────────────────────────────────────────────────────────
 
 type DangerState = "healthy" | "wounded" | "critical" | "down";
@@ -66,6 +68,7 @@ interface CommandCenterCardProps {
   /** Fallback data from campaign member list (instant header while data loads). */
   fallbackName?: string;
   fallbackAvatar?: string | null;
+  shareToken?: string;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -75,8 +78,30 @@ export function CommandCenterCard({
   onSelect,
   fallbackName,
   fallbackAvatar,
+  shareToken,
 }: CommandCenterCardProps) {
   const { data: character, isLoading } = useCharacter(characterId);
+  const [shareState, setShareState] = React.useState<ShareState>("idle");
+
+  const handleCopyShareUrl = React.useCallback(
+    async (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      if (!shareToken || shareState === "loading") return;
+
+      setShareState("loading");
+      try {
+        const origin = typeof window !== "undefined" ? window.location.origin : "";
+        const url = `${origin}/character/${characterId}/public?token=${shareToken}`;
+        await navigator.clipboard.writeText(url);
+        setShareState("copied");
+        setTimeout(() => setShareState("idle"), 2500);
+      } catch {
+        setShareState("error");
+        setTimeout(() => setShareState("idle"), 2500);
+      }
+    },
+    [characterId, shareState, shareToken]
+  );
 
   // Loading skeleton
   if (isLoading && !character) {
@@ -96,9 +121,16 @@ export function CommandCenterCard({
   // Minimal fallback when character data hasn't arrived
   if (!character) {
     return (
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => onSelect(characterId)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onSelect(characterId);
+          }
+        }}
         className="w-full rounded-xl border border-[#577399]/20 bg-slate-900/80 p-3 text-left transition-colors hover:bg-slate-800/80"
       >
         <div className="flex items-center gap-2.5">
@@ -108,8 +140,14 @@ export function CommandCenterCard({
           <p className="text-sm font-serif font-semibold text-parchment-100 truncate">
             {fallbackName ?? "Unknown"}
           </p>
+          <ShareButton
+            characterId={characterId}
+            shareToken={shareToken}
+            shareState={shareState}
+            onCopy={handleCopyShareUrl}
+          />
         </div>
-      </button>
+      </div>
     );
   }
 
@@ -120,9 +158,16 @@ export function CommandCenterCard({
   const evasion  = derivedStats?.evasion ?? 0;
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => onSelect(characterId)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelect(characterId);
+        }
+      }}
       className={`
         w-full rounded-xl border p-3 text-left space-y-2
         transition-all duration-300
@@ -132,11 +177,11 @@ export function CommandCenterCard({
       aria-label={`${character.name} — ${hpMax - hpMarked} of ${hpMax} HP remaining`}
     >
       {/* Header: avatar + name */}
-      <div className="flex items-center gap-2.5">
-        {/* Avatar */}
-        {(character.portraitUrl || character.avatarUrl || fallbackAvatar) ? (
-          <img
-            src={character.portraitUrl || character.avatarUrl || fallbackAvatar || ""}
+        <div className="flex items-center gap-2.5">
+          {/* Avatar */}
+          {(character.portraitUrl || character.avatarUrl || fallbackAvatar) ? (
+            <img
+              src={character.portraitUrl || character.avatarUrl || fallbackAvatar || ""}
             alt=""
             className="h-10 w-10 rounded-full object-cover border border-[#577399]/30 shrink-0"
           />
@@ -147,16 +192,22 @@ export function CommandCenterCard({
             </span>
           </div>
         )}
-        <div className="flex-1 min-w-0">
-          <p className={`text-sm font-serif font-semibold truncate ${danger === "down" ? "line-through text-[#fe5f55]/70" : "text-parchment-100"}`}>
-            {character.name}
-          </p>
+          <div className="flex-1 min-w-0">
+            <p className={`text-sm font-serif font-semibold truncate ${danger === "down" ? "line-through text-[#fe5f55]/70" : "text-parchment-100"}`}>
+              {character.name}
+            </p>
+          </div>
+          <ShareButton
+            characterId={characterId}
+            shareToken={shareToken}
+            shareState={shareState}
+            onCopy={handleCopyShareUrl}
+          />
+          {/* Danger warning icon */}
+          {(danger === "critical" || danger === "down") && (
+            <span aria-label="Danger" className="text-[#fe5f55] text-sm shrink-0">&#9888;</span>
+          )}
         </div>
-        {/* Danger warning icon */}
-        {(danger === "critical" || danger === "down") && (
-          <span aria-label="Danger" className="text-[#fe5f55] text-sm shrink-0">&#9888;</span>
-        )}
-      </div>
 
       {/* Slot bars: HP, Stress, Armor */}
       <div className="space-y-1">
@@ -209,7 +260,7 @@ export function CommandCenterCard({
           )}
         </div>
       )}
-    </button>
+    </div>
   );
 }
 
@@ -222,4 +273,57 @@ export function getHpPercentage(character: { trackers?: { hp?: { marked?: number
   const max = character.trackers?.hp?.max ?? 0;
   if (max === 0) return 0; // no HP tracked → treat as healthy (0 danger)
   return (character.trackers?.hp?.marked ?? 0) / max;
+}
+
+function ShareButton({
+  characterId,
+  shareToken,
+  shareState,
+  onCopy,
+}: {
+  characterId: string;
+  shareToken?: string;
+  shareState: ShareState;
+  onCopy: (event: React.MouseEvent<HTMLButtonElement>) => void;
+}) {
+  const label =
+    shareState === "copied"
+      ? "Copied!"
+      : shareState === "error"
+        ? "Failed"
+        : "Copy share URL";
+
+  return (
+    <button
+      type="button"
+      onClick={(event) => {
+        event.preventDefault();
+        onCopy(event);
+      }}
+      disabled={!shareToken || shareState === "loading"}
+      aria-label={label}
+      title={label}
+      className={[
+        "ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors",
+        "focus:outline-none focus:ring-2 focus:ring-[#577399]",
+        "disabled:cursor-not-allowed disabled:opacity-40",
+        shareState === "copied"
+          ? "border-green-500/50 bg-green-500/10 text-green-400"
+          : shareState === "error"
+            ? "border-red-500/50 bg-red-500/10 text-red-400"
+            : "border-[#577399]/30 bg-slate-950/40 text-[#b9baa3]/70 hover:border-[#577399]/60 hover:text-[#577399]",
+      ].join(" ")}
+      data-character-id={characterId}
+    >
+      {shareState === "loading" ? (
+        <i className="fa-solid fa-arrows-rotate animate-spin text-[11px]" aria-hidden="true" />
+      ) : shareState === "copied" ? (
+        <i className="fa-solid fa-check text-[11px]" aria-hidden="true" />
+      ) : shareState === "error" ? (
+        <i className="fa-solid fa-circle-exclamation text-[11px]" aria-hidden="true" />
+      ) : (
+        <i className="fa-solid fa-link text-[11px]" aria-hidden="true" />
+      )}
+    </button>
+  );
 }

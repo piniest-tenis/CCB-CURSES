@@ -17,6 +17,7 @@ import {
 import { apiClient } from "@/lib/api";
 import { campaignKeys } from "./useCampaigns";
 import type { Character } from "@shared/types";
+import type { LevelUpInput } from "./useCharacter";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -31,8 +32,12 @@ export interface PregenManagementSummary {
   communityName: string | null;
   domains: string[];
   nativeLevel: number;
+  /** Sorted list of levels for which snapshots exist. */
+  availableLevels: number[];
   createdAt: string;
   updatedAt: string;
+  /** The characterId of the character this pregen was created from, if any. */
+  sourceCharacterId?: string | null;
 }
 
 export interface PregenDetail extends PregenManagementSummary {
@@ -41,16 +46,21 @@ export interface PregenDetail extends PregenManagementSummary {
 
 export interface CreatePregenInput {
   character: Character;
+  /** The characterId of the source character this pregen is being created from. */
+  sourceCharacterId?: string;
 }
 
 export interface AddToPoolInput {
   pregenId: string;
   source: "system" | "user";
   ownerId?: string;
+  /** The level version to add to the pool. Defaults to nativeLevel. */
+  selectedLevel?: number;
 }
 
 export interface CampaignPoolPregen extends PregenManagementSummary {
   addedAt: string;
+  selectedLevel: number;
 }
 
 // ─── Query Keys ───────────────────────────────────────────────────────────────
@@ -125,6 +135,42 @@ export function useDeleteAdminPregen(): UseMutationResult<
   });
 }
 
+export function useLevelUpAdminPregen(): UseMutationResult<
+  { pregen: PregenManagementSummary },
+  Error,
+  { pregenId: string; input: LevelUpInput }
+> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ pregenId, input }) =>
+      apiClient.post<{ pregen: PregenManagementSummary }>(
+        `/admin/pregens/${pregenId}/levelup`,
+        input
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: pregenKeys.admin() });
+    },
+  });
+}
+
+export function useUpdateAdminPregen(): UseMutationResult<
+  { pregen: PregenManagementSummary },
+  Error,
+  { pregenId: string; character: Character }
+> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ pregenId, character }) =>
+      apiClient.put<{ pregen: PregenManagementSummary }>(
+        `/admin/pregens/${pregenId}`,
+        { character }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: pregenKeys.admin() });
+    },
+  });
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // User — GM-scoped Pregens
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -176,6 +222,42 @@ export function useDeleteUserPregen(): UseMutationResult<
   return useMutation({
     mutationFn: (pregenId: string) =>
       apiClient.delete(`/pregens/${pregenId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: pregenKeys.user() });
+    },
+  });
+}
+
+export function useLevelUpUserPregen(): UseMutationResult<
+  { pregen: PregenManagementSummary },
+  Error,
+  { pregenId: string; input: LevelUpInput }
+> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ pregenId, input }) =>
+      apiClient.post<{ pregen: PregenManagementSummary }>(
+        `/pregens/${pregenId}/levelup`,
+        input
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: pregenKeys.user() });
+    },
+  });
+}
+
+export function useUpdateUserPregen(): UseMutationResult<
+  { pregen: PregenManagementSummary },
+  Error,
+  { pregenId: string; character: Character }
+> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ pregenId, character }) =>
+      apiClient.put<{ pregen: PregenManagementSummary }>(
+        `/pregens/${pregenId}`,
+        { character }
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: pregenKeys.user() });
     },
@@ -236,6 +318,31 @@ export function useRemoveFromPregenPool(
     mutationFn: (pregenId: string) =>
       apiClient.delete(
         `/campaigns/${campaignId}/pregens/pool/${pregenId}`
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: pregenKeys.campaignPool(campaignId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: [...campaignKeys.detail(campaignId), "pregens"],
+      });
+    },
+  });
+}
+
+export function useUpdatePoolPregen(
+  campaignId: string
+): UseMutationResult<
+  { updated: true; pregenId: string; campaignId: string; selectedLevel: number },
+  Error,
+  { pregenId: string; selectedLevel: number }
+> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ pregenId, selectedLevel }) =>
+      apiClient.patch<{ updated: true; pregenId: string; campaignId: string; selectedLevel: number }>(
+        `/campaigns/${campaignId}/pregens/pool/${pregenId}`,
+        { selectedLevel }
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({

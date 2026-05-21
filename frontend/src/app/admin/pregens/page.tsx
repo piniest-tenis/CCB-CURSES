@@ -14,139 +14,18 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import {
   useAdminPregens,
-  useCreateAdminPregen,
   useDeleteAdminPregen,
+  useLevelUpAdminPregen,
+  useAdminPregenDetail,
   type PregenManagementSummary,
 } from "@/hooks/usePregens";
-import type { Character } from "@shared/types";
+import { useCreateCharacter } from "@/hooks/useCharacter";
+import { LevelUpWizard } from "@/components/character/LevelUpWizard";
+import type { LevelUpInput } from "@/hooks/useCharacter";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 type SortDir = "asc" | "desc";
-
-// ─── Create Modal ──────────────────────────────────────────────────────────────
-
-function CreatePregenModal({ onClose }: { onClose: () => void }) {
-  const [json, setJson] = useState("");
-  const [parseError, setParseError] = useState<string | null>(null);
-  const createMutation = useCreateAdminPregen();
-
-  const handleSubmit = useCallback(() => {
-    setParseError(null);
-    let character: Character;
-    try {
-      character = JSON.parse(json);
-    } catch {
-      setParseError("Invalid JSON. Please check the format and try again.");
-      return;
-    }
-    if (!character || typeof character !== "object") {
-      setParseError("Parsed value is not a valid Character object.");
-      return;
-    }
-    createMutation.mutate(
-      { character },
-      {
-        onSuccess: () => onClose(),
-        onError: (err) =>
-          setParseError(err.message || "Failed to create pre-gen."),
-      }
-    );
-  }, [json, createMutation, onClose]);
-
-  // Close on Escape
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
-
-  const handleBackdrop = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      if (e.target === e.currentTarget) onClose();
-    },
-    [onClose]
-  );
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onClick={handleBackdrop}
-    >
-      <div className="w-full max-w-2xl mx-4 rounded-xl border border-slate-700/60 bg-[#0f1a14] shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700/40">
-          <h2 className="font-serif text-lg font-semibold text-[#f7f7ff]">
-            Create Pre-gen
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-[#b9baa3] hover:text-[#f7f7ff] transition-colors p-1"
-            aria-label="Close"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className="w-4 h-4"
-            >
-              <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="px-5 py-4 space-y-4">
-          <label className="block text-xs text-[#b9baa3] uppercase tracking-wider mb-1.5">
-            Paste Character JSON
-          </label>
-          <textarea
-            value={json}
-            onChange={(e) => setJson(e.target.value)}
-            rows={16}
-            spellCheck={false}
-            placeholder='{ "name": "...", "className": "...", ... }'
-            className="
-              w-full rounded-lg border border-slate-700/60 bg-slate-900/60
-              px-3 py-2 text-sm text-[#f7f7ff] font-mono
-              placeholder:text-[#b9baa3]/40
-              focus:outline-none focus:border-[#577399]/60
-              transition-colors resize-y
-            "
-          />
-          {parseError && (
-            <p className="text-xs text-[#fe5f55] bg-[#fe5f55]/10 border border-[#fe5f55]/20 rounded px-3 py-2">
-              {parseError}
-            </p>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-slate-700/40">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={createMutation.isPending}
-            className="px-3 py-1.5 text-sm text-[#b9baa3] hover:text-[#f7f7ff] border border-slate-700/40 hover:border-slate-600 rounded transition-colors disabled:opacity-40"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={!json.trim() || createMutation.isPending}
-            className="px-3 py-1.5 text-sm font-medium bg-[#577399]/20 hover:bg-[#577399]/30 text-[#577399] border border-[#577399]/40 hover:border-[#577399]/60 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {createMutation.isPending ? "Creating..." : "Create"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ─── Delete Confirmation Modal ─────────────────────────────────────────────────
 
@@ -293,6 +172,8 @@ export default function AdminPregensPage() {
   // ── Data ───────────────────────────────────────────────────────────────────
 
   const { data, isLoading, isError, refetch } = useAdminPregens();
+  const createCharacterMutation = useCreateCharacter();
+  const levelUpMutation = useLevelUpAdminPregen();
 
   // ── Sort state ─────────────────────────────────────────────────────────────
 
@@ -311,8 +192,13 @@ export default function AdminPregensPage() {
 
   // ── Modal state ────────────────────────────────────────────────────────────
 
-  const [showCreate, setShowCreate] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<PregenManagementSummary | null>(null);
+  const [levelUpTarget, setLevelUpTarget] = useState<PregenManagementSummary | null>(null);
+
+  async function handleCreatePregen() {
+    const char = await createCharacterMutation.mutateAsync({ name: "New Pre-gen" });
+    router.push(`/character/${char.characterId}/build?pregenMode=admin&returnTo=/admin/pregens`);
+  }
 
   // ── Render guards ──────────────────────────────────────────────────────────
 
@@ -424,10 +310,11 @@ export default function AdminPregensPage() {
             </button>
             <button
               type="button"
-              onClick={() => setShowCreate(true)}
-              className="rounded px-3 py-1.5 text-sm font-medium bg-[#577399]/20 hover:bg-[#577399]/30 text-[#577399] border border-[#577399]/40 hover:border-[#577399]/60 transition-colors"
+              onClick={() => void handleCreatePregen()}
+              disabled={createCharacterMutation.isPending}
+              className="rounded px-3 py-1.5 text-sm font-medium bg-[#577399]/20 hover:bg-[#577399]/30 text-[#577399] border border-[#577399]/40 hover:border-[#577399]/60 transition-colors disabled:opacity-50"
             >
-              Create Pre-gen
+              {createCharacterMutation.isPending ? "Creating..." : "Create Pre-gen"}
             </button>
           </div>
         </div>
@@ -530,7 +417,16 @@ export default function AdminPregensPage() {
                     <span className="text-xs font-semibold text-[#577399] text-right tabular-nums">
                       {p.nativeLevel}
                     </span>
-                    <div className="flex items-center justify-end">
+                    <div className="flex items-center justify-end gap-2">
+                      {p.nativeLevel < 10 && (
+                        <button
+                          type="button"
+                          onClick={() => setLevelUpTarget(p)}
+                          className="rounded border border-[#577399]/40 px-2 py-1 text-xs text-[#577399] hover:text-[#f7f7ff] hover:border-[#577399] transition-colors"
+                        >
+                          Level Up
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => setDeleteTarget(p)}
@@ -548,13 +444,57 @@ export default function AdminPregensPage() {
       </main>
 
       {/* Modals */}
-      {showCreate && <CreatePregenModal onClose={() => setShowCreate(false)} />}
       {deleteTarget && (
         <DeleteConfirmModal
           pregen={deleteTarget}
           onClose={() => setDeleteTarget(null)}
         />
       )}
+      {levelUpTarget && (
+        <LevelUpWizardForAdminPregen
+          pregen={levelUpTarget}
+          levelUpMutation={levelUpMutation}
+          onClose={() => setLevelUpTarget(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── LevelUpWizardForAdminPregen ──────────────────────────────────────────────
+
+function LevelUpWizardForAdminPregen({
+  pregen,
+  levelUpMutation,
+  onClose,
+}: {
+  pregen: PregenManagementSummary;
+  levelUpMutation: ReturnType<typeof useLevelUpAdminPregen>;
+  onClose: () => void;
+}) {
+  const { data, isLoading } = useAdminPregenDetail(pregen.pregenId);
+
+  if (isLoading || !data?.pregen.character) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#577399] border-t-transparent" />
+      </div>
+    );
+  }
+
+  async function handleSave(input: LevelUpInput) {
+    await levelUpMutation.mutateAsync({ pregenId: pregen.pregenId, input });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm overflow-y-auto p-4">
+      <div className="w-full max-w-2xl">
+        <LevelUpWizard
+          character={data.pregen.character}
+          onClose={onClose}
+          onSave={handleSave}
+        />
+      </div>
     </div>
   );
 }

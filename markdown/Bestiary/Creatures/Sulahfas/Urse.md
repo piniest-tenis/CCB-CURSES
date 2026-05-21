@@ -1,0 +1,3 @@
+A dark amber fluid from the gall bladder of the [Sulahfas](The%20Land%20of%20Tidwell/Bestiary/Creatures/Sulahfas/Sulahfas.md). Valuable in that it makes a near impermeable epoxy, and is used in the ritual in ending an Age via [The World Book](The%20World%20Book.md). 
+
+Jewelry from Urse is considered the ultimate indicator of commitment, and is such used in marriage and bonding ceremonies throughout Tidwell.

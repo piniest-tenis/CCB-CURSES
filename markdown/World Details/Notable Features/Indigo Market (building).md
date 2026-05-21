@@ -1,0 +1,3 @@
+An impressive stone and brick structure bearing a large, flat canvas roof. Its interior is open and the sounds of the traders activities can be heard reverberating throughout the [Indigo Market (District)](Indigo%20Market%20(District).md) when trading is in session. The floor of this space is the same bluish-gray stone of the streets outside, and it has a number of permanent stalls on the floor populated by the most affluent representatives of the Guild of Exchange.
+ 
+Unlike a normal marketplace, these transactions are primarily dealing with large quantities of goods which are then shipped to other cities throughout Tidwell.

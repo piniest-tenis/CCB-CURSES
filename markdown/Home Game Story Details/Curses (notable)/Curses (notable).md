@@ -1,0 +1,1 @@
+[small cursed compass](small%20cursed%20compass.md)

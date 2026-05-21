@@ -1,0 +1,1 @@
+A family of [Crenshaw](Crenshaw.md), dominated by their ancient patriarch [Ollester Sloane](Ollester%20Sloane.md). They're shrewd business creatures.￼￼Primary motivations: legacy and honor

@@ -1,0 +1,1 @@
+The hill upon which Reveille is built. Filled with a deep bluish-gray stone like marble, which is a common stone used throughout Tidwell to build traversable roads.

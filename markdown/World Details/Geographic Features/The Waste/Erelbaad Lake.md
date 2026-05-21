@@ -1,0 +1,1 @@
+The deep lake outside [[Taliga]]. Home to the [[Allonaut]], a sentient shelled creature that works in harmony with the [[Ayonik]] of Taliga.

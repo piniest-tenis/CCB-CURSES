@@ -1,0 +1,1 @@
+An unusually cold lake, fed by a prolific spring. Unnaturally still waters largely devoid of animals save for a few particularly fatty relatives of the [[Deaconfish]] and the [[Quaddadura]] that feed on them.

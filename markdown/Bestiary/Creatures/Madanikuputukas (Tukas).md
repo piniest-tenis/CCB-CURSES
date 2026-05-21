@@ -1,0 +1,1 @@
+Small semi-corporeal spirits of rot, often captured and kept in jars and kept as decorations due to their faint yellowish glow. They are believed to be dangerous in large numbers as they are harbingers of [[Creep]], but when kept individually they are docile and largely dormant.

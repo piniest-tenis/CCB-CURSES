@@ -29,7 +29,8 @@
     "clean": "rm -rf dist",
     "build:ws-roll-request": "esbuild src/websocket/rollRequest.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/ws-roll-request-handler/index.js --external:@aws-sdk/* --sourcemap",
     "build:homebrew": "esbuild src/homebrew/handler.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/homebrew-handler/index.js --external:@aws-sdk/* --sourcemap",
-    "build:pregens": "esbuild src/pregens/handler.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/pregens-handler/index.js --external:@aws-sdk/* --sourcemap"
+    "build:pregens": "esbuild src/pregens/handler.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/pregens-handler/index.js --external:@aws-sdk/* --sourcemap",
+    "build:twitch-extension": "esbuild src/twitch-extension/handler.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/twitch-extension-handler/index.js --external:@aws-sdk/* --sourcemap"
   },
   "dependencies": {
     "@aws-sdk/client-apigatewaymanagementapi": "^3.1016.0",

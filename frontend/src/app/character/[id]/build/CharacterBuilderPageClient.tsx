@@ -22,10 +22,11 @@
  * After saving, redirects back to character sheet.
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { useCharacter, useUpdateCharacter } from "@/hooks/useCharacter";
+import { useCharacter, useUpdateCharacter, useDeleteCharacter } from "@/hooks/useCharacter";
+import { useCreateUserPregen, useCreateAdminPregen, useUpdateAdminPregen, useUpdateUserPregen, useAdminPregenDetail, useUserPregenDetail } from "@/hooks/usePregens";
 import {
   useClass,
   useClasses,
@@ -167,10 +168,11 @@ interface CharacterBuilderPageProps {
   params: { id: string };
 }
 
-export default function CharacterBuilderPageClient({
+function CharacterBuilderInner({
   params: _params,
 }: CharacterBuilderPageProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   // Extract the real character ID from the browser URL.
   // params.id is "__placeholder__" in a static export because Next.js only
   // pre-renders one HTML file per dynamic segment. usePathname() always
@@ -178,6 +180,16 @@ export default function CharacterBuilderPageClient({
   // Path shape: /character/{id}/build  → segments[2] is the id.
   const characterId = pathname?.split("/")[2] ?? "";
   const router = useRouter();
+
+  // ── Pregen mode ──────────────────────────────────────────────────────────
+  // When the builder is launched from a pregen creation flow, these params are set:
+  //   pregenMode=user|admin  → save as user or admin pregen after build
+  //   returnTo=/some/path    → where to navigate after saving or cancelling
+  const pregenMode = searchParams?.get("pregenMode") as "user" | "admin" | null;
+  const returnTo = searchParams?.get("returnTo") ?? null;
+  // editExisting=true means the characterId IS a pregen ID — fetch from pregen
+  // endpoint and PUT back on save instead of create+delete.
+  const editExisting = searchParams?.get("editExisting") === "true";
 
   // ── Session-storage draft ────────────────────────────────────────────────
   // Load any in-progress draft once (synchronously on first render) so the
@@ -190,7 +202,21 @@ export default function CharacterBuilderPageClient({
   );
 
   // Queries
-  const { data: character, isLoading: charLoading } = useCharacter(characterId);
+  const { data: character, isLoading: charLoading } = useCharacter(
+    editExisting ? undefined : characterId
+  );
+  const { data: adminPregenDetail, isLoading: adminPregenLoading } = useAdminPregenDetail(
+    editExisting && pregenMode === "admin" ? characterId : undefined
+  );
+  const { data: userPregenDetail, isLoading: userPregenLoading } = useUserPregenDetail(
+    editExisting && pregenMode === "user" ? characterId : undefined
+  );
+  // Resolve the effective character data regardless of source
+  const pregenCharacter = adminPregenDetail?.pregen?.character ?? userPregenDetail?.pregen?.character ?? null;
+  const effectiveCharacter = editExisting ? pregenCharacter : (character ?? null);
+  const effectiveLoading = editExisting
+    ? (pregenMode === "admin" ? adminPregenLoading : userPregenLoading)
+    : charLoading;
   const { data: classesData } = useClasses();
   const { data: ancestriesData } = useAncestries();
   const { data: communitiesData } = useCommunities();
@@ -201,6 +227,11 @@ export default function CharacterBuilderPageClient({
   // mid-wizard and refreshed).  For a fresh builder or an already-saved
   // character the normal server-recovery path wins.
   const updateMutation = useUpdateCharacter(characterId);
+  const deleteMutation = useDeleteCharacter();
+  const createUserPregenMutation = useCreateUserPregen();
+  const createAdminPregenMutation = useCreateAdminPregen();
+  const updateAdminPregenMutation = useUpdateAdminPregen();
+  const updateUserPregenMutation = useUpdateUserPregen();
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10>(
     () => {
       const draft = sessionDraft?.step;
@@ -224,53 +255,53 @@ export default function CharacterBuilderPageClient({
     },
   );
   const [classId, setClassId] = useState(
-    sessionDraft?.classId ?? character?.classId ?? "",
+    sessionDraft?.classId ?? effectiveCharacter?.classId ?? "",
   );
   const [subclassId, setSubclassId] = useState(
-    sessionDraft?.subclassId ?? character?.subclassId ?? "",
+    sessionDraft?.subclassId ?? effectiveCharacter?.subclassId ?? "",
   );
   const [ancestryId, setAncestryId] = useState(
-    sessionDraft?.ancestryId ?? character?.ancestryId ?? "",
+    sessionDraft?.ancestryId ?? effectiveCharacter?.ancestryId ?? "",
   );
   // ── Mixed Ancestry state (SRD p.16) ──────────────────────────────────────
   const [isMixedAncestry, setIsMixedAncestry] = useState(
-    sessionDraft?.isMixedAncestry ?? character?.isMixedAncestry ?? false,
+    sessionDraft?.isMixedAncestry ?? effectiveCharacter?.isMixedAncestry ?? false,
   );
   const [mixedAncestryBottomId, setMixedAncestryBottomId] = useState(
     sessionDraft?.mixedAncestryBottomId ??
-      character?.mixedAncestryBottomId ??
+      effectiveCharacter?.mixedAncestryBottomId ??
       "",
   );
   const [mixedAncestryDisplayName, setMixedAncestryDisplayName] = useState(
     sessionDraft?.mixedAncestryDisplayName ??
-      character?.mixedAncestryDisplayName ??
+      effectiveCharacter?.mixedAncestryDisplayName ??
       "",
   );
   const [mixedAncestryPhase, setMixedAncestryPhase] =
     useState<MixedAncestryPhase>(
       sessionDraft?.mixedAncestryPhase ??
-        (character?.isMixedAncestry ? "done" : "A"),
+        (effectiveCharacter?.isMixedAncestry ? "done" : "A"),
     );
   const [communityId, setCommunityId] = useState(
-    sessionDraft?.communityId ?? character?.communityId ?? "",
+    sessionDraft?.communityId ?? effectiveCharacter?.communityId ?? "",
   );
   const [traitBonuses, setTraitBonuses] = useState<TraitBonuses>(
-    sessionDraft?.traitBonuses ?? character?.traitBonuses ?? {},
+    sessionDraft?.traitBonuses ?? effectiveCharacter?.traitBonuses ?? {},
   );
   const [primaryWeaponId, setPrimaryWeaponId] = useState<string | null>(
     sessionDraft?.primaryWeaponId ??
-      character?.weapons?.primary?.weaponId ??
+      effectiveCharacter?.weapons?.primary?.weaponId ??
       null,
   );
   const [secondaryWeaponId, setSecondaryWeaponId] = useState<string | null>(
     sessionDraft?.secondaryWeaponId ??
-      character?.weapons?.secondary?.weaponId ??
+      effectiveCharacter?.weapons?.secondary?.weaponId ??
       null,
   );
   const [armorId, setArmorId] = useState<string | null>(() => {
     if (sessionDraft?.armorId !== undefined) return sessionDraft.armorId;
     // Recover armor from inventory: we store the armor name there on save.
-    const inv = character?.inventory ?? [];
+    const inv = effectiveCharacter?.inventory ?? [];
     return TIER1_ARMOR.find((a) => inv.includes(a.name))?.id ?? null;
   });
 
@@ -279,7 +310,7 @@ export default function CharacterBuilderPageClient({
     useState<StartingEquipmentSelections>(() => {
       if (sessionDraft?.equipmentSelections)
         return sessionDraft.equipmentSelections;
-      const inv = character?.inventory ?? [];
+      const inv = effectiveCharacter?.inventory ?? [];
       // Recover consumable
       const consumableId = inv.includes("Minor Health Potion")
         ? "minor-health-potion"
@@ -293,13 +324,13 @@ export default function CharacterBuilderPageClient({
 
   // Step 10: Domain Cards
   const [selectedDomainCardIds, setSelectedDomainCardIds] = useState<string[]>(
-    sessionDraft?.selectedDomainCardIds ?? character?.domainLoadout ?? [],
+    sessionDraft?.selectedDomainCardIds ?? effectiveCharacter?.domainLoadout ?? [],
   );
 
   // Step 9: Experiences (inserted before Domain Cards in the wizard flow)
   const [experiences, setExperiences] = useState<Experience[]>(() => {
     if (sessionDraft?.experiences) return sessionDraft.experiences;
-    if (character?.experiences?.length) return character.experiences;
+    if (effectiveCharacter?.experiences?.length) return effectiveCharacter.experiences;
     return [
       { name: "", bonus: 2 },
       { name: "", bonus: 2 },
@@ -308,7 +339,7 @@ export default function CharacterBuilderPageClient({
 
   // Character name (editable in Review step)
   const [characterName, setCharacterName] = useState(
-    sessionDraft?.characterName ?? character?.name ?? "",
+    sessionDraft?.characterName ?? effectiveCharacter?.name ?? "",
   );
 
   const [heritageTab, setHeritageTab] = useState<"ancestry" | "community">(
@@ -396,41 +427,41 @@ export default function CharacterBuilderPageClient({
   // for character to arrive and fills in any fields that are still at their
   // empty default - without clobbering values the user has already changed.
   useEffect(() => {
-    if (!character) return;
-    if (!classId && character.classId) setClassId(character.classId);
-    if (!subclassId && character.subclassId)
-      setSubclassId(character.subclassId);
-    if (!ancestryId && character.ancestryId)
-      setAncestryId(character.ancestryId);
+    if (!effectiveCharacter) return;
+    if (!classId && effectiveCharacter.classId) setClassId(effectiveCharacter.classId);
+    if (!subclassId && effectiveCharacter.subclassId)
+      setSubclassId(effectiveCharacter.subclassId);
+    if (!ancestryId && effectiveCharacter.ancestryId)
+      setAncestryId(effectiveCharacter.ancestryId);
     // Backfill mixed ancestry fields from server
-    if (character.isMixedAncestry && !isMixedAncestry) {
+    if (effectiveCharacter.isMixedAncestry && !isMixedAncestry) {
       setIsMixedAncestry(true);
-      if (character.mixedAncestryBottomId)
-        setMixedAncestryBottomId(character.mixedAncestryBottomId);
-      if (character.mixedAncestryDisplayName)
-        setMixedAncestryDisplayName(character.mixedAncestryDisplayName);
+      if (effectiveCharacter.mixedAncestryBottomId)
+        setMixedAncestryBottomId(effectiveCharacter.mixedAncestryBottomId);
+      if (effectiveCharacter.mixedAncestryDisplayName)
+        setMixedAncestryDisplayName(effectiveCharacter.mixedAncestryDisplayName);
       setMixedAncestryPhase("done");
     }
-    if (!communityId && character.communityId)
-      setCommunityId(character.communityId);
-    if (!characterName && character.name) setCharacterName(character.name);
-    if (!primaryWeaponId && character.weapons?.primary?.weaponId)
-      setPrimaryWeaponId(character.weapons.primary.weaponId);
-    if (!secondaryWeaponId && character.weapons?.secondary?.weaponId)
-      setSecondaryWeaponId(character.weapons.secondary.weaponId);
+    if (!communityId && effectiveCharacter.communityId)
+      setCommunityId(effectiveCharacter.communityId);
+    if (!characterName && effectiveCharacter.name) setCharacterName(effectiveCharacter.name);
+    if (!primaryWeaponId && effectiveCharacter.weapons?.primary?.weaponId)
+      setPrimaryWeaponId(effectiveCharacter.weapons.primary.weaponId);
+    if (!secondaryWeaponId && effectiveCharacter.weapons?.secondary?.weaponId)
+      setSecondaryWeaponId(effectiveCharacter.weapons.secondary.weaponId);
     if (!armorId) {
-      const inv = character.inventory ?? [];
+      const inv = effectiveCharacter.inventory ?? [];
       const recovered =
         TIER1_ARMOR.find((a) => inv.includes(a.name))?.id ?? null;
       if (recovered) setArmorId(recovered);
     }
-    if (!selectedDomainCardIds.length && character.domainLoadout?.length) {
-      setSelectedDomainCardIds(character.domainLoadout);
+    if (!selectedDomainCardIds.length && effectiveCharacter.domainLoadout?.length) {
+      setSelectedDomainCardIds(effectiveCharacter.domainLoadout);
     }
     // Consumable recovery from inventory
     setEquipmentSelections((prev) => {
       if (prev.consumableId) return prev;
-      const inv = character.inventory ?? [];
+      const inv = effectiveCharacter.inventory ?? [];
       const consumableId = inv.includes("Minor Health Potion")
         ? "minor-health-potion"
         : inv.includes("Minor Stamina Potion")
@@ -442,22 +473,22 @@ export default function CharacterBuilderPageClient({
     // Trait bonuses backfill
     if (
       !Object.keys(traitBonuses).length &&
-      character.traitBonuses &&
-      Object.keys(character.traitBonuses).length
+      effectiveCharacter.traitBonuses &&
+      Object.keys(effectiveCharacter.traitBonuses).length
     ) {
-      setTraitBonuses(character.traitBonuses);
+      setTraitBonuses(effectiveCharacter.traitBonuses);
     }
     // Experiences backfill
-    if (experiences.every((e) => !e.name) && character.experiences?.length) {
-      setExperiences(character.experiences);
+    if (experiences.every((e) => !e.name) && effectiveCharacter.experiences?.length) {
+      setExperiences(effectiveCharacter.experiences);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [character]);
+  }, [effectiveCharacter]);
 
   // Recover saved class item from inventory once class data loads
   useEffect(() => {
-    if (!selectedClassData || !character) return;
-    const inv = character.inventory ?? [];
+    if (!selectedClassData || !effectiveCharacter) return;
+    const inv = effectiveCharacter.inventory ?? [];
     const recovered =
       selectedClassData.classItems.find((ci) => inv.includes(ci)) ?? null;
     if (recovered) {
@@ -465,7 +496,7 @@ export default function CharacterBuilderPageClient({
         prev.classItem ? prev : { ...prev, classItem: recovered },
       );
     }
-  }, [selectedClassData, character]);
+  }, [selectedClassData, effectiveCharacter]);
 
   // Get selected subclass data
   const selectedSubclass = selectedClassData?.subclasses.find(
@@ -520,17 +551,17 @@ export default function CharacterBuilderPageClient({
     experiences.length >= 2 &&
     experiences.every((e) => e.name.trim().length > 0);
   // Post-Level-1: domain cards are managed via the level-up wizard - always allow Next.
-  const isLockedDomainStep = Boolean(character && character.level > 1);
+  const isLockedDomainStep = Boolean(effectiveCharacter && effectiveCharacter.level > 1);
   const canGoNext9 = isLockedDomainStep || selectedDomainCardIds.length === 2;
 
   // ── Steps 6 (weapons) and 7 (armor): skip when already saved ────────────
   // Once weapons/armor have been selected and persisted via a previous builder run,
   // they are managed from the equipment page on the character sheet.
   // Detect from the server character data (not local draft state).
-  const hasExistingWeapons = Boolean(character?.weapons?.primary?.weaponId);
+  const hasExistingWeapons = Boolean(effectiveCharacter?.weapons?.primary?.weaponId);
   const hasExistingArmor = Boolean(
-    character?.inventory &&
-    TIER1_ARMOR.some((a) => character.inventory!.includes(a.name)),
+    effectiveCharacter?.inventory &&
+    TIER1_ARMOR.some((a) => effectiveCharacter.inventory!.includes(a.name)),
   );
 
   // Build the ordered list of active steps (skipping locked equipment steps).
@@ -622,14 +653,15 @@ export default function CharacterBuilderPageClient({
       // ── Compute damageThresholds ─────────────────────────────────
       // SRD: major = armor.baseMajorThreshold + level
       // SRD: severe = armor.baseSevereThreshold + level
-      const charLevel = character?.level ?? 1;
+      const charLevel = effectiveCharacter?.level ?? 1;
       const damageThresholds = {
         major: (selectedArmor?.baseMajorThreshold ?? 0) + charLevel,
         severe: (selectedArmor?.baseSevereThreshold ?? 0) + charLevel,
       };
 
-      const updated = await updateMutation.mutateAsync({
-        name: characterName.trim() || character?.name || "Unnamed Character",
+      // Build the character payload
+      const characterPayload = {
+        name: characterName.trim() || effectiveCharacter?.name || "Unnamed Character",
         classId,
         subclassId: subclassId || undefined,
         ancestryId: ancestryId || undefined,
@@ -664,11 +696,48 @@ export default function CharacterBuilderPageClient({
             }),
         // Save experiences - filter out any empty entries just in case.
         experiences: experiences.filter((e) => e.name.trim()),
-      } as Partial<Character>);
+      } as Partial<Character>;
+
+      // In editExisting mode the characterId IS the pregenId — there is no temp
+      // character record, so we skip the PATCH /characters step and build the
+      // updated object directly from local state merged with the existing pregen.
+      const updated: Character = editExisting
+        ? { ...effectiveCharacter!, ...characterPayload, characterId }
+        : await updateMutation.mutateAsync(characterPayload);
 
       // Redirect back to character sheet
       clearSession();
-      router.push(`/character/${updated.characterId ?? characterId}`);
+
+      if (pregenMode) {
+        // Pregen mode: save the built character as a pregen, then (if not editing
+        // an existing pregen) delete the temporary character record.
+        try {
+          if (editExisting) {
+            // Editing an existing pregen: PUT the updated character blob directly.
+            if (pregenMode === "admin") {
+              await updateAdminPregenMutation.mutateAsync({ pregenId: characterId, character: updated });
+            } else {
+              await updateUserPregenMutation.mutateAsync({ pregenId: characterId, character: updated });
+            }
+          } else {
+            // Creating a new pregen: create record then delete the temp character.
+            if (pregenMode === "admin") {
+              await createAdminPregenMutation.mutateAsync({ character: updated });
+            } else {
+              await createUserPregenMutation.mutateAsync({ character: updated });
+            }
+            await deleteMutation.mutateAsync(updated.characterId ?? characterId);
+          }
+        } catch {
+          // Even if pregen save or delete fails, surface the error but still
+          // allow the user to navigate away — the character was saved successfully.
+          setError("Character saved but failed to convert to pre-gen. You can save it as a pre-gen from the dashboard.");
+          return;
+        }
+        router.push(returnTo ?? (pregenMode === "admin" ? "/admin/pregens" : "/pregens"));
+      } else {
+        router.push(`/character/${updated.characterId ?? characterId}`);
+      }
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to update character",
@@ -676,7 +745,23 @@ export default function CharacterBuilderPageClient({
     }
   };
 
-  if (charLoading) {
+  // When in pregen mode, cancelling means discarding the temp character (unless editing existing).
+  const handleCancel = async () => {
+    if (pregenMode && characterId) {
+      if (!editExisting) {
+        try {
+          await deleteMutation.mutateAsync(characterId);
+        } catch {
+          // Ignore — orphaned characters are low risk; proceed with navigation.
+        }
+      }
+      router.push(returnTo ?? (pregenMode === "admin" ? "/admin/pregens" : "/pregens"));
+    } else {
+      router.push(`/character/${characterId}`);
+    }
+  };
+
+  if (effectiveLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a100d]">
         <div
@@ -690,7 +775,7 @@ export default function CharacterBuilderPageClient({
     );
   }
 
-  if (!character) {
+  if (!effectiveCharacter) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a100d] p-4">
         <div className="rounded-lg border border-[#fe5f55]/40 bg-[#fe5f55]/10 p-8 text-center">
@@ -729,16 +814,16 @@ export default function CharacterBuilderPageClient({
                 id="builder-title"
                 className="font-serif text-xl font-semibold text-[#f7f7ff]"
               >
-                Edit Character
+                {pregenMode ? "Build Pre-gen" : "Edit Character"}
               </h2>
               <p className="text-sm text-[#b9baa3]/60 mt-0.5">
-                {characterName || character.name} • Step {step} of 10
+                {characterName || effectiveCharacter.name} • Step {step} of 10
               </p>
             </div>
 
             <button
               type="button"
-              onClick={() => router.push(`/character/${characterId}`)}
+              onClick={handleCancel}
               className="h-11 w-11 flex items-center justify-center text-parchment-600 hover:text-parchment-400 text-2xl leading-none transition-colors focus:outline-none focus:ring-2 focus:ring-[#577399] rounded-lg"
               aria-label="Close builder"
             >
@@ -779,7 +864,7 @@ export default function CharacterBuilderPageClient({
               classesData &&
               !classesData.classes.find((c) => c.classId === classId)
             ) {
-              missing.push(`Class (${character.className || classId})`);
+              missing.push(`Class (${effectiveCharacter.className || classId})`);
             }
             if (
               ancestryId &&
@@ -790,7 +875,7 @@ export default function CharacterBuilderPageClient({
               )
             ) {
               missing.push(
-                `Ancestry (${character.ancestryName || ancestryId})`,
+                `Ancestry (${effectiveCharacter.ancestryName || ancestryId})`,
               );
             }
             if (
@@ -802,7 +887,7 @@ export default function CharacterBuilderPageClient({
               )
             ) {
               missing.push(
-                `Community (${character.communityName || communityId})`,
+                `Community (${effectiveCharacter.communityName || communityId})`,
               );
             }
             if (missing.length === 0) return null;
@@ -1716,14 +1801,14 @@ export default function CharacterBuilderPageClient({
                       onSelectionChange={
                         isLockedDomainStep ? () => {} : setSelectedDomainCardIds
                       }
-                      characterLevel={character?.level ?? 1}
-                      lockedCardIds={
-                        isLockedDomainStep
-                          ? (character?.domainVault ??
-                            character?.domainLoadout ??
-                            [])
-                          : undefined
-                      }
+                       characterLevel={effectiveCharacter?.level ?? 1}
+                       lockedCardIds={
+                         isLockedDomainStep
+                           ? (effectiveCharacter?.domainVault ??
+                             effectiveCharacter?.domainLoadout ??
+                             [])
+                           : undefined
+                       }
                     />
                   </div>
                 </div>
@@ -2026,11 +2111,11 @@ export default function CharacterBuilderPageClient({
                           {isLockedDomainStep ? (
                             <p className="text-sm text-parchment-500">
                               {
-                                (
-                                  character?.domainVault ??
-                                  character?.domainLoadout ??
-                                  []
-                                ).length
+                                 (
+                                   effectiveCharacter?.domainVault ??
+                                   effectiveCharacter?.domainLoadout ??
+                                   []
+                                 ).length
                               }{" "}
                               cards in vault - not modified here.
                             </p>
@@ -2239,7 +2324,7 @@ export default function CharacterBuilderPageClient({
               type="button"
               onClick={() => {
                 if (step === activeSteps[0]) {
-                  router.push(`/character/${characterId}`);
+                  void handleCancel();
                 } else {
                   setStep(
                     prevActiveStep(step) as
@@ -2312,7 +2397,7 @@ export default function CharacterBuilderPageClient({
                 <button
                   type="button"
                   onClick={handleSave}
-                  disabled={updateMutation.isPending}
+                  disabled={updateMutation.isPending || createUserPregenMutation.isPending || createAdminPregenMutation.isPending || deleteMutation.isPending}
                   className="
                        rounded-lg px-6 py-3 font-semibold text-base min-h-[44px]
                       bg-[#577399] text-[#f7f7ff]
@@ -2321,7 +2406,7 @@ export default function CharacterBuilderPageClient({
                       transition-colors shadow-sm
                     "
                 >
-                  {updateMutation.isPending ? (
+                  {(updateMutation.isPending || createUserPregenMutation.isPending || createAdminPregenMutation.isPending || deleteMutation.isPending) ? (
                     <span className="flex items-center gap-2">
                       <span
                         className="h-3.5 w-3.5 animate-spin rounded-full border border-[#f7f7ff] border-t-transparent"
@@ -2330,6 +2415,8 @@ export default function CharacterBuilderPageClient({
                       <span className="sr-only">Saving…</span>
                       <span aria-hidden="true">Saving…</span>
                     </span>
+                  ) : pregenMode ? (
+                    "Save Pre-gen ✦"
                   ) : (
                     "Save Changes ✦"
                   )}
@@ -2340,5 +2427,17 @@ export default function CharacterBuilderPageClient({
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CharacterBuilderPageClient(props: CharacterBuilderPageProps) {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-[#0a100d]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#577399] border-t-transparent" />
+      </div>
+    }>
+      <CharacterBuilderInner {...props} />
+    </Suspense>
   );
 }

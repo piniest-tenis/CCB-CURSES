@@ -53,7 +53,7 @@ const corsAllowedOrigins = isProd
   ? [
       "https://ccb.curses.show",
       "https://localhost:8080",
-      "https://ajls8isp75nequgerzql4vipnfrzzi.ext-twitch.tv",
+      "*.ext-twitch.tv",                      // Twitch extension iframes (all subdomains)
     ]
   : [
       "http://localhost:3000",

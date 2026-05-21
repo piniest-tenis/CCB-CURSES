@@ -230,6 +230,51 @@ export class CampaignStack extends cdk.Stack {
     });
 
     // -------------------------------------------------------------------------
+    // 6b. Twitch Extension EBS Lambda + routes
+    //     GET  /twitch/config  — read broadcaster config (any extension role)
+    //     PUT  /twitch/config  — write broadcaster config (broadcaster only)
+    //
+    //     Auth is handled entirely in-handler using the Twitch extension JWT
+    //     (HMAC-SHA256 with the base64-encoded extension secret).  API Gateway
+    //     has no JWT authorizer on these routes intentionally — the Twitch JWT
+    //     is NOT a Cognito JWT and would fail the Cognito authorizer.
+    // -------------------------------------------------------------------------
+    const twitchExtensionHandler = new lambda.Function(
+      this,
+      "TwitchExtensionHandler",
+      {
+        ...commonLambdaProps,
+        functionName: `daggerheart-twitch-extension-${stage}`,
+        description: "Twitch extension EBS — broadcaster config read/write",
+        handler: "index.handler",
+        code: lambda.Code.fromAsset("../backend/dist/twitch-extension-handler"),
+        logGroup: makeLambdaLogGroup("twitch-extension"),
+        environment: {
+          ...commonLambdaProps.environment,
+          // Base64-encoded Twitch extension secret (from Developer Console → Settings).
+          // Used to verify the HS256 JWT that the Twitch extension sends with
+          // every EBS request.
+          TWITCH_EXTENSION_SECRET: process.env["TWITCH_EXTENSION_SECRET"] ?? "",
+        },
+      } as lambda.FunctionProps
+    );
+
+    // Config is stored as TWITCH_CONFIG#<channelId> items in the campaigns table.
+    this.campaignsTable.grantReadWriteData(twitchExtensionHandler);
+
+    const twitchExtensionIntegration = new apigwv2Integrations.HttpLambdaIntegration(
+      "TwitchExtensionIntegration",
+      twitchExtensionHandler
+    );
+
+    // No JWT authorizer — Twitch extension JWT verified in-handler.
+    httpApi.addRoutes({
+      path: "/twitch/config",
+      methods: [apigwv2.HttpMethod.GET, apigwv2.HttpMethod.PUT],
+      integration: twitchExtensionIntegration,
+    });
+
+    // -------------------------------------------------------------------------
     // 6b. HTTP Routes for Pregen management endpoints
     // -------------------------------------------------------------------------
     const pregensIntegration = new apigwv2Integrations.HttpLambdaIntegration(
@@ -242,16 +287,21 @@ export class CampaignStack extends cdk.Stack {
       { method: apigwv2.HttpMethod.POST, path: "/admin/pregens" },
       { method: apigwv2.HttpMethod.GET, path: "/admin/pregens" },
       { method: apigwv2.HttpMethod.GET, path: "/admin/pregens/{pregenId}" },
+      { method: apigwv2.HttpMethod.PUT, path: "/admin/pregens/{pregenId}" },
+      { method: apigwv2.HttpMethod.POST, path: "/admin/pregens/{pregenId}/levelup" },
       { method: apigwv2.HttpMethod.DELETE, path: "/admin/pregens/{pregenId}" },
       // User — GM-scoped pregens
       { method: apigwv2.HttpMethod.POST, path: "/pregens" },
       { method: apigwv2.HttpMethod.GET, path: "/pregens" },
       { method: apigwv2.HttpMethod.GET, path: "/pregens/{pregenId}" },
+      { method: apigwv2.HttpMethod.PUT, path: "/pregens/{pregenId}" },
+      { method: apigwv2.HttpMethod.POST, path: "/pregens/{pregenId}/levelup" },
       { method: apigwv2.HttpMethod.DELETE, path: "/pregens/{pregenId}" },
       // Campaign pool management
       { method: apigwv2.HttpMethod.POST, path: "/campaigns/{campaignId}/pregens/pool" },
       { method: apigwv2.HttpMethod.GET, path: "/campaigns/{campaignId}/pregens/pool" },
       { method: apigwv2.HttpMethod.DELETE, path: "/campaigns/{campaignId}/pregens/pool/{pregenId}" },
+      { method: apigwv2.HttpMethod.PATCH, path: "/campaigns/{campaignId}/pregens/pool/{pregenId}" },
     ];
 
     for (const route of pregenRoutes) {

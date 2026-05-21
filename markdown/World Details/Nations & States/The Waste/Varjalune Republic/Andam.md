@@ -1,0 +1,1 @@
+The yearly tribute of persons dedicated to the [[Hygiane Order]]. This is paid from the [[The Land of Tidwell/World Details/Nations & States/The Waste/Varjalune Republic/Varjalune Republic]] and was cemented in gratitude as part of their repayment for the Order's aid in the [[Eraldama Incursion]].

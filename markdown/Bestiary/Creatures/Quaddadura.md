@@ -1,0 +1,1 @@
+A massive, furred, thick-skinned semi-aquatic creature. Ranging from 10 to 30 foot long and weighing in at several hundred tons at its heaviest. Large, spade-like teeth surround four prominent hook-shaped eye teeth. These creatures feed primarily on the lungfish in the cold waters of deep lakes.

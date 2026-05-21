@@ -1,0 +1,1 @@
+A deep cliff-walled lake in the western [Gyhrra Badlands](Gyhrra%20Badlands.md). The area on which the lake sits is full of iron-rich sands. The lake originates deep underground, from what local surveyors suspect is a geothermal hot spring. It travels up through the intensely iron rich crust before emptying into the [Huldrab Canyon](Huldrab%20Canyon.md)

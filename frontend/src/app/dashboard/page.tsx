@@ -17,7 +17,7 @@
  *   - Custom sort dropdown (name / class / updatedAt)
  */
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuthStore } from "@/store/authStore";
@@ -27,6 +27,8 @@ import {
   useDeleteCharacter,
 } from "@/hooks/useCharacter";
 import { useCampaigns } from "@/hooks/useCampaigns";
+import { useUserPregens, useCreateUserPregen } from "@/hooks/usePregens";
+import { apiClient } from "@/lib/api";
 import type { CharacterSummary, CampaignSummary } from "@shared/types";
 
 import { AppHeader } from "@/components/AppHeader";
@@ -43,6 +45,7 @@ import { LorePanel } from "@/components/dashboard/LorePanel";
 import { Footer } from "@/components/Footer";
 import { PatreonPaidGate } from "@/components/PatreonGateOverlay";
 import { usePatreonGate, usePatreonOAuth } from "@/hooks/usePatreonGate";
+import { PregenDashboardPanel } from "@/app/dashboard/PregenDashboardPanel";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -197,6 +200,27 @@ export default function DashboardPage() {
   const { hasUnlimitedCharacters, needsPatreon } = usePatreonGate();
   const { startOAuth, isLinking } = usePatreonOAuth();
   const [showCreate, setShowCreate] = useState(false);
+
+  // Pregen hooks
+  const createPregenMutation = useCreateUserPregen();
+  const { data: userPregenData } = useUserPregens();
+  const userPregens = userPregenData?.pregens ?? [];
+
+  const pregenSourceIds = useMemo(
+    () => new Set(userPregens.map((p) => p.sourceCharacterId).filter(Boolean) as string[]),
+    [userPregens]
+  );
+
+  const handleSaveAsPregen = useCallback(
+    async (characterId: string) => {
+      const fullCharacter = await apiClient.get(`/characters/${characterId}`);
+      await createPregenMutation.mutateAsync({
+        character: fullCharacter as import("@shared/types").Character,
+        sourceCharacterId: characterId,
+      });
+    },
+    [createPregenMutation]
+  );
 
   const [searchSort, setSearchSort] = useState<SearchSortState>({
     query: "",
@@ -452,11 +476,16 @@ export default function DashboardPage() {
                         deleteMutation.isPending &&
                         deleteMutation.variables === char.characterId
                       }
+                      isAlreadyPregen={pregenSourceIds.has(char.characterId)}
+                      onSaveAsPregen={() => handleSaveAsPregen(char.characterId)}
                     />
                   ))}
                 </div>
               )}
             </section>
+
+            {/* Personal Pre-gens panel — only shown when the user has pregens */}
+            {userPregens.length > 0 && <PregenDashboardPanel />}
 
             {/* ── Mobile-only rail panels ───────────────────────────────── */}
             <div className="xl:hidden space-y-4">

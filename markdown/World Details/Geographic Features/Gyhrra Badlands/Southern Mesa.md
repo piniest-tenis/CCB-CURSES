@@ -1,0 +1,3 @@
+The vast, arid desert atop a wind-eroded Mesa. Tall enough to have a distinct ecosystem from the surrounding barren mixed-grass prairies. A temperate desert, the Southern Mesa's ecosystem is drier than the surrounding plains due to the elevation of the mesa.
+
+The Mesa's origin defies traditional ecological explanation, though the [[Davites]] believe the origin to be obvious (the [[Revenant God]] felt [[Tidwell]] needed a true desert), and the [[Church of the Bent Trunk]] believe it to be a haven for the downtrodden and abysmal souls too pure for the rest of society.

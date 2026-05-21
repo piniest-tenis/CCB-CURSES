@@ -108,6 +108,7 @@ export interface CampaignCharacterDetail {
   level: number;
   avatarUrl: string | null;
   portraitUrl: string | null;
+  shareToken?: string;
 }
 
 // ─── Invites ───────────────────────────────────────────────────────────────────
@@ -195,4 +196,3 @@ export interface AddCharacterInput {
   /** The character owner's userId. Required when an admin adds a player's character. */
   ownerUserId?: string;
 }
-

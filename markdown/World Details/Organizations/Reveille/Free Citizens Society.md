@@ -1,0 +1,1 @@
+A group formed in direct opposition to the [Zoning Commission](Zoning%20Commission.md). They advocate for the abolition of all regulations against what can be built in the [Common District](Common%20District.md) and who can live where. They frequently take action against the commission by disrupting their proceedings in an often silly and over-the-top manner.

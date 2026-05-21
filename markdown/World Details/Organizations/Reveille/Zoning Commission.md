@@ -1,0 +1,1 @@
+A bureaucratic and heavy handed organization of community leaders and business owners who employ city planners to dictate what can be built where. They also sometimes dictate _who_ can build where, which is generally seen as needlessly oppressive and discriminatory, yet they claim to be impartial and only following the science in order to make their decisions.

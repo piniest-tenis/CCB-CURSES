@@ -1,0 +1,3 @@
+This compass will often lead its bearer into danger. It is powerful in that you can ask it to take you to any location, and it will point the quickest direction, but in doing so it will sometimes ignore dangers or impediments on that path.￼￼When the party uses the compass, there is a 1 in 3 chance that it will lead them to a precarious situation.
+ 
+Origin: A wish to know the swiftest path of travel

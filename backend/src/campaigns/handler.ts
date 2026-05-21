@@ -436,6 +436,7 @@ async function buildCampaignDetail(
         level: charRecord.level,
         avatarUrl: charRecord.avatarUrl ?? null,
         portraitUrl: charRecord.portraitUrl ?? null,
+        shareToken: callerRole === "gm" ? signShareToken(cr.characterId, cr.userId) : undefined,
       });
     }
   }
@@ -1693,6 +1694,7 @@ interface CampaignPregenPoolRecord {
   source: "system" | "user";
   ownerId: string | null;
   addedAt: string;
+  selectedLevel?: number;
 }
 
 /**
@@ -1701,7 +1703,7 @@ interface CampaignPregenPoolRecord {
  */
 async function resolvePregenCharacter(
   poolRecord: CampaignPregenPoolRecord
-): Promise<Character | null> {
+): Promise<PregenRecord | null> {
   const lookupPk = poolRecord.source === "system"
     ? "PREGEN#SYSTEM"
     : `PREGEN#USER#${poolRecord.ownerId}`;
@@ -1710,10 +1712,7 @@ async function resolvePregenCharacter(
     CHARACTERS_TABLE,
     { PK: lookupPk, SK: `PREGEN#${poolRecord.pregenId}` }
   );
-  if (dbPregen) return dbPregen.character;
-
-  // Fallback: check the hardcoded array
-  return PREGEN_CHARACTERS.find((p) => p.characterId === poolRecord.pregenId) ?? null;
+  return dbPregen ?? null;
 }
 
 // GET /campaigns/{campaignId}/pregens — list available pregens
@@ -1769,12 +1768,14 @@ async function listPregens(
     communityName: string | null;
     domains: string[];
     nativeLevel: number;
+    selectedLevel?: number;
+    claimed: boolean;
   }> = [];
 
   if (poolRecords.length > 0) {
     // Campaign has an explicit pool — resolve each
     for (const pr of poolRecords) {
-      if (usedPregenIds.has(pr.pregenId)) continue;
+      const claimed = usedPregenIds.has(pr.pregenId);
 
       const lookupPk = pr.source === "system"
         ? "PREGEN#SYSTEM"
@@ -1794,13 +1795,14 @@ async function listPregens(
           communityName: rec.communityName,
           domains: rec.domains,
           nativeLevel: rec.nativeLevel,
+          selectedLevel: pr.selectedLevel,
+          claimed,
         });
       }
     }
   } else {
     // Fallback: use hardcoded PREGEN_CHARACTERS for legacy campaigns
     available = PREGEN_CHARACTERS
-      .filter((p) => !usedPregenIds.has(p.characterId))
       .map((p) => ({
         pregenId: p.characterId,
         name: p.name,
@@ -1810,6 +1812,7 @@ async function listPregens(
         communityName: p.communityName ?? null,
         domains: p.domains,
         nativeLevel: p.level,
+        claimed: usedPregenIds.has(p.characterId),
       }));
   }
 
@@ -1846,6 +1849,7 @@ async function importPregen(
 
   // ── Resolve pregen template ─────────────────────────────────────────────
   let pregen: Character | undefined;
+  let pregenRecord: PregenRecord | null = null;
 
   // First check the campaign pool
   const poolRecord = await getItem<CampaignPregenPoolRecord>(
@@ -1855,7 +1859,10 @@ async function importPregen(
 
   if (poolRecord) {
     const resolved = await resolvePregenCharacter(poolRecord);
-    if (resolved) pregen = resolved;
+    if (resolved) {
+      pregenRecord = resolved;
+      pregen = resolved.character;
+    }
   }
 
   // Fallback: hardcoded array (legacy)
@@ -1884,8 +1891,23 @@ async function importPregen(
     throw new AppError("VALIDATION_ERROR", "Import level must be 1–10", 422, []);
   }
 
-  // Scale the pregen to the target level
-  const scaled = scalePregenToLevel(pregen, importLevel);
+  // Resolve the imported character at the target level.
+  // DB-backed pregens store authoritative snapshots per level, while legacy
+  // hardcoded pregens still rely on the shared scaler.
+  const scaled = pregenRecord
+    ? (() => {
+        const snapshot = pregenRecord.levelSnapshots?.[importLevel];
+        if (!snapshot) {
+          throw new AppError(
+            "VALIDATION_ERROR",
+            `Level ${importLevel} is not available for this pre-generated character`,
+            422,
+            []
+          );
+        }
+        return { ...snapshot };
+      })()
+    : scalePregenToLevel(pregen, importLevel);
 
   // Create real character record
   const characterId = uuidv4();

@@ -1,0 +1,1 @@
+The large, protected bay upon which [[Alipinn]] is situated. This natural barrier space provides for the best natural harbor on the northern half of the island, allowing for trade to [[The Land of Tidwell/World Details/Geographic Features/Kybon Isle]] and even the distant [[The Land of Tidwell/World Details/Nations & States/Gyhrra Badlands/Mercy & Ascension]].

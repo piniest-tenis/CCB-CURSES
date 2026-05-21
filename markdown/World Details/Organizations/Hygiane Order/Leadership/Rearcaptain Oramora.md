@@ -1,0 +1,4 @@
+Species: [[Ghotling]]
+Appearance: Missing right leg, refuses prosthesis. Moves in a swinging lope utilizing his arms, generally a behavior that Ghotlings reserve for running, though the Rearcaptain has adapted this for his purposes. Has a fondness for buttons, and has sewn several more than regulation allows onto his uniform and dress blouses.
+
+Rearcaptain Oramora is the head of [[The Etherements]] in [[The Land of Tidwell/World Details/Nations & States/Forestdown/Gatehouse/Gatehouse]]. He is a dark and brooding figure, and often speaks only enough to convey the vaguest of thoughts before finding a way to retreat. Has avoided major reprimand or oversight from [[Grandmarshal Pogg]].
