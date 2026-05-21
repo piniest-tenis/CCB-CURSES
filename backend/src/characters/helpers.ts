@@ -4,10 +4,12 @@
 
 import { createHmac } from "crypto";
 import { AppError } from "../common/middleware";
+import { resolveTokenCap } from "@shared/tokenResolver";
 import type {
   Character,
   RestType,
   RestResult,
+  TokenConfig,
   Weapons,
   LevelUpChoices,
   AdvancementChoice,
@@ -331,15 +333,67 @@ export function validateSrdRules(character: Partial<Character>): SrdError[] {
 
 // ─── Rest logic ───────────────────────────────────────────────────────────────
 
+/**
+ * Apply token rest actions to a character's cardTokens map.
+ * Pure function — no I/O.
+ *
+ * @param cardTokens    - Current token counts (mutated copy returned).
+ * @param tokenConfigs  - Map of cardId → TokenConfig for all cards in loadout.
+ * @param restType      - The rest type being applied ("short" | "long").
+ * @param character     - The character (needed for resolveTokenCap).
+ */
+function applyTokenRestActions(
+  cardTokens: Record<string, number>,
+  tokenConfigs: Record<string, TokenConfig>,
+  restType: RestType,
+  character: Character
+): Record<string, number> {
+  const trigger = restType === "short" ? "short-rest" : "long-rest";
+  const updated = { ...cardTokens };
+
+  for (const [cardId, count] of Object.entries(updated)) {
+    const config = tokenConfigs[cardId];
+    if (!config?.restAction) continue;
+    if (config.restAction.trigger !== trigger) continue;
+
+    switch (config.restAction.effect) {
+      case "fill-to-cap": {
+        const cap = resolveTokenCap(config, character);
+        if (cap !== null) {
+          updated[cardId] = cap;
+        }
+        break;
+      }
+      case "clear": {
+        updated[cardId] = 0;
+        break;
+      }
+      case "add-1": {
+        updated[cardId] = count + 1;
+        break;
+      }
+    }
+  }
+
+  return updated;
+}
+
 export function applyRest(
   character: Character,
-  restType: RestType
+  restType: RestType,
+  tokenConfigs: Record<string, TokenConfig> = {}
 ): { character: Character; cleared: RestResult["cleared"] } {
   const cleared: RestResult["cleared"] = { hp: 0, stress: 0, armor: 0 };
 
   if (restType === "short") {
     const stressToClear = Math.min(2, character.trackers.stress.marked);
     cleared.stress = stressToClear;
+    const updatedTokens = applyTokenRestActions(
+      character.cardTokens,
+      tokenConfigs,
+      restType,
+      character
+    );
     return {
       character: {
         ...character,
@@ -350,6 +404,7 @@ export function applyRest(
             marked: character.trackers.stress.marked - stressToClear,
           },
         },
+        cardTokens: updatedTokens,
         updatedAt: new Date().toISOString(),
       },
       cleared,
@@ -359,6 +414,12 @@ export function applyRest(
     cleared.stress = character.trackers.stress.marked;
     cleared.armor = character.trackers.armor.marked;
     const hopeMax = character.hopeMax ?? 6;
+    const updatedTokens = applyTokenRestActions(
+      character.cardTokens,
+      tokenConfigs,
+      restType,
+      character
+    );
     return {
       character: {
         ...character,
@@ -369,6 +430,7 @@ export function applyRest(
           armor: { ...character.trackers.armor, marked: 0 },
         },
         hope: Math.min(character.hope + 1, hopeMax),
+        cardTokens: updatedTokens,
         updatedAt: new Date().toISOString(),
       },
       cleared,

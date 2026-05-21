@@ -43,12 +43,14 @@ import {
   CHARACTERS_TABLE,
   CLASSES_TABLE,
   GAME_DATA_TABLE,
+  DOMAIN_CARDS_TABLE,
   USERS_TABLE,
   docClient,
   getItem,
   putItem,
   deleteItem,
   queryPage,
+  queryItems,
   scanItems,
   keys,
 } from "../common/dynamodb";
@@ -69,6 +71,7 @@ import type {
   MechanicalBonus,
   UserPreferences,
   PatreonLink,
+  TokenConfig,
 } from "@shared/types";
 import { canSave, isGrandfathered } from "../users/patreon";
 
@@ -1325,9 +1328,38 @@ async function takeRest(
 
   const { restType } = parseBody(event, RestSchema);
 
+  // ── Fetch TokenConfig for all cards in the character's domain loadout ──────
+  const tokenConfigs: Record<string, TokenConfig> = {};
+  if (existing.domainLoadout && existing.domainLoadout.length > 0) {
+    // Fetch each card individually; cards are keyed by DOMAIN#<domain> / CARD#<cardId>.
+    // We need the domain for each card — stored on the card record itself.
+    // Use a parallel fetch: getItem for each cardId.
+    // Since we don't store domain on the character, we query by SK prefix across all domains.
+    // Simpler: fetch each card by scanning SK = CARD#<cardId> — but that's expensive.
+    // Instead, fetch each card record via a query on the GSI or by storing domain on character.
+    // For now, use parallel getItem calls with a scan fallback: query the table for each cardId.
+    const cardFetches = existing.domainLoadout.map(async (cardId: string) => {
+      // Query DOMAIN_CARDS_TABLE for SK = CARD#<cardId> across all PKs
+      const results = await queryItems<{ cardId: string; domain: string; tokenConfig?: TokenConfig }>({
+        TableName: DOMAIN_CARDS_TABLE,
+        IndexName: "cardId-index",
+        KeyConditionExpression: "cardId = :cardId",
+        ExpressionAttributeValues: { ":cardId": cardId },
+      }).catch(() => [] as Array<{ cardId: string; domain: string; tokenConfig?: TokenConfig }>);
+      return results[0] ?? null;
+    });
+    const cardResults = await Promise.all(cardFetches);
+    for (const card of cardResults) {
+      if (card?.tokenConfig) {
+        tokenConfigs[card.cardId] = card.tokenConfig;
+      }
+    }
+  }
+
   const { character: updatedCharacter, cleared } = applyRest(
     existing as unknown as Character,
-    restType
+    restType,
+    tokenConfigs
   );
 
   const updatedRecord: CharacterRecord = {
