@@ -46,6 +46,14 @@ const NAV_LINKS: NavLink[] = [
     activeColor:
       "border-coral-400 bg-coral-400/25 text-[#f7f7ff] focus:ring-coral-400",
   },
+  {
+    href: "/rules",
+    label: "Rules",
+    baseColor:
+      "border-[#577399]/40 bg-[#577399]/10 text-[#577399] hover:bg-[#577399]/20 hover:border-[#577399] focus:ring-[#577399]",
+    activeColor:
+      "border-[#577399] bg-[#577399]/25 text-[#f7f7ff] focus:ring-[#577399]",
+  },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────

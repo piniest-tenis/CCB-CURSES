@@ -1,0 +1,1 @@
+The massive northern lake situated on the border of [Forestdown](Forestdown.md) and [Carnithia 1](Carnithia%201.md). Known for its crystal clear, cool waters and the massive creatures that live beneath its surface.

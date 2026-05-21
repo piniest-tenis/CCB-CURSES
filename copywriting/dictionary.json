@@ -1,0 +1,182 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2026-04-12",
+  "description": "Custom dictionary of allowed terms for the Curses! platform. All marketing, UI, and content copy should reference this dictionary for consistent terminology.",
+
+  "brandTerms": {
+    "Curses!": {
+      "usage": "Always include the exclamation mark. Always italicize or bold in running text when referring to the product. Never lowercase.",
+      "incorrect": ["Curses", "curses!", "CURSES!", "Curses! app"],
+      "context": "Product name. Used as a standalone noun: 'Curses! is a Daggerheart toolset.'"
+    },
+    "Man in Jumpsuit": {
+      "usage": "Full studio name. Do not abbreviate in legal/footer contexts.",
+      "incorrect": ["Man In Jumpsuit", "MIJP", "ManInJumpsuit"],
+      "context": "Studio / publisher name."
+    },
+    "Chronicles of Tidwell": {
+      "usage": "The actual-play show title. Italicize when possible.",
+      "incorrect": ["Tidwell Chronicles", "Chronicle of Tidwell"],
+      "context": "Show name — the actual-play campaign streamed on Twitch."
+    },
+    "Tales of Tidwell": {
+      "usage": "CMS content framing label for lore interstitials.",
+      "context": "Used in the loading interstitial as a content heading."
+    }
+  },
+
+  "srdTerms": {
+    "Hope": {
+      "capitalize": true,
+      "usage": "Always capitalized when referring to the Daggerheart resource."
+    },
+    "Stress": {
+      "capitalize": true,
+      "usage": "Always capitalized when referring to the Daggerheart resource."
+    },
+    "HP": {
+      "capitalize": true,
+      "usage": "Abbreviation for Hit Points. Always uppercase."
+    },
+    "Hit Points": {
+      "capitalize": true,
+      "usage": "Full form. Capitalize both words when used as a game term."
+    },
+    "Domain": {
+      "capitalize": true,
+      "usage": "Capitalized when referring to the Daggerheart character Domain."
+    },
+    "Domain Card": {
+      "capitalize": true,
+      "usage": "Two words, both capitalized. Refers to the cards associated with a Domain."
+    },
+    "Loadout": {
+      "capitalize": true,
+      "usage": "Capitalized when referring to a character's Domain Card Loadout."
+    },
+    "Ancestry": {
+      "capitalize": true,
+      "usage": "Capitalized. Refers to a character's species/heritage in Daggerheart."
+    },
+    "Community": {
+      "capitalize": true,
+      "usage": "Capitalized when referring to the Daggerheart character background option."
+    },
+    "Class": {
+      "capitalize": true,
+      "usage": "Capitalized when referring to a Daggerheart Class."
+    },
+    "Subclass": {
+      "capitalize": true,
+      "usage": "Capitalized. Refers to a specialization within a Class."
+    },
+    "Adversary": {
+      "capitalize": true,
+      "usage": "Capitalized. The SRD term for enemies/monsters in Daggerheart.",
+      "incorrect": ["monster", "enemy", "mob", "creature"]
+    },
+    "Hope Feature": {
+      "capitalize": true,
+      "usage": "Capitalized. A character feature triggered by spending Hope."
+    },
+    "Class Feature": {
+      "capitalize": true,
+      "usage": "Capitalized. A feature granted by a character's Class."
+    },
+    "Downtime": {
+      "capitalize": true,
+      "usage": "Capitalized when referring to the Daggerheart Downtime phase."
+    },
+    "Tier": {
+      "capitalize": true,
+      "usage": "Capitalized when referring to Daggerheart advancement Tiers (Tier 1–4)."
+    },
+    "Companion": {
+      "capitalize": true,
+      "usage": "Capitalized when referring to a character's Daggerheart Companion."
+    },
+    "Fear": {
+      "capitalize": true,
+      "usage": "Capitalized when referring to the Daggerheart resource/roll type."
+    },
+    "with Hope / with Fear": {
+      "usage": "Daggerheart dual-die results. Always 'with Hope' or 'with Fear' — not 'on Hope.'"
+    }
+  },
+
+  "platformTerms": {
+    "character sheet": {
+      "capitalize": false,
+      "usage": "Lowercase in running text. Not a proper noun."
+    },
+    "character builder": {
+      "capitalize": false,
+      "usage": "Lowercase. Generic feature description."
+    },
+    "campaign management": {
+      "capitalize": false,
+      "usage": "Lowercase. Generic feature description."
+    },
+    "Encounter Designer": {
+      "capitalize": true,
+      "usage": "Capitalized. Refers to the specific Curses! feature."
+    },
+    "GM Command HUD": {
+      "capitalize": true,
+      "usage": "Capitalized. Refers to the specific Curses! Game Master dashboard."
+    },
+    "Homebrew Workshop": {
+      "capitalize": true,
+      "usage": "Capitalized. Refers to the specific Curses! homebrew creation tool."
+    },
+    "Dice Roller": {
+      "capitalize": true,
+      "usage": "Capitalized when referring to the specific Curses! feature."
+    },
+    "Session Log": {
+      "capitalize": true,
+      "usage": "Capitalized when referring to the specific Curses! feature. Plural: Session Logs."
+    },
+    "ping": {
+      "capitalize": false,
+      "usage": "Lowercase as a verb ('ping an element'). The feature is the 'ping system' or 'GM ping.'"
+    },
+    "share link": {
+      "capitalize": false,
+      "usage": "Lowercase. A permanent public URL to a character sheet."
+    },
+    "SRD": {
+      "capitalize": true,
+      "usage": "System Reference Document. No need to expand after first use in context where the audience understands it."
+    }
+  },
+
+  "settingTerms": {
+    "Tidwell": "The world/continent of the Curses! campaign setting.",
+    "The Waste": "Region name. Always 'The Waste' with capital T.",
+    "Forestdown": "One word, capitalized. The corrupted temperate rainforest.",
+    "Varjalune Republic": "Nation-state name. 'The Varjalune Republic' or just 'the Varjalune.'",
+    "Alipinn": "Capital city of the Varjalune Republic.",
+    "Taliga": "Second city of the Varjalune Republic.",
+    "Gatehouse": "Border town, home of the Hygiane Order.",
+    "Hygiane Order": "Military/religious order tasked with containing the Creep.",
+    "The Creep": "The corrupting force within Forestdown. Always 'The Creep' with capital T.",
+    "Etherotaxia": "Spirits and semi-corporeal beings in Forestdown.",
+    "The Spirit Ichida": "Ancient ghost, embodiment of change. Always include 'The Spirit.'",
+    "Ergantine Lake": "Lake adjacent to Gatehouse.",
+    "Eraldama": "A season in the Tidwell calendar.",
+    "Kuivatuul": "Dry seasonal wind.",
+    "Andam": "Annual draft/tribute event. 'The Andam' or 'the 231st Andam.'",
+    "The Masked Host": "Pre-humanoid inhabitants of Tidwell.",
+    "Storied Altar": "The altar in Reveille through which peoples arrive."
+  },
+
+  "formatting": {
+    "em-dash": "Use — (em dash) with no surrounding spaces for parenthetical breaks.",
+    "ellipsis": "Use … (Unicode ellipsis), not three periods.",
+    "ampersand": "Use '&' only in headings and stat strips. Use 'and' in body text.",
+    "oxford-comma": true,
+    "sentence-case-headings": false,
+    "title-case-headings": true
+  }
+}

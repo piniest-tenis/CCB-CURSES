@@ -309,7 +309,7 @@ export default function HomebrewUploadPage() {
   // Auth guard
   useEffect(() => {
     if (isReady && !isAuthenticated) {
-      router.replace("/auth/login");
+      router.replace("/auth/login?return_to=/homebrew/upload");
     }
   }, [isReady, isAuthenticated, router]);
 

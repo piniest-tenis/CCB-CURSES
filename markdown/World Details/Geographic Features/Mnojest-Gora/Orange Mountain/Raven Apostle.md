@@ -1,0 +1,3 @@
+A massive carving on the western face of the [[Orange Mountain]]. Its provenance is unknown.
+
+It depicts a creature similar to a [[Hokaw]] but missing its distinct crest and with wings in place of arms. The creature is perched on a branch, and an intricately carved strand of sinew is wound in its beak. Due to a trick of the carving, its eyes are set in a manner that cause it to appear to be looking at the viewer from almost any angle at which it can be viewed.

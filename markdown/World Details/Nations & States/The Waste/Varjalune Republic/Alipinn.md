@@ -1,0 +1,1 @@
+The major trade town at the mouth of the [[Vaiknelaht Bay]]. 

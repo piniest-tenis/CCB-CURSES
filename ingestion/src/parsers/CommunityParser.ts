@@ -19,6 +19,7 @@ import * as path from "path";
 import type { CommunityData, CharacterSource } from "@shared/types";
 import { toSlug } from "../transformers/SlugTransformer";
 import { extractMechanicalBonuses } from "../transformers/BonusExtractor";
+import { tokenExtractor } from "@shared/tokenExtractor";
 
 /**
  * Parse a single community `.md` file into a `CommunityData` object.
@@ -124,6 +125,7 @@ function parseCommunityRaw(
   }
 
   const mechanicalBonuses = extractMechanicalBonuses(raw, traitDescription, "");
+  const tokenConfig = tokenExtractor(traitDescription) ?? undefined;
 
   return {
     communityId,
@@ -133,5 +135,6 @@ function parseCommunityRaw(
     traitDescription,
     source,
     ...(mechanicalBonuses ? { mechanicalBonuses } : {}),
+    ...(tokenConfig !== undefined ? { tokenConfig } : {}),
   };
 }

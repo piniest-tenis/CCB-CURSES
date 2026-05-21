@@ -1,0 +1,1 @@
+The mining operation that owns the salt mines in the [Salt District](Salt%20District.md) in [Reveille](The%20Land%20of%20Tidwell/World%20Details/Nations%20&%20States/Carnithia/Reveille/Reveille.md). Headed by [Ghreesha](Ghreesha). Generally seen as a necessary industry, but hated by those who work within the corporation and by those who must deal with purchasing from it as well.

@@ -1,0 +1,1 @@
+Any number of reported spirits, either of the dead or semi-corporeal manifestations of concepts within the forest. Most are poorly understood, but some, such as the [[Madanikuputukas (Tukas)]].

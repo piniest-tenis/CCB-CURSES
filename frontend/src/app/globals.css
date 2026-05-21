@@ -2,6 +2,18 @@
  * src/app/globals.css
  * Tailwind directives + CSS custom properties for the fantasy theme.
  */
+
+/* ─── Self-hosted fonts ────────────────────────────────────────────────────────
+   Heavitas is served from /public/fonts/ — no external CDN required.
+   ─────────────────────────────────────────────────────────────────────────── */
+@font-face {
+  font-family: "Heavitas";
+  src: url("/fonts/Heavitas.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -48,6 +60,7 @@
 
   body {
     @apply bg-background text-foreground;
+    font-weight: 500; /* Overpass default weight */
     line-height: 1.6;
   }
 
@@ -65,27 +78,13 @@
 
   /* double-pica serif font — small-caps handled by font-serif-sc (double-pica-sc) */
 
-  /* jetsam-collection-basilea display font — no size override needed here */
+  /* Heavitas — self-hosted display font (see @font-face above) */
 
-  /* ─── Small-text font override ────────────────────────────────────────────────
-     Body default is mestiza-sans (more readable at small sizes).
-     Restore sofia-pro-narrow for Tailwind font-size utilities ≥ 18px (text-lg+)
-     so that larger UI text keeps the brand condensed sans-serif.
+  /* ─── Body font ────────────────────────────────────────────────────────────────
+     Default body font is Overpass (Google Fonts, weight 500).
      Headings using font-serif / font-serif-sc / font-display are unaffected
      because their explicit font-family class already takes precedence.
      ─────────────────────────────────────────────────────────────────────────── */
-  .text-lg,
-  .text-xl,
-  .text-2xl,
-  .text-3xl,
-  .text-4xl,
-  .text-5xl,
-  .text-6xl,
-  .text-7xl,
-  .text-8xl,
-  .text-9xl {
-    font-family: "sofia-pro-narrow", "Sofia Pro Narrow", Inter, system-ui, sans-serif;
-  }
 
   /* Scrollbar styling */
   ::-webkit-scrollbar {
@@ -277,6 +276,202 @@
   display: none;
 }
 
+/* ─── SRD Hero Gradient ───────────────────────────────────────────────────────
+   Overlay gradient for the Rules of Daggerheart hero image.
+   Transitions from translucent at the top to fully opaque at the bottom,
+   anchoring the page content against the atmospheric background image.
+   ─────────────────────────────────────────────────────────────────────────── */
+.srd-hero-gradient {
+  background: linear-gradient(
+    to bottom,
+    rgba(74, 10, 20, 0.15)  0%,
+    rgba(10, 16, 13, 0.40) 10%,
+    rgba(10, 16, 13, 0.90) 20%,
+    rgba(10, 16, 13, 0.95) 55%,
+    rgba(10, 16, 13, 1.00) 100%
+  );
+}
+
+/* ─── SRD Accordion Grid Animation ───────────────────────────────────────────
+   CSS grid 0fr → 1fr trick for smooth, performant accordion expand/collapse.
+   No JS height measurements needed — the browser handles it natively.
+   Requires a single child <div> with overflow: hidden.
+   ─────────────────────────────────────────────────────────────────────────── */
+.srd-accordion-grid {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 300ms ease-in-out;
+}
+.srd-accordion-grid.open {
+  grid-template-rows: 1fr;
+}
+.srd-accordion-grid > div {
+  overflow: hidden;
+}
+
+/* ─── SRD Prose Content ───────────────────────────────────────────────────────
+   Applied to flowing prose sections in the Rules page.
+   Uses parchment neutral at 0.85 opacity for comfortable long-form reading.
+   Provides SRD-specific theming for headings, lists, tables, and other
+   markdown elements rendered by MarkdownContent inside the Rules page.
+   ─────────────────────────────────────────────────────────────────────────── */
+.prose-srd {
+  color: rgba(185, 186, 163, 0.85);
+  line-height: 1.75;
+}
+
+/* Headings — Overpass body font for H1/H2, bright text, golden underline accent on H2 */
+.prose-srd h1 {
+  font-family: "Overpass", Inter, system-ui, sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f7f7ff;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(251, 191, 36, 0.25);
+}
+.prose-srd h2 {
+  font-family: "Overpass", Inter, system-ui, sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #f7f7ff;
+  margin-top: 1.75rem;
+  margin-bottom: 0.625rem;
+  padding-bottom: 0.375rem;
+  border-bottom: 1px solid rgba(251, 191, 36, 0.2);
+}
+.prose-srd h3 {
+  font-family: "double-pica", Georgia, serif;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #f7f7ff;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+.prose-srd h4 {
+  font-family: "double-pica", Georgia, serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: rgba(247, 247, 255, 0.9);
+  margin-top: 1.25rem;
+  margin-bottom: 0.375rem;
+}
+.prose-srd h5,
+.prose-srd h6 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(247, 247, 255, 0.85);
+  margin-top: 1rem;
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Bold & emphasis */
+.prose-srd strong {
+  color: #f7f7ff;
+  font-weight: 600;
+}
+.prose-srd em {
+  color: rgba(247, 247, 255, 0.9);
+}
+
+/* Lists — warm bullet colour, comfortable spacing */
+.prose-srd ul {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.prose-srd ol {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.prose-srd li {
+  margin-top: 0.125rem;
+  margin-bottom: 0.125rem;
+}
+.prose-srd li::marker {
+  color: rgba(251, 191, 36, 0.5);
+}
+
+/* Tables — dark card look with subtle borders */
+.prose-srd table {
+  width: 100%;
+  font-size: 0.875rem;
+}
+.prose-srd th {
+  color: rgba(251, 191, 36, 0.8);
+}
+.prose-srd td {
+  vertical-align: top;
+}
+
+/* Blockquotes — gold left border, muted text */
+.prose-srd blockquote {
+  border-left-color: rgba(251, 191, 36, 0.4);
+  color: rgba(185, 186, 163, 0.7);
+}
+
+/* Horizontal rules */
+.prose-srd hr {
+  border-color: rgba(251, 191, 36, 0.15);
+}
+
+/* Inline code */
+.prose-srd code {
+  font-size: 0.875em;
+}
+
+/* Paragraphs — spacing between blocks */
+.prose-srd > div > span.block + span.block {
+  margin-top: 0.75rem;
+}
+
+/* ─── Class entry section dividers ─────────────────────────────────────────────
+   Ornamental SVG divider inserted above major section headings within
+   class rule entries (Hope Feature, Class Feature, Subclasses, etc.)
+   Uses the gold-tinted divider-knowledge-instinct.svg at reduced opacity.
+   ─────────────────────────────────────────────────────────────────────────── */
+.prose-srd .srd-class-section-break {
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  position: relative;
+}
+.prose-srd .srd-class-section-break::before {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 14px;
+  margin-bottom: 0.75rem;
+  background: url("/images/ui-elements/divider-knowledge-instinct.svg") center / contain no-repeat;
+  opacity: 0.35;
+  filter: sepia(1) saturate(3) hue-rotate(-10deg) brightness(1.2);
+}
+
+@media (max-width: 640px) {
+  .prose-srd .srd-class-section-break::before {
+    height: 10px;
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Drop cap — illuminated-manuscript first letter on first paragraph */
+.prose-srd-drop-cap > div > span.block:first-child::first-letter {
+  font-family: "Heavitas", "double-pica", Georgia, serif;
+  font-size: 3.25em;
+  line-height: 0.85;
+  float: left;
+  margin-right: 0.1em;
+  margin-top: 0.05em;
+  color: rgba(251, 191, 36, 0.7);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prose-srd-drop-cap > div > span.block:first-child::first-letter {
+    /* Keep the drop cap but remove any animation that might be added later */
+  }
+}
+
 /* ─── Dice Strip Flash ────────────────────────────────────────────────────────
    Brief background pulse when a new roll arrives on the mobile docked strip.
    Used by MobileDiceStrip in DiceLog.tsx.
@@ -294,5 +489,95 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-dice-strip-flash {
     animation: none;
+  }
+}
+
+/* ─── Marketing Page: Marquee Ribbon ──────────────────────────────────────────
+   Infinite horizontal scroll for the keyword ribbon on the landing page.
+   Pauses on hover for readability. Fully suppressed for reduced-motion users.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+.marquee-track {
+  animation: marquee-scroll 40s linear infinite;
+}
+
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+}
+
+/* ─── Marketing Page: Scroll Hint ─────────────────────────────────────────────
+   Gentle vertical float for the hero scroll indicator. Slow and dignified,
+   replacing animate-bounce which is too energetic for this brand.
+   Fully suppressed for reduced-motion users.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+@keyframes scroll-hint {
+  0%, 100% { transform: translateY(0); opacity: 0.5; }
+  50%      { transform: translateY(6px); opacity: 0.3; }
+}
+
+.animate-scroll-hint {
+  animation: scroll-hint 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-scroll-hint {
+    animation: none;
+  }
+}
+
+/* ─── Marketing Sub-Pages: FAQ Accordion Grid ─────────────────────────────────
+   CSS grid 0fr → 1fr trick for smooth accordion expand/collapse.
+   Same pattern as srd-accordion-grid but scoped for marketing FAQ sections.
+   ─────────────────────────────────────────────────────────────────────────── */
+.faq-accordion-grid {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 300ms ease-in-out;
+}
+.faq-accordion-grid.open {
+  grid-template-rows: 1fr;
+}
+.faq-accordion-grid > div {
+  overflow: hidden;
+}
+
+/* ─── Marketing Sub-Pages: Step Connector Draw-in ─────────────────────────────
+   Gold gradient connector line between step cards on desktop.
+   Animates from 0 to full width when the parent becomes visible.
+   ─────────────────────────────────────────────────────────────────────────── */
+@keyframes connector-draw {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.animate-connector-draw {
+  transform-origin: left center;
+  animation: connector-draw 600ms ease-out forwards;
+}
+
+/* ─── Reduced motion: suppress marketing sub-page animations ──────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .faq-accordion-grid {
+    transition: none;
+  }
+  .animate-connector-draw {
+    animation: none;
+    transform: scaleX(1);
   }
 }

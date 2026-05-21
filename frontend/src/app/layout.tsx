@@ -35,7 +35,8 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <head>
         {/* Preconnect to font / icon CDNs so DNS + TLS happen early */}
-        <link rel="preconnect" href="https://use.typekit.net" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossOrigin="anonymous" />
 
         {/*
@@ -46,7 +47,7 @@ export default function RootLayout({
         */}
         <link
           rel="preload"
-          href="https://use.typekit.net/zko4lko.css"
+          href="https://fonts.googleapis.com/css2?family=Overpass:wght@300;400;500;600;700&display=swap"
           as="style"
         />
         <link
@@ -83,7 +84,7 @@ export default function RootLayout({
         />
 
         <noscript>
-          <link rel="stylesheet" href="https://use.typekit.net/zko4lko.css" />
+          <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Overpass:wght@300;400;500;600;700&display=swap" />
           <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/fontawesome.min.css" />
           <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/solid.min.css" />
           <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/regular.min.css" />

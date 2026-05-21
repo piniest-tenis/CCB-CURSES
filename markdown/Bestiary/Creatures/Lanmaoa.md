@@ -1,0 +1,1 @@
+A race of forest dwellers. Pint sized. Known to crawl under doors and through small cracks. Little is known of these, and their appearance is often linked to the early stages of delusions in those affected by the [[Creep]]. This may be due to the intense psychotropic effect on those who spend any amount of time in their presence.

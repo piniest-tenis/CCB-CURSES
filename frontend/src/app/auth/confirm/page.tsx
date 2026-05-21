@@ -64,11 +64,13 @@ function ConfirmForm() {
     try {
       const cognitoAuth = await import("@/lib/auth");
       await cognitoAuth.confirmSignUp(values.email, values.code);
-      // Brief success state — then redirect to login
+      // Brief success state - then redirect to login
       setTimeout(() => router.replace("/auth/login"), 1500);
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : "Confirmation failed. Please try again.";
+        err instanceof Error
+          ? err.message
+          : "Confirmation failed. Please try again.";
 
       if (message.includes("CodeMismatchException")) {
         setError("code", { message: "Incorrect code. Please try again." });
@@ -106,14 +108,25 @@ function ConfirmForm() {
           {isSubmitSuccessful ? (
             /* Success state */
             <div role="status" className="space-y-3 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-gold-600 text-gold-400 text-xl" aria-hidden="true">
+              <div
+                className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-gold-600 text-gold-400 text-xl"
+                aria-hidden="true"
+              >
                 ✓
               </div>
-              <p className="font-semibold text-parchment-200">Email confirmed!</p>
-              <p className="text-sm text-parchment-500">Redirecting to sign in…</p>
+              <p className="font-semibold text-parchment-200">
+                Email confirmed!
+              </p>
+              <p className="text-sm text-parchment-500">
+                Redirecting to sign in…
+              </p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+            <form
+              onSubmit={handleSubmit(onSubmit)}
+              noValidate
+              className="space-y-4"
+            >
               <p className="text-sm text-parchment-500">
                 Check your inbox for a 6-digit verification code and enter it
                 below.
@@ -121,7 +134,10 @@ function ConfirmForm() {
 
               {/* Root error */}
               {errors.root && (
-                <div role="alert" className="rounded-lg border border-burgundy-700 bg-burgundy-950/40 px-4 py-3 text-sm text-burgundy-300">
+                <div
+                  role="alert"
+                  className="rounded-lg border border-burgundy-700 bg-burgundy-950/40 px-4 py-3 text-sm text-burgundy-300"
+                >
                   {errors.root.message}
                 </div>
               )}
@@ -154,7 +170,13 @@ function ConfirmForm() {
                   placeholder="you@example.com"
                 />
                 {errors.email && (
-                  <p id="email-error" role="alert" className="text-sm text-burgundy-400">{errors.email.message}</p>
+                  <p
+                    id="email-error"
+                    role="alert"
+                    className="text-sm text-burgundy-400"
+                  >
+                    {errors.email.message}
+                  </p>
                 )}
               </div>
 
@@ -189,7 +211,13 @@ function ConfirmForm() {
                   placeholder="000000"
                 />
                 {errors.code && (
-                  <p id="code-error" role="alert" className="text-sm text-burgundy-400">{errors.code.message}</p>
+                  <p
+                    id="code-error"
+                    role="alert"
+                    className="text-sm text-burgundy-400"
+                  >
+                    {errors.code.message}
+                  </p>
                 )}
               </div>
 
@@ -241,8 +269,14 @@ export default function ConfirmPage() {
   return (
     <Suspense
       fallback={
-        <div role="status" className="flex min-h-screen items-center justify-center bg-slate-950">
-          <div aria-hidden="true" className="h-8 w-8 animate-spin rounded-full border-2 border-burgundy-500 border-t-transparent" />
+        <div
+          role="status"
+          className="flex min-h-screen items-center justify-center bg-slate-950"
+        >
+          <div
+            aria-hidden="true"
+            className="h-8 w-8 animate-spin rounded-full border-2 border-burgundy-500 border-t-transparent"
+          />
           <span className="sr-only">Loading…</span>
         </div>
       }

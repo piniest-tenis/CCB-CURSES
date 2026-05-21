@@ -1,6 +1,6 @@
 /**
  * Server shell for /campaigns/[id]
- * generateStaticParams returns a placeholder — actual routing is client-side.
+ * generateStaticParams returns a placeholder - actual routing is client-side.
  * CloudFront rewrites all paths to index.html for SPA routing.
  *
  * Note: The <Suspense> wrapper was removed because useCampaignNav no longer

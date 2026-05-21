@@ -131,6 +131,72 @@ export function verifyShareToken(
   return { characterId: payload.characterId, userId: payload.userId };
 }
 
+// ─── Campaign share token ────────────────────────────────────────────────────
+
+/**
+ * Sign a campaign share token. Same HMAC scheme as character share tokens
+ * but with type "campaign-share" and a campaignId payload field.
+ * Tokens do not expire — permanently valid until the SHARE_TOKEN_SECRET rotates.
+ */
+export function signCampaignShareToken(
+  campaignId: string,
+  issuedByUserId: string
+): string {
+  const secret =
+    process.env["SHARE_TOKEN_SECRET"] ?? "dev-secret-change-in-prod";
+  const header = Buffer.from(
+    JSON.stringify({ alg: "HS256", typ: "campaign-share" })
+  ).toString("base64url");
+  const payload = Buffer.from(
+    JSON.stringify({ type: "campaign-share", campaignId, issuedBy: issuedByUserId })
+  ).toString("base64url");
+  const signature = createHmac("sha256", secret)
+    .update(`${header}.${payload}`)
+    .digest("base64url");
+  return `${header}.${payload}.${signature}`;
+}
+
+/**
+ * Verify a campaign share token. Returns the decoded payload or throws an AppError.
+ */
+export function verifyCampaignShareToken(
+  token: string,
+  expectedCampaignId: string
+): { campaignId: string; issuedBy: string } {
+  const parts = token.split(".");
+  if (parts.length !== 3) {
+    throw AppError.badRequest("Invalid campaign share token format");
+  }
+
+  const [headerB64, payloadB64, signature] = parts as [string, string, string];
+  const secret =
+    process.env["SHARE_TOKEN_SECRET"] ?? "dev-secret-change-in-prod";
+
+  const expectedSig = createHmac("sha256", secret)
+    .update(`${headerB64}.${payloadB64}`)
+    .digest("base64url");
+
+  if (expectedSig !== signature) {
+    throw AppError.unauthorized("Invalid campaign share token");
+  }
+
+  let payload: { type: string; campaignId: string; issuedBy: string };
+  try {
+    payload = JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf8"));
+  } catch {
+    throw AppError.badRequest("Malformed campaign share token payload");
+  }
+
+  if (payload.type !== "campaign-share") {
+    throw AppError.unauthorized("Token is not a campaign share token");
+  }
+  if (payload.campaignId !== expectedCampaignId) {
+    throw AppError.forbidden("Token does not match campaign");
+  }
+
+  return { campaignId: payload.campaignId, issuedBy: payload.issuedBy };
+}
+
 // ─── SRD Validation ───────────────────────────────────────────────────────────
 
 export interface SrdError {

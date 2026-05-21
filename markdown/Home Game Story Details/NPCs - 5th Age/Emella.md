@@ -1,0 +1,1 @@
+The consort/nurse of [Ollester Sloane](Ollester%20Sloane.md). She is considerably younger, only 40 years old.￼￼Motivations: Trying to earn enough money to keep her family from being evicted from their home.

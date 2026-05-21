@@ -1,0 +1,7 @@
+Here at the end of the fifth age, however, a new force has arrived. A force not from the creator, but from an unnamed foreign influence. Reveille, the capital of all of Tidwell, has been thrown into chaos with the arrival of the Ministry of the Sixth Form. Its leader titles herself The Declaimer. She is a woman with a twisted back and dark features hidden behind a thick white veil. She has declared herself to herald the dawn of the new age, and tells of the coming death of the Tree of Life and the withering of the Tree of Strength.
+ 
+As per custom, [[Ono]] has accepted this staking of a new age, and begun the days long ceremony of the renewal. Ono leads the herald and a representative of each age except the first to the peak of Rhodia, where he world book will be opened. The pages of the fifth age, made from the silk of the World Moth, will be burnt. New pages are then fashioned of the herald's choosing, and the beginning of the new age will be written.
+ 
+---
+ 
+This world is cursed. All throughout Tidwell, there are pernicious and intractable faults. Deeply malignant curses dooming its peoples to endless cycles of misfortune and misery. The Declaimer has come to end the curse by radically remaking Tidwell. And in order to truly remake something, the vestiges of the previous world must be rendered moot. ￼￼This is why the trees holding up the world must die. They aren't holding up the world, they are holding it back.

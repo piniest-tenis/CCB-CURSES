@@ -1,0 +1,1 @@
+Gatehouse is a bustling border town situated on the edge of the [Ergantine Lake](Ergantine%20Lake.md). Home to the [Hygiane Order](Hygiane%20Order.md), which occupies the massive fortress and monastery on an easily defensible outcropping into the lake.

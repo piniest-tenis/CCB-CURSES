@@ -1,0 +1,1 @@
+The birthday of the [[Revenant God]] is the 6th day of the 8th month. On this day, every year, a new avatar of the [[Revenant God]] is chosen. They must have been born on the sixth day of the eighth month, and they will serve until their eighth birthday, when another Petrarch is chosen.

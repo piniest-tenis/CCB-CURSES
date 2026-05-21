@@ -1,0 +1,1 @@
+The largest lake of the [[Three Sisters]], on which [[The Land of Tidwell/World Details/Nations & States/Carnithia/Medilaac/Medilaac]] is situated. Home to the kelp farms that comprise a major food crop in [[Tidwell]].

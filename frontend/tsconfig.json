@@ -16,9 +16,9 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@shared/*": ["../shared/src/*"]
+      "@shared/*": ["../shared/src/*", "../shared/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "../shared/src/**/*.ts"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "../shared/src/**/*.ts", "../shared/types/**/*.ts"],
   "exclude": ["node_modules"]
 }

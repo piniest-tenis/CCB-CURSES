@@ -1,0 +1,3 @@
+A family of [Isdaan](Isdaans) that consitute one of [The Four Families](The%20Four%20Families.md) in [Reveille](The%20Land%20of%20Tidwell/World%20Details/Nations%20&%20States/Carnithia/Reveille/Reveille.md). Headed by [Lorchet](Lorchet.md), the matriarch of the family. They are a boisterous and charming bunch, but known to cheat regularly in every imaginable way.
+ 
+Primary Motivation: Advantage at all costs

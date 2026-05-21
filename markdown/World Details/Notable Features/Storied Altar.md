@@ -1,0 +1,1 @@
+A large, stone altar carved to look like the pages of an open book. There is unintelligible markings on the page. If it is a language, it is unlike any encountered in Tidwell. Despite the obvious age of the stone, the inlaid markings are still a vibrant golden color that seemingly reflects a more intense light than it receives.

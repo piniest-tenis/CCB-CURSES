@@ -24,6 +24,12 @@
       "mode": "subagent",
       "temperature": 0.1,
       "color": "#37afdb"
+    },
+    "game-planner": {
+      "description": "An expert game session planner and author for tabletop games set in Tidwell, influenced by Jeff VanderMeer, China Miéville, and George Saunders. Reads world lore and generates absurd, philosophically rich campaign outlines.",
+      "mode": "subagent",
+      "temperature": 0.85,
+      "color": "#c9a84c"
     }
   }
 }

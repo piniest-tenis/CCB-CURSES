@@ -177,6 +177,12 @@ const ADVANCEMENT_OPTIONS: AdvancementOption[] = [
 interface LevelUpWizardProps {
   character: Character;
   onClose: () => void;
+  /**
+   * Optional override for the save action.
+   * If provided, called instead of the default Patreon-gated POST /characters/:id/levelup.
+   * Receives the LevelUpInput and should return a Promise.
+   */
+  onSave?: (input: LevelUpInput) => Promise<void>;
 }
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
@@ -1351,7 +1357,7 @@ function DomainCardPicker({ character, targetLevel, maxSelections, selectedCardI
 
 // ─── LevelUpWizard (main export) ──────────────────────────────────────────────
 
-export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
+export function LevelUpWizard({ character, onClose, onSave }: LevelUpWizardProps) {
   const targetLevel = character.level + 1;
   const currentTier = tierForLevel(character.level);
   const newTier     = tierForLevel(targetLevel);
@@ -1480,6 +1486,11 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
         ? { tierAchievementExperienceName: tierAchievementExperienceName.trim() }
         : {}),
     };
+
+    if (onSave) {
+      onSave(input).then(() => onClose()).catch(() => {/* errors surfaced by caller */});
+      return;
+    }
 
     levelUpMutation.mutate(input, {
       onSuccess: () => {

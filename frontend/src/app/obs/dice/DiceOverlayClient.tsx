@@ -29,8 +29,12 @@ import type { DieRole, RollResult } from "@/types/dice";
 type ColorOverrides = Record<DieRole, { dice_color: string; label_color: string }>;
 
 const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL ?? "";
-const MAX_RECONNECT_ATTEMPTS = 3;
 const BASE_BACKOFF_MS = 1_000;
+const MAX_BACKOFF_MS  = 30_000; // cap at 30 s between retries
+// AWS API Gateway WebSocket connections idle-timeout at 10 minutes.
+// Send a keepalive ping every 9 minutes to prevent the connection from
+// being silently closed during a long stream session.
+const KEEPALIVE_INTERVAL_MS = 9 * 60 * 1_000;
 
 // Goldenrod crit glow colour
 const CRIT_COLOR = "218, 165, 32"; // RGB components of #DAA520
@@ -64,6 +68,7 @@ export default function DiceOverlayClient() {
     let ws: WebSocket | null = null;
     let reconnectCount = 0;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let keepaliveTimer: ReturnType<typeof setInterval> | null = null;
     let unmounted = false;
 
     function connect() {
@@ -74,6 +79,20 @@ export default function DiceOverlayClient() {
       url.searchParams.set("role", "obs");
 
       ws = new WebSocket(url.toString());
+
+      ws.onopen = () => {
+        if (unmounted) { ws?.close(); return; }
+        reconnectCount = 0; // reset backoff on successful connect
+
+        // Keepalive: send a ping frame every 9 minutes so API Gateway doesn't
+        // idle-close the connection during a long OBS session.
+        if (keepaliveTimer) clearInterval(keepaliveTimer);
+        keepaliveTimer = setInterval(() => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            try { ws.send(JSON.stringify({ action: "ping" })); } catch { /* ignore */ }
+          }
+        }, KEEPALIVE_INTERVAL_MS);
+      };
 
       ws.onmessage = (evt: MessageEvent) => {
         try {
@@ -89,11 +108,12 @@ export default function DiceOverlayClient() {
 
       ws.onclose = () => {
         if (unmounted) return;
-        if (reconnectCount < MAX_RECONNECT_ATTEMPTS) {
-          const delay = BASE_BACKOFF_MS * Math.pow(2, reconnectCount);
-          reconnectCount += 1;
-          reconnectTimer = setTimeout(connect, delay);
-        }
+        if (keepaliveTimer) { clearInterval(keepaliveTimer); keepaliveTimer = null; }
+        // Retry indefinitely with exponential backoff capped at MAX_BACKOFF_MS.
+        // This handles both transient failures and AWS's 2-hour forced disconnect.
+        const delay = Math.min(BASE_BACKOFF_MS * Math.pow(2, reconnectCount), MAX_BACKOFF_MS);
+        reconnectCount += 1;
+        reconnectTimer = setTimeout(connect, delay);
       };
 
       ws.onerror = () => {
@@ -106,6 +126,7 @@ export default function DiceOverlayClient() {
     return () => {
       unmounted = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (keepaliveTimer) clearInterval(keepaliveTimer);
       if (ws) {
         ws.onclose = null;
         ws.close();

@@ -1,0 +1,3 @@
+Head of [The Sloanes](The%20Sloanes.md), he is approximately 225 years old and shows his age. Deeply wrinkled skin, comically large eyeglasses that seemingly weigh down his head. Walks with the assistance of a cane and a young Crenshaw named Emella.
+ 
+Motivation: Wants to push out one of the other dynasties in [The Four Families](The%20Four%20Families.md), as he believes they deadlock in tie votes far too often.

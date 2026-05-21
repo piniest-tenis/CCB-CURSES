@@ -1,0 +1,1 @@
+A town said to be populated by civilized monstrosities of The Waste. It's known as a place of legend; its existence only supposed from the stories of wayward travelers who claim to have visited or been to the place with no recollection on how they left it or arrived.

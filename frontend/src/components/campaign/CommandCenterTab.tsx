@@ -144,6 +144,7 @@ export function CommandCenterTab({
                 onSelect={onSelectCharacter}
                 fallbackName={member?.name}
                 fallbackAvatar={member?.avatarUrl ?? member?.portraitUrl}
+                shareToken={member?.shareToken}
               />
             </div>
           );

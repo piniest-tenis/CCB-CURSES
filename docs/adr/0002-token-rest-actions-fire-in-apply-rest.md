@@ -1,0 +1,3 @@
+# Token Rest Actions fire in applyRest, not applyAction
+
+Token Rest Actions (fill-to-cap, clear, add-1) must fire at a single atomic point tied to the rest type. The frontend DowntimeModal historically dispatched individual `clear-stress`/`clear-hp`/`clear-armor` actions without ever calling `POST /rest`, making the rest endpoint dead code. Rather than adding a new `start-rest` ActionId or keeping token triggers ad-hoc, we fix the gap: the DowntimeModal calls `POST /rest` when the player confirms their rest type, and `applyRest` processes all token Rest Actions for cards in the loadout with a matching trigger. This gives a single, atomic, server-side hookpoint for rest effects and closes the existing bug where the rest endpoint was never called.

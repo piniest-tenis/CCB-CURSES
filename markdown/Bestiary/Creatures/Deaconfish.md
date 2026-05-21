@@ -1,0 +1,1 @@
+A semi-aquatic, lunged beast of burden. Large humped back and numerous muscled pseudopods allow these lumbering creatures to be deceptively nimble in their movements.

@@ -1,0 +1,1 @@
+A deceptively deep and often red-colored river traveling out from the high mesas and via canyons until it meets the softer plains on the western edge of the [Gyhrra Badlands](Gyhrra%20Badlands.md). The river is a ruddy brownish-red, from the soil and iron deposits in the [Buhadid Lake](Buhadid%20Lake.md)

@@ -1,0 +1,3 @@
+These are the clerics, scientists and researchers studying the forest, its creatures, and the changes it is wreaking on the environment. Responsible for handling the effects of Forestdown when they manifest in populations previously uninfected, and tending to delicate operations to contain the spread of the corruption.
+
+With the discovery of the psychoactive effects of the [[The Land of Tidwell/Bestiary/Creatures/Lanmaoa]], a new scourge has fallen on the ranks of Medicaments. Under the guise of research, they have taken to "cataloging the effects" of prolonged exposure.

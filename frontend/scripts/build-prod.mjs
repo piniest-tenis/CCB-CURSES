@@ -51,6 +51,19 @@ const prodVars = parseDotEnv(ENV_PROD_FILE);
 // Merge: prod vars take priority over current process.env
 const env = { ...process.env, ...prodVars };
 
+// ── Step 1: Build the SRD search index ───────────────────────────────────────
+console.log("[build-prod] Building SRD search index...");
+const indexResult = spawnSync(
+  process.execPath,
+  [resolve(FRONTEND_DIR, "scripts/build-srd-index.mjs")],
+  { cwd: FRONTEND_DIR, env, stdio: "inherit" }
+);
+if (indexResult.status !== 0) {
+  console.error("[build-prod] SRD index build failed — aborting.");
+  process.exit(indexResult.status ?? 1);
+}
+
+// ── Step 2: Next.js build ─────────────────────────────────────────────────────
 console.log("[build-prod] Building with prod env vars from .env.production");
 console.log(`[build-prod]   NEXT_PUBLIC_STAGE=${env.NEXT_PUBLIC_STAGE}`);
 console.log(`[build-prod]   NEXT_PUBLIC_COGNITO_HOSTED_DOMAIN=${env.NEXT_PUBLIC_COGNITO_HOSTED_DOMAIN}`);

@@ -1,0 +1,3 @@
+By far the least glamorous of the four orders. Tenders are tasked with keeping Forestdown contained. This involves walking the perimeter of [[Forestdown]] and salting the underbrush. Occasionally a burn is required. Tenders do not manage burns as it is considered sensitive and dangerous work, so they must send runners to [[The Land of Tidwell/World Details/Nations & States/Forestdown/Gatehouse/Gatehouse]] to call in [[The Medicaments]].
+
+Led by [[Rearcaptain Grace Kinder]].

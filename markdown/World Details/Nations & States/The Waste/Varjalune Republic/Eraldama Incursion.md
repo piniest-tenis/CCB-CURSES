@@ -1,0 +1,3 @@
+231 years past, when the edge of the [[Forestdown]] stretched nearly all the way to the western edge of the [[Vaiknelaht Bay]], a massive influx of [[Etherotaxia]] moved from the forest and into the waters of the [[Erelbaad Lake]] next to [[Taliga]]. Almost overnight, [[Creep]] spread into the ecosystem and began converting the flora and fauna into twisted abominations. Over the next thirty days. Taliga nearly fell into the encroaching Forestdown. A fifth of the population did not survive intact, and it was only via the efforts of the Medicamentia and Hospitallers of the [[Hygiane Order]] that the town was eventually cleansed.
+
+This lead to the creation of the [[Varjalune Exclusion Zone]], and bolstered the [[Andam]] to historic levels of tribute.

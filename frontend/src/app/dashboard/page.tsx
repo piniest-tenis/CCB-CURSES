@@ -17,7 +17,7 @@
  *   - Custom sort dropdown (name / class / updatedAt)
  */
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuthStore } from "@/store/authStore";
@@ -27,6 +27,8 @@ import {
   useDeleteCharacter,
 } from "@/hooks/useCharacter";
 import { useCampaigns } from "@/hooks/useCampaigns";
+import { useUserPregens, useCreateUserPregen } from "@/hooks/usePregens";
+import { apiClient } from "@/lib/api";
 import type { CharacterSummary, CampaignSummary } from "@shared/types";
 
 import { AppHeader } from "@/components/AppHeader";
@@ -43,6 +45,7 @@ import { LorePanel } from "@/components/dashboard/LorePanel";
 import { Footer } from "@/components/Footer";
 import { PatreonPaidGate } from "@/components/PatreonGateOverlay";
 import { usePatreonGate, usePatreonOAuth } from "@/hooks/usePatreonGate";
+import { PregenDashboardPanel } from "@/app/dashboard/PregenDashboardPanel";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -198,6 +201,27 @@ export default function DashboardPage() {
   const { startOAuth, isLinking } = usePatreonOAuth();
   const [showCreate, setShowCreate] = useState(false);
 
+  // Pregen hooks
+  const createPregenMutation = useCreateUserPregen();
+  const { data: userPregenData } = useUserPregens();
+  const userPregens = userPregenData?.pregens ?? [];
+
+  const pregenSourceIds = useMemo(
+    () => new Set(userPregens.map((p) => p.sourceCharacterId).filter(Boolean) as string[]),
+    [userPregens]
+  );
+
+  const handleSaveAsPregen = useCallback(
+    async (characterId: string) => {
+      const fullCharacter = await apiClient.get(`/characters/${characterId}`);
+      await createPregenMutation.mutateAsync({
+        character: fullCharacter as import("@shared/types").Character,
+        sourceCharacterId: characterId,
+      });
+    },
+    [createPregenMutation]
+  );
+
   const [searchSort, setSearchSort] = useState<SearchSortState>({
     query: "",
     sortKey: "updatedAt",
@@ -224,6 +248,19 @@ export default function DashboardPage() {
       : allChars;
     return sortCharacters(filtered, searchSort.sortKey);
   }, [allChars, searchSort]);
+
+  // Whether to show the World Lore section:
+  // visible if the user has "Curses! Content" enabled in their preferences,
+  // OR if they have at least one character in a campaign that has cursesContentEnabled.
+  const showLorePanel = useMemo(() => {
+    if (user?.preferences?.cursesEnabled === true) return true;
+    const campaignMap = new Map(campaignList.map((c) => [c.campaignId, c]));
+    return allChars.some(
+      (char) =>
+        char.campaignId != null &&
+        campaignMap.get(char.campaignId)?.cursesContentEnabled === true,
+    );
+  }, [user, allChars, campaignList]);
 
   // Most recently updated campaign for session panel
   const topCampaign: CampaignSummary | null = useMemo(() => {
@@ -439,11 +476,16 @@ export default function DashboardPage() {
                         deleteMutation.isPending &&
                         deleteMutation.variables === char.characterId
                       }
+                      isAlreadyPregen={pregenSourceIds.has(char.characterId)}
+                      onSaveAsPregen={() => handleSaveAsPregen(char.characterId)}
                     />
                   ))}
                 </div>
               )}
             </section>
+
+            {/* Personal Pre-gens panel — only shown when the user has pregens */}
+            {userPregens.length > 0 && <PregenDashboardPanel />}
 
             {/* ── Mobile-only rail panels ───────────────────────────────── */}
             <div className="xl:hidden space-y-4">
@@ -463,7 +505,7 @@ export default function DashboardPage() {
                   <SessionPanel campaign={topCampaign} />
                 </div>
               </PatreonPaidGate>
-              <LorePanel />
+              {showLorePanel && <LorePanel />}
             </div>
           </main>
 
@@ -488,7 +530,7 @@ export default function DashboardPage() {
                 <SessionPanel campaign={topCampaign} />
               </div>
             </PatreonPaidGate>
-            <LorePanel />
+            {showLorePanel && <LorePanel />}
           </aside>
         </div>
       </div>

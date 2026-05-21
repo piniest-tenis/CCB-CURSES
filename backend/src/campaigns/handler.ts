@@ -28,6 +28,11 @@ import {
   queryItems,
   keys,
 } from "../common/dynamodb";
+import {
+  signCampaignShareToken,
+  verifyCampaignShareToken,
+  signShareToken,
+} from "../characters/helpers";
 import type {
   Campaign,
   CampaignMemberRole,
@@ -36,7 +41,12 @@ import type {
   CampaignMemberDetail,
   CampaignCharacterDetail,
   CampaignInvite,
+  Character,
 } from "@shared/types";
+import {
+  PREGEN_CHARACTERS,
+  scalePregenToLevel,
+} from "@shared/data/pregenCharacters";
 
 // ─── Internal DynamoDB Record Types ──────────────────────────────────────────
 
@@ -152,6 +162,8 @@ const PatchCampaignSchema = z.object({
   fear: z.number().int().min(0).max(12).optional(),
   /** Whether this campaign uses the Curses! campaign frame. */
   cursesContentEnabled: z.boolean().optional(),
+  /** Restrict new characters joining to a specific level (1–10). Null to remove. */
+  requiredLevel: z.number().int().min(1).max(10).nullable().optional(),
 });
 
 const CreateInviteSchema = z.object({
@@ -424,6 +436,7 @@ async function buildCampaignDetail(
         level: charRecord.level,
         avatarUrl: charRecord.avatarUrl ?? null,
         portraitUrl: charRecord.portraitUrl ?? null,
+        shareToken: callerRole === "gm" ? signShareToken(cr.characterId, cr.userId) : undefined,
       });
     }
   }
@@ -454,6 +467,7 @@ async function buildCampaignDetail(
     updatedAt: campaignMeta.updatedAt,
     currentFear: campaignMeta.currentFear ?? 0,
     cursesContentEnabled: campaignMeta.cursesContentEnabled ?? true,
+    requiredLevel: campaignMeta.requiredLevel ?? null,
     members,
     characters: characterDetails,
     callerRole,
@@ -674,6 +688,7 @@ async function listCampaigns(
         createdAt: campaign.createdAt,
         updatedAt: campaign.updatedAt,
         cursesContentEnabled: campaign.cursesContentEnabled ?? true,
+        requiredLevel: campaign.requiredLevel ?? null,
         memberCount: members.length,
         callerRole: idx.role,
         callerCharacterId: callerChar?.characterId ?? null,
@@ -787,6 +802,10 @@ async function patchCampaign(
   if (body.cursesContentEnabled !== undefined) {
     updates.push("cursesContentEnabled = :cursesContent");
     vals[":cursesContent"] = body.cursesContentEnabled;
+  }
+  if (body.requiredLevel !== undefined) {
+    updates.push("requiredLevel = :requiredLevel");
+    vals[":requiredLevel"] = body.requiredLevel;
   }
 
   if (updates.length === 1) {
@@ -1522,6 +1541,412 @@ async function getInvitePreview(
   return createSuccessResponse(preview);
 }
 
+// ─── Campaign Share Token ─────────────────────────────────────────────────────
+
+/**
+ * GET /campaigns/{campaignId}/share
+ * Generate a campaign share token. Only callable by campaign GMs.
+ * Returns { campaignToken, shareUrl } — the token grants read-only access to
+ * all characters in the campaign without requiring authentication.
+ */
+async function getCampaignShareToken(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<APIGatewayProxyResultV2> {
+  const userId = extractUserId(event);
+  const campaignId = requirePathParam(event, "campaignId");
+
+  // Only GMs can generate campaign share tokens
+  const member = await assertCampaignMember(campaignId, userId);
+  if (member.role !== "gm") {
+    throw AppError.forbidden("Only GMs can generate campaign share tokens");
+  }
+
+  const campaignToken = signCampaignShareToken(campaignId, userId);
+
+  const frontendUrl =
+    process.env["FRONTEND_URL"] ?? "https://ccb.curses.show";
+  const shareUrl = `${frontendUrl}/campaign/${campaignId}?token=${campaignToken}`;
+
+  return createSuccessResponse({ campaignToken, shareUrl });
+}
+
+// ─── Public Campaign View ─────────────────────────────────────────────────────
+
+/**
+ * GET /campaigns/{campaignId}/view?token=<campaign-share-token>
+ * Public (no JWT required) endpoint. Verifies the campaign share token,
+ * then returns the campaign name and all character summaries + per-character
+ * share tokens so the Twitch Extension can render them without authentication.
+ */
+async function getSharedCampaign(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<APIGatewayProxyResultV2> {
+  const campaignId = requirePathParam(event, "campaignId");
+  const token = event.queryStringParameters?.["token"];
+
+  if (!token) {
+    throw AppError.unauthorized("Campaign share token is required");
+  }
+
+  // Verify the token — throws on failure
+  verifyCampaignShareToken(token, campaignId);
+
+  // Query all items in the campaign partition
+  const allItems = await queryItems<CampaignPartitionItem>(
+    CAMPAIGNS_TABLE,
+    "PK = :pk",
+    { ":pk": `CAMPAIGN#${campaignId}` }
+  );
+
+  let campaignMeta: CampaignRecord | null = null;
+  const characterRecords: CampaignCharacterRecord[] = [];
+
+  for (const item of allItems) {
+    if (item.SK === "METADATA") {
+      campaignMeta = item as CampaignRecord;
+    } else if (item.SK.startsWith("CHARACTER#")) {
+      characterRecords.push(item as CampaignCharacterRecord);
+    }
+  }
+
+  if (!campaignMeta) {
+    throw AppError.notFound("Campaign", campaignId);
+  }
+
+  // Fetch character records and generate per-character share tokens
+  const characters: Array<{
+    characterId: string;
+    userId: string;
+    name: string;
+    className: string;
+    level: number;
+    avatarUrl: string | null;
+    portraitUrl: string | null;
+  }> = [];
+  const shareTokens: Record<string, string> = {};
+
+  for (const cr of characterRecords) {
+    const charRecord = await getItem<CharacterRecord>(
+      CHARACTERS_TABLE,
+      { PK: `USER#${cr.userId}`, SK: `CHARACTER#${cr.characterId}` }
+    );
+    if (charRecord) {
+      characters.push({
+        characterId: cr.characterId,
+        userId: cr.userId,
+        name: charRecord.name,
+        className: charRecord.className,
+        level: charRecord.level,
+        avatarUrl: charRecord.avatarUrl ?? null,
+        portraitUrl: charRecord.portraitUrl ?? null,
+      });
+      // Generate a character-level share token so the extension can
+      // fetch live data for each character independently
+      shareTokens[cr.characterId] = signShareToken(cr.characterId, cr.userId);
+    }
+  }
+
+  return createSuccessResponse({
+    campaign: {
+      campaignId: campaignMeta.campaignId,
+      name: campaignMeta.name,
+    },
+    characters,
+    shareTokens,
+  });
+}
+
+// ─── Pregen Endpoints ─────────────────────────────────────────────────────────
+//
+// Pregens are now stored in DynamoDB rather than hardcoded. The campaign pool
+// (PREGENPOOL# records) determines which pregens are available in a given
+// campaign. The hardcoded PREGEN_CHARACTERS array is used only as a fallback
+// for backwards compatibility with campaigns that haven't adopted the pool yet.
+
+const ImportPregenSchema = z.object({
+  pregenId: z.string().min(1, "pregenId is required"),
+  level: z.number().int().min(1).max(10).optional(),
+});
+
+/** DynamoDB record for a pregen stored via /admin/pregens or /pregens. */
+interface PregenRecord {
+  PK: string;
+  SK: string;
+  pregenId: string;
+  scope: "system" | "user";
+  ownerId: string | null;
+  character: Character;
+  name: string;
+  className: string;
+  subclassName: string | null;
+  ancestryName: string | null;
+  communityName: string | null;
+  domains: string[];
+  nativeLevel: number;
+}
+
+/** Campaign pool pointer record. */
+interface CampaignPregenPoolRecord {
+  PK: string;
+  SK: string;
+  campaignId: string;
+  pregenId: string;
+  source: "system" | "user";
+  ownerId: string | null;
+  addedAt: string;
+  selectedLevel?: number;
+}
+
+/**
+ * Resolve a pregen from the DB by looking up its pool pointer.
+ * Falls back to the hardcoded PREGEN_CHARACTERS array for legacy compat.
+ */
+async function resolvePregenCharacter(
+  poolRecord: CampaignPregenPoolRecord
+): Promise<PregenRecord | null> {
+  const lookupPk = poolRecord.source === "system"
+    ? "PREGEN#SYSTEM"
+    : `PREGEN#USER#${poolRecord.ownerId}`;
+
+  const dbPregen = await getItem<PregenRecord>(
+    CHARACTERS_TABLE,
+    { PK: lookupPk, SK: `PREGEN#${poolRecord.pregenId}` }
+  );
+  return dbPregen ?? null;
+}
+
+// GET /campaigns/{campaignId}/pregens — list available pregens
+async function listPregens(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<APIGatewayProxyResultV2> {
+  const userId = extractUserId(event);
+  const campaignId = requirePathParam(event, "campaignId");
+
+  await assertCampaignMember(campaignId, userId);
+  const campaign = await getCampaignOrThrow(campaignId);
+
+  // Get all character assignments in this campaign
+  const campaignChars = await queryItems<CampaignCharacterRecord>(
+    CAMPAIGNS_TABLE,
+    "PK = :pk AND begins_with(SK, :prefix)",
+    {
+      ":pk": `CAMPAIGN#${campaignId}`,
+      ":prefix": "CHARACTER#",
+    }
+  );
+
+  // Check which pregens are already imported
+  const usedPregenIds = new Set<string>();
+  for (const cc of campaignChars) {
+    const charRecord = await getItem<CharacterRecord & { pregenSourceId?: string }>(
+      CHARACTERS_TABLE,
+      { PK: `USER#${cc.userId}`, SK: `CHARACTER#${cc.characterId}` }
+    );
+    if (charRecord?.pregenSourceId) {
+      usedPregenIds.add(charRecord.pregenSourceId);
+    }
+  }
+
+  const userHasCharacter = campaignChars.some((c) => c.userId === userId);
+
+  // ── Fetch pregens from the campaign pool ──────────────────────────────────
+  const poolRecords = await queryItems<CampaignPregenPoolRecord>(
+    CAMPAIGNS_TABLE,
+    "PK = :pk AND begins_with(SK, :prefix)",
+    {
+      ":pk": `CAMPAIGN#${campaignId}`,
+      ":prefix": "PREGENPOOL#",
+    }
+  );
+
+  let available: Array<{
+    pregenId: string;
+    name: string;
+    className: string;
+    subclassName: string | null;
+    ancestryName: string | null;
+    communityName: string | null;
+    domains: string[];
+    nativeLevel: number;
+    selectedLevel?: number;
+    claimed: boolean;
+  }> = [];
+
+  if (poolRecords.length > 0) {
+    // Campaign has an explicit pool — resolve each
+    for (const pr of poolRecords) {
+      const claimed = usedPregenIds.has(pr.pregenId);
+
+      const lookupPk = pr.source === "system"
+        ? "PREGEN#SYSTEM"
+        : `PREGEN#USER#${pr.ownerId}`;
+
+      const rec = await getItem<PregenRecord>(
+        CHARACTERS_TABLE,
+        { PK: lookupPk, SK: `PREGEN#${pr.pregenId}` }
+      );
+      if (rec) {
+        available.push({
+          pregenId: rec.pregenId,
+          name: rec.name,
+          className: rec.className,
+          subclassName: rec.subclassName,
+          ancestryName: rec.ancestryName,
+          communityName: rec.communityName,
+          domains: rec.domains,
+          nativeLevel: rec.nativeLevel,
+          selectedLevel: pr.selectedLevel,
+          claimed,
+        });
+      }
+    }
+  } else {
+    // Fallback: use hardcoded PREGEN_CHARACTERS for legacy campaigns
+    available = PREGEN_CHARACTERS
+      .map((p) => ({
+        pregenId: p.characterId,
+        name: p.name,
+        className: p.className,
+        subclassName: p.subclassName ?? null,
+        ancestryName: p.ancestryName ?? null,
+        communityName: p.communityName ?? null,
+        domains: p.domains,
+        nativeLevel: p.level,
+        claimed: usedPregenIds.has(p.characterId),
+      }));
+  }
+
+  return createSuccessResponse({
+    pregens: available,
+    requiredLevel: campaign.requiredLevel ?? null,
+    userHasCharacter,
+  });
+}
+
+// POST /campaigns/{campaignId}/pregens/import — import a pregen as a real character
+async function importPregen(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<APIGatewayProxyResultV2> {
+  const userId = extractUserId(event);
+  const campaignId = requirePathParam(event, "campaignId");
+  const body = parseBody(event, ImportPregenSchema);
+
+  await assertCampaignMember(campaignId, userId);
+  const campaign = await getCampaignOrThrow(campaignId);
+
+  // Check user doesn't already have a character in this campaign
+  const existingChars = await queryItems<CampaignCharacterRecord>(
+    CAMPAIGNS_TABLE,
+    "PK = :pk AND begins_with(SK, :prefix)",
+    {
+      ":pk": `CAMPAIGN#${campaignId}`,
+      ":prefix": "CHARACTER#",
+    }
+  );
+  if (existingChars.some((c) => c.userId === userId)) {
+    throw AppError.conflict("You already have a character in this campaign");
+  }
+
+  // ── Resolve pregen template ─────────────────────────────────────────────
+  let pregen: Character | undefined;
+  let pregenRecord: PregenRecord | null = null;
+
+  // First check the campaign pool
+  const poolRecord = await getItem<CampaignPregenPoolRecord>(
+    CAMPAIGNS_TABLE,
+    { PK: `CAMPAIGN#${campaignId}`, SK: `PREGENPOOL#${body.pregenId}` }
+  );
+
+  if (poolRecord) {
+    const resolved = await resolvePregenCharacter(poolRecord);
+    if (resolved) {
+      pregenRecord = resolved;
+      pregen = resolved.character;
+    }
+  }
+
+  // Fallback: hardcoded array (legacy)
+  if (!pregen) {
+    pregen = PREGEN_CHARACTERS.find((p) => p.characterId === body.pregenId);
+  }
+
+  if (!pregen) {
+    throw AppError.notFound("Pre-generated character", body.pregenId);
+  }
+
+  // Check this pregen isn't already in use in this campaign
+  for (const cc of existingChars) {
+    const charRecord = await getItem<CharacterRecord & { pregenSourceId?: string }>(
+      CHARACTERS_TABLE,
+      { PK: `USER#${cc.userId}`, SK: `CHARACTER#${cc.characterId}` }
+    );
+    if (charRecord?.pregenSourceId === body.pregenId) {
+      throw AppError.conflict("This pre-generated character is already in use in this campaign");
+    }
+  }
+
+  // Determine import level
+  const importLevel = campaign.requiredLevel ?? body.level ?? pregen.level;
+  if (importLevel < 1 || importLevel > 10) {
+    throw new AppError("VALIDATION_ERROR", "Import level must be 1–10", 422, []);
+  }
+
+  // Resolve the imported character at the target level.
+  // DB-backed pregens store authoritative snapshots per level, while legacy
+  // hardcoded pregens still rely on the shared scaler.
+  const scaled = pregenRecord
+    ? (() => {
+        const snapshot = pregenRecord.levelSnapshots?.[importLevel];
+        if (!snapshot) {
+          throw new AppError(
+            "VALIDATION_ERROR",
+            `Level ${importLevel} is not available for this pre-generated character`,
+            422,
+            []
+          );
+        }
+        return { ...snapshot };
+      })()
+    : scalePregenToLevel(pregen, importLevel);
+
+  // Create real character record
+  const characterId = uuidv4();
+  const now = new Date().toISOString();
+
+  const characterRecord = {
+    PK: `USER#${userId}`,
+    SK: `CHARACTER#${characterId}`,
+    ...scaled,
+    characterId,
+    userId,
+    campaignId,
+    pregenSourceId: body.pregenId,  // track which pregen this came from
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  await putItem(CHARACTERS_TABLE, characterRecord as unknown as Record<string, unknown>);
+
+  // Write campaign-character assignment
+  const charAssignment: CampaignCharacterRecord = {
+    PK: `CAMPAIGN#${campaignId}`,
+    SK: `CHARACTER#${characterId}`,
+    campaignId,
+    characterId,
+    userId,
+    addedAt: now,
+  };
+  await putItem(CAMPAIGNS_TABLE, charAssignment as unknown as Record<string, unknown>);
+
+  return createSuccessResponse({
+    imported: true,
+    characterId,
+    campaignId,
+    level: importLevel,
+    pregenId: body.pregenId,
+  }, 201);
+}
+
 // ─── Main Handler ─────────────────────────────────────────────────────────────
 
 async function campaignsHandler(
@@ -1577,6 +2002,18 @@ async function campaignsHandler(
 
     case "DELETE /campaigns/{campaignId}/characters/{characterId}":
       return removeCharacter(event);
+
+    case "GET /campaigns/{campaignId}/pregens":
+      return listPregens(event);
+
+    case "POST /campaigns/{campaignId}/pregens/import":
+      return importPregen(event);
+
+    case "GET /campaigns/{campaignId}/share":
+      return getCampaignShareToken(event);
+
+    case "GET /campaigns/{campaignId}/view":
+      return getSharedCampaign(event);
 
     default:
       return {
