@@ -378,6 +378,120 @@ describe("applyRest", () => {
       expect(result.trackers.armor.max).toBe(char.trackers.armor.max);
     });
   });
+
+  // ─── Community token rest effects ─────────────────────────────────────────
+
+  describe("community token rest effects", () => {
+    it("clears community tokens on long rest when restAction is 'clear'", () => {
+      const char = makeCharacter({
+        cardTokens: { "community/seaborne": 3 },
+      });
+      const tokenConfigs = {
+        "community/seaborne": {
+          maxStat: null,
+          restAction: { trigger: "long-rest" as const, effect: "clear" as const },
+        },
+      };
+      const { character: result } = applyRest(char, "long", tokenConfigs);
+      expect(result.cardTokens["community/seaborne"]).toBe(0);
+    });
+
+    it("fills community tokens to cap on long rest when restAction is 'fill-to-cap'", () => {
+      const char = makeCharacter({
+        cardTokens: { "community/wanderers": 1 },
+        stats: { agility: 1, strength: 1, finesse: 1, instinct: 1, presence: 4, knowledge: 1 },
+      });
+      const tokenConfigs = {
+        "community/wanderers": {
+          maxStat: 4 as const, // fixed numeric cap
+          restAction: { trigger: "long-rest" as const, effect: "fill-to-cap" as const },
+        },
+      };
+      const { character: result } = applyRest(char, "long", tokenConfigs);
+      expect(result.cardTokens["community/wanderers"]).toBe(4);
+    });
+
+    it("adds 1 community token on long rest when restAction is 'add-1'", () => {
+      const char = makeCharacter({
+        cardTokens: { "community/ironveil": 2 },
+      });
+      const tokenConfigs = {
+        "community/ironveil": {
+          maxStat: 5 as const,
+          restAction: { trigger: "long-rest" as const, effect: "add-1" as const },
+        },
+      };
+      const { character: result } = applyRest(char, "long", tokenConfigs);
+      expect(result.cardTokens["community/ironveil"]).toBe(3);
+    });
+
+    it("does not exceed cap when add-1 would overflow", () => {
+      const char = makeCharacter({
+        cardTokens: { "community/ironveil": 5 },
+      });
+      const tokenConfigs = {
+        "community/ironveil": {
+          maxStat: 5 as const,
+          restAction: { trigger: "long-rest" as const, effect: "add-1" as const },
+        },
+      };
+      const { character: result } = applyRest(char, "long", tokenConfigs);
+      expect(result.cardTokens["community/ironveil"]).toBe(5);
+    });
+
+    it("does not apply long-rest tokenConfig on short rest", () => {
+      const char = makeCharacter({
+        cardTokens: { "community/seaborne": 3 },
+      });
+      const tokenConfigs = {
+        "community/seaborne": {
+          maxStat: null,
+          restAction: { trigger: "long-rest" as const, effect: "clear" as const },
+        },
+      };
+      const { character: result } = applyRest(char, "short", tokenConfigs);
+      // tokens should be unchanged — long-rest config doesn't fire on short rest
+      expect(result.cardTokens["community/seaborne"]).toBe(3);
+    });
+
+    it("applies short-rest tokenConfig on short rest", () => {
+      const char = makeCharacter({
+        cardTokens: { "community/seaborne": 2 },
+      });
+      const tokenConfigs = {
+        "community/seaborne": {
+          maxStat: null,
+          restAction: { trigger: "short-rest" as const, effect: "clear" as const },
+        },
+      };
+      const { character: result } = applyRest(char, "short", tokenConfigs);
+      expect(result.cardTokens["community/seaborne"]).toBe(0);
+    });
+
+    it("leaves cardTokens unchanged when no tokenConfigs provided", () => {
+      const char = makeCharacter({
+        cardTokens: { "community/seaborne": 3 },
+      });
+      const { character: result } = applyRest(char, "long");
+      expect(result.cardTokens["community/seaborne"]).toBe(3);
+    });
+
+    it("uses 'community/{id}' key — not bare communityId", () => {
+      const char = makeCharacter({
+        cardTokens: { "community/seaborne": 3, seaborne: 99 },
+      });
+      const tokenConfigs = {
+        "community/seaborne": {
+          maxStat: null,
+          restAction: { trigger: "long-rest" as const, effect: "clear" as const },
+        },
+      };
+      const { character: result } = applyRest(char, "long", tokenConfigs);
+      // Only the namespaced key is cleared; bare key is untouched
+      expect(result.cardTokens["community/seaborne"]).toBe(0);
+      expect(result.cardTokens["seaborne"]).toBe(99);
+    });
+  });
 });
 
 // ─── normalizeWeapons ─────────────────────────────────────────────────────────

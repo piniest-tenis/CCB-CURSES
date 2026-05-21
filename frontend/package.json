@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "build:srd-index": "node scripts/build-srd-index.mjs",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
     "test:srd-search": "node scripts/test-srd-search.mjs",
     "build:prod": "node scripts/build-prod.mjs",
     "deploy:dev": "next build && node scripts/deploy-s3.mjs",
@@ -51,14 +53,19 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.49.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^20.14.10",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^6.0.2",
     "autoprefixer": "^10.4.19",
     "eslint": "^8.57.0",
     "eslint-config-next": "14.2.5",
+    "jsdom": "^29.1.1",
     "postcss": "^8.4.39",
     "tailwindcss": "^3.4.6",
-    "typescript": "^5.5.3"
+    "typescript": "^5.5.3",
+    "vitest": "^2.1.9"
   }
 }

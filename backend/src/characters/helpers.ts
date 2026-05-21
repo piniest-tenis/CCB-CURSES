@@ -12,7 +12,9 @@ import type {
   LevelUpChoices,
   AdvancementChoice,
   CoreStatName,
+  TokenConfig,
 } from "@shared/types";
+import { resolveTokenCap } from "@shared/tokenResolver";
 
 // ─── deepMerge ────────────────────────────────────────────────────────────────
 
@@ -333,9 +335,37 @@ export function validateSrdRules(character: Partial<Character>): SrdError[] {
 
 export function applyRest(
   character: Character,
-  restType: RestType
+  restType: RestType,
+  tokenConfigs?: Record<string, TokenConfig>
 ): { character: Character; cleared: RestResult["cleared"] } {
   const cleared: RestResult["cleared"] = { hp: 0, stress: 0, armor: 0 };
+
+  // Apply token rest effects for all provided tokenConfigs.
+  // Mutates a working copy of cardTokens.
+  function applyTokenRestEffects(
+    cardTokens: Record<string, number>
+  ): Record<string, number> {
+    if (!tokenConfigs) return cardTokens;
+    const updated = { ...cardTokens };
+    const trigger = restType === "short" ? "short-rest" : "long-rest";
+    for (const [cardId, config] of Object.entries(tokenConfigs)) {
+      if (!config.restAction || config.restAction.trigger !== trigger) continue;
+      const current = updated[cardId] ?? 0;
+      const cap = resolveTokenCap(config, character);
+      switch (config.restAction.effect) {
+        case "fill-to-cap":
+          updated[cardId] = cap ?? current;
+          break;
+        case "clear":
+          updated[cardId] = 0;
+          break;
+        case "add-1":
+          updated[cardId] = cap != null ? Math.min(current + 1, cap) : current + 1;
+          break;
+      }
+    }
+    return updated;
+  }
 
   if (restType === "short") {
     const stressToClear = Math.min(2, character.trackers.stress.marked);
@@ -350,6 +380,7 @@ export function applyRest(
             marked: character.trackers.stress.marked - stressToClear,
           },
         },
+        cardTokens: applyTokenRestEffects(character.cardTokens ?? {}),
         updatedAt: new Date().toISOString(),
       },
       cleared,
@@ -368,6 +399,7 @@ export function applyRest(
           stress: { ...character.trackers.stress, marked: 0 },
           armor: { ...character.trackers.armor, marked: 0 },
         },
+        cardTokens: applyTokenRestEffects(character.cardTokens ?? {}),
         hope: Math.min(character.hope + 1, hopeMax),
         updatedAt: new Date().toISOString(),
       },
