@@ -205,6 +205,7 @@ export const PREGEN_CHARACTERS: Character[] = [
       ],
     },
     markedTraits: ["strength", "agility"],
+    spellcastTrait: "strength",
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -379,6 +380,7 @@ export const PREGEN_CHARACTERS: Character[] = [
       ],
     },
     markedTraits: ["finesse", "agility"],
+    spellcastTrait: "finesse",
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -553,6 +555,7 @@ export const PREGEN_CHARACTERS: Character[] = [
       ],
     },
     markedTraits: ["knowledge", "instinct"],
+    spellcastTrait: "knowledge",
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -727,6 +730,7 @@ export const PREGEN_CHARACTERS: Character[] = [
       ],
     },
     markedTraits: ["agility", "instinct"],
+    spellcastTrait: "agility",
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -901,6 +905,7 @@ export const PREGEN_CHARACTERS: Character[] = [
       ],
     },
     markedTraits: ["presence", "agility"],
+    spellcastTrait: "presence",
   },
 ];
 

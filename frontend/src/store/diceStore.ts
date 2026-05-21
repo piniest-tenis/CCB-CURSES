@@ -41,6 +41,16 @@ interface DiceStoreExtended extends DiceStore {
   forceCrit: boolean;
   /** Set/unset the force-crit flag (called from CharacterPageClient on WS event). */
   setForceCrit: (active: boolean) => void;
+  /**
+   * Publish a completed roll result directly to the dice log and OBS overlays
+   * without triggering a 3D animation. Used by the encounter system so that
+   * adversary attack and damage rolls appear on the OBS dice-log overlay and
+   * are fanned out via WebSocket just like any other roll.
+   *
+   * @param req      - The roll request describing the dice pool.
+   * @param rawValues - The already-computed raw die face values (one per die in req.dice).
+   */
+  publishInstantRoll: (req: RollRequest, rawValues: number[]) => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -198,6 +208,62 @@ export const useDiceStore = create<DiceStoreExtended>((set, get) => ({
     }));
 
     // Broadcast to OBS BroadcastChannel so dice-log overlay page receives it
+    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+      try {
+        const channelName = get().campaignId
+          ? `dh-dice-${get().campaignId}`
+          : "dh-dice";
+        const ch = new BroadcastChannel(channelName);
+        ch.postMessage({ type: "ROLL_RESULT", result });
+        ch.close();
+      } catch {
+        // BroadcastChannel not available in this context — ignore
+      }
+    }
+  },
+
+  // ── publishInstantRoll ────────────────────────────────────────────────────
+  // Bypasses the 3D animation entirely and publishes a completed roll result
+  // directly to the dice log and OBS overlays. Used by the encounter system for
+  // adversary attack and damage rolls so they appear on the OBS dice-log overlay
+  // and are fanned out via WebSocket exactly like player/GM rolls.
+  publishInstantRoll: (req: RollRequest, rawValues: number[]) => {
+    const diceResults: DieResult[] = req.dice.map((spec, i) => ({
+      size:  spec.size,
+      role:  spec.role,
+      value: Math.max(1, rawValues[i] ?? 1),
+      label: spec.label,
+    }));
+
+    const diceSum = diceResults.reduce((acc, d) => {
+      return d.role === "disadvantage" ? acc - d.value : acc + d.value;
+    }, 0);
+    const total = diceSum + (req.modifier ?? 0);
+
+    const { outcome, hopeValue, fearValue } = classifyOutcome(
+      diceResults,
+      total,
+      req.difficulty,
+      req.type
+    );
+
+    const result: RollResult = {
+      id:        nanoid(),
+      timestamp: new Date().toISOString(),
+      request:   req,
+      dice:      diceResults,
+      total,
+      outcome,
+      hopeValue,
+      fearValue,
+    };
+
+    set((state) => ({
+      lastResult: result,
+      log:        [result, ...state.log].slice(0, 50),
+    }));
+
+    // Broadcast to OBS BroadcastChannel (dice-log overlay)
     if (typeof window !== "undefined" && "BroadcastChannel" in window) {
       try {
         const channelName = get().campaignId

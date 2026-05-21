@@ -68,6 +68,7 @@ function makeCharacter(overrides: Partial<Character> = {}): Character {
     reputationBonuses: {},
     favors: {},
     customConditions: [],
+    spellcastTrait: null,
     ...overrides,
   };
 }

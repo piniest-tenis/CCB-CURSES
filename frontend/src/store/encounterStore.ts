@@ -16,7 +16,9 @@ import type {
   EncounterStatus,
   AdversaryRollResult,
 } from "@/types/adversary";
+import type { DieSize, DieRole } from "@/types/dice";
 import { parseDiceNotation, rollDice } from "@/lib/diceNotation";
+import { useDiceStore } from "@/store/diceStore";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -253,6 +255,17 @@ export const useEncounterStore = create<EncounterStore>((set, get) => ({
       rollLog: [result, ...state.rollLog].slice(0, 50),
     }));
 
+    // Publish to the OBS dice overlay via diceStore
+    useDiceStore.getState().publishInstantRoll(
+      {
+        label: result.label,
+        type: "generic",
+        dice: [{ size: "d20", role: "gm" }],
+        modifier: instance.attackModifier,
+      },
+      [d20]
+    );
+
     return result;
   },
 
@@ -275,6 +288,22 @@ export const useEncounterStore = create<EncounterStore>((set, get) => ({
     set((state) => ({
       rollLog: [result, ...state.rollLog].slice(0, 50),
     }));
+
+    // Publish to the OBS dice overlay via diceStore.
+    // Map the parsed die size (number) to a DieSize string and expand the pool.
+    const dieSizeStr = `d${parsed.size}` as DieSize;
+    useDiceStore.getState().publishInstantRoll(
+      {
+        label: result.label,
+        type: "damage",
+        dice: Array.from({ length: parsed.count }, () => ({
+          size: dieSizeStr,
+          role: "damage" as DieRole,
+        })),
+        modifier: parsed.modifier,
+      },
+      values
+    );
 
     return result;
   },
