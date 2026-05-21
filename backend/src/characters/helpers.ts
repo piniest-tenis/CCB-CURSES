@@ -4,6 +4,7 @@
 
 import { createHmac } from "crypto";
 import { AppError } from "../common/middleware";
+import { resolveTokenCap } from "@shared/tokenResolver";
 import type {
   Character,
   RestType,
@@ -12,6 +13,7 @@ import type {
   LevelUpChoices,
   AdvancementChoice,
   CoreStatName,
+  TokenConfig,
 } from "@shared/types";
 
 // ─── deepMerge ────────────────────────────────────────────────────────────────
@@ -401,6 +403,7 @@ export type ActionId =
   | "spend-token"
   | "add-token"
   | "clear-tokens"
+  | "fill-tokens"
   | "toggle-aura"
   | "tick-project"
   | "clear-stress"
@@ -453,11 +456,16 @@ function invalidAction(message: string, field: string): never {
 /**
  * Apply an actionable feature to a character and return the updated character.
  * Pure function — no I/O. Throws AppError (422) on validity failures.
+ *
+ * @param tokenConfig - Optional TokenConfig for the card referenced by params.cardId.
+ *   Must be injected by the caller (not fetched inside this function).
+ *   Required for `add-token` cap enforcement and `fill-tokens`.
  */
 export function applyAction(
   character: Character,
   actionId: ActionId,
-  params: ActionParams = {}
+  params: ActionParams = {},
+  tokenConfig?: TokenConfig
 ): Character {
   const n = params.n ?? 1;
 
@@ -496,9 +504,19 @@ export function applyAction(
       const cardId = params.cardId;
       if (!cardId) invalidAction("cardId is required for add-token", "cardId");
       const current = character.cardTokens[cardId] ?? 0;
+      const newCount = current + 1;
+      if (tokenConfig !== undefined) {
+        const resolvedCap = resolveTokenCap(tokenConfig, character);
+        if (resolvedCap !== null && newCount > resolvedCap) {
+          invalidAction(
+            `Token cap reached for card '${cardId}' (cap: ${resolvedCap}, current: ${current})`,
+            `cardTokens.${cardId}`
+          );
+        }
+      }
       return {
         ...character,
-        cardTokens: { ...character.cardTokens, [cardId]: current + 1 },
+        cardTokens: { ...character.cardTokens, [cardId]: newCount },
       };
     }
 
@@ -509,6 +527,27 @@ export function applyAction(
       return {
         ...character,
         cardTokens: { ...character.cardTokens, [cardId]: 0 },
+      };
+    }
+
+    // ── Token: fill to cap ──────────────────────────────────────────────────
+    // Called internally by applyRest — not a player UI button.
+    // If tokenConfig is absent or maxStat is null (uncapped), this is a no-op.
+    case "fill-tokens": {
+      const cardId = params.cardId;
+      if (!cardId) invalidAction("cardId is required for fill-tokens", "cardId");
+      if (tokenConfig === undefined) {
+        // No config provided — no-op
+        return character;
+      }
+      const resolvedCap = resolveTokenCap(tokenConfig, character);
+      if (resolvedCap === null) {
+        // Uncapped — no-op
+        return character;
+      }
+      return {
+        ...character,
+        cardTokens: { ...character.cardTokens, [cardId]: resolvedCap },
       };
     }
 
