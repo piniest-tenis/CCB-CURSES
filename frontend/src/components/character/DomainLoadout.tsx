@@ -8,7 +8,8 @@
  *
  * New features:
  *
- * Token tracking — shown when card.isCursed OR character.cardTokens[cardId] !== undefined.
+ * Token tracking — shown when card.isCursed OR card.tokenConfig !== undefined OR character.cardTokens[cardId] !== undefined.
+ *   Visibility logic lives in src/lib/tokenUtils.ts (cardHasTokens).
  *   − button → spend-token   { cardId }
  *   × button → clear-tokens  { cardId }
  *   + button → add-token     { cardId }
@@ -19,7 +20,9 @@
  */
 
 import React, { useState, useRef } from "react";
-import type { DomainCard } from "@shared/types";
+import type { DomainCard, TokenConfig, CoreStatName } from "@shared/types";
+import { resolveTokenCap } from "@shared/tokenResolver";
+import { cardHasTokens, statLabel, type StatLabelKey } from "@/lib/tokenUtils";
 import { useCharacterStore } from "@/store/characterStore";
 import { useDomainCard, useClass, useDomain } from "@/hooks/useGameData";
 import { useActionButton, InlineActionError } from "./ActionButton";
@@ -395,15 +398,6 @@ function AcquireCardPicker({
   );
 }
 
-function cardHasTokens(
-  card: DomainCard | undefined,
-  cardTokens: Record<string, number>,
-  cardId: string,
-): boolean {
-  if (!card) return false;
-  return card.isCursed || cardId in cardTokens;
-}
-
 function cardHasAura(card: DomainCard | undefined): boolean {
   if (!card) return false;
   return /aura/i.test(card.description);
@@ -417,6 +411,10 @@ interface TokenTrackerProps {
   cardName: string;
   characterId: string;
   count: number;
+  /** Resolved integer cap (null = uncapped). */
+  resolvedCap?: number | null;
+  /** Token config from the domain card, if any. */
+  tokenConfig?: TokenConfig | undefined;
 }
 
 function TokenTracker({
@@ -424,6 +422,8 @@ function TokenTracker({
   cardName,
   characterId,
   count,
+  resolvedCap,
+  tokenConfig,
 }: TokenTrackerProps) {
   const spendAction = useActionButton(characterId);
   const addAction = useActionButton(characterId);
@@ -436,6 +436,27 @@ function TokenTracker({
   const errorId = React.useId();
   const spinnerId = React.useId();
 
+  // Determine pip count: use resolvedCap if available, else default to 8
+  const pipCount = resolvedCap != null ? resolvedCap : 8;
+
+  // Build display label for the stat cap source
+  const capStatKey =
+    tokenConfig?.maxStat != null && typeof tokenConfig.maxStat !== "number"
+      ? (tokenConfig.maxStat as StatLabelKey)
+      : null;
+  const capLabel = capStatKey ? statLabel(capStatKey) : null;
+
+  // Display format: "3 / 5 (Presence)" when cap and label known; "3 / 5" when cap but no label; "3" when uncapped
+  const countDisplay =
+    resolvedCap != null
+      ? capLabel
+        ? `${count} / ${resolvedCap} (${capLabel})`
+        : `${count} / ${resolvedCap}`
+      : `${count}`;
+
+  const atCap = resolvedCap != null && count >= resolvedCap;
+  const atZero = count <= 0;
+
   return (
     <div className="mt-2 flex flex-col gap-1">
       <div className="flex items-center gap-2">
@@ -446,7 +467,7 @@ function TokenTracker({
           role="spinbutton"
           aria-valuenow={count}
           aria-valuemin={0}
-          aria-valuemax={99}
+          aria-valuemax={resolvedCap ?? 99}
           aria-label={`Token count for ${cardName}`}
           aria-describedby={inlineError ? errorId : undefined}
           className="flex items-center gap-1"
@@ -455,12 +476,12 @@ function TokenTracker({
           <button
             type="button"
             onClick={() => spendAction.fire("spend-token", { cardId })}
-            disabled={isPending}
+            disabled={isPending || atZero}
             aria-label={`Remove token from ${cardName}`}
             className="
               min-h-[44px] min-w-[44px] rounded border border-burgundy-800 bg-slate-900
               text-sm text-parchment-500 hover:bg-burgundy-900/30
-              disabled:opacity-50 disabled:cursor-wait
+              disabled:opacity-50 disabled:cursor-not-allowed
               transition-colors flex items-center justify-center
               focus:outline-none focus:ring-1 focus:ring-gold-500
             "
@@ -471,21 +492,21 @@ function TokenTracker({
           {/* Count display */}
           <span
             id={spinnerId}
-            className="min-w-[1.75rem] text-center text-sm font-bold text-parchment-200 tabular-nums"
+            className="min-w-[4rem] text-center text-sm font-bold text-parchment-200 tabular-nums"
           >
-            {count}
+            {countDisplay}
           </span>
 
           {/* + Add token */}
           <button
             type="button"
             onClick={() => addAction.fire("add-token", { cardId })}
-            disabled={isPending}
+            disabled={isPending || atCap}
             aria-label={`Add token to ${cardName}`}
             className="
               min-h-[44px] min-w-[44px] rounded border border-gold-800 bg-slate-900
               text-sm text-gold-600 hover:bg-gold-900/20
-              disabled:opacity-50 disabled:cursor-wait
+              disabled:opacity-50 disabled:cursor-not-allowed
               transition-colors flex items-center justify-center
               focus:outline-none focus:ring-1 focus:ring-gold-500
             "
@@ -514,13 +535,13 @@ function TokenTracker({
         </div>
       </div>
 
-      {/* Visual slot pips — at-a-glance gold dots for counts 1–8 */}
-      {count > 0 && count <= 8 && (
+      {/* Visual slot pips — filled/empty dots up to cap (or 8 when uncapped) */}
+      {pipCount > 0 && (
         <div className="flex gap-1 ml-0.5" aria-hidden="true">
-          {Array.from({ length: count }, (_, i) => (
+          {Array.from({ length: pipCount }, (_, i) => (
             <span
               key={i}
-              className="h-2 w-2 rounded-full bg-[#DAA520]"
+              className={`h-2 w-2 rounded-full ${i < count ? "bg-[#DAA520]" : "bg-slate-700"}`}
             />
           ))}
         </div>
@@ -823,6 +844,12 @@ function LoadoutCardSlot({
   const showAura = cardHasAura(card);
   const isAuraActive = activeAuras.includes(cardId);
 
+  // Resolve token cap for display
+  const resolvedCap: number | null =
+    card?.tokenConfig && activeCharacter
+      ? resolveTokenCap(card.tokenConfig, activeCharacter)
+      : null;
+
   // Determine if removal needs confirmation (has tokens or active aura)
   const needsRemoveConfirm = tokenCount > 0 || isAuraActive;
 
@@ -990,13 +1017,15 @@ function LoadoutCardSlot({
         )}
       </div>
 
-      {/* Token tracker (shown for cursed cards or cards that already have tokens) */}
+      {/* Token tracker (shown for cursed cards, cards with tokenConfig, or cards that already have tokens) */}
       {showTokens && (
         <TokenTracker
           cardId={cardId}
           cardName={card?.name ?? cardId}
           characterId={characterId}
           count={tokenCount}
+          resolvedCap={resolvedCap}
+          tokenConfig={card?.tokenConfig}
         />
       )}
 
