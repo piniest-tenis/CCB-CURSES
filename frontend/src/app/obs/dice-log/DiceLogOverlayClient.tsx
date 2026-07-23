@@ -21,6 +21,7 @@ type ColorOverrides = Record<DieRole, { dice_color: string; label_color: string 
 const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL ?? "";
 const MAX_RECONNECT_ATTEMPTS = 3;
 const BASE_BACKOFF_MS = 1_000;
+const KEEPALIVE_MS = 5 * 60 * 1000; // 5 minutes (AWS API Gateway idle timeout is 10 min)
 
 // ─── Outcome helpers ──────────────────────────────────────────────────────────
 
@@ -147,6 +148,7 @@ export default function DiceLogOverlayClient() {
     let ws: WebSocket | null = null;
     let reconnectCount = 0;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let keepAliveTimer: ReturnType<typeof setInterval> | null = null;
     let unmounted = false;
 
     function connect() {
@@ -157,6 +159,16 @@ export default function DiceLogOverlayClient() {
       url.searchParams.set("role", "obs");
 
       ws = new WebSocket(url.toString());
+
+      ws.onopen = () => {
+        reconnectCount = 0;
+
+        keepAliveTimer = setInterval(() => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ action: "keepalive" }));
+          }
+        }, KEEPALIVE_MS);
+      };
 
       ws.onmessage = (evt: MessageEvent) => {
         try {
@@ -171,6 +183,7 @@ export default function DiceLogOverlayClient() {
       };
 
       ws.onclose = () => {
+        if (keepAliveTimer) clearInterval(keepAliveTimer);
         if (unmounted) return;
         if (reconnectCount < MAX_RECONNECT_ATTEMPTS) {
           const delay = BASE_BACKOFF_MS * Math.pow(2, reconnectCount);
@@ -189,6 +202,7 @@ export default function DiceLogOverlayClient() {
     return () => {
       unmounted = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (keepAliveTimer) clearInterval(keepAliveTimer);
       if (ws) {
         ws.onclose = null;
         ws.close();

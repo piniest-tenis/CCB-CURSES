@@ -1391,7 +1391,7 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
 
   // Domain card acquisition is mandatory — but if no cards are available, allow proceeding
   const [noCardsAvailable, setNoCardsAvailable] = useState(false);
-  const domainCardSatisfied = selectedDomainCardIds.length >= 1 || noCardsAvailable;
+  const domainCardSatisfied = selectedDomainCardIds.length >= maxDomainCardSelections || noCardsAvailable;
 
   const STEPS = ["Overview", "Advancements", "Domain Card", "Confirm"];
 
@@ -1744,7 +1744,7 @@ export function LevelUpWizard({ character, onClose }: LevelUpWizardProps) {
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={!advancementsComplete || levelUpMutation.isPending}
+            disabled={!advancementsComplete || !domainCardSatisfied || levelUpMutation.isPending}
             aria-busy={levelUpMutation.isPending}
             className="
               rounded-lg px-6 py-2 text-sm font-bold

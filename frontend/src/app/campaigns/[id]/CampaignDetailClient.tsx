@@ -761,23 +761,55 @@ function FearTracker({ campaignId, currentFear, compact }: FearTrackerProps) {
     [updateMutation]
   );
 
-  // Compact chip variant for non-encounter tabs on sm+
+  // Compact chip variant for non-encounter tabs — shows inc/dec and readout
   if (compact) {
     return (
-      <button
-        type="button"
-        aria-label={`Fear: ${localFear} of ${FEAR_MAX}. Click to increase.`}
-        onClick={() => setFear(localFear + 1)}
+      <div
         className="
-          inline-flex items-center gap-1.5 rounded-full
+          inline-flex items-center gap-1 rounded-full
           border border-[#fe5f55]/30 bg-[#fe5f55]/5
-          px-2.5 py-1 text-xs font-semibold text-[#fe5f55]/80
-          hover:bg-[#fe5f55]/15 transition-colors
-          focus:outline-none focus:ring-2 focus:ring-[#fe5f55]
+          px-1.5 py-1 text-xs font-semibold text-[#fe5f55]/80
+          focus-within:ring-2 focus-within:ring-[#fe5f55]
         "
+        role="group"
+        aria-label={`Fear: ${localFear} of ${FEAR_MAX}`}
       >
-        🔥 Fear: {localFear}/{FEAR_MAX}
-      </button>
+        <button
+          type="button"
+          onClick={() => setFear(localFear - 1)}
+          disabled={localFear === 0 || updateMutation.isPending}
+          aria-label="Decrease fear"
+          className="
+            h-5 w-5 rounded flex items-center justify-center
+            text-[#fe5f55] text-xs font-bold
+            hover:bg-[#fe5f55]/15 disabled:opacity-30
+            transition-colors focus:outline-none
+          "
+        >
+          −
+        </button>
+        <span
+          className="tabular-nums min-w-[2ch] text-center select-none"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {localFear}/{FEAR_MAX}
+        </span>
+        <button
+          type="button"
+          onClick={() => setFear(localFear + 1)}
+          disabled={localFear === FEAR_MAX || updateMutation.isPending}
+          aria-label="Increase fear"
+          className="
+            h-5 w-5 rounded flex items-center justify-center
+            text-[#fe5f55] text-xs font-bold
+            hover:bg-[#fe5f55]/15 disabled:opacity-30
+            transition-colors focus:outline-none
+          "
+        >
+          +
+        </button>
+      </div>
     );
   }
 
@@ -1140,8 +1172,11 @@ export default function CampaignDetailClient() {
       onForceCrit: useCallback(
         (evt: ForceCritEvent) => {
           setForceCritCharId(evt.active ? evt.targetCharacterId : null);
+          if (evt.targetCharacterId === myCharId) {
+            useDiceStore.getState().setForceCrit(evt.active);
+          }
         },
-        []
+        [myCharId]
       ),
     }
   );
@@ -1625,18 +1660,11 @@ export default function CampaignDetailClient() {
                       currentFear={campaign.currentFear ?? 0}
                     />
                   ) : (
-                    <>
-                      {/* Compact chip on non-encounter tabs (sm+ only) */}
-                      <div className="hidden sm:block">
-                        <FearTracker
-                          campaignId={campaignId}
-                          currentFear={campaign.currentFear ?? 0}
-                          compact
-                        />
-                      </div>
-                      {/* Full tracker always visible on Encounter tab (desktop) - skip on other tabs on mobile */}
-                      <div className="block sm:hidden" />
-                    </>
+                    <FearTracker
+                      campaignId={campaignId}
+                      currentFear={campaign.currentFear ?? 0}
+                      compact
+                    />
                   )}
                 </div>
               )}

@@ -1659,14 +1659,20 @@ async function executeAction(
 // ─── Level-Up Schema & Route Handler ─────────────────────────────────────────
 
 const LevelUpSchema = z.object({
-  targetLevel:     z.number().int().min(2).max(10),
-  advancements:    z.array(AdvancementChoiceSchema).min(1).max(4),
-  newDomainCardId: z.string().nullable().default(null),
-  exchangeCardId:  z.string().nullable().optional(),
-  newSubclassId:   z.string().nullable().optional(),
-  newClassId:      z.string().nullable().optional(),
+  targetLevel:                   z.number().int().min(2).max(10),
+  advancements:                  z.array(AdvancementChoiceSchema).min(1).max(4),
+  newDomainCardId:               z.string().nullable().default(null),
+  exchangeCardId:                z.string().nullable().optional(),
+  newSubclassId:                 z.string().nullable().optional(),
+  newClassId:                    z.string().nullable().optional(),
   /** New spellcast trait when subclass changes. Must accompany newSubclassId. */
-  spellcastTrait:  z.enum(["agility","strength","finesse","instinct","presence","knowledge"]).nullable().optional(),
+  spellcastTrait:                z.enum(["agility","strength","finesse","instinct","presence","knowledge"]).nullable().optional(),
+  /** SRD p.22 Tier Achievement: name for the new experience at +2. */
+  tierAchievementExperienceName: z.string().optional(),
+  /** Level of the newly acquired domain card (for exchange level-cap validation). */
+  newDomainCardLevel:            z.number().int().positive().optional(),
+  /** Level of the card being exchanged (for exchange level-cap validation). */
+  exchangeCardLevel:             z.number().int().positive().optional(),
 });
 
 async function levelUpCharacter(
@@ -1688,10 +1694,13 @@ async function levelUpCharacter(
   const body = parseBody(event, LevelUpSchema);
 
   const choices: LevelUpChoices = {
-    targetLevel:     body.targetLevel,
-    advancements:    body.advancements as AdvancementChoice[],
-    newDomainCardId: body.newDomainCardId ?? null,
-    exchangeCardId:  body.exchangeCardId ?? null,
+    targetLevel:                   body.targetLevel,
+    advancements:                  body.advancements as AdvancementChoice[],
+    newDomainCardId:               body.newDomainCardId ?? null,
+    exchangeCardId:                body.exchangeCardId ?? null,
+    tierAchievementExperienceName: body.tierAchievementExperienceName,
+    newDomainCardLevel:            body.newDomainCardLevel,
+    exchangeCardLevel:             body.exchangeCardLevel,
   };
 
   // applyLevelUp throws AppError(422) on validation failures

@@ -271,14 +271,29 @@ export const useEncounterStore = create<EncounterStore>((set, get) => ({
 
   // ── rollDamage ───────────────────────────────────────────────────────────
   rollDamage: (instance) => {
-    const parsed = parseDiceNotation(instance.attackDamage);
+    let parsed: ReturnType<typeof parseDiceNotation>;
+    try {
+      parsed = parseDiceNotation(instance.attackDamage ?? "");
+    } catch {
+      const result: AdversaryRollResult = {
+        instanceId: instance.instanceId,
+        label: `Damage — ${instance.name} ${instance.label}`.trim(),
+        diceValues: [],
+        diceNotation: instance.attackDamage ?? "—",
+        modifier: 0,
+        total: 0,
+        isCritical: false,
+        timestamp: new Date().toISOString(),
+      };
+      return result;
+    }
     const { values, total } = rollDice(parsed);
 
     const result: AdversaryRollResult = {
       instanceId: instance.instanceId,
       label: `Damage — ${instance.name} ${instance.label}`.trim(),
       diceValues: values,
-      diceNotation: instance.attackDamage.split(" ")[0], // e.g. "2d4+2"
+      diceNotation: instance.attackDamage ? instance.attackDamage.split(" ")[0] : "—",
       modifier: parsed.modifier,
       total,
       isCritical: false,

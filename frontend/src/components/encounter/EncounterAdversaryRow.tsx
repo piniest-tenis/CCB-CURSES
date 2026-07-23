@@ -256,9 +256,9 @@ export function EncounterAdversaryRow({
             "
           >
             🎲{" "}
-            <span className="font-mono text-[11px]">
-              {instance.attackDamage.split(" ")[0]}
-            </span>
+             <span className="font-mono text-[11px]">
+               {instance.attackDamage ? instance.attackDamage.split(" ")[0] : "—"}
+             </span>
           </button>
 
           {/* Quick damage buttons */}
