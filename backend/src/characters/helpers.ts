@@ -995,8 +995,29 @@ function levelsInTier(tier: number): number[] {
  *
  * Does NOT fetch new domain card data — caller is responsible for ensuring
  * newDomainCardId is a valid card for this character's domains. The card is
- * added to the vault (not the loadout) automatically.
+ * added to the loadout when there is room (SRD p.5 "immediately move it into
+ * your loadout for free"), otherwise to the vault.
  */
+
+/**
+ * Add a newly-acquired domain card to the character.
+ *
+ * SRD p.22 (Step Four) lets a player add the card to their loadout or vault;
+ * SRD p.5 grants an immediate, free placement into the loadout at level-up.
+ * We place the card in the loadout when there is room, and fall back to the
+ * vault when the loadout is already full (5/5).
+ */
+function addAcquiredCard(character: Character, cardId: string): Character {
+  let updated = character;
+  if (!updated.domainVault.includes(cardId)) {
+    updated = { ...updated, domainVault: [...updated.domainVault, cardId] };
+  }
+  if (!updated.domainLoadout.includes(cardId) && updated.domainLoadout.length < 5) {
+    updated = { ...updated, domainLoadout: [...updated.domainLoadout, cardId] };
+  }
+  return updated;
+}
+
 export function applyLevelUp(
   character: Character,
   choices: LevelUpChoices
@@ -1280,7 +1301,7 @@ export function applyLevelUp(
           }
         }
         if (!updated.domainVault.includes(cardId)) {
-          updated = { ...updated, domainVault: [...updated.domainVault, cardId] };
+          updated = addAcquiredCard(updated, cardId);
         }
         break;
       }
@@ -1362,9 +1383,9 @@ export function applyLevelUp(
           : updated.domainLoadout,
       };
     } else {
-      // Add to vault if not already present
+      // Add to loadout when there is room, otherwise vault (SRD p.5/p.22)
       if (!updated.domainVault.includes(newDomainCardId)) {
-        updated = { ...updated, domainVault: [...updated.domainVault, newDomainCardId] };
+        updated = addAcquiredCard(updated, newDomainCardId);
       }
     }
   }
