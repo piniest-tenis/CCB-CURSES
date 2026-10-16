@@ -39,6 +39,9 @@ interface DowntimeModalProps {
   characterId: string;
   open: boolean;
   onClose: () => void;
+  /** Lifted rest state (single source of truth, owned by CharacterSheet). */
+  restType: "none" | "short" | "long";
+  onRestTypeChange: (v: "none" | "short" | "long") => void;
 }
 
 // ─── Rest type toggle ─────────────────────────────────────────────────────────
@@ -185,20 +188,36 @@ function RestActionButton({
 
 // ─── Main modal ───────────────────────────────────────────────────────────────
 
-export function DowntimeModal({ characterId, open, onClose }: DowntimeModalProps) {
-  const [restType, setRestType] = useState<"short" | "long">("short");
+export function DowntimeModal({
+  characterId,
+  open,
+  onClose,
+  restType,
+  onRestTypeChange,
+}: DowntimeModalProps) {
   const { activeCharacter } = useCharacterStore();
   const resetUsages = useActionButton(characterId);
 
+  // The toggle only exposes short/long; "none" shows as "short" (default) until
+  // the player actively selects a rest type, which arms the free-swap window.
+  const toggleValue: "short" | "long" = restType === "long" ? "long" : "short";
+
   const handleClose = () => {
+    // Keep the rest window armed so the player can swap cards on the sheet.
     onClose();
+  };
+
+  const handleToggle = (v: "short" | "long") => {
+    onRestTypeChange(v);
   };
 
   // Completing the rest auto-resets rest-cadence usages (once-per-rest /
   // once-per-short-rest / once-per-long-rest) while scene/session usages stay
   // exhausted. The granular rest moves (clear-stress/clear-hp/etc.) are unchanged.
+  // Completing also closes the free-swap window (restType → none).
   const handleDone = async () => {
-    await resetUsages.fire("reset-rest-usages", { restType });
+    await resetUsages.fire("reset-rest-usages", { restType: toggleValue });
+    onRestTypeChange("none");
     onClose();
   };
 
@@ -267,7 +286,7 @@ export function DowntimeModal({ characterId, open, onClose }: DowntimeModalProps
     },
   ];
 
-  const actions = restType === "short" ? shortRestActions : longRestActions;
+  const actions = toggleValue === "short" ? shortRestActions : longRestActions;
 
   return (
     <Dialog.Root open={open} onOpenChange={(v) => !v && handleClose()}>
@@ -313,19 +332,19 @@ export function DowntimeModal({ characterId, open, onClose }: DowntimeModalProps
 
           {/* Body */}
           <div className="space-y-4">
-            <RestTypeToggle value={restType} onChange={setRestType} />
+            <RestTypeToggle value={toggleValue} onChange={handleToggle} />
 
             {/* Contextual note */}
             <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-3 text-sm text-parchment-400">
-              {restType === "short" ? (
+              {toggleValue === "short" ? (
                 <p>
                   <span className="font-medium text-parchment-300">Short Rest (~1 hour).</span>{" "}
-                  Choose 2 downtime moves. Domain cards may be freely swapped between loadout and vault.
+                  Choose 2 downtime moves. Domain cards swap for free, except ★ Cursed cards (always pay Recall Cost). ↔ Linked Curse cards need a long rest.
                 </p>
               ) : (
                 <p>
                   <span className="font-medium text-parchment-300">Long Rest (several hours).</span>{" "}
-                  Choose 2 downtime moves (you may choose the same move twice). Domain cards may be freely swapped.
+                  Choose 2 downtime moves (you may choose the same move twice). Domain cards swap for free, except ★ Cursed cards (always pay Recall Cost). ↔ Linked Curse cards cost 6 Stress.
                 </p>
               )}
             </div>

@@ -727,8 +727,8 @@ function LoadoutCard({
           {...listeners}
           {...attributes}
           disabled={viewerMode}
-          className="flex flex-col gap-0.5 text-parchment-600 select-none shrink-0 cursor-grab active:cursor-grabbing touch-none
-            p-1 rounded focus:outline-none focus:ring-1 focus:ring-gold-500 disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex flex-col gap-0.5 items-center justify-center text-parchment-600 select-none shrink-0 cursor-grab active:cursor-grabbing touch-none
+            rounded focus:outline-none focus:ring-1 focus:ring-gold-500 disabled:cursor-not-allowed disabled:opacity-40 min-h-[44px] min-w-[44px]"
           aria-label={`Drag ${card?.name ?? cardId} to reorder or move to vault`}
           title={viewerMode ? "View only" : "Drag to move to vault"}
         >
@@ -875,6 +875,8 @@ interface VaultCardProps {
   cardId: string;
   /** Disables dragging into the loadout (loadout is full). */
   disabled: boolean;
+  /** Active rest state — drives the cost chip and ↔ blocking. */
+  restType: "short" | "long" | "none";
   /** True when this card just landed optimistically into the vault. */
   isLanding?: boolean;
   /** True while the optimistic move for this card is in-flight. */
@@ -885,6 +887,7 @@ interface VaultCardProps {
 function VaultCard({
   cardId,
   disabled,
+  restType,
   isLanding = false,
   isSaving = false,
   onAddToLoadout,
@@ -893,7 +896,9 @@ function VaultCard({
   const { domain, id } = parseCardId(cardId);
   const { data: card } = useDomainCard(domain, id);
 
-  const dragDisabled = disabled || viewerMode;
+  // ↔ Linked Curse cards can only be moved into the loadout during a long rest.
+  const linkedBlocked = card?.isLinkedCurse && restType !== "long";
+  const dragDisabled = disabled || viewerMode || linkedBlocked;
 
   const {
     setNodeRef,
@@ -947,10 +952,18 @@ function VaultCard({
           {...listeners}
           {...attributes}
           disabled={dragDisabled}
-          className="flex flex-col gap-0.5 text-parchment-600 select-none shrink-0 cursor-grab active:cursor-grabbing touch-none
-            p-1 rounded focus:outline-none focus:ring-1 focus:ring-gold-500 disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex flex-col gap-0.5 items-center justify-center text-parchment-600 select-none shrink-0 cursor-grab active:cursor-grabbing touch-none
+            rounded focus:outline-none focus:ring-1 focus:ring-gold-500 disabled:cursor-not-allowed disabled:opacity-40 min-h-[44px] min-w-[44px]"
           aria-label={`Drag ${card?.name ?? cardId} into the loadout`}
-          title={viewerMode ? "View only" : disabled ? "Loadout is full" : "Drag to add to loadout"}
+          title={
+            viewerMode
+              ? "View only"
+              : disabled
+                ? "Loadout is full"
+                : linkedBlocked
+                  ? "Linked Curse — long rest only"
+                  : "Drag to add to loadout"
+          }
         >
           <span className="block w-4 border-t border-current" />
           <span className="block w-4 border-t border-current" />
@@ -984,7 +997,29 @@ function VaultCard({
               <span className="rounded-full border border-gold-800 px-1.5 text-xs font-bold text-gold-500">
                 Lv {card.level}
               </span>
-              <span className="text-xs text-parchment-600">⚡{card.recallCost}</span>
+              {card.isLinkedCurse ? (
+                restType === "long" ? (
+                  <span className="rounded border border-burgundy-800/60 bg-burgundy-900/40 px-1.5 py-0.5 text-[0.65rem] font-semibold text-burgundy-300">
+                    ↔ ⚡ 6 Stress
+                  </span>
+                ) : (
+                  <span className="rounded border border-burgundy-800/50 bg-burgundy-950/40 px-1.5 py-0.5 text-[0.65rem] font-semibold text-burgundy-400 opacity-80">
+                    ↔ Long rest only
+                  </span>
+                )
+              ) : card.isCursed ? (
+                <span className="rounded border border-burgundy-800/60 bg-burgundy-900/40 px-1.5 py-0.5 text-[0.65rem] font-semibold text-burgundy-300">
+                  ★ ⚡ {card.recallCost} Stress
+                </span>
+              ) : restType === "none" ? (
+                <span className="rounded border border-slate-700/60 bg-slate-900/60 px-1.5 py-0.5 text-[0.65rem] font-semibold text-parchment-400 tabular-nums">
+                  ⚡ {card.recallCost} Stress
+                </span>
+              ) : (
+                <span className="rounded border border-gold-500/40 bg-gold-500/15 px-1.5 py-0.5 text-[0.65rem] font-bold uppercase tracking-wider text-gold-300">
+                  FREE
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -995,17 +1030,19 @@ function VaultCard({
           onClick={() => card && onAddToLoadout(card)}
           disabled={dragDisabled || !card}
           aria-disabled={dragDisabled || !card}
+          title={linkedBlocked ? "Linked Curse — long rest only" : undefined}
           className="
             shrink-0 rounded px-2 py-1.5 text-xs font-semibold
             border border-gold-800/60 bg-gold-950/20 text-gold-300
             hover:bg-gold-900/30 hover:border-gold-700
             disabled:opacity-40 disabled:cursor-not-allowed
             transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500 min-h-[44px]
+            flex items-center gap-1
           "
           aria-label={`Add ${card?.name ?? cardId} to Loadout`}
         >
           <i className="fa-solid fa-arrow-up-from-bracket text-xs" aria-hidden="true" />
-          <span className="sr-only">Add to Loadout</span>
+          <span>Add</span>
         </button>
       </div>
     </div>
@@ -1018,8 +1055,6 @@ interface AddCardModalProps {
   characterId: string;
   loadoutIds: string[];
   vaultIds: string[];
-  isFull: boolean;
-  restType: "short" | "long" | "none";
   onClose: () => void;
 }
 
@@ -1027,8 +1062,6 @@ function AddCardModal({
   characterId,
   loadoutIds,
   vaultIds,
-  isFull,
-  restType,
   onClose,
 }: AddCardModalProps) {
   const { data: domainsData } = useDomains();
@@ -1145,8 +1178,6 @@ function AddCardModal({
                 characterId={characterId}
                 loadoutIds={loadoutIds}
                 vaultIds={vaultIds}
-                isFull={isFull}
-                restType={restType}
                 query={query}
                 sourceFilter={sourceFilter}
                 expanded={expandedDomain === d.domain}
@@ -1180,8 +1211,6 @@ interface DomainGroupProps {
   characterId: string;
   loadoutIds: string[];
   vaultIds: string[];
-  isFull: boolean;
-  restType: "short" | "long" | "none";
   query: string;
   sourceFilter: SourceFilterValue;
   expanded: boolean;
@@ -1193,8 +1222,6 @@ function DomainGroup({
   characterId,
   loadoutIds,
   vaultIds,
-  isFull,
-  restType,
   query,
   sourceFilter,
   expanded,
@@ -1242,8 +1269,6 @@ function DomainGroup({
                   characterId={characterId}
                   isInLoadout={loadoutIds.includes(fullId)}
                   isInVault={vaultIds.includes(fullId)}
-                  isFull={isFull}
-                  restType={restType}
                 />
               );
             })
@@ -1259,8 +1284,6 @@ interface ModalCardRowProps {
   characterId: string;
   isInLoadout: boolean;
   isInVault: boolean;
-  isFull: boolean;
-  restType: "short" | "long" | "none";
 }
 
 function ModalCardRow({
@@ -1268,8 +1291,6 @@ function ModalCardRow({
   characterId,
   isInLoadout,
   isInVault,
-  isFull,
-  restType,
 }: ModalCardRowProps) {
   const { fire, isPending, inlineError } = useActionButton(characterId);
   const flushPendingSave = useCharacterStore((s) => s.flushPendingSave);
@@ -1281,18 +1302,6 @@ function ModalCardRow({
     if (viewerMode) return;
     await flushPendingSave();
     fire("acquire-domain-card", { cardId: `${card.domain}/${card.cardId}` });
-  };
-
-  const handleAddToLoadout = async () => {
-    if (viewerMode) return;
-    await flushPendingSave();
-    fire("swap-loadout-card", {
-      vaultCardId: `${card.domain}/${card.cardId}`,
-      restType,
-      n: card.recallCost ?? card.level ?? 0,
-      isCursed: card.isCursed ?? false,
-      isLinkedCurse: card.isLinkedCurse ?? false,
-    });
   };
 
   return (
@@ -1368,22 +1377,9 @@ function ModalCardRow({
                 In loadout
               </span>
             ) : isInVault ? (
-              <>
-                <span className="rounded border border-steel-400/30 bg-slate-800 px-2 py-1 text-xs text-parchment-400">
-                  In vault
-                </span>
-                <button
-                  type="button"
-                  onClick={handleAddToLoadout}
-                  disabled={isPending || isFull}
-                  aria-busy={isPending}
-                  className="rounded px-3 py-1.5 text-xs font-semibold bg-[#577399] text-[#f7f7ff] hover:bg-[#577399]/80
-                    disabled:opacity-40 disabled:cursor-not-allowed
-                    focus:outline-none focus:ring-2 focus:ring-gold-500 transition-colors"
-                >
-                  {isPending ? "…" : isFull ? "Loadout full" : "Add to loadout"}
-                </button>
-              </>
+              <span className="rounded border border-steel-400/30 bg-slate-800 px-2 py-1 text-xs text-parchment-400">
+                In vault
+              </span>
             ) : (
               <button
                 type="button"
@@ -1443,12 +1439,56 @@ function RoomAvailableHelp() {
   );
 }
 
+function RestModeBanner({
+  restType,
+  onFinishRest,
+}: {
+  restType: "short" | "long";
+  onFinishRest?: () => void;
+}) {
+  return (
+    <div className="rounded-lg border border-gold-500/40 bg-gold-500/10 px-3 py-2.5 space-y-2">
+      <div role="status" aria-live="polite" className="flex items-start gap-2">
+        <i className="fa-solid fa-moon text-gold-400 mt-0.5" aria-hidden="true" />
+        <div className="space-y-0.5">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gold-300">
+            Rest mode — {restType}
+          </p>
+          <p className="text-xs text-parchment-200">
+            {restType === "long"
+              ? "Swaps are FREE, except ★ Cursed cards (always pay Recall Cost). ↔ Linked Curse cards cost 6 Stress."
+              : "Swaps are FREE, except ★ Cursed cards (always pay Recall Cost). ↔ Linked Curse cards require a long rest."}
+          </p>
+        </div>
+      </div>
+      {onFinishRest && (
+        <button
+          type="button"
+          onClick={onFinishRest}
+          className="
+            rounded border border-gold-500/40 bg-gold-500/10 px-2 py-1 text-xs font-semibold
+            text-gold-300 hover:bg-gold-500/20 transition-colors
+            focus:outline-none focus:ring-2 focus:ring-gold-500
+          "
+        >
+          Finish rest
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ─── DomainLoadout (main export) ──────────────────────────────────────────────
 
 export function DomainLoadout({
   onRollQueued,
   restType = "none",
-}: { onRollQueued?: () => void; restType?: "short" | "long" | "none" } = {}) {
+  onFinishRest,
+}: {
+  onRollQueued?: () => void;
+  restType?: "short" | "long" | "none";
+  onFinishRest?: () => void;
+} = {}) {
   const { activeCharacter, flushPendingSave, optimisticMoveCard } =
     useCharacterStore();
   const viewerMode = useViewerMode();
@@ -1482,6 +1522,7 @@ export function DomainLoadout({
 
   const isFull = domainLoadout.length >= 5;
   const loadoutNotFull = !isFull;
+  const restActive = restType !== "none";
 
   // The vault shows only cards not currently in the loadout. Filtering here
   // keeps a cardId from being a draggable in both containers at once (which
@@ -1691,13 +1732,23 @@ export function DomainLoadout({
 
           {drawerOpen && (
             <div id="domain-cards-drawer" className="space-y-4">
-              {/* Warning help (not full) above loadout */}
-              {loadoutNotFull && <RoomAvailableHelp />}
+              {/* Rest-mode banner (reflects the active rest; replaces the
+                  "space available" hint while resting) */}
+              {restActive && (
+                <RestModeBanner
+                  restType={restType}
+                  onFinishRest={onFinishRest}
+                />
+              )}
+
+              {/* Warning help (not full) above loadout — suppressed while resting */}
+              {loadoutNotFull && !restActive && <RoomAvailableHelp />}
 
               {/* Loadout zone (droppable) */}
               <LoadoutDropZone
                 isOver={overTarget === "loadout"}
                 dimmed={activeDrag?.container === "vault"}
+                restActive={restActive}
               >
                 {sortedLoadout.length === 0 ? (
                   <p className="text-sm text-parchment-500">
@@ -1754,6 +1805,12 @@ export function DomainLoadout({
 
                 {vaultOpen && (
                   <div id="domain-vault-panel" className="mt-2 space-y-2">
+                    {/* Legend — once per vault, not per card */}
+                    <p className="text-xs text-parchment-600">
+                      <span aria-hidden="true" className="text-gold-400">⚡</span>{" "}
+                      = Stress cost to add to loadout
+                    </p>
+
                     {/* Info help (full) above vault */}
                     {isFull && <FullLoadoutHelp />}
 
@@ -1772,6 +1829,7 @@ export function DomainLoadout({
                               key={cardId}
                               cardId={cardId}
                               disabled={isFull}
+                              restType={restType}
                               isLanding={
                                 optimistic?.cardId === cardId &&
                                 optimistic.to === "vault"
@@ -1820,8 +1878,6 @@ export function DomainLoadout({
           characterId={characterId}
           loadoutIds={domainLoadout}
           vaultIds={domainVault}
-          isFull={isFull}
-          restType={restType}
           onClose={() => setModalOpen(false)}
         />
       )}
@@ -1835,10 +1891,12 @@ function LoadoutDropZone({
   children,
   isOver,
   dimmed,
+  restActive = false,
 }: {
   children: React.ReactNode;
   isOver: boolean;
   dimmed: boolean;
+  restActive?: boolean;
 }) {
   const { setNodeRef } = useDroppable({ id: "loadout" });
   return (
@@ -1849,10 +1907,17 @@ function LoadoutDropZone({
         "rounded-lg transition-all duration-150",
         isOver
           ? "border-2 border-dashed border-gold-400/80 bg-gold-500/10"
-          : "border-2 border-dashed border-transparent",
+          : restActive
+            ? "border-2 border-dashed border-gold-500/25"
+            : "border-2 border-dashed border-transparent",
         dimmed ? "opacity-40 pointer-events-none saturate-[0.85]" : "",
       ].join(" ")}
     >
+      {restActive && !isOver && (
+        <p className="px-1 pb-1 text-[0.65rem] font-semibold uppercase tracking-wider text-gold-400">
+          Free swaps
+        </p>
+      )}
       {children}
     </section>
   );

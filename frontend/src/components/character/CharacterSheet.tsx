@@ -1236,12 +1236,16 @@ interface FeaturesPanelProps {
   classData: ClassData | null | undefined;
   characterId: string;
   onRollQueued?: () => void;
+  restType: "none" | "short" | "long";
+  onFinishRest: () => void;
 }
 
 function FeaturesPanel({
   classData,
   characterId,
   onRollQueued,
+  restType,
+  onFinishRest,
 }: FeaturesPanelProps) {
   const { activeCharacter } = useCharacterStore();
 
@@ -1783,7 +1787,11 @@ function FeaturesPanel({
 
       {/* Domain loadout */}
       <div data-field-key="loadout.domains">
-        <DomainLoadout onRollQueued={onRollQueued} />
+        <DomainLoadout
+          onRollQueued={onRollQueued}
+          restType={restType}
+          onFinishRest={onFinishRest}
+        />
       </div>
     </section>
   );
@@ -1944,6 +1952,9 @@ function CharacterSheetContent({
   const { activeCharacter } = useCharacterStore();
   const { stagedRequest } = useDiceStore();
   const [diceModalOpen, setDiceModalOpen] = useState(false);
+  // Single source of truth for the active-rest window (drives free domain-card
+  // swaps). "none" = mid-play; set to "short"/"long" by the Downtime modal.
+  const [restType, setRestType] = useState<"none" | "short" | "long">("none");
   const userPrefs = useAuthStore((s) => s.user?.preferences);
 
   // Fetch campaign data (if character belongs to one) to check cursesContentEnabled
@@ -2096,6 +2107,8 @@ function CharacterSheetContent({
         classData={classData}
         characterId={characterId}
         onRollQueued={handleRollQueued}
+        restType={restType}
+        onFinishRest={() => setRestType("none")}
       />
 
       <SheetDivider spellcastTrait={spellcastTrait} />
@@ -2154,6 +2167,8 @@ function CharacterSheetContent({
         characterId={characterId}
         open={downtimeOpen}
         onClose={() => setDowntimeOpen(false)}
+        restType={restType}
+        onRestTypeChange={setRestType}
       />
 
       {/* Dice roller side-panel */}
