@@ -47,6 +47,7 @@ import {
   useDomain,
 } from "@/hooks/useGameData";
 import { useActionButton, InlineActionError } from "./ActionButton";
+import { useCharacterAction } from "@/hooks/useCharacter";
 import { UsageTracker } from "./UsageTracker";
 import {
   detectUsageFrequency,
@@ -627,6 +628,10 @@ type ActiveDrag = { container: "loadout" | "vault"; cardId: string } | null;
 interface LoadoutCardProps {
   cardId: string;
   characterId: string;
+  /** True when this card just landed optimistically into the loadout. */
+  isLanding?: boolean;
+  /** True while the optimistic move for this card is in-flight. */
+  isSaving?: boolean;
   onDrill: (card: DomainCard) => void;
   onMoveToVault: (cardId: string) => void;
   onRegisterLevel: (cardId: string, level: number) => void;
@@ -635,6 +640,8 @@ interface LoadoutCardProps {
 function LoadoutCard({
   cardId,
   characterId,
+  isLanding = false,
+  isSaving = false,
   onDrill,
   onMoveToVault,
   onRegisterLevel,
@@ -683,11 +690,14 @@ function LoadoutCard({
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform) }}
       role="listitem"
+      aria-busy={isSaving || undefined}
       aria-label={card ? `${card.name}, domain card` : cardId}
       className={`
         relative rounded-lg p-3
         transition-colors duration-150
-        ${isDragging ? "opacity-60" : exhausted ? "opacity-75 saturate-[0.85]" : ""}
+        motion-reduce:transition-none motion-reduce:animate-none motion-reduce:transform-none
+        ${isLanding ? "motion-safe:animate-card-land" : ""}
+        ${isSaving ? "opacity-85" : isDragging ? "opacity-60" : exhausted ? "opacity-75 saturate-[0.85]" : ""}
         ${
           isAuraActive
             ? "border border-[#577399]/60 bg-slate-850 shadow-[0_0_10px_rgba(87,115,153,0.25)]"
@@ -696,6 +706,20 @@ function LoadoutCard({
         shadow-card-fantasy
       `}
     >
+      {isLanding && (
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 rounded-lg pointer-events-none shadow-[0_0_0_2px_rgba(251,191,36,0.7),0_0_18px_rgba(251,191,36,0.45)] motion-safe:animate-land-ring"
+        />
+      )}
+      {isSaving && (
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 overflow-hidden rounded-lg pointer-events-none"
+        >
+          <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-gold-400/10 to-transparent motion-safe:animate-shimmer" />
+        </span>
+      )}
       <div className="flex items-center gap-3">
         {/* Drag handle */}
         <button
@@ -851,10 +875,20 @@ interface VaultCardProps {
   cardId: string;
   /** Disables dragging into the loadout (loadout is full). */
   disabled: boolean;
+  /** True when this card just landed optimistically into the vault. */
+  isLanding?: boolean;
+  /** True while the optimistic move for this card is in-flight. */
+  isSaving?: boolean;
   onAddToLoadout: (card: DomainCard) => void;
 }
 
-function VaultCard({ cardId, disabled, onAddToLoadout }: VaultCardProps) {
+function VaultCard({
+  cardId,
+  disabled,
+  isLanding = false,
+  isSaving = false,
+  onAddToLoadout,
+}: VaultCardProps) {
   const viewerMode = useViewerMode();
   const { domain, id } = parseCardId(cardId);
   const { data: card } = useDomainCard(domain, id);
@@ -878,10 +912,13 @@ function VaultCard({ cardId, disabled, onAddToLoadout }: VaultCardProps) {
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform) }}
       role="listitem"
+      aria-busy={isSaving || undefined}
       aria-label={card ? `${card.name}, vault card` : cardId}
       className={`
-        rounded-lg border p-2.5 transition-colors duration-150
-        ${isDragging ? "opacity-60" : ""}
+        relative rounded-lg border p-2.5 transition-colors duration-150
+        motion-reduce:transition-none motion-reduce:animate-none motion-reduce:transform-none
+        ${isLanding ? "motion-safe:animate-card-land" : ""}
+        ${isSaving ? "opacity-85" : isDragging ? "opacity-60" : ""}
         ${
           dragDisabled
             ? "border-steel-400/20 bg-slate-900/40 opacity-60"
@@ -889,6 +926,20 @@ function VaultCard({ cardId, disabled, onAddToLoadout }: VaultCardProps) {
         }
       `}
     >
+      {isLanding && (
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 rounded-lg pointer-events-none shadow-[0_0_0_2px_rgba(87,115,153,0.7),0_0_14px_rgba(87,115,153,0.4)] motion-safe:animate-land-ring"
+        />
+      )}
+      {isSaving && (
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 overflow-hidden rounded-lg pointer-events-none"
+        >
+          <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-gold-400/10 to-transparent motion-safe:animate-shimmer" />
+        </span>
+      )}
       <div className="flex items-center gap-2">
         {/* Drag handle */}
         <button
@@ -1398,7 +1449,8 @@ export function DomainLoadout({
   onRollQueued,
   restType = "none",
 }: { onRollQueued?: () => void; restType?: "short" | "long" | "none" } = {}) {
-  const { activeCharacter, flushPendingSave } = useCharacterStore();
+  const { activeCharacter, flushPendingSave, optimisticMoveCard } =
+    useCharacterStore();
   const viewerMode = useViewerMode();
   const [drillCard, setDrillCard] = useState<DomainCard | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(true);
@@ -1410,13 +1462,19 @@ export function DomainLoadout({
   const [dragCard, setDragCard] = useState<DomainCard | null>(null);
   const [overTarget, setOverTarget] = useState<"loadout" | "vault" | null>(null);
 
+  // Optimistic drop state — the card that just landed and where it went.
+  const [optimistic, setOptimistic] = useState<{
+    cardId: string;
+    to: "loadout" | "vault";
+  } | null>(null);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor),
   );
 
-  const moveAction = useActionButton(activeCharacter?.characterId ?? "");
-  const swapAction = useActionButton(activeCharacter?.characterId ?? "");
+  const actionMutation = useCharacterAction(activeCharacter?.characterId ?? "");
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const domainLoadout = activeCharacter?.domainLoadout ?? [];
   const domainVault = activeCharacter?.domainVault ?? [];
@@ -1447,25 +1505,58 @@ export function DomainLoadout({
   const handleMoveToVault = useCallback(
     async (cardId: string) => {
       if (viewerMode) return;
+      // Flush any pending field edits first (does NOT include the card move),
+      // then optimistically move the card so it lands immediately.
       await flushPendingSave();
-      moveAction.fire("move-loadout-to-vault", { cardId });
+      setOptimistic({ cardId, to: "vault" });
+      setActionError(null);
+      optimisticMoveCard(cardId, "vault");
+      try {
+        await actionMutation.mutateAsync({
+          actionId: "move-loadout-to-vault",
+          params: { cardId },
+        });
+        setOptimistic(null);
+      } catch (err) {
+        optimisticMoveCard(cardId, "loadout"); // roll back
+        setActionError(
+          err instanceof Error ? err.message : "Failed to move card to vault.",
+        );
+        setOptimistic(null);
+      }
     },
-    [moveAction, flushPendingSave, viewerMode],
+    [viewerMode, flushPendingSave, optimisticMoveCard, actionMutation],
   );
 
   const handleAddToLoadout = useCallback(
     async (card: DomainCard) => {
       if (viewerMode) return;
+      const cardId = `${card.domain}/${card.cardId}`;
       await flushPendingSave();
-      swapAction.fire("swap-loadout-card", {
-        vaultCardId: `${card.domain}/${card.cardId}`,
-        restType,
-        n: card.recallCost ?? card.level ?? 0,
-        isCursed: card.isCursed ?? false,
-        isLinkedCurse: card.isLinkedCurse ?? false,
-      });
+      setOptimistic({ cardId, to: "loadout" });
+      setActionError(null);
+      optimisticMoveCard(cardId, "loadout");
+      try {
+        await actionMutation.mutateAsync({
+          actionId: "swap-loadout-card",
+          params: {
+            vaultCardId: cardId,
+            restType,
+            n: card.recallCost ?? card.level ?? 0,
+            isCursed: card.isCursed ?? false,
+            isLinkedCurse: card.isLinkedCurse ?? false,
+          },
+        });
+        setOptimistic(null);
+      } catch (err) {
+        optimisticMoveCard(cardId, "vault"); // roll back
+        setActionError(
+          err instanceof Error ? err.message : "Failed to add card to loadout.",
+        );
+        setOptimistic(null);
+      }
     },
-    [swapAction, restType, flushPendingSave, viewerMode],
+    [viewerMode, restType, flushPendingSave, optimisticMoveCard, actionMutation],
   );
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
@@ -1619,6 +1710,15 @@ export function DomainLoadout({
                         <LoadoutCard
                           cardId={cardId}
                           characterId={characterId}
+                          isLanding={
+                            optimistic?.cardId === cardId &&
+                            optimistic.to === "loadout"
+                          }
+                          isSaving={
+                            optimistic?.cardId === cardId &&
+                            optimistic.to === "loadout" &&
+                            actionMutation.isPending
+                          }
                           onDrill={setDrillCard}
                           onMoveToVault={handleMoveToVault}
                           onRegisterLevel={registerLevel}
@@ -1672,6 +1772,15 @@ export function DomainLoadout({
                               key={cardId}
                               cardId={cardId}
                               disabled={isFull}
+                              isLanding={
+                                optimistic?.cardId === cardId &&
+                                optimistic.to === "vault"
+                              }
+                              isSaving={
+                                optimistic?.cardId === cardId &&
+                                optimistic.to === "vault" &&
+                                actionMutation.isPending
+                              }
                               onAddToLoadout={handleAddToLoadout}
                             />
                           ))}
@@ -1684,9 +1793,7 @@ export function DomainLoadout({
             </div>
           )}
 
-          <InlineActionError
-            message={moveAction.inlineError ?? swapAction.inlineError}
-          />
+          <InlineActionError message={actionError} />
         </div>
 
         <DragOverlay>

@@ -130,6 +130,13 @@ export interface CharacterStore {
   // ── Loadout management ─────────────────────────────────────────────────────
   /** Add a card to the active loadout (max 5 slots; no-op if already present). */
   addToLoadout: (cardId: string) => void;
+  /**
+   * Optimistically move a card between the loadout and vault in a single
+   * atomic store update (no `isDirty` — the server action is the source of
+   * truth). Used for the drag-and-drop "optimistic drop" so the card appears
+   * in its destination immediately, before the action round-trips.
+   */
+  optimisticMoveCard: (cardId: string, to: "loadout" | "vault") => void;
 
   // ── Vault management ───────────────────────────────────────────────────────
   /** Add a card to the domain vault (no-op if already present). */
@@ -326,6 +333,42 @@ export const useCharacterStore = create<CharacterStore>()((set, get) => ({
         domainLoadout: [...domainLoadout, cardId],
       },
       isDirty: true,
+    });
+  },
+
+  // ── optimisticMoveCard ──────────────────────────────────────────────────────
+  optimisticMoveCard: (cardId: string, to: "loadout" | "vault") => {
+    const { activeCharacter } = get();
+    if (!activeCharacter) return;
+
+    const loadout = activeCharacter.domainLoadout ?? [];
+    const vault = activeCharacter.domainVault ?? [];
+
+    // Atomic: remove from one list and add to the other in a single set() so
+    // the card never appears in both lists (avoids dnd-kit duplicate pickup).
+    const nextLoadout =
+      to === "loadout"
+        ? loadout.includes(cardId)
+          ? loadout
+          : loadout.length >= 5
+            ? loadout
+            : [...loadout, cardId]
+        : loadout.filter((id) => id !== cardId);
+
+    const nextVault =
+      to === "vault"
+        ? vault.includes(cardId)
+          ? vault
+          : [...vault, cardId]
+        : vault.filter((id) => id !== cardId);
+
+    // No isDirty — the server action is the source of truth and will reconcile.
+    set({
+      activeCharacter: {
+        ...activeCharacter,
+        domainLoadout: nextLoadout,
+        domainVault: nextVault,
+      },
     });
   },
 

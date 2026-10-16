@@ -225,6 +225,35 @@ const config: Config = {
               "0 0 0 6px rgba(218,165,32,0.0), 0 0 28px rgba(218,165,32,0.6)",
           },
         },
+        // Optimistic domain-card drop: card settles into its destination
+        "card-land": {
+          "0%": { opacity: "0", transform: "scale(0.96) translateY(3px)" },
+          "60%": { opacity: "1", transform: "scale(1.02) translateY(0)" },
+          "100%": { opacity: "1", transform: "scale(1) translateY(0)" },
+        },
+        // Confirm ring flash that outlasts the settle
+        "land-ring": {
+          "0%": { opacity: "1" },
+          "100%": { opacity: "0" },
+        },
+        // DragOverlay exit — crossfade with the landing card
+        "overlay-out": {
+          "0%": { opacity: "1", transform: "scale(1)" },
+          "100%": { opacity: "0", transform: "scale(0.97)" },
+        },
+        // Optimistic move rejected — shake before returning
+        "card-shake": {
+          "0%, 100%": { transform: "translateX(0)" },
+          "20%": { transform: "translateX(-4px)" },
+          "40%": { transform: "translateX(4px)" },
+          "60%": { transform: "translateX(-2px)" },
+          "80%": { transform: "translateX(2px)" },
+        },
+        // Optimistic move rejected — shrink out
+        "card-out": {
+          "0%": { opacity: "1", transform: "scale(1)" },
+          "100%": { opacity: "0", transform: "scale(0.96) translateY(2px)" },
+        },
       },
       animation: {
         "fade-in": "fade-in 0.2s ease-out",
@@ -236,6 +265,11 @@ const config: Config = {
         "stat-flash-down": "stat-flash-down 0.4s ease-out forwards",
         "stat-flash-up": "stat-flash-up 0.4s ease-out forwards",
         "gold-ring-pulse": "gold-ring-pulse 2.4s ease-in-out infinite",
+        "card-land": "card-land 0.18s cubic-bezier(0.22,1,0.36,1) both",
+        "land-ring": "land-ring 0.4s ease-out forwards",
+        "overlay-out": "overlay-out 0.18s cubic-bezier(0.22,1,0.36,1) forwards",
+        "card-shake": "card-shake 0.2s ease-in-out",
+        "card-out": "card-out 0.18s ease-out forwards",
       },
     },
   },
