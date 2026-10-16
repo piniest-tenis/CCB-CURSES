@@ -232,6 +232,8 @@ export interface Character extends CharacterSummary {
   downtimeProjects: DowntimeProject[];
   /** cardIds of auras that are currently toggled on. */
   activeAuras: string[];
+  /** Sparse usage/exhaustion state keyed by stable usageKey. Defaults to {}. */
+  usage: UsageState;
   /** Companion state for Wraithcaller / Herder subclasses, or null. */
   companionState: CompanionState | null;
   /**
@@ -287,11 +289,13 @@ export interface ClassFeature {
   name: string;
   description: string;
   options: string[];
+  usageFrequency?: UsageFrequency;
 }
 
 export interface NamedFeature {
   name: string;
   description: string;
+  usageFrequency?: UsageFrequency;
 }
 
 export interface SubclassData {
@@ -406,11 +410,35 @@ export interface TokenConfig {
   };
 }
 
+// ─── Usage / Exhaustion Tracker ───────────────────────────────────────────────
+
+/**
+ * Cadence at which a feature returns after being exhausted.
+ * `"none"` means the feature is not tracked (no usage UI).
+ * `"once-per-rest"` clears on any rest (short OR long).
+ * `"once-per-scene"` / `"once-per-session"` are cleared manually only.
+ */
+export type UsageFrequency =
+  | "none"
+  | "once-per-rest"
+  | "once-per-short-rest"
+  | "once-per-long-rest"
+  | "once-per-scene"
+  | "once-per-session";
+
+export interface UsageEntry {
+  frequency: UsageFrequency;
+  usedAt?: string;
+}
+
+export type UsageState = Record<string, UsageEntry>;
+
 // ─── Domain Cards ─────────────────────────────────────────────────────────────
 
 export interface GrimoireAbility {
   name: string;
   description: string;
+  usageFrequency?: UsageFrequency;
 }
 
 export interface DomainCard {
@@ -429,6 +457,7 @@ export interface DomainCard {
   source: CharacterSource;
   /** Token behaviour for the token pool associated with this card, if any. */
   tokenConfig?: TokenConfig;
+  usageFrequency?: UsageFrequency;
 }
 
 export interface DomainSummary {

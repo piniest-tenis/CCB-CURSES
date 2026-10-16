@@ -254,6 +254,7 @@ export function createValidCharacterAtLevel(level: number, classId: string = "ba
     cardTokens: {},
     downtimeProjects: [],
     activeAuras: [],
+    usage: {},
     companionState: null,
     reputationBonuses: {},
     favors: {},

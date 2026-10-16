@@ -296,6 +296,7 @@ export function createValidCharacter(
     cardTokens: {},
     downtimeProjects: [],
     activeAuras: [],
+    usage: {},
     companionState: null,
     reputationBonuses: {},
     favors: {},

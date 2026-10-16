@@ -987,6 +987,255 @@ const SEED_ADVERSARIES: Adversary[] = [
     createdAt: "2026-04-02T00:00:00Z",
     updatedAt: "2026-04-02T00:00:00Z",
   },
+
+  // ── Church of the Revenant God ─────────────────────────────────────────────
+
+  {
+    adversaryId: "hb-davidian-knight",
+    name: "Davidian Knight",
+    tier: 4,
+    type: "Bruiser",
+    description:
+      "A devoted follower of the Revenant God, clad in a white tabard and bearing a single two-handed greatsword. He holds the front line, weathering wounds that would fell lesser men, certain his god will raise him again.",
+    difficulty: 20,
+    hp: 10,
+    stress: 4,
+    damageThresholds: { major: 25, severe: 45 },
+    attackModifier: 2,
+    attackRange: "Melee",
+    attackDamage: "4d12+12 physical",
+    features: [
+      {
+        name: "Overwhelming Force - Passive",
+        description:
+          "Targets who mark HP from the Knight's standard attack are knocked back to Very Close range.",
+      },
+      {
+        name: "Deathless Devotion - Passive",
+        description:
+          "When the Knight marks HP from an attack, he clears a Stress and gains advantage on his next attack roll.",
+      },
+      {
+        name: "Greatsword Cleave - Action",
+        description:
+          "Mark a Stress to make a standard attack against all targets within Very Close range.",
+      },
+      {
+        name: "Momentum - Reaction",
+        description:
+          "When the Knight makes a successful attack against a PC, you gain a Fear.",
+      },
+    ],
+    imageUrl: null,
+    source: "homebrew",
+    campaignId: null,
+    createdAt: "2026-10-01T00:00:00Z",
+    updatedAt: "2026-10-01T00:00:00Z",
+  },
+
+  {
+    adversaryId: "hb-the-petrarch",
+    name: "The Petrarch",
+    tier: 4,
+    type: "Social",
+    description:
+      "An eight-year-old boy who serves as the figurehead of the Church of the Revenant God. Unremarkable for a child, he is guided — and abused — by his steward, the Chamberlain. His authority is absolute; his will is not his own.",
+    difficulty: 20,
+    hp: 3,
+    stress: 6,
+    damageThresholds: { major: 25, severe: 45 },
+    attackModifier: 0,
+    attackRange: "Melee",
+    attackDamage: "4d4 physical",
+    features: [
+      {
+        name: "Boy Prophet - Passive",
+        description:
+          "The Petrarch's certainty is absolute. PCs have disadvantage on Presence and Deception rolls made against him.",
+      },
+      {
+        name: "Sacrosanct - Passive",
+        description:
+          "The first time each scene a PC attacks the Petrarch, they must first succeed on an Instinct Reaction Roll (20) or lose the attack and mark a Stress, unable to bring themselves to harm a child.",
+      },
+      {
+        name: "Declare Heresy - Action",
+        description:
+          "Spend a Fear. The Petrarch names a target within Far range a false prophet. Until the end of the scene, Church adversaries gain advantage on attacks against that target, and that target loses a Hope whenever a Church adversary succeeds on an attack against them.",
+      },
+      {
+        name: "Word of the Revenant - Action",
+        description:
+          "Mark a Stress. The Petrarch utters a pronouncement. A target within Far range must make a Presence Reaction Roll (20). On a failure, they lose a Hope and become Vulnerable until their next roll with Hope. On a success, they mark a Stress.",
+      },
+      {
+        name: "Sanctified Rebuke - Reaction",
+        description:
+          "When a PC succeeds on a social action roll against the Petrarch, he responds with unshakeable certainty and you gain a Fear.",
+      },
+    ],
+    imageUrl: null,
+    source: "homebrew",
+    campaignId: null,
+    createdAt: "2026-10-01T00:00:00Z",
+    updatedAt: "2026-10-01T00:00:00Z",
+  },
+
+  {
+    adversaryId: "hb-the-chamberlain",
+    name: "The Chamberlain",
+    tier: 4,
+    type: "Social",
+    description:
+      "The steward of the Petrarch, who advises the boy on all matters of faith and rules through him. A gaunt, patient manipulator who speaks softly and controls the child completely, using him to root out and punish any false prophet of the Revenant God.",
+    difficulty: 20,
+    hp: 5,
+    stress: 6,
+    damageThresholds: { major: 25, severe: 45 },
+    attackModifier: 1,
+    attackRange: "Melee",
+    attackDamage: "4d6 physical",
+    features: [
+      {
+        name: "Voice of the Throne - Passive",
+        description:
+          "While the Chamberlain is present, PCs have disadvantage on social rolls made against the Petrarch; the Chamberlain intercepts and answers for the boy.",
+      },
+      {
+        name: "Use the Boy as a Shield - Action",
+        description:
+          "The Chamberlain steps behind the Petrarch. Until the start of the Chamberlain's next spotlight, any PC who attacks the Chamberlain must first succeed on an Instinct Reaction Roll (20). On a failure, their attack targets the Petrarch instead.",
+      },
+      {
+        name: "Interrogation - Action",
+        description:
+          "Spend a Fear. The Chamberlain interrogates a target within Far range. The target must make an Instinct Reaction Roll (20). On a failure, they reveal a damaging truth — the target marks 2 Stress and all Church adversaries gain advantage on attacks against them until the end of the scene. On a success, the target marks a Stress.",
+      },
+      {
+        name: "Expose the False Prophet - Reaction",
+        description:
+          "When a PC claims the Revenant God's favor or poses as a prophet, the Chamberlain challenges them. The PC must make a Presence Reaction Roll (20). On a failure, they are exposed as false — they lose 2 Hope and you gain a Fear. On a success, they mark a Stress.",
+      },
+      {
+        name: "Guardian's Wrath - Reaction",
+        description:
+          "When a PC harms the Petrarch, the Chamberlain marks a Stress and you gain a Fear; the Chamberlain and all Church allies gain advantage on attacks against that PC until the end of the scene.",
+      },
+    ],
+    imageUrl: null,
+    source: "homebrew",
+    campaignId: null,
+    createdAt: "2026-10-01T00:00:00Z",
+    updatedAt: "2026-10-01T00:00:00Z",
+  },
+
+  {
+    adversaryId: "hb-brother-pall",
+    name: "Brother Pall",
+    tier: 4,
+    type: "Solo",
+    description:
+      "A gaunt, cowled cleric of the Church of the Revenant God. The hollow socket where his Deathseer's Eye once sat is now bandaged and empty — the eye was ripped from his skull. He still carries his long, serpentine dagger, its blade twisting like a corkscrew of bone and black iron.",
+    difficulty: 20,
+    hp: 11,
+    stress: 6,
+    damageThresholds: { major: 25, severe: 45 },
+    attackModifier: 4,
+    attackRange: "Melee",
+    attackDamage: "4d10+8 physical",
+    features: [
+      {
+        name: "Relentless (2) - Passive",
+        description:
+          "Brother Pall can be spotlighted up to two times per GM turn. Spend Fear as usual to spotlight him.",
+      },
+      {
+        name: "Twisted Dagger - Passive",
+        description:
+          "Brother Pall's corkscrew blade of bone and black iron tears and festers. When he succeeds on a melee attack, the target marks a Stress in addition to taking damage. A target who has marked Stress this way takes an additional d8 damage from his attacks until they clear a Stress.",
+      },
+      {
+        name: "Righteous Flurry - Action",
+        description:
+          "Mark a Stress to make a standard attack against up to two targets within Melee range.",
+      },
+      {
+        name: "Moment of Revenance - Action",
+        description:
+          "Spend a Fear. Brother Pall utters a prayer to the Revenant God and dedicates a target within Far range to death. The target must make a Presence Reaction Roll (20). On a failure, they mark 2 Stress and Brother Pall gains advantage on attack rolls against them until the end of the scene. On a success, they mark a Stress.",
+      },
+      {
+        name: "Momentum - Reaction",
+        description:
+          "When Brother Pall makes a successful attack against a PC, you gain a Fear.",
+      },
+      {
+        name: "Death's Due - Reaction",
+        description:
+          "When a target within Melee range marks HP from Brother Pall's attack, he twists the blade. They must mark an Armor Slot without gaining its benefit (they can still use armor to reduce the damage).",
+      },
+    ],
+    imageUrl: null,
+    source: "homebrew",
+    campaignId: null,
+    createdAt: "2026-08-12T00:00:00Z",
+    updatedAt: "2026-10-01T00:00:00Z",
+  },
+
+  // ── Alipinn Aberration ──────────────────────────────────────────────────────
+
+  {
+    adversaryId: "hb-mooz",
+    name: "Mooz",
+    tier: 4,
+    type: "Solo",
+    description:
+      "A horrible, twisted aberration formed from the reformed and reworked bodies of twelve citizens of Alipinn. It shambles on a makeshift skeleton of fallen timbers beneath a stained oil cloth, and when it moves, a chorus of a dozen stolen voices wails from its mass.",
+    difficulty: 20,
+    hp: 11,
+    stress: 7,
+    damageThresholds: { major: 25, severe: 45 },
+    attackModifier: 6,
+    attackRange: "Close",
+    attackDamage: "4d12+10 physical",
+    features: [
+      {
+        name: "Relentless (2) - Passive",
+        description:
+          "Mooz can be spotlighted up to two times per GM turn. Spend Fear as usual to spotlight it.",
+      },
+      {
+        name: "Many Limbs - Passive",
+        description:
+          "While Mooz has 6 or fewer marked HP, it can make its standard attack against two targets within range.",
+      },
+      {
+        name: "Crushing Bite - Action",
+        description:
+          "Mark a Stress to make an attack against a target within Melee range. On a success, deal 4d10+12 physical damage and the target is Restrained until they break free with a successful Strength Roll.",
+      },
+      {
+        name: "Flailing Lash - Action",
+        description:
+          "Mark a Stress to make an attack against all targets within Close range. Targets Mooz succeeds against take 3d12+6 physical damage and are knocked back to Close range.",
+      },
+      {
+        name: "Chorus of Twelve - Action",
+        description:
+          "Spend a Fear. Twelve voices wail from Mooz's mass. All PCs within Far range must make a Presence Reaction Roll (20). On a failure, they mark a Stress, lose a Hope, and become Vulnerable until their next roll with Hope. On a success, they mark a Stress.",
+      },
+      {
+        name: "Thrash and Regurgitate - Reaction",
+        description:
+          "When Mooz takes Severe damage, it thrashes and spews a tide of reworked flesh. All creatures within Close range take 3d8 physical damage and must mark a Stress.",
+      },
+    ],
+    imageUrl: null,
+    source: "homebrew",
+    campaignId: null,
+    createdAt: "2026-10-01T00:00:00Z",
+    updatedAt: "2026-10-01T00:00:00Z",
+  },
 ];
 
 // ─── Adversary Catalog Store ──────────────────────────────────────────────────

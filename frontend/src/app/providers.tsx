@@ -74,8 +74,9 @@ function handleAuthError(error: unknown): void {
 }
 
 // Create a stable QueryClient instance outside the component so it isn't
-// recreated on every render.
-const queryClient = new QueryClient({
+// recreated on every render. Exported so non-React modules (e.g. the Zustand
+// character store) can sync the cache directly.
+export const queryClient = new QueryClient({
   queryCache: new QueryCache({ onError: handleAuthError }),
   mutationCache: new MutationCache({ onError: handleAuthError }),
   defaultOptions: {

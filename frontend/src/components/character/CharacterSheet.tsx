@@ -22,7 +22,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { useCharacter, useUpdateCharacter } from "@/hooks/useCharacter";
+import { useCharacter } from "@/hooks/useCharacter";
 import {
   useAncestries,
   useClass,
@@ -100,6 +100,13 @@ import { usePatreonGate, usePatreonOAuth } from "@/hooks/usePatreonGate";
 import { useSourceFilterDefault } from "@/hooks/useSourceFilterDefault";
 import { ViewerModeProvider } from "./ViewerModeContext";
 import { DisabledInViewerMode } from "./DisabledInViewerMode";
+import { UsageTracker } from "./UsageTracker";
+import {
+  detectUsageFrequency,
+  usageKeyForClassFeature,
+  usageKeyForSubclassFeature,
+  usageKeyForHopeFeature,
+} from "@/lib/usageUtils";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -1245,6 +1252,8 @@ function FeaturesPanel({
 
   if (!activeCharacter || !classData) return null;
 
+  const usage = activeCharacter.usage ?? {};
+
   const activeSubclass = classData.subclasses.find(
     (sc) => sc.subclassId === activeCharacter.subclassId,
   );
@@ -1318,44 +1327,61 @@ function FeaturesPanel({
               Class Features
             </h3>
           )}
-          {classData.classFeatures.map((feature) => (
-            <div
-              key={feature.name}
-              className="rounded-lg border border-steel-400/20 bg-slate-850 p-4 space-y-3 min-h-[44px]"
-            >
-              <div>
-                <h3 className="mb-1 font-serif text-[0.938rem] font-semibold text-[#f7f7ff] leading-snug">
-                  {feature.name}
-                </h3>
-                <MarkdownContent className="text-sm text-[#b9baa3] leading-relaxed">
-                  {feature.description}
-                </MarkdownContent>
-                {feature.options.length > 0 && (
-                  <ul className="mt-2.5 space-y-1 list-disc list-outside pl-4">
-                    {feature.options.map((opt) => (
-                      <li key={opt} className="text-sm text-[#b9baa3] leading-relaxed">
-                        <MarkdownContent inline>{opt}</MarkdownContent>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+          {classData.classFeatures.map((feature) => {
+            const usageKey = usageKeyForClassFeature(classData.classId, feature.name);
+            const frequency =
+              feature.usageFrequency ?? detectUsageFrequency(feature.description);
+            const exhausted = Boolean(usage[usageKey]);
+            return (
+              <div
+                key={feature.name}
+                className={`rounded-lg border border-steel-400/20 bg-slate-850 p-4 space-y-3 min-h-[44px] ${
+                  exhausted ? "opacity-75 saturate-[0.85]" : ""
+                }`}
+              >
+                <div>
+                  <h3 className="mb-1 font-serif text-[0.938rem] font-semibold text-[#f7f7ff] leading-snug">
+                    {feature.name}
+                  </h3>
+                  <MarkdownContent className="text-sm text-[#b9baa3] leading-relaxed">
+                    {feature.description}
+                  </MarkdownContent>
+                  {feature.options.length > 0 && (
+                    <ul className="mt-2.5 space-y-1 list-disc list-outside pl-4">
+                      {feature.options.map((opt) => (
+                        <li key={opt} className="text-sm text-[#b9baa3] leading-relaxed">
+                          <MarkdownContent inline>{opt}</MarkdownContent>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
 
-              {/* Action button if this feature has a known mechanic */}
-              {(() => {
-                const action = classFeatureHasAction(feature.name);
-                return action ? (
-                  <FeatureActionButton
-                    characterId={characterId}
-                    label={`Use ${feature.name}`}
-                    actionId={action.actionId}
-                    params={action.params}
-                    costLabel={action.costLabel}
-                  />
-                ) : null;
-              })()}
-            </div>
-          ))}
+                {/* Usage / exhaustion tracker */}
+                <UsageTracker
+                  characterId={characterId}
+                  usageKey={usageKey}
+                  frequency={frequency}
+                  exhausted={exhausted}
+                  label={feature.name}
+                />
+
+                {/* Action button if this feature has a known mechanic */}
+                {(() => {
+                  const action = classFeatureHasAction(feature.name);
+                  return action ? (
+                    <FeatureActionButton
+                      characterId={characterId}
+                      label={`Use ${feature.name}`}
+                      actionId={action.actionId}
+                      params={action.params}
+                      costLabel={action.costLabel}
+                    />
+                  ) : null;
+                })()}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -1382,6 +1408,21 @@ function FeaturesPanel({
             </MarkdownContent>
           </div>
 
+          {/* Usage / exhaustion tracker (usually renders nothing — hope features
+              are rarely usage-limited, but a cadence phrase would surface one) */}
+          {(() => {
+            const usageKey = usageKeyForHopeFeature(classData.classId);
+            return (
+              <UsageTracker
+                characterId={characterId}
+                usageKey={usageKey}
+                frequency={detectUsageFrequency(classData.hopeFeature.description)}
+                exhausted={Boolean(usage[usageKey])}
+                label={classData.hopeFeature.name}
+              />
+            );
+          })()}
+
           {/* Every Hope Feature gets a "Use [Name]" button spending hopeCost */}
           <FeatureActionButton
             characterId={characterId}
@@ -1405,10 +1446,19 @@ function FeaturesPanel({
           {/* Foundation features — always visible */}
           {activeSubclass.foundationFeatures.map((feat) => {
             const action = classFeatureHasAction(feat.name);
+            const usageKey = usageKeyForSubclassFeature(
+              activeSubclass.subclassId,
+              feat.name,
+            );
+            const frequency =
+              feat.usageFrequency ?? detectUsageFrequency(feat.description);
+            const exhausted = Boolean(usage[usageKey]);
             return (
               <div
                 key={feat.name}
-                className="rounded-lg border border-steel-400/20 bg-slate-850 p-4 space-y-3 min-h-[44px]"
+                className={`rounded-lg border border-steel-400/20 bg-slate-850 p-4 space-y-3 min-h-[44px] ${
+                  exhausted ? "opacity-75 saturate-[0.85]" : ""
+                }`}
               >
                 <div>
                   <div className="flex items-center gap-2 mb-1">
@@ -1426,6 +1476,13 @@ function FeaturesPanel({
                     {feat.description}
                   </MarkdownContent>
                 </div>
+                <UsageTracker
+                  characterId={characterId}
+                  usageKey={usageKey}
+                  frequency={frequency}
+                  exhausted={exhausted}
+                  label={feat.name}
+                />
                 {action && (
                   <FeatureActionButton
                     characterId={characterId}
@@ -1458,6 +1515,26 @@ function FeaturesPanel({
                   {activeSubclass.specializationFeature.description}
                 </MarkdownContent>
               </div>
+              {(() => {
+                const usageKey = usageKeyForSubclassFeature(
+                  activeSubclass.subclassId,
+                  activeSubclass.specializationFeature.name,
+                );
+                return (
+                  <UsageTracker
+                    characterId={characterId}
+                    usageKey={usageKey}
+                    frequency={
+                      activeSubclass.specializationFeature.usageFrequency ??
+                      detectUsageFrequency(
+                        activeSubclass.specializationFeature.description,
+                      )
+                    }
+                    exhausted={Boolean(usage[usageKey])}
+                    label={activeSubclass.specializationFeature.name}
+                  />
+                );
+              })()}
               {(() => {
                 const action = classFeatureHasAction(
                   activeSubclass.specializationFeature.name,
@@ -1512,6 +1589,24 @@ function FeaturesPanel({
                   {activeSubclass.masteryFeature.description}
                 </MarkdownContent>
               </div>
+              {(() => {
+                const usageKey = usageKeyForSubclassFeature(
+                  activeSubclass.subclassId,
+                  activeSubclass.masteryFeature.name,
+                );
+                return (
+                  <UsageTracker
+                    characterId={characterId}
+                    usageKey={usageKey}
+                    frequency={
+                      activeSubclass.masteryFeature.usageFrequency ??
+                      detectUsageFrequency(activeSubclass.masteryFeature.description)
+                    }
+                    exhausted={Boolean(usage[usageKey])}
+                    label={activeSubclass.masteryFeature.name}
+                  />
+                );
+              })()}
               {(() => {
                 const action = classFeatureHasAction(
                   activeSubclass.masteryFeature.name,
@@ -1572,42 +1667,61 @@ function FeaturesPanel({
                   Class Features
                 </h4>
               )}
-              {multiclassData.classFeatures.map((feature) => (
-                <div
-                  key={feature.name}
-                  className="rounded-lg border border-steel-400/20 bg-slate-850 p-4 space-y-3 min-h-[44px]"
-                >
-                  <div>
-                    <h4 className="mb-1 font-serif text-[0.938rem] font-semibold text-[#f7f7ff] leading-snug">
-                      {feature.name}
-                    </h4>
-                    <MarkdownContent className="text-sm text-[#b9baa3] leading-relaxed">
-                      {feature.description}
-                    </MarkdownContent>
-                    {feature.options.length > 0 && (
-                      <ul className="mt-2.5 space-y-1 list-disc list-outside pl-4">
-                        {feature.options.map((opt) => (
-                          <li key={opt} className="text-sm text-[#b9baa3] leading-relaxed">
-                            <MarkdownContent inline>{opt}</MarkdownContent>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+              {multiclassData.classFeatures.map((feature) => {
+                const usageKey = usageKeyForClassFeature(
+                  multiclassData.classId,
+                  feature.name,
+                );
+                const frequency =
+                  feature.usageFrequency ??
+                  detectUsageFrequency(feature.description);
+                const exhausted = Boolean(usage[usageKey]);
+                return (
+                  <div
+                    key={feature.name}
+                    className={`rounded-lg border border-steel-400/20 bg-slate-850 p-4 space-y-3 min-h-[44px] ${
+                      exhausted ? "opacity-75 saturate-[0.85]" : ""
+                    }`}
+                  >
+                    <div>
+                      <h4 className="mb-1 font-serif text-[0.938rem] font-semibold text-[#f7f7ff] leading-snug">
+                        {feature.name}
+                      </h4>
+                      <MarkdownContent className="text-sm text-[#b9baa3] leading-relaxed">
+                        {feature.description}
+                      </MarkdownContent>
+                      {feature.options.length > 0 && (
+                        <ul className="mt-2.5 space-y-1 list-disc list-outside pl-4">
+                          {feature.options.map((opt) => (
+                            <li key={opt} className="text-sm text-[#b9baa3] leading-relaxed">
+                              <MarkdownContent inline>{opt}</MarkdownContent>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                    <UsageTracker
+                      characterId={characterId}
+                      usageKey={usageKey}
+                      frequency={frequency}
+                      exhausted={exhausted}
+                      label={feature.name}
+                    />
+                    {(() => {
+                      const action = classFeatureHasAction(feature.name);
+                      return action ? (
+                        <FeatureActionButton
+                          characterId={characterId}
+                          label={`Use ${feature.name}`}
+                          actionId={action.actionId}
+                          params={action.params}
+                          costLabel={action.costLabel}
+                        />
+                      ) : null;
+                    })()}
                   </div>
-                  {(() => {
-                    const action = classFeatureHasAction(feature.name);
-                    return action ? (
-                      <FeatureActionButton
-                        characterId={characterId}
-                        label={`Use ${feature.name}`}
-                        actionId={action.actionId}
-                        params={action.params}
-                        costLabel={action.costLabel}
-                      />
-                    ) : null;
-                  })()}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
@@ -1615,10 +1729,19 @@ function FeaturesPanel({
           {mcSubclass &&
             mcSubclass.foundationFeatures.map((feat) => {
               const action = classFeatureHasAction(feat.name);
+              const usageKey = usageKeyForSubclassFeature(
+                mcSubclass.subclassId,
+                feat.name,
+              );
+              const frequency =
+                feat.usageFrequency ?? detectUsageFrequency(feat.description);
+              const exhausted = Boolean(usage[usageKey]);
               return (
                 <div
                   key={feat.name}
-                  className="rounded-lg border border-steel-400/20 bg-slate-850 p-4 space-y-3 min-h-[44px]"
+                  className={`rounded-lg border border-steel-400/20 bg-slate-850 p-4 space-y-3 min-h-[44px] ${
+                    exhausted ? "opacity-75 saturate-[0.85]" : ""
+                  }`}
                 >
                   <div>
                     <div className="flex items-center gap-2 mb-1">
@@ -1636,6 +1759,13 @@ function FeaturesPanel({
                       {feat.description}
                     </MarkdownContent>
                   </div>
+                  <UsageTracker
+                    characterId={characterId}
+                    usageKey={usageKey}
+                    frequency={frequency}
+                    exhausted={exhausted}
+                    label={feat.name}
+                  />
                   {action && (
                     <FeatureActionButton
                       characterId={characterId}
@@ -1707,10 +1837,8 @@ export function CharacterSheet({ characterId, viewerMode = false }: CharacterShe
     error,
   } = useCharacter(characterId);
 
-  const updateMutation = useUpdateCharacter(characterId);
-
-  const { activeCharacter, setCharacter, updateField, isDirty, isSaving } =
-    useCharacterStore();
+  const { activeCharacter, setCharacter, updateField, isDirty, isSaving,
+    scheduleAutoSave, cancelAutoSave } = useCharacterStore();
 
   const [downtimeOpen, setDowntimeOpen] = useState(false);
   const [levelUpOpen, setLevelUpOpen] = useState(false);
@@ -1725,24 +1853,14 @@ export function CharacterSheet({ characterId, viewerMode = false }: CharacterShe
     }
   }, [character, setCharacter]);
 
-  // Debounced auto-save: fire PATCH 1500ms after the last dirty change
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const scheduleAutoSave = useCallback(() => {
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      if (activeCharacter) {
-        updateMutation.mutate(activeCharacter as Partial<Character>);
-      }
-    }, 1500);
-  }, [activeCharacter, updateMutation]);
-
+  // Debounced auto-save lives in the store (1500ms) so domain-card actions can
+  // coordinate with it via flushPendingSave().
   useEffect(() => {
     if (isDirty) scheduleAutoSave();
     return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      cancelAutoSave();
     };
-  }, [isDirty, scheduleAutoSave]);
+  }, [isDirty, scheduleAutoSave, cancelAutoSave]);
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (isLoading) {

@@ -13,6 +13,7 @@ import type {
   AdvancementChoice,
   CoreStatName,
   TokenConfig,
+  UsageFrequency,
 } from "@shared/types";
 import { resolveTokenCap } from "@shared/tokenResolver";
 
@@ -224,6 +225,35 @@ export function validateSrdRules(character: Partial<Character>): SrdError[] {
         issue: "Domain loadout may contain at most 5 cards",
       });
     }
+    // No duplicate card ids within the loadout.
+    const loadoutSet = new Set(character.domainLoadout);
+    if (loadoutSet.size !== character.domainLoadout.length) {
+      errors.push({
+        field: "domainLoadout",
+        issue: "Domain loadout contains duplicate cards",
+      });
+    }
+    // Disjointness: a card may not be in both the loadout and the vault.
+    if (character.domainVault !== undefined) {
+      for (const cardId of loadoutSet) {
+        if (character.domainVault.includes(cardId)) {
+          errors.push({
+            field: "domainLoadout",
+            issue: `Card '${cardId}' is in both domainLoadout and domainVault`,
+          });
+        }
+      }
+    }
+  }
+
+  if (character.domainVault !== undefined) {
+    const vaultSet = new Set(character.domainVault);
+    if (vaultSet.size !== character.domainVault.length) {
+      errors.push({
+        field: "domainVault",
+        issue: "Domain vault contains duplicate cards",
+      });
+    }
   }
 
   // SRD page 3: starting traits range from -1 to +2; allow -5 floor for penalty modifiers.
@@ -426,6 +456,26 @@ export function normalizeWeapons(raw: {
   };
 }
 
+// ─── Usage / Exhaustion ───────────────────────────────────────────────────────
+
+/**
+ * Whether a usage entry with the given cadence is cleared by a rest of the
+ * given type. `once-per-rest` and `once-per-short-rest` clear on both short and
+ * long rests; `once-per-long-rest` clears only on a long rest; scene/session
+ * cadences are never cleared by rest (manual reset only).
+ */
+export function usageClearsOn(frequency: UsageFrequency, restType: RestType): boolean {
+  if (frequency === "none") return false;
+  if (restType === "short") {
+    return frequency === "once-per-rest" || frequency === "once-per-short-rest";
+  }
+  return (
+    frequency === "once-per-rest" ||
+    frequency === "once-per-short-rest" ||
+    frequency === "once-per-long-rest"
+  );
+}
+
 // ─── Action Dispatch ──────────────────────────────────────────────────────────
 
 export type ActionId =
@@ -446,9 +496,13 @@ export type ActionId =
   | "mark-armor"
   | "clear-armor"
   | "swap-loadout-card"
+  | "move-loadout-to-vault"
   | "acquire-domain-card"
   | "gain-favor"
-  | "spend-favor";
+  | "spend-favor"
+  | "mark-usage"
+  | "clear-usage"
+  | "reset-rest-usages";
 
 export interface ActionParams {
   /** cardId for token / aura actions */
@@ -470,8 +524,14 @@ export interface ActionParams {
   restType?: "short" | "long" | "none";
   /** For swap-loadout-card: whether this is a Linked Curse (↔) card */
   isLinkedCurse?: boolean;
+  /** For swap-loadout-card: whether this is a Cursed (★) card */
+  isCursed?: boolean;
   /** factionId (or freeform source label) for gain-favor / spend-favor */
   factionId?: string;
+  /** Stable usage key for mark-usage / clear-usage */
+  usageKey?: string;
+  /** Usage cadence for mark-usage */
+  frequency?: UsageFrequency;
 }
 
 /**
@@ -771,6 +831,43 @@ export function applyAction(
       };
     }
 
+    // ── Usage: mark a feature as exhausted ──────────────────────────────────
+    case "mark-usage": {
+      const usageKey = params.usageKey;
+      const frequency = params.frequency;
+      if (!usageKey) invalidAction("usageKey is required for mark-usage", "usageKey");
+      if (!frequency || frequency === "none")
+        invalidAction("frequency is required for mark-usage", "frequency");
+      return {
+        ...character,
+        usage: {
+          ...(character.usage ?? {}),
+          [usageKey]: { frequency, usedAt: new Date().toISOString() },
+        },
+      };
+    }
+
+    // ── Usage: clear a single exhausted feature ─────────────────────────────
+    case "clear-usage": {
+      const usageKey = params.usageKey;
+      if (!usageKey) invalidAction("usageKey is required for clear-usage", "usageKey");
+      const next = { ...(character.usage ?? {}) };
+      delete next[usageKey];
+      return { ...character, usage: next };
+    }
+
+    // ── Usage: clear rest-reset entries on a rest ────────────────────────────
+    case "reset-rest-usages": {
+      const restType = params.restType;
+      if (restType !== "short" && restType !== "long")
+        invalidAction("restType is required for reset-rest-usages", "restType");
+      const next = { ...(character.usage ?? {}) };
+      for (const [key, entry] of Object.entries(next)) {
+        if (usageClearsOn(entry.frequency, restType)) delete next[key];
+      }
+      return { ...character, usage: next };
+    }
+
     // ── Domain loadout: swap vault ↔ loadout ─────────────────────────────────
     //
     // Rules (SRD p.5 + campaign Linked Curse rules):
@@ -806,6 +903,7 @@ export function applyAction(
       // or by the isLinkedCurse flag (passed via params.isLinkedCurse if available).
       // Since card metadata is not loaded in helpers, we rely on a flag passed by caller.
       const isLinkedCurse = params["isLinkedCurse"] === true;
+      const isCursed = params["isCursed"] === true;
 
       // Linked Curse restriction: only during long rests
       if (isLinkedCurse && restType !== "long") {
@@ -817,13 +915,18 @@ export function applyAction(
 
       // Calculate stress cost
       let stressCost = 0;
-      if (restType === "none") {
+      if (isLinkedCurse) {
+        // Linked Curse swaps cost 6 stress (campaign rule); long-rest-only enforced above
+        stressCost = 6;
+      } else if (isCursed) {
+        // Cursed (★) cards pay their Recall Cost even during a rest / level-up (campaign rule)
+        stressCost = n ?? 0;
+      } else if (restType === "none") {
         // Mid-play: pay Recall Cost (caller passes n = recallCost)
-        stressCost = isLinkedCurse ? 6 : (n ?? 0);
-      } else if (restType === "short" || restType === "long") {
-        // At start of rest: free — unless it's a Linked Curse on a short rest (blocked above)
-        // Long rest Linked Curse swaps cost 6 stress (campaign rule)
-        stressCost = isLinkedCurse && restType === "long" ? 6 : 0;
+        stressCost = n ?? 0;
+      } else {
+        // At start of rest: free for normal cards
+        stressCost = 0;
       }
 
       // Validate stress availability
@@ -865,6 +968,12 @@ export function applyAction(
       newVault   = newVault.filter((id) => id !== vaultCardId);
       newLoadout = [...newLoadout, vaultCardId];
 
+      // Any card that left the loadout (a displaced card) can no longer keep an
+      // active aura — deactivate it so the resulting state stays SRD-legal.
+      const newActiveAuras = character.activeAuras.filter((id) =>
+        newLoadout.includes(id)
+      );
+
       // Apply stress cost
       const newStressMarked = character.trackers.stress.marked + stressCost;
       const newStressMax    = character.trackers.stress.max;
@@ -882,11 +991,35 @@ export function applyAction(
         ...character,
         domainLoadout: newLoadout,
         domainVault:   newVault,
+        activeAuras:   newActiveAuras,
         trackers: {
           ...character.trackers,
           stress: { max: newStressMax, marked: actualStressMarked },
           hp:     { max: character.trackers.hp.max, marked: newHpMarked },
         },
+      };
+    }
+
+    // ── Move a loadout card back into the vault (no cost) ──────────────────
+    // Replacement for the old client-side "remove from loadout". Idempotent:
+    // if the card is not in the loadout, the character is returned unchanged.
+    case "move-loadout-to-vault": {
+      const cardId = params.cardId;
+      if (!cardId) {
+        invalidAction("cardId is required for move-loadout-to-vault", "cardId");
+      }
+      if (!character.domainLoadout.includes(cardId)) {
+        return character;
+      }
+      const newVault = character.domainVault.includes(cardId)
+        ? character.domainVault
+        : [...character.domainVault, cardId];
+      return {
+        ...character,
+        domainLoadout: character.domainLoadout.filter((id) => id !== cardId),
+        domainVault: newVault,
+        // A card that leaves the loadout can no longer keep an active aura.
+        activeAuras: character.activeAuras.filter((id) => id !== cardId),
       };
     }
 

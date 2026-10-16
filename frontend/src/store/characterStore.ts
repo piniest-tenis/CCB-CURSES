@@ -13,6 +13,15 @@
 import { create } from "zustand";
 import type { Character, CoreStatName, CharacterTrackers } from "@shared/types";
 import { apiClient, ApiError } from "@/lib/api";
+import { queryClient } from "@/app/providers";
+
+// ─── Auto-save coordination (module-level, non-reactive) ──────────────────────
+// A single debounce timer + in-flight promise so field-edit auto-saves and
+// server actions can coordinate: domain-card actions flush pending edits before
+// firing so a stale debounced PATCH can't overwrite the action's result.
+
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+let inFlightSave: Promise<void> | null = null;
 
 // ─── Dot-notation deep setter ─────────────────────────────────────────────────
 // Supports paths like "stats.agility", "weapons.primary.name", etc.
@@ -121,10 +130,6 @@ export interface CharacterStore {
   // ── Loadout management ─────────────────────────────────────────────────────
   /** Add a card to the active loadout (max 5 slots; no-op if already present). */
   addToLoadout: (cardId: string) => void;
-  /** Remove a card from the active loadout by cardId. */
-  removeFromLoadout: (cardId: string) => void;
-  /** Swap the positions of two loadout slots by their indices. */
-  reorderLoadout: (fromIndex: number, toIndex: number) => void;
 
   // ── Vault management ───────────────────────────────────────────────────────
   /** Add a card to the domain vault (no-op if already present). */
@@ -146,6 +151,17 @@ export interface CharacterStore {
   // ── Persistence ────────────────────────────────────────────────────────────
   /** PATCH the character to the server with the full current state. */
   saveCharacter: () => Promise<void>;
+  /** Debounce a save 1500ms after the last dirty change. */
+  scheduleAutoSave: () => void;
+  /** Cancel any pending debounced save. */
+  cancelAutoSave: () => void;
+  /**
+   * Cancel the pending debounce and flush any dirty edits before a server
+   * action fires, so a stale PATCH cannot overwrite the action's result.
+   * Never throws — a failed flush only loses the pending edit, the action still
+   * proceeds.
+   */
+  flushPendingSave: () => Promise<void>;
 }
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -313,39 +329,9 @@ export const useCharacterStore = create<CharacterStore>()((set, get) => ({
     });
   },
 
-  // ── removeFromLoadout ────────────────────────────────────────────────────────
-  removeFromLoadout: (cardId: string) => {
-    const { activeCharacter } = get();
-    if (!activeCharacter) return;
-
-    set({
-      activeCharacter: {
-        ...activeCharacter,
-        domainLoadout: activeCharacter.domainLoadout.filter((id) => id !== cardId),
-      },
-      isDirty: true,
-    });
-  },
-
-  // ── reorderLoadout ───────────────────────────────────────────────────────────
-  reorderLoadout: (fromIndex: number, toIndex: number) => {
-    const { activeCharacter } = get();
-    if (!activeCharacter) return;
-
-    const loadout = [...activeCharacter.domainLoadout];
-    if (
-      fromIndex < 0 || fromIndex >= loadout.length ||
-      toIndex   < 0 || toIndex   >= loadout.length
-    ) return;
-
-    const [moved] = loadout.splice(fromIndex, 1);
-    loadout.splice(toIndex, 0, moved);
-
-    set({
-      activeCharacter: { ...activeCharacter, domainLoadout: loadout },
-      isDirty: true,
-    });
-  },
+  // NOTE: Loadout→vault moves are handled by the server action
+  // "move-loadout-to-vault" (authoritative, idempotent, deactivates the card's
+  // aura). The loadout is tier-locked (no reordering).
 
   // ── addToVault ───────────────────────────────────────────────────────────────
   addToVault: (cardId: string) => {
@@ -365,22 +351,74 @@ export const useCharacterStore = create<CharacterStore>()((set, get) => ({
 
   // ── saveCharacter ────────────────────────────────────────────────────────────
   saveCharacter: async () => {
-    const { activeCharacter, isSaving } = get();
+    const { activeCharacter } = get();
     if (!activeCharacter?.characterId) return;
-    if (isSaving) return; // Prevent overlapping saves
+    if (inFlightSave) return inFlightSave;
 
-    set({ isSaving: true });
-    try {
-      const updated = await apiClient.patch<Character>(
-        `/characters/${activeCharacter.characterId}`,
-        activeCharacter
-      );
-      // Sync store with server's authoritative response
-      set({ activeCharacter: updated, isDirty: false });
-    } catch (err) {
-      throw err; // Re-throw errors
-    } finally {
-      set({ isSaving: false });
+    const run = (async () => {
+      set({ isSaving: true });
+      try {
+        const updated = await apiClient.patch<Character>(
+          `/characters/${activeCharacter.characterId}`,
+          activeCharacter
+        );
+        // Sync the TanStack cache (like useUpdateCharacter) + the store.
+        queryClient.setQueryData(
+          ["characters", "detail", activeCharacter.characterId],
+          updated
+        );
+        set({ activeCharacter: updated, isDirty: false });
+        queryClient.invalidateQueries({ queryKey: ["characters", "list"] });
+      } finally {
+        set({ isSaving: false });
+        inFlightSave = null;
+      }
+    })();
+
+    inFlightSave = run;
+    return run;
+  },
+
+  // ── scheduleAutoSave ────────────────────────────────────────────────────────
+  scheduleAutoSave: () => {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      saveTimer = null;
+      const { activeCharacter, isDirty } = get();
+      if (activeCharacter && isDirty) {
+        void get().saveCharacter();
+      }
+    }, 1500);
+  },
+
+  // ── cancelAutoSave ──────────────────────────────────────────────────────────
+  cancelAutoSave: () => {
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+    }
+  },
+
+  // ── flushPendingSave ────────────────────────────────────────────────────────
+  flushPendingSave: async () => {
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+    }
+    if (inFlightSave) {
+      try {
+        await inFlightSave;
+      } catch {
+        // A failed in-flight save should not block the action.
+      }
+      return;
+    }
+    if (get().isDirty) {
+      try {
+        await get().saveCharacter();
+      } catch {
+        // A failed flush only loses the pending edit; the action still proceeds.
+      }
     }
   },
 

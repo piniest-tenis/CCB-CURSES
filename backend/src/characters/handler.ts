@@ -43,6 +43,7 @@ import {
   CHARACTERS_TABLE,
   CLASSES_TABLE,
   GAME_DATA_TABLE,
+  DOMAIN_CARDS_TABLE,
   USERS_TABLE,
   docClient,
   getItem,
@@ -69,7 +70,9 @@ import type {
   MechanicalBonus,
   UserPreferences,
   PatreonLink,
+  UsageFrequency,
 } from "@shared/types";
+import { getDomainTokenConfig } from "@shared/tokenConfigs";
 import { canSave, isGrandfathered } from "../users/patreon";
 
 // ─── Patreon Gate ─────────────────────────────────────────────────────────────
@@ -430,6 +433,23 @@ const PutCharacterSchema = z.object({
   cardTokens: z.record(z.string(), z.number().int().min(0)).optional().default({}),
   downtimeProjects: z.array(DowntimeProjectSchema).optional().default([]),
   activeAuras: z.array(z.string()).optional().default([]),
+  usage: z
+    .record(
+      z.string(),
+      z.object({
+        frequency: z.enum([
+          "none",
+          "once-per-rest",
+          "once-per-short-rest",
+          "once-per-long-rest",
+          "once-per-scene",
+          "once-per-session",
+        ]),
+        usedAt: z.string().optional(),
+      })
+    )
+    .optional()
+    .default({}),
   companionState: CompanionStateSchema.nullable().optional().default(null),
   reputationBonuses: z.record(z.string(), z.number().int()).optional().default({}),
   favors: z.record(z.string(), z.number().int().min(0)).optional().default({}),
@@ -492,9 +512,13 @@ const ActionSchema = z.object({
     "mark-armor",
     "clear-armor",
     "swap-loadout-card",
+    "move-loadout-to-vault",
     "acquire-domain-card",
     "gain-favor",
     "spend-favor",
+    "mark-usage",
+    "clear-usage",
+    "reset-rest-usages",
   ] as const),
   params: z.record(z.unknown()).optional().default({}),
 });
@@ -517,6 +541,8 @@ const PortraitUploadSchema = z.object({
 interface CharacterRecord extends Character {
   PK: string;
   SK: string;
+  /** Monotonic concurrency guard, incremented on every read-modify-write. */
+  revision?: number;
 }
 
 interface ClassRecord {
@@ -549,6 +575,76 @@ interface GameDataRecord {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Authoritative domain-card metadata, read from the DomainCards table. */
+interface DomainCardAuthMeta {
+  level: number;
+  recallCost?: number;
+  isCursed?: boolean;
+  isLinkedCurse?: boolean;
+  domain?: string;
+  name?: string;
+}
+
+/**
+ * Load a domain card's authoritative metadata by its "{domain}/{cardId}" id.
+ * Returns null when the id is malformed or the card does not exist.
+ */
+async function loadDomainCardAuth(
+  cardId: string,
+): Promise<DomainCardAuthMeta | null> {
+  const slash = cardId.indexOf("/");
+  if (slash <= 0 || slash === cardId.length - 1) return null;
+  const domain = cardId.slice(0, slash);
+  const id = cardId.slice(slash + 1);
+  return getItem<DomainCardAuthMeta>({
+    TableName: DOMAIN_CARDS_TABLE,
+    Key: keys.domainCard(domain, id),
+  });
+}
+
+/** Throws a 422 INVALID_ACTION error matching the helpers.ts invalidAction shape. */
+function invalidAction(message: string, field: string): never {
+  throw new AppError("INVALID_ACTION", message, 422, [{ field, issue: message }]);
+}
+
+function isConditionalCheckFailed(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    (err as { name?: string }).name === "ConditionalCheckFailedException"
+  );
+}
+
+/**
+ * Persist a character record with an optimistic-concurrency `revision` guard.
+ * Every read-modify-write increments `revision` and uses a conditional write so
+ * a stale writer (e.g. a debounced PATCH landing after an action) cannot
+ * silently overwrite a newer state. Throws 409 CONFLICT on a lost race.
+ */
+async function putCharacterRecord(
+  existing: CharacterRecord,
+  updated: CharacterRecord,
+): Promise<void> {
+  const expected = existing.revision ?? 0;
+  updated.revision = expected + 1;
+  try {
+    await putItem({
+      TableName: CHARACTERS_TABLE,
+      Item: updated,
+      ConditionExpression:
+        "attribute_exists(PK) AND attribute_exists(SK) AND (attribute_not_exists(revision) OR revision = :expected)",
+      ExpressionAttributeValues: { ":expected": expected },
+    });
+  } catch (err) {
+    if (isConditionalCheckFailed(err)) {
+      throw AppError.conflict(
+        "This character was updated elsewhere. Refresh and try again.",
+      );
+    }
+    throw err;
+  }
+}
 
 function emptyWeapon(): Weapons["primary"] {
   return { weaponId: null };
@@ -797,6 +893,7 @@ function toCharacterResponse(
     cardTokens: record.cardTokens ?? {},
     downtimeProjects: record.downtimeProjects ?? [],
     activeAuras: record.activeAuras ?? [],
+    usage: record.usage ?? {},
     companionState: record.companionState ?? null,
     reputationBonuses: record.reputationBonuses ?? {},
     favors: record.favors ?? {},
@@ -1059,6 +1156,7 @@ async function createCharacter(
     cardTokens: {},
     downtimeProjects: [],
     activeAuras: [],
+    usage: {},
     companionState: null,
     reputationBonuses: {},
     favors: {},
@@ -1173,11 +1271,7 @@ async function updateCharacter(
       : existing.weapons,
   };
 
-  await putItem({
-    TableName: CHARACTERS_TABLE,
-    Item: updated,
-    ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)",
-  });
+  await putCharacterRecord(existing, updated);
 
   const response = await enrichCharacter(updated);
   return createSuccessResponse(response);
@@ -1280,11 +1374,7 @@ async function patchCharacter(
     throw AppError.srdViolation("Character data violates SRD rules", srdErrors);
   }
 
-  await putItem({
-    TableName: CHARACTERS_TABLE,
-    Item: merged,
-    ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)",
-  });
+  await putCharacterRecord(existing, merged);
 
   const response = await enrichCharacter(merged);
   return createSuccessResponse(response);
@@ -1337,6 +1427,22 @@ async function takeRest(
     }
   }
 
+  // Extend tokenConfigs with every domain card in the loadout that has a
+  // tokenConfig, so applyRest can run fill-to-cap / clear / add-1 for domain
+  // cards (Research, Inventor, Theoretical Magic, …) — not just the community.
+  // Keys must match the cardTokens keys: the loadout cardId strings themselves
+  // (e.g. "Study/research").
+  for (const loadoutCardId of existing.domainLoadout ?? []) {
+    const slashIndex = loadoutCardId.indexOf("/");
+    if (slashIndex <= 0 || slashIndex === loadoutCardId.length - 1) continue;
+    const domain = loadoutCardId.slice(0, slashIndex);
+    const cardId = loadoutCardId.slice(slashIndex + 1);
+    const config = getDomainTokenConfig(domain, cardId);
+    if (config) {
+      tokenConfigs[loadoutCardId] = config;
+    }
+  }
+
   const { character: updatedCharacter, cleared } = applyRest(
     existing as unknown as Character,
     restType,
@@ -1350,10 +1456,7 @@ async function takeRest(
     SK: existing.SK,
   };
 
-  await putItem({
-    TableName: CHARACTERS_TABLE,
-    Item: updatedRecord,
-  });
+  await putCharacterRecord(existing, updatedRecord);
 
   const enriched = await enrichCharacter(updatedRecord);
 
@@ -1498,11 +1601,7 @@ async function createProject(
     updatedAt: now,
   };
 
-  await putItem({
-    TableName: CHARACTERS_TABLE,
-    Item: updatedRecord,
-    ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)",
-  });
+  await putCharacterRecord(existing, updatedRecord);
 
   const response = await enrichCharacter(updatedRecord);
   return createSuccessResponse(response, 201);
@@ -1556,11 +1655,7 @@ async function patchProject(
     updatedAt: now,
   };
 
-  await putItem({
-    TableName: CHARACTERS_TABLE,
-    Item: updatedRecord,
-    ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)",
-  });
+  await putCharacterRecord(existing, updatedRecord);
 
   const response = await enrichCharacter(updatedRecord);
   return createSuccessResponse(response);
@@ -1590,11 +1685,7 @@ async function deleteProject(
     updatedAt: new Date().toISOString(),
   };
 
-  await putItem({
-    TableName: CHARACTERS_TABLE,
-    Item: updatedRecord,
-    ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)",
-  });
+  await putCharacterRecord(existing, updatedRecord);
 
   return createNoContentResponse();
 }
@@ -1629,8 +1720,40 @@ async function executeAction(
                      ? (params["restType"] as "short" | "long" | "none")
                      : undefined,
     isLinkedCurse: params["isLinkedCurse"] === true,
+    isCursed:      params["isCursed"] === true,
     factionId:     typeof params["factionId"] === "string"     ? params["factionId"]     : undefined,
+    usageKey:      typeof params["usageKey"] === "string"      ? params["usageKey"]      : undefined,
+    frequency:     (["none","once-per-rest","once-per-short-rest","once-per-long-rest","once-per-scene","once-per-session"] as const).includes(params["frequency"] as never)
+                     ? (params["frequency"] as UsageFrequency)
+                     : undefined,
   };
+
+  // Derive authoritative card metadata server-side so a client cannot forge
+  // recall cost / cursed / linked-curse flags for the swap (SRD safety).
+  if (actionId === "swap-loadout-card" && actionParams.vaultCardId) {
+    const meta = await loadDomainCardAuth(actionParams.vaultCardId);
+    if (!meta) {
+      invalidAction(
+        `Domain card '${actionParams.vaultCardId}' does not exist`,
+        "vaultCardId",
+      );
+    }
+    actionParams.n = meta.recallCost ?? meta.level;
+    actionParams.isCursed = meta.isCursed ?? false;
+    actionParams.isLinkedCurse = meta.isLinkedCurse ?? false;
+  }
+
+  // Acquire must reference a real card (the modal intentionally allows
+  // non-compliant level/domain picks, but a nonexistent id is always invalid).
+  if (actionId === "acquire-domain-card" && actionParams.cardId) {
+    const meta = await loadDomainCardAuth(actionParams.cardId);
+    if (!meta) {
+      invalidAction(
+        `Domain card '${actionParams.cardId}' does not exist`,
+        "cardId",
+      );
+    }
+  }
 
   // applyAction throws AppError(422) on validity failure
   const updatedCharacter = applyAction(
@@ -1646,11 +1769,7 @@ async function executeAction(
     updatedAt: new Date().toISOString(),
   };
 
-  await putItem({
-    TableName: CHARACTERS_TABLE,
-    Item: updatedRecord,
-    ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)",
-  });
+  await putCharacterRecord(existing, updatedRecord);
 
   const response = await enrichCharacter(updatedRecord);
   return createSuccessResponse(response);
@@ -1731,11 +1850,7 @@ async function levelUpCharacter(
     throw AppError.srdViolation("Level-up violates SRD rules", srdErrors);
   }
 
-  await putItem({
-    TableName: CHARACTERS_TABLE,
-    Item: updatedRecord,
-    ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)",
-  });
+  await putCharacterRecord(existing, updatedRecord);
 
   const response = await enrichCharacter(updatedRecord);
   return createSuccessResponse(response);

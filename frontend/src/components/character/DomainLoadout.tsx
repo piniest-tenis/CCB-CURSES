@@ -3,45 +3,69 @@
 /**
  * src/components/character/DomainLoadout.tsx
  *
- * Renders the active domain card loadout (max 5 slots).
- * Cards can be removed, reordered via index-swap drag, and added from the vault.
+ * Domain card management via drag-and-drop (@dnd-kit) between the "Active
+ * Loadout" (max 5 cards, tier-locked order) and the "Vault" (all other acquired
+ * cards). Replaces the old swap/remove/reorder UI.
  *
- * New features:
+ * Rules:
+ *   - Loadout → Vault: always allowed, no cost (server action
+ *     "move-loadout-to-vault"). Replaces the old "×" remove button.
+ *   - Vault → Loadout: only when the loadout is not full ("swap-loadout-card",
+ *     Recall Cost stress / Linked Curse rules apply).
+ *   - Add a domain card: opens a modal listing all cards grouped by collapsible
+ *     domain; adding a non-standard card is flagged as non-compliant (GM
+ *     discretion).
  *
- * Token tracking — shown when card.isCursed OR card.tokenConfig !== undefined OR character.cardTokens[cardId] !== undefined.
- *   Visibility logic lives in src/lib/tokenUtils.ts (cardHasTokens).
- *   − button → spend-token   { cardId }
- *   × button → clear-tokens  { cardId }
- *   + button → add-token     { cardId }
- *
- * Aura toggle — shown when card.description contains "aura" (case-insensitive).
- *   Toggle calls toggle-aura { cardId }.
- *   Active auras display a glowing ring and a reminder message.
+ * Accessibility: every drag operation has a keyboard-operable button fallback
+ * ("Move to Vault" / "Add to Loadout") and dnd-kit's KeyboardSensor (Space to
+ * lift, arrows to move, Space to drop, Escape to cancel).
  */
 
-import React, { useState, useRef } from "react";
-import type { DomainCard, TokenConfig, CoreStatName } from "@shared/types";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
+import {
+  DndContext,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  useDraggable,
+  useDroppable,
+  DragOverlay,
+  closestCorners,
+  type DragStartEvent,
+  type DragOverEvent,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
+import type { DomainCard, TokenConfig } from "@shared/types";
 import { resolveTokenCap } from "@shared/tokenResolver";
 import { cardHasTokens, statLabel, type StatLabelKey } from "@/lib/tokenUtils";
 import { useCharacterStore } from "@/store/characterStore";
-import { useDomainCard, useClass, useDomain } from "@/hooks/useGameData";
+import {
+  useDomainCard,
+  useDomains,
+  useDomain,
+} from "@/hooks/useGameData";
 import { useActionButton, InlineActionError } from "./ActionButton";
+import { UsageTracker } from "./UsageTracker";
+import {
+  detectUsageFrequency,
+  usageKeyForCard,
+  usageKeyForGrimoireAbility,
+} from "@/lib/usageUtils";
 import { MarkdownContent } from "@/components/MarkdownContent";
-import { CollapsibleSRDDescription } from "@/components/character/CollapsibleSRDDescription";
+import { SourceBadge } from "@/components/SourceBadge";
+import {
+  SourceFilter,
+  matchesSourceFilter,
+  type SourceFilterValue,
+} from "@/components/SourceFilter";
+import { useSourceFilterDefault } from "@/hooks/useSourceFilterDefault";
+import { useViewerMode } from "./ViewerModeContext";
 import { DiceRollButton } from "@/components/dice/DiceRollButton";
 import type { RollRequest, DieSize } from "@/types/dice";
 
 // ─── Card text roll parser ────────────────────────────────────────────────────
-// Parses common roll patterns from Daggerheart domain card description text.
-// Returns a RollRequest if a rollable action is found, otherwise null.
-//
-// Supported patterns:
-//   "make a(n) X Roll"                 → action roll, trait = X
-//   "make a(n) X Roll (N)"             → action roll + difficulty N
-//   "make a Spellcast Roll"             → action roll, trait = Spellcast
-//   "deal NdX+M damage"                → damage roll
-//   "roll NdX"                         → generic roll
-//   "roll your damage dice"            → signal — caller must use character weapon
 
 const TRAIT_MAP: Record<string, string> = {
   agility: "Agility",
@@ -57,7 +81,6 @@ function parseCardRollRequest(
   cardName: string,
   text: string,
 ): RollRequest | null {
-  // ── Pattern 1: "make a(n)? X Roll (N)?" ──────────────────────────────────
   const actionMatch = text.match(/make an?\s+(\w+)\s+Roll(?:\s*\((\d+)\))?/i);
   if (actionMatch) {
     const traitKey = actionMatch[1].toLowerCase();
@@ -76,7 +99,6 @@ function parseCardRollRequest(
     };
   }
 
-  // ── Pattern 2: "deal NdX+M damage" or "deal NdX damage" ──────────────────
   const damageMatch = text.match(
     /deal\s+(\d+)?d(\d+)(?:\+(\d+))?\s+\w*\s*damage/i,
   );
@@ -100,7 +122,6 @@ function parseCardRollRequest(
     }
   }
 
-  // ── Pattern 3: "roll a? NdX" ──────────────────────────────────────────────
   const genericMatch = text.match(/roll\s+a?\s*(\d+)?d(\d+)/i);
   if (genericMatch) {
     const count = genericMatch[1] ? parseInt(genericMatch[1], 10) : 1;
@@ -123,7 +144,6 @@ function parseCardRollRequest(
   return null;
 }
 
-/** Collect all distinct roll requests from a card (description + grimoire entries). */
 function cardRollRequests(card: DomainCard): RollRequest[] {
   const reqs: RollRequest[] = [];
   const seen = new Set<string>();
@@ -152,7 +172,7 @@ function cardRollRequests(card: DomainCard): RollRequest[] {
   return reqs;
 }
 
-// ─── Helper: parseCardId ──────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function parseCardId(cardId: string): {
   domain: string | undefined;
@@ -162,258 +182,33 @@ function parseCardId(cardId: string): {
   return { domain: parts?.[0], id: parts?.[1] ?? cardId };
 }
 
-// ─── AcquireCardPicker ────────────────────────────────────────────────────────
-// Shows eligible unacquired domain cards the character can acquire.
-// Filters by:
-//   - Character's two class domains
-//   - Card level ≤ character level
-//   - Cards not already in loadout or vault
-//
-// SRD p. 22-23: "Acquire a new domain card at your level or lower from one of your class's domains"
-
-interface AcquireCardPickerProps {
-  classId: string | undefined;
-  characterLevel: number;
-  characterId: string;
-  acquiredCardIds: Set<string>;
-  loadoutIds: string[];
-  multiclassDomainId: string | null;
-  onCardAcquired: () => void;
-  onClose: () => void;
-}
-
-function AcquireCardPicker({
-  classId,
-  characterLevel,
-  characterId,
-  acquiredCardIds,
-  loadoutIds,
-  multiclassDomainId,
-  onCardAcquired,
-  onClose,
-}: AcquireCardPickerProps) {
-  const { data: classData } = useClass(classId);
-  const [selectedCard, setSelectedCard] = React.useState<{
-    domain: string;
-    id: string;
-  } | null>(null);
-  const [isPending, setIsPending] = React.useState(false);
-  const [actionError, setActionError] = React.useState<string | null>(null);
-
-  const { fire } = useActionButton(characterId);
-
-  // Get eligible domains from the class
-  const domains = React.useMemo(() => {
-    if (!classData) return [];
-    return classData.domains ?? [];
-  }, [classData]);
-
-  // Multiclass domain level cap: cards capped at ceil(level / 2) — SRD p.43
-  const multiclassLevelCap = Math.ceil(characterLevel / 2);
-
-  // Fetch cards for each domain (always call all three hooks unconditionally to
-  // satisfy Rules of Hooks — pass undefined when the domain doesn't exist).
-  const domain0Result = useDomain(domains[0] ?? undefined, characterLevel);
-  const domain1Result = useDomain(domains[1] ?? undefined, characterLevel);
-  const domain2Result = useDomain(
-    multiclassDomainId ?? undefined,
-    multiclassLevelCap,
-  );
-
-  // Collect all eligible, unacquired cards
-  const eligibleCards = React.useMemo(() => {
-    const cards: (DomainCard & { domain: string })[] = [];
-    const seen = new Set<string>();
-    // Primary class domains: level cap = character level
-    // Multiclass domain: level cap = ceil(level / 2)
-    const pairs: [string | undefined, typeof domain0Result, number][] = [
-      [domains[0], domain0Result, characterLevel],
-      [domains[1], domain1Result, characterLevel],
-      [multiclassDomainId ?? undefined, domain2Result, multiclassLevelCap],
-    ];
-    for (const [domain, result, levelCap] of pairs) {
-      if (!domain || !result.data?.cards) continue;
-      for (const card of result.data.cards) {
-        const cardId = `${domain}/${card.cardId}`;
-        if (seen.has(cardId)) continue;
-        if (!acquiredCardIds.has(cardId) && card.level <= levelCap) {
-          seen.add(cardId);
-          cards.push({ ...card, domain });
-        }
-      }
-    }
-    return cards.sort(
-      (a, b) =>
-        a.level - b.level ||
-        a.domain.localeCompare(b.domain) ||
-        a.name.localeCompare(b.name),
-    );
-  }, [
-    domains,
-    domain0Result,
-    domain1Result,
-    multiclassDomainId,
-    domain2Result,
-    multiclassLevelCap,
-    acquiredCardIds,
-    characterLevel,
-  ]);
-
-  const handleAcquire = async () => {
-    if (!selectedCard) return;
-    setActionError(null);
-    setIsPending(true);
-    try {
-      const cardId = `${selectedCard.domain}/${selectedCard.id}`;
-      await fire("acquire-domain-card", { cardId });
-      onCardAcquired();
-      setSelectedCard(null);
-    } catch (err) {
-      setActionError(
-        err instanceof Error ? err.message : "Failed to acquire card.",
-      );
-    } finally {
-      setIsPending(false);
-    }
-  };
-
-  const isLoading =
-    domain0Result.isLoading ||
-    domain1Result.isLoading ||
-    domain2Result.isLoading;
-
-  return (
-    <div className="rounded-xl border border-steel-400/30 bg-slate-900/50 p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-parchment-200">
-          Acquire a card
-        </h4>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close acquire card picker"
-          className="text-parchment-600 hover:text-parchment-300 text-xs focus:outline-none focus:ring-1 focus:ring-gold-500 rounded px-1"
-        >
-          Close
-        </button>
-      </div>
-
-      <p className="text-xs text-parchment-600">
-        Level {characterLevel} or below from your domains
-        {domains.length > 0 && ` (${domains.join(", ")})`}
-        {multiclassDomainId &&
-          ` + ${multiclassDomainId} (Lv ${multiclassLevelCap} cap)`}
-      </p>
-
-      {isLoading ? (
-        <p className="text-sm text-parchment-500">
-          Loading available cards…
-        </p>
-      ) : eligibleCards.length === 0 ? (
-        <p className="text-sm text-parchment-500">
-          No new cards available. Level up to unlock more!
-        </p>
-      ) : (
-        <ul
-          className="space-y-1 max-h-48 overflow-y-auto"
-          role="listbox"
-          aria-label="Available domain cards"
-        >
-          {eligibleCards.map((card) => {
-            const cardId = `${card.domain}/${card.cardId}`;
-            const isSelected =
-              selectedCard?.id === card.cardId &&
-              selectedCard?.domain === card.domain;
-            return (
-              <li key={cardId}>
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={isSelected}
-                  onClick={() =>
-                    setSelectedCard(
-                      isSelected
-                        ? null
-                        : { domain: card.domain, id: card.cardId },
-                    )
-                  }
-                  className={[
-                    "w-full text-left rounded-lg px-3 py-2 text-sm transition-colors",
-                    "focus:outline-none focus:ring-2 focus:ring-gold-500",
-                    isSelected
-                      ? "bg-steel-400/20 text-parchment-100 border border-steel-400"
-                      : "border border-steel-400/20 text-parchment-300 hover:bg-slate-800/50 hover:border-steel-400/50",
-                  ].join(" ")}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium">{card.name}</span>
-                    <span className="flex items-center gap-1.5 flex-shrink-0">
-                      <span className="text-xs text-parchment-600 uppercase">
-                        {card.domain}
-                      </span>
-                      <span className="text-xs font-bold text-gold-600">
-                        Lv{card.level}
-                      </span>
-                    </span>
-                  </div>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
-      {actionError && (
-        <p role="alert" className="text-xs text-coral-400">
-          {actionError}
-        </p>
-      )}
-
-      {selectedCard && (
-        <button
-          type="button"
-          onClick={handleAcquire}
-          disabled={isPending}
-          aria-busy={isPending}
-          className="
-            w-full rounded-lg border border-gold-800/60 bg-gold-950/20 px-3 py-2
-            text-sm font-semibold text-gold-300
-            hover:bg-gold-900/30 hover:border-gold-700
-            disabled:opacity-40 disabled:cursor-not-allowed
-            focus:outline-none focus:ring-2 focus:ring-gold-500
-            transition-colors
-          "
-        >
-          {isPending ? (
-            <span
-              aria-hidden="true"
-              className="inline-block h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"
-            />
-          ) : (
-            `Acquire card`
-          )}
-        </button>
-      )}
-    </div>
-  );
-}
-
 function cardHasAura(card: DomainCard | undefined): boolean {
   if (!card) return false;
   return /aura/i.test(card.description);
+}
+
+function cardMatchesQuery(card: DomainCard, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const hay = [
+    card.name,
+    card.domain,
+    card.description,
+    ...(card.grimoire?.map((a) => a.name) ?? []),
+  ]
+    .join(" ")
+    .toLowerCase();
+  return hay.includes(q);
 }
 
 // ─── TokenTracker ─────────────────────────────────────────────────────────────
 
 interface TokenTrackerProps {
   cardId: string;
-  /** Human-readable card name for aria-labels (falls back to cardId). */
   cardName: string;
   characterId: string;
   count: number;
-  /** Resolved integer cap (null = uncapped). */
   resolvedCap?: number | null;
-  /** Token config from the domain card, if any. */
   tokenConfig?: TokenConfig | undefined;
 }
 
@@ -436,17 +231,14 @@ function TokenTracker({
   const errorId = React.useId();
   const spinnerId = React.useId();
 
-  // Determine pip count: use resolvedCap if available, else default to 8
   const pipCount = resolvedCap != null ? resolvedCap : 8;
 
-  // Build display label for the stat cap source
   const capStatKey =
     tokenConfig?.maxStat != null && typeof tokenConfig.maxStat !== "number"
       ? (tokenConfig.maxStat as StatLabelKey)
       : null;
   const capLabel = capStatKey ? statLabel(capStatKey) : null;
 
-  // Display format: "3 / 5 (Presence)" when cap and label known; "3 / 5" when cap but no label; "3" when uncapped
   const countDisplay =
     resolvedCap != null
       ? capLabel
@@ -472,7 +264,6 @@ function TokenTracker({
           aria-describedby={inlineError ? errorId : undefined}
           className="flex items-center gap-1"
         >
-          {/* − Remove token */}
           <button
             type="button"
             onClick={() => spendAction.fire("spend-token", { cardId })}
@@ -489,7 +280,6 @@ function TokenTracker({
             −
           </button>
 
-          {/* Count display */}
           <span
             id={spinnerId}
             className="min-w-[4rem] text-center text-sm font-bold text-parchment-200 tabular-nums"
@@ -497,7 +287,6 @@ function TokenTracker({
             {countDisplay}
           </span>
 
-          {/* + Add token */}
           <button
             type="button"
             onClick={() => addAction.fire("add-token", { cardId })}
@@ -514,7 +303,6 @@ function TokenTracker({
             +
           </button>
 
-          {/* × Clear all tokens */}
           <button
             type="button"
             onClick={() => clearAction.fire("clear-tokens", { cardId })}
@@ -535,7 +323,6 @@ function TokenTracker({
         </div>
       </div>
 
-      {/* Visual slot pips — filled/empty dots up to cap (or 8 when uncapped) */}
       {pipCount > 0 && (
         <div className="flex gap-1 ml-0.5" aria-hidden="true">
           {Array.from({ length: pipCount }, (_, i) => (
@@ -559,7 +346,6 @@ interface AuraToggleProps {
   cardName: string;
   characterId: string;
   isActive: boolean;
-  /** True when another aura is currently active (will be deactivated if this one is turned on). */
   anotherAuraActive: boolean;
 }
 
@@ -633,11 +419,15 @@ function DomainCardDetailSidebar({
   onRollQueued,
   characterName,
 }: DomainCardDetailSidebarProps) {
+  const { activeCharacter } = useCharacterStore();
+  const characterId = activeCharacter?.characterId ?? "";
+  const usage = activeCharacter?.usage ?? {};
   const open = card !== null;
   const panelRef = React.useRef<HTMLDivElement>(null);
   const headingId = React.useId();
 
-  // Focus first focusable element when opened
+  const fullCardId = card ? `${card.domain}/${card.cardId}` : "";
+
   React.useEffect(() => {
     if (!open) return;
     const t = setTimeout(() => {
@@ -649,7 +439,6 @@ function DomainCardDetailSidebar({
     return () => clearTimeout(t);
   }, [open]);
 
-  // Escape to close
   React.useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
@@ -685,7 +474,6 @@ function DomainCardDetailSidebar({
           open ? "translate-x-0" : "translate-x-full",
         ].join(" ")}
       >
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-[#577399]/25 px-5 py-4 shrink-0">
           <div>
             {card && (
@@ -710,10 +498,8 @@ function DomainCardDetailSidebar({
           </button>
         </div>
 
-        {/* Body */}
         {card && (
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-            {/* Badges */}
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full border border-gold-800 px-2 py-0.5 text-xs font-bold text-gold-500">
                 Lv {card.level}
@@ -738,7 +524,6 @@ function DomainCardDetailSidebar({
               )}
             </div>
 
-            {/* Card text */}
             <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 px-4 py-3">
               {card.isGrimoire && card.grimoire.length > 0 ? (
                 <div className="space-y-3">
@@ -750,17 +535,44 @@ function DomainCardDetailSidebar({
                       <MarkdownContent className="text-base text-[#b9baa3]/75">
                         {ability.description}
                       </MarkdownContent>
+                      <div className="mt-2">
+                        <UsageTracker
+                          characterId={characterId}
+                          usageKey={usageKeyForGrimoireAbility(fullCardId, i)}
+                          frequency={
+                            ability.usageFrequency ??
+                            detectUsageFrequency(ability.description)
+                          }
+                          exhausted={Boolean(
+                            usage[usageKeyForGrimoireAbility(fullCardId, i)],
+                          )}
+                          label={`${card.name}: ${ability.name}`}
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <MarkdownContent className="text-base text-[#b9baa3]/75">
-                  {card.description}
-                </MarkdownContent>
+                <>
+                  <MarkdownContent className="text-base text-[#b9baa3]/75">
+                    {card.description}
+                  </MarkdownContent>
+                  <div className="mt-3 border-t border-slate-700/40 pt-2">
+                    <UsageTracker
+                      characterId={characterId}
+                      usageKey={usageKeyForCard(fullCardId)}
+                      frequency={
+                        card.usageFrequency ??
+                        detectUsageFrequency(card.description)
+                      }
+                      exhausted={Boolean(usage[usageKeyForCard(fullCardId)])}
+                      label={card.name}
+                    />
+                  </div>
+                </>
               )}
             </div>
 
-            {/* Curse text */}
             {card.isCursed && card.curseText && (
               <div className="rounded-lg border border-steel-400/30 bg-slate-900/60 px-4 py-3">
                 <p className="text-xs uppercase tracking-wider text-steel-accessible mb-1">
@@ -772,7 +584,6 @@ function DomainCardDetailSidebar({
               </div>
             )}
 
-            {/* Roll buttons — parsed from card text */}
             {(() => {
               const rolls = cardRollRequests(card);
               if (rolls.length === 0) return null;
@@ -801,41 +612,53 @@ function DomainCardDetailSidebar({
   );
 }
 
-// ─── LoadoutCardSlot ──────────────────────────────────────────────────────────
+// ─── Drag data & shared types ─────────────────────────────────────────────────
 
-interface LoadoutCardSlotProps {
+interface DragData {
+  container: "loadout" | "vault";
   cardId: string;
-  index: number;
-  total: number;
-  characterId: string;
-  onRemove: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
-  onDrill: (card: DomainCard) => void;
-  isDragging: boolean;
-  onDragStart: () => void;
-  onDragEnter: () => void;
-  onDragEnd: () => void;
+  card?: DomainCard;
 }
 
-function LoadoutCardSlot({
+type ActiveDrag = { container: "loadout" | "vault"; cardId: string } | null;
+
+// ─── LoadoutCard ──────────────────────────────────────────────────────────────
+
+interface LoadoutCardProps {
+  cardId: string;
+  characterId: string;
+  onDrill: (card: DomainCard) => void;
+  onMoveToVault: (cardId: string) => void;
+  onRegisterLevel: (cardId: string, level: number) => void;
+}
+
+function LoadoutCard({
   cardId,
-  index,
-  total,
   characterId,
-  onRemove,
-  onMoveUp,
-  onMoveDown,
   onDrill,
-  isDragging,
-  onDragStart,
-  onDragEnter,
-  onDragEnd,
-}: LoadoutCardSlotProps) {
+  onMoveToVault,
+  onRegisterLevel,
+}: LoadoutCardProps) {
   const { activeCharacter } = useCharacterStore();
+  const viewerMode = useViewerMode();
   const { domain, id } = parseCardId(cardId);
   const { data: card } = useDomainCard(domain, id);
-  const [confirmingRemove, setConfirmingRemove] = React.useState(false);
+
+  const {
+    setNodeRef,
+    listeners,
+    attributes,
+    transform,
+    isDragging,
+  } = useDraggable({
+    id: cardId,
+    data: { container: "loadout", cardId, card } satisfies DragData,
+    disabled: viewerMode,
+  });
+
+  useEffect(() => {
+    if (card?.level != null) onRegisterLevel(cardId, card.level);
+  }, [card, cardId, onRegisterLevel]);
 
   const cardTokens = activeCharacter?.cardTokens ?? {};
   const activeAuras = activeCharacter?.activeAuras ?? [];
@@ -844,53 +667,51 @@ function LoadoutCardSlot({
   const showAura = cardHasAura(card);
   const isAuraActive = activeAuras.includes(cardId);
 
-  // Resolve token cap for display
+  const usage = activeCharacter?.usage ?? {};
+  const frequency =
+    card?.usageFrequency ?? detectUsageFrequency(card?.description ?? "");
+  const usageKey = usageKeyForCard(cardId);
+  const exhausted = Boolean(usage[usageKey]);
+
   const resolvedCap: number | null =
     card?.tokenConfig && activeCharacter
       ? resolveTokenCap(card.tokenConfig, activeCharacter)
       : null;
 
-  // Determine if removal needs confirmation (has tokens or active aura)
-  const needsRemoveConfirm = tokenCount > 0 || isAuraActive;
-
-  const handleRemoveClick = () => {
-    if (needsRemoveConfirm && !confirmingRemove) {
-      setConfirmingRemove(true);
-      return;
-    }
-    setConfirmingRemove(false);
-    onRemove();
-  };
-
   return (
     <div
-      draggable
-      onDragStart={onDragStart}
-      onDragEnter={onDragEnter}
-      onDragEnd={onDragEnd}
+      ref={setNodeRef}
+      style={{ transform: CSS.Translate.toString(transform) }}
       role="listitem"
       aria-label={card ? `${card.name}, domain card` : cardId}
       className={`
-        relative rounded-lg border p-3 cursor-grab active:cursor-grabbing
-        transition-all duration-150
+        relative rounded-lg p-3
+        transition-colors duration-150
+        ${isDragging ? "opacity-60" : exhausted ? "opacity-75 saturate-[0.85]" : ""}
         ${
-          isDragging
-            ? "opacity-40 border-gold-500 bg-slate-800"
-            : isAuraActive
-              ? "border-[#577399]/60 bg-slate-850 shadow-[0_0_10px_rgba(87,115,153,0.25)]"
-              : "border-steel-400/30 bg-slate-850 hover:border-steel-400/50"
+          isAuraActive
+            ? "border border-[#577399]/60 bg-slate-850 shadow-[0_0_10px_rgba(87,115,153,0.25)]"
+            : "border border-steel-400/30 bg-slate-850 hover:border-steel-400/50"
         }
         shadow-card-fantasy
       `}
     >
-      {/* Top row: drag handle + card info + reorder + remove */}
       <div className="flex items-center gap-3">
         {/* Drag handle */}
-        <div className="flex flex-col gap-0.5 text-parchment-600 select-none shrink-0">
+        <button
+          type="button"
+          {...listeners}
+          {...attributes}
+          disabled={viewerMode}
+          className="flex flex-col gap-0.5 text-parchment-600 select-none shrink-0 cursor-grab active:cursor-grabbing touch-none
+            p-1 rounded focus:outline-none focus:ring-1 focus:ring-gold-500 disabled:cursor-not-allowed disabled:opacity-40"
+          aria-label={`Drag ${card?.name ?? cardId} to reorder or move to vault`}
+          title={viewerMode ? "View only" : "Drag to move to vault"}
+        >
           <span className="block w-4 border-t border-current" />
           <span className="block w-4 border-t border-current" />
           <span className="block w-4 border-t border-current" />
-        </div>
+        </button>
 
         {/* Card info — click to open detail sidebar */}
         <div className="flex-1 min-w-0">
@@ -902,14 +723,25 @@ function LoadoutCardSlot({
               aria-label={`View details for ${card.name}`}
             >
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-parchment-200 truncate group-hover:text-parchment-100 transition-colors">
+                <span
+                  className={`text-sm font-semibold truncate group-hover:text-parchment-100 transition-colors ${
+                    exhausted
+                      ? "line-through decoration-slate-500/70 decoration-[1.5px] text-parchment-300"
+                      : "text-parchment-200"
+                  }`}
+                >
                   {card.name}
                 </span>
-                {card.isCursed && (
+                {exhausted && (
                   <span
-                    title="Cursed"
-                    className="text-xs text-burgundy-400 font-bold"
+                    title="Used"
+                    className="rounded bg-burgundy-900/50 px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wider text-burgundy-400"
                   >
+                    USED
+                  </span>
+                )}
+                {card.isCursed && (
+                  <span title="Cursed" className="text-xs text-burgundy-400 font-bold">
                     ★
                   </span>
                 )}
@@ -938,407 +770,625 @@ function LoadoutCardSlot({
                   Lv {card.level}
                 </span>
               </div>
-              {/* Inline description preview — avoids needing to open sidebar */}
-              <p className="text-xs text-parchment-600 leading-snug mt-1 line-clamp-2">
+              <MarkdownContent
+                className="text-xs text-parchment-600 leading-snug mt-1 line-clamp-2"
+                inline
+              >
                 {card.isGrimoire && card.grimoire.length > 0
                   ? card.grimoire.map((a) => a.name).join(", ")
                   : card.description
-                      .replace(/\*\*/g, "")
+                      .replace(/\[\[([^\]]+?)\]\]/g, (_m, inner: string) => {
+                        const pipe = inner.indexOf("|");
+                        return pipe >= 0
+                          ? inner.slice(pipe + 1).trim()
+                          : inner.split("/").pop()!.trim();
+                      })
                       .replace(/\n/g, " ")
                       .trim()}
-              </p>
+              </MarkdownContent>
             </button>
           ) : (
             <span className="text-sm text-parchment-500">Loading…</span>
           )}
         </div>
 
-        {/* Reorder buttons */}
-        <div className="flex flex-col gap-0.5 shrink-0">
-          <button
-            onClick={onMoveUp}
-            disabled={index === 0}
-            className="
-              text-parchment-600 hover:text-gold-400 disabled:opacity-20
-              transition-colors text-xs p-1.5 min-w-[2rem] min-h-[2rem]
-              flex items-center justify-center
-              focus:outline-none focus:ring-1 focus:ring-gold-500 rounded
-            "
-            aria-label={`Move ${card?.name ?? cardId} up`}
-          >
-            ▲
-          </button>
-          <button
-            onClick={onMoveDown}
-            disabled={index === total - 1}
-            className="
-              text-parchment-600 hover:text-gold-400 disabled:opacity-20
-              transition-colors text-xs p-1.5 min-w-[2rem] min-h-[2rem]
-              flex items-center justify-center
-              focus:outline-none focus:ring-1 focus:ring-gold-500 rounded
-            "
-            aria-label={`Move ${card?.name ?? cardId} down`}
-          >
-            ▼
-          </button>
-        </div>
-
-        {/* Remove button */}
-        {confirmingRemove ? (
-          <div className="flex items-center gap-1 shrink-0">
-            <button
-              onClick={handleRemoveClick}
-              className="rounded px-2 py-1 text-xs font-semibold text-coral-400 bg-coral-400/10 border border-coral-400/30
-                hover:bg-coral-400/20 transition-colors focus:outline-none focus:ring-2 focus:ring-coral-400"
-              aria-label={`Confirm remove ${card?.name ?? cardId}`}
-            >
-              Confirm
-            </button>
-            <button
-              onClick={() => setConfirmingRemove(false)}
-              className="rounded px-2 py-1 text-xs text-parchment-500 hover:text-parchment-300
-                transition-colors focus:outline-none focus:ring-1 focus:ring-gold-500"
-              aria-label="Cancel removal"
-            >
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={handleRemoveClick}
-            className="
-              shrink-0 rounded p-2 text-parchment-500 hover:bg-coral-400/15 hover:text-coral-400
-              transition-colors focus:outline-none focus:ring-2 focus:ring-coral-400
-            "
-            aria-label={`Remove ${card?.name ?? cardId} from loadout`}
-          >
-            ✕
-          </button>
-        )}
-      </div>
-
-      {/* Token tracker (shown for cursed cards, cards with tokenConfig, or cards that already have tokens) */}
-      {showTokens && (
-        <TokenTracker
-          cardId={cardId}
-          cardName={card?.name ?? cardId}
-          characterId={characterId}
-          count={tokenCount}
-          resolvedCap={resolvedCap}
-          tokenConfig={card?.tokenConfig}
-        />
-      )}
-
-      {/* Aura toggle (shown when description mentions "aura") */}
-      {showAura && card && (
-        <AuraToggle
-          cardId={cardId}
-          cardName={card.name}
-          characterId={characterId}
-          isActive={isAuraActive}
-          anotherAuraActive={!isAuraActive && activeAuras.length > 0}
-        />
-      )}
-    </div>
-  );
-}
-
-// ─── VaultPicker ─────────────────────────────────────────────────────────────
-
-/**
- * The vault picker now:
- *   1) Filters cards by level (card.level <= character.level)
- *   2) Shows Recall Cost and Linked Curse indicators
- *   3) When loadout is full, requires picking a card to displace
- *   4) Uses the swap-loadout-card server action (with stress cost)
- */
-
-interface VaultPickerProps {
-  vaultIds: string[];
-  loadoutIds: string[];
-  characterId: string;
-  characterLevel: number;
-  onClose: () => void;
-}
-
-function VaultPicker({
-  vaultIds,
-  loadoutIds,
-  characterId,
-  characterLevel,
-  onClose,
-}: VaultPickerProps) {
-  const available = vaultIds.filter((id) => !loadoutIds.includes(id));
-  const isFull = loadoutIds.length >= 5;
-  const [selectedVaultCard, setSelectedVaultCard] = React.useState<
-    string | null
-  >(null);
-  const [selectedLoadoutCard, setSelectedLoadoutCard] = React.useState<
-    string | null
-  >(null);
-  const swapAction = useActionButton(characterId);
-
-  // Fetch the selected vault card's data so we can read its recall cost
-  const selectedParsed = selectedVaultCard
-    ? parseCardId(selectedVaultCard)
-    : { domain: undefined, id: undefined };
-  const { data: selectedCardData } = useDomainCard(
-    selectedParsed.domain,
-    selectedParsed.id,
-  );
-
-  const handleSwap = () => {
-    if (!selectedVaultCard) return;
-    if (isFull && !selectedLoadoutCard) return;
-
-    // Recall cost = card's recallCost field if available, otherwise fall back to card level.
-    // During a rest the backend ignores n, but during normal play it charges stress.
-    const recallCost =
-      selectedCardData?.recallCost ?? selectedCardData?.level ?? 0;
-
-    swapAction.fire("swap-loadout-card", {
-      vaultCardId: selectedVaultCard,
-      loadoutCardId: isFull ? selectedLoadoutCard : undefined,
-      // During normal play (not rest), Recall Cost applies. The card's recallCost
-      // is passed via n so the backend knows how much stress to charge.
-      // For now, we pass restType: "none" — the DowntimeModal will use "short"/"long".
-      restType: "none",
-      n: recallCost,
-      isLinkedCurse: selectedCardData?.isLinkedCurse ?? false,
-    });
-
-    setSelectedVaultCard(null);
-    setSelectedLoadoutCard(null);
-    onClose();
-  };
-
-  return (
-    <div className="rounded-lg border border-gold-800 bg-slate-900 shadow-card-fantasy-hover p-4 space-y-3">
-      <div className="flex items-center justify-between mb-1">
-        <h4 className="text-xs font-semibold uppercase tracking-wider text-gold-600">
-          Domain Vault
-        </h4>
-        <button
-          onClick={onClose}
-          aria-label="Close domain vault picker"
-          className="text-parchment-600 hover:text-parchment-300 text-xs focus:outline-none focus:ring-1 focus:ring-gold-500 rounded px-1"
-        >
-          Close
-        </button>
-      </div>
-
-      {/* Vault card selection */}
-      {available.length === 0 ? (
-        <p className="text-sm text-parchment-500">
-          No more cards in vault (all are already in loadout or vault is empty).
-        </p>
-      ) : (
-        <>
-          <p className="text-sm text-parchment-500">
-            Select a card to add to your loadout
-            {isFull
-              ? ". Your loadout is full — you must also choose a card to displace."
-              : "."}
-          </p>
-          <ul
-            className="space-y-1 max-h-48 overflow-y-auto pr-1"
-            role="listbox"
-            aria-label="Vault cards"
-          >
-            {available.map((cardId) => (
-              <VaultPickerItem
-                key={cardId}
-                cardId={cardId}
-                characterLevel={characterLevel}
-                isSelected={selectedVaultCard === cardId}
-                onSelect={() =>
-                  setSelectedVaultCard(
-                    cardId === selectedVaultCard ? null : cardId,
-                  )
-                }
-              />
-            ))}
-          </ul>
-        </>
-      )}
-
-      {/* Loadout displacement selection (only when loadout is full) */}
-      {isFull && selectedVaultCard && (
-        <div className="border-t border-slate-700/30 pt-3">
-          <p className="text-sm text-parchment-500 mb-2">
-            Choose a card to move from loadout to vault:
-          </p>
-          <ul
-            className="space-y-1 max-h-36 overflow-y-auto pr-1"
-            role="listbox"
-            aria-label="Loadout cards to displace"
-          >
-            {loadoutIds.map((cardId) => (
-              <DisplacePickerItem
-                key={cardId}
-                cardId={cardId}
-                isSelected={selectedLoadoutCard === cardId}
-                onSelect={() =>
-                  setSelectedLoadoutCard(
-                    cardId === selectedLoadoutCard ? null : cardId,
-                  )
-                }
-              />
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Swap button */}
-      {selectedVaultCard && (!isFull || selectedLoadoutCard) && (
+        {/* Move to Vault (keyboard fallback for drag-out) */}
         <button
           type="button"
-          onClick={handleSwap}
-          disabled={swapAction.isPending}
+          onClick={() => onMoveToVault(cardId)}
+          disabled={viewerMode}
           className="
-            w-full rounded px-3 py-2 text-sm font-semibold
-            bg-gold-800/80 text-parchment-100 border border-gold-600
-            hover:bg-gold-700 transition-colors
-            disabled:opacity-50 disabled:cursor-wait
-            focus:outline-none focus:ring-2 focus:ring-gold-500
+            shrink-0 rounded p-2 text-parchment-500 hover:bg-steel-400/15 hover:text-parchment-300
+            transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500 min-h-[44px] min-w-[44px]
+            disabled:cursor-not-allowed disabled:opacity-40
           "
+          aria-label={`Move ${card?.name ?? cardId} to Vault`}
+          title={viewerMode ? "View only" : "Move to Vault"}
         >
-          {swapAction.isPending ? "Swapping..." : "Swap Card"}
+          <i className="fa-solid fa-box-archive text-sm" aria-hidden="true" />
         </button>
-      )}
+      </div>
 
-      <InlineActionError message={swapAction.inlineError} />
+      {(frequency !== "none" || showTokens || showAura) && (
+        <div className="mt-3 border-t border-slate-700/40 pt-2 space-y-2">
+          <UsageTracker
+            characterId={characterId}
+            usageKey={usageKey}
+            frequency={frequency}
+            exhausted={exhausted}
+            label={card?.name ?? cardId}
+          />
+
+          {showTokens && (
+            <TokenTracker
+              cardId={cardId}
+              cardName={card?.name ?? cardId}
+              characterId={characterId}
+              count={tokenCount}
+              resolvedCap={resolvedCap}
+              tokenConfig={card?.tokenConfig}
+            />
+          )}
+
+          {showAura && card && (
+            <AuraToggle
+              cardId={cardId}
+              cardName={card.name}
+              characterId={characterId}
+              isActive={isAuraActive}
+              anotherAuraActive={!isAuraActive && activeAuras.length > 0}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-function VaultPickerItem({
-  cardId,
-  characterLevel,
-  isSelected,
-  onSelect,
-}: {
+// ─── VaultCard ────────────────────────────────────────────────────────────────
+
+interface VaultCardProps {
   cardId: string;
-  characterLevel: number;
-  isSelected: boolean;
-  onSelect: () => void;
-}) {
+  /** Disables dragging into the loadout (loadout is full). */
+  disabled: boolean;
+  onAddToLoadout: (card: DomainCard) => void;
+}
+
+function VaultCard({ cardId, disabled, onAddToLoadout }: VaultCardProps) {
+  const viewerMode = useViewerMode();
   const { domain, id } = parseCardId(cardId);
   const { data: card } = useDomainCard(domain, id);
 
-  // Level filter: dim cards above character level (SRD p.5)
-  const aboveLevel = card ? card.level > characterLevel : false;
+  const dragDisabled = disabled || viewerMode;
+
+  const {
+    setNodeRef,
+    listeners,
+    attributes,
+    transform,
+    isDragging,
+  } = useDraggable({
+    id: cardId,
+    data: { container: "vault", cardId, card } satisfies DragData,
+    disabled: dragDisabled,
+  });
 
   return (
-    <li>
-      <button
-        onClick={onSelect}
-        disabled={aboveLevel}
-        role="option"
-        aria-selected={isSelected}
-        aria-label={
-          card
-            ? `${card.name} (${card.domain}, Level ${card.level})${card.isLinkedCurse ? " — Linked Curse" : ""}${aboveLevel ? " — above your level" : ""}`
-            : cardId
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Translate.toString(transform) }}
+      role="listitem"
+      aria-label={card ? `${card.name}, vault card` : cardId}
+      className={`
+        rounded-lg border p-2.5 transition-colors duration-150
+        ${isDragging ? "opacity-60" : ""}
+        ${
+          dragDisabled
+            ? "border-steel-400/20 bg-slate-900/40 opacity-60"
+            : "border-steel-400/30 bg-slate-850 hover:border-steel-400/50"
         }
-        className={`
-          w-full flex items-center gap-2 rounded px-2 py-1.5
-          text-left transition-colors
-          focus:outline-none focus:ring-1 focus:ring-gold-500
-          ${
-            aboveLevel
-              ? "opacity-40 cursor-not-allowed"
-              : isSelected
-                ? "bg-gold-900/40 border border-gold-600"
-                : "hover:bg-burgundy-900/40"
-          }
-        `}
-      >
-        <span className="flex-1 text-sm text-parchment-300 truncate">
-          {card?.name ?? cardId}
-        </span>
-        {card && (
-          <>
-            {card.isLinkedCurse && (
+      `}
+    >
+      <div className="flex items-center gap-2">
+        {/* Drag handle */}
+        <button
+          type="button"
+          {...listeners}
+          {...attributes}
+          disabled={dragDisabled}
+          className="flex flex-col gap-0.5 text-parchment-600 select-none shrink-0 cursor-grab active:cursor-grabbing touch-none
+            p-1 rounded focus:outline-none focus:ring-1 focus:ring-gold-500 disabled:cursor-not-allowed disabled:opacity-40"
+          aria-label={`Drag ${card?.name ?? cardId} into the loadout`}
+          title={viewerMode ? "View only" : disabled ? "Loadout is full" : "Drag to add to loadout"}
+        >
+          <span className="block w-4 border-t border-current" />
+          <span className="block w-4 border-t border-current" />
+          <span className="block w-4 border-t border-current" />
+        </button>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-sm font-semibold text-parchment-200 truncate">
+              {card?.name ?? cardId}
+            </span>
+            {card?.isCursed && (
+              <span title="Cursed" className="text-xs text-burgundy-400 font-bold">
+                ★
+              </span>
+            )}
+            {card?.isLinkedCurse && (
               <span
-                title="Linked Curse — long rest only, 6 stress"
+                title="Linked Curse"
                 className="text-xs text-burgundy-400 font-bold"
               >
                 ↔
               </span>
             )}
-            {card.isCursed && (
-              <span
-                title="Cursed"
-                className="text-xs text-burgundy-400 font-bold"
-              >
-                ★
+          </div>
+          {card && (
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-xs text-parchment-500 uppercase tracking-wider">
+                {card.domain}
               </span>
-            )}
-            <span className="text-xs text-parchment-600 uppercase">
-              {card.domain}
-            </span>
-            <span
-              className={`text-xs font-bold ${aboveLevel ? "text-parchment-600" : "text-gold-600"}`}
-            >
-              Lv{card.level}
-            </span>
-          </>
-        )}
-      </button>
-    </li>
+              <span className="rounded-full border border-gold-800 px-1.5 text-xs font-bold text-gold-500">
+                Lv {card.level}
+              </span>
+              <span className="text-xs text-parchment-600">⚡{card.recallCost}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Add to Loadout (keyboard fallback for drag-in) */}
+        <button
+          type="button"
+          onClick={() => card && onAddToLoadout(card)}
+          disabled={dragDisabled || !card}
+          aria-disabled={dragDisabled || !card}
+          className="
+            shrink-0 rounded px-2 py-1.5 text-xs font-semibold
+            border border-gold-800/60 bg-gold-950/20 text-gold-300
+            hover:bg-gold-900/30 hover:border-gold-700
+            disabled:opacity-40 disabled:cursor-not-allowed
+            transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500 min-h-[44px]
+          "
+          aria-label={`Add ${card?.name ?? cardId} to Loadout`}
+        >
+          <i className="fa-solid fa-arrow-up-from-bracket text-xs" aria-hidden="true" />
+          <span className="sr-only">Add to Loadout</span>
+        </button>
+      </div>
+    </div>
   );
 }
 
-function DisplacePickerItem({
-  cardId,
-  isSelected,
-  onSelect,
-}: {
-  cardId: string;
-  isSelected: boolean;
-  onSelect: () => void;
-}) {
-  const { domain, id } = parseCardId(cardId);
-  const { data: card } = useDomainCard(domain, id);
+// ─── AddCardModal ─────────────────────────────────────────────────────────────
+
+interface AddCardModalProps {
+  characterId: string;
+  loadoutIds: string[];
+  vaultIds: string[];
+  isFull: boolean;
+  restType: "short" | "long" | "none";
+  onClose: () => void;
+}
+
+function AddCardModal({
+  characterId,
+  loadoutIds,
+  vaultIds,
+  isFull,
+  restType,
+  onClose,
+}: AddCardModalProps) {
+  const { data: domainsData } = useDomains();
+  const domains = domainsData?.domains ?? [];
+  const [expandedDomain, setExpandedDomain] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const sourceFilterDefault = useSourceFilterDefault();
+  // Default to "all" so every card in the system is visible (the modal is the
+  // GM-discretion "add any card" surface, per product decision).
+  const [sourceFilter, setSourceFilter] = useState<SourceFilterValue>("all");
+  const headingId = React.useId();
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const first = document.querySelector<HTMLElement>(
+        '[data-addcard-modal] button, [data-addcard-modal] input, [data-addcard-modal] [tabindex]:not([tabindex="-1"])',
+      );
+      first?.focus();
+    }, 50);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handler, true);
+    return () => document.removeEventListener("keydown", handler, true);
+  }, [onClose]);
+
+  const sortedDomains = useMemo(
+    () => [...domains].sort((a, b) => a.domain.localeCompare(b.domain)),
+    [domains],
+  );
 
   return (
-    <li>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={headingId}
+      data-addcard-modal
+    >
+      <div
+        aria-hidden="true"
+        onClick={onClose}
+        className="fixed inset-0 z-[-1] bg-slate-950/70 backdrop-blur-sm"
+      />
+
+      <div className="relative flex h-full max-h-[85vh] w-full max-w-2xl flex-col rounded-xl border border-[#577399]/30 bg-[#0f1713] shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[#577399]/25 px-5 py-4 shrink-0">
+          <h2
+            id={headingId}
+            className="font-serif text-lg font-semibold text-[#f7f7ff]"
+          >
+            Add a Domain Card
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close add card dialog"
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#577399]/30 text-[#b9baa3] hover:bg-[#577399]/12 hover:text-[#f7f7ff] focus:outline-none focus:ring-2 focus:ring-[#577399]"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Non-compliant warning */}
+        <div
+          role="alert"
+          className="border-b border-[#f7b500]/25 px-5 py-2.5 flex items-start gap-2 bg-[#f7b500]/5"
+        >
+          <i
+            className="fa-solid fa-triangle-exclamation text-[#f7b500] mt-0.5"
+            aria-hidden="true"
+          />
+          <p className="text-xs sidebar-text-secondary">
+            Adding a domain card this way may create a character sheet that is
+            not compliant with the standard rules. Check with your GM before
+            using this method to add a domain card.
+          </p>
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-col gap-2 border-b border-[#577399]/20 px-5 py-3 shrink-0 sm:flex-row sm:items-center">
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search cards…"
+            aria-label="Search domain cards"
+            className="flex-1 rounded-md border border-steel-400/40 bg-slate-850 px-3 py-2 text-sm text-[#f7f7ff] placeholder:text-[#b9baa3]/40 focus:outline-none focus:ring-2 focus:ring-[#577399] focus:border-[#577399]"
+          />
+          <SourceFilter
+            value={sourceFilter}
+            onChange={setSourceFilter}
+            defaultFilter={sourceFilterDefault}
+          />
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2">
+          {sortedDomains.length === 0 ? (
+            <p className="text-sm text-parchment-500">Loading domains…</p>
+          ) : (
+            sortedDomains.map((d) => (
+              <DomainGroup
+                key={d.domain}
+                domain={d.domain}
+                characterId={characterId}
+                loadoutIds={loadoutIds}
+                vaultIds={vaultIds}
+                isFull={isFull}
+                restType={restType}
+                query={query}
+                sourceFilter={sourceFilter}
+                expanded={expandedDomain === d.domain}
+                onToggle={() =>
+                  setExpandedDomain((prev) =>
+                    prev === d.domain ? null : d.domain,
+                  )
+                }
+              />
+            ))
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-[#577399]/25 px-5 py-4 shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-xl border border-steel-400/40 bg-steel-400/15 px-4 py-3 text-sm font-semibold text-[#f7f7ff] hover:bg-steel-400/25 focus:outline-none focus:ring-2 focus:ring-[#577399]"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface DomainGroupProps {
+  domain: string;
+  characterId: string;
+  loadoutIds: string[];
+  vaultIds: string[];
+  isFull: boolean;
+  restType: "short" | "long" | "none";
+  query: string;
+  sourceFilter: SourceFilterValue;
+  expanded: boolean;
+  onToggle: () => void;
+}
+
+function DomainGroup({
+  domain,
+  characterId,
+  loadoutIds,
+  vaultIds,
+  isFull,
+  restType,
+  query,
+  sourceFilter,
+  expanded,
+  onToggle,
+}: DomainGroupProps) {
+  const { data } = useDomain(domain);
+  const cards = (data?.cards ?? []).filter((c) =>
+    matchesSourceFilter(c.source, sourceFilter),
+  );
+  const filtered = query ? cards.filter((c) => cardMatchesQuery(c, query)) : cards;
+  const sorted = [...filtered].sort((a, b) => a.level - b.level);
+
+  return (
+    <div className="rounded-lg border border-steel-400/20 bg-slate-900/30 overflow-hidden">
       <button
-        onClick={onSelect}
-        role="option"
-        aria-selected={isSelected}
-        aria-label={
-          card
-            ? `Displace ${card.name} (${card.domain}, Level ${card.level})`
-            : `Displace ${cardId}`
-        }
-        className={`
-          w-full flex items-center gap-2 rounded px-2 py-1.5
-          text-left transition-colors
-          focus:outline-none focus:ring-1 focus:ring-gold-500
-          ${
-            isSelected
-              ? "bg-burgundy-900/50 border border-burgundy-600"
-              : "hover:bg-burgundy-900/30"
-          }
-        `}
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        aria-controls={`domain-group-${domain}`}
+        className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-slate-800/40 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#577399]"
       >
-        <span className="flex-1 text-sm text-parchment-300 truncate">
-          {card?.name ?? cardId}
+        <i
+          className={`fa-solid fa-chevron-right w-3.5 h-3.5 shrink-0 text-center text-[0.6rem] leading-[0.875rem] text-steel-accessible transition-transform duration-150 ${
+            expanded ? "rotate-90" : ""
+          }`}
+          aria-hidden="true"
+        />
+        <span className="flex-1 text-sm font-semibold uppercase tracking-wider text-parchment-200">
+          {domain}
         </span>
-        {card && (
-          <>
-            <span className="text-xs text-parchment-600 uppercase">
-              {card.domain}
-            </span>
-            <span className="text-xs font-bold text-gold-600">
-              Lv{card.level}
-            </span>
-          </>
-        )}
+        <span className="text-xs text-parchment-600">{sorted.length}</span>
       </button>
-    </li>
+
+      {expanded && (
+        <div id={`domain-group-${domain}`} className="border-t border-slate-700/30 px-3 py-2 space-y-1.5">
+          {sorted.length === 0 ? (
+            <p className="text-xs text-parchment-500">No matching cards.</p>
+          ) : (
+            sorted.map((card) => {
+              const fullId = `${card.domain}/${card.cardId}`;
+              return (
+                <ModalCardRow
+                  key={card.cardId}
+                  card={card}
+                  characterId={characterId}
+                  isInLoadout={loadoutIds.includes(fullId)}
+                  isInVault={vaultIds.includes(fullId)}
+                  isFull={isFull}
+                  restType={restType}
+                />
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface ModalCardRowProps {
+  card: DomainCard;
+  characterId: string;
+  isInLoadout: boolean;
+  isInVault: boolean;
+  isFull: boolean;
+  restType: "short" | "long" | "none";
+}
+
+function ModalCardRow({
+  card,
+  characterId,
+  isInLoadout,
+  isInVault,
+  isFull,
+  restType,
+}: ModalCardRowProps) {
+  const { fire, isPending, inlineError } = useActionButton(characterId);
+  const flushPendingSave = useCharacterStore((s) => s.flushPendingSave);
+  const viewerMode = useViewerMode();
+  const [expanded, setExpanded] = useState(false);
+  const errorId = React.useId();
+
+  const handleAddToVault = async () => {
+    if (viewerMode) return;
+    await flushPendingSave();
+    fire("acquire-domain-card", { cardId: `${card.domain}/${card.cardId}` });
+  };
+
+  const handleAddToLoadout = async () => {
+    if (viewerMode) return;
+    await flushPendingSave();
+    fire("swap-loadout-card", {
+      vaultCardId: `${card.domain}/${card.cardId}`,
+      restType,
+      n: card.recallCost ?? card.level ?? 0,
+      isCursed: card.isCursed ?? false,
+      isLinkedCurse: card.isLinkedCurse ?? false,
+    });
+  };
+
+  return (
+    <div className="rounded-lg border border-steel-400/20 bg-slate-900/50">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
+        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-slate-800/40 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#577399]"
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-sm font-medium text-parchment-100 truncate">
+              {card.name}
+            </span>
+            <SourceBadge source={card.source} size="sm" />
+            {card.isGrimoire && (
+              <span className="text-xs uppercase tracking-wider text-[#daa520]/70">
+                Grimoire
+              </span>
+            )}
+            {card.isCursed && (
+              <span title="Cursed" className="text-xs text-burgundy-400 font-bold">
+                ★
+              </span>
+            )}
+            {card.isLinkedCurse && (
+              <span title="Linked Curse" className="text-xs text-burgundy-400 font-bold">
+                ↔
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-xs text-parchment-500 uppercase">{card.domain}</span>
+            <span className="rounded-full border border-gold-800 px-1.5 text-xs font-bold text-gold-500">
+              Lv {card.level}
+            </span>
+            <span className="text-xs text-parchment-600">⚡{card.recallCost}</span>
+          </div>
+        </div>
+        <i
+          className={`fa-solid fa-chevron-right text-parchment-600 text-xs transition-transform duration-150 ${
+            expanded ? "rotate-90" : ""
+          }`}
+          aria-hidden="true"
+        />
+      </button>
+
+      {expanded && (
+        <div className="border-t border-slate-700/30 px-3 py-2 space-y-2">
+          <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 px-3 py-2">
+            {card.isGrimoire && card.grimoire.length > 0 ? (
+              <div className="space-y-2">
+                {card.grimoire.map((ability, i) => (
+                  <div key={i}>
+                    <p className="text-xs font-semibold text-[#f7f7ff]">{ability.name}</p>
+                    <MarkdownContent className="text-xs text-parchment-500">
+                      {ability.description}
+                    </MarkdownContent>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <MarkdownContent className="text-xs text-parchment-500">
+                {card.description}
+              </MarkdownContent>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {isInLoadout ? (
+              <span className="rounded border border-[#577399]/40 bg-[#577399]/10 px-2 py-1 text-xs font-semibold text-[#6a8fb5]">
+                In loadout
+              </span>
+            ) : isInVault ? (
+              <>
+                <span className="rounded border border-steel-400/30 bg-slate-800 px-2 py-1 text-xs text-parchment-400">
+                  In vault
+                </span>
+                <button
+                  type="button"
+                  onClick={handleAddToLoadout}
+                  disabled={isPending || isFull}
+                  aria-busy={isPending}
+                  className="rounded px-3 py-1.5 text-xs font-semibold bg-[#577399] text-[#f7f7ff] hover:bg-[#577399]/80
+                    disabled:opacity-40 disabled:cursor-not-allowed
+                    focus:outline-none focus:ring-2 focus:ring-gold-500 transition-colors"
+                >
+                  {isPending ? "…" : isFull ? "Loadout full" : "Add to loadout"}
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={handleAddToVault}
+                disabled={isPending}
+                aria-busy={isPending}
+                className="rounded px-3 py-1.5 text-xs font-semibold bg-[#577399] text-[#f7f7ff] hover:bg-[#577399]/80
+                  disabled:opacity-40 disabled:cursor-not-allowed
+                  focus:outline-none focus:ring-2 focus:ring-gold-500 transition-colors"
+              >
+                {isPending ? "Adding…" : "Add to vault"}
+              </button>
+            )}
+          </div>
+
+          <InlineActionError message={inlineError} id={errorId} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Help text ────────────────────────────────────────────────────────────────
+
+function FullLoadoutHelp() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="rounded-lg border border-[#577399]/30 bg-[#577399]/8 px-3 py-2.5 flex items-start gap-2"
+    >
+      <i className="fa-solid fa-circle-info text-steel-accessible mt-0.5" aria-hidden="true" />
+      <p className="text-xs sidebar-text-secondary">
+        To add a domain card from the vault, first put a domain card from your
+        loadout back into the Vault.
+      </p>
+    </div>
+  );
+}
+
+function RoomAvailableHelp() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="rounded-lg border border-[#f7b500]/50 bg-[#f7b500]/8 px-3 py-2.5 flex items-start gap-2"
+    >
+      <i
+        className="fa-solid fa-triangle-exclamation text-[#f7b500] mt-0.5"
+        aria-hidden="true"
+      />
+      <p className="text-xs sidebar-text-secondary">
+        You have available space in your loadout to add additional domain cards
+        from the Vault.
+      </p>
+    </div>
   );
 }
 
@@ -1346,67 +1396,129 @@ function DisplacePickerItem({
 
 export function DomainLoadout({
   onRollQueued,
-}: { onRollQueued?: () => void } = {}) {
-  const { activeCharacter, removeFromLoadout, reorderLoadout } =
-    useCharacterStore();
-  const [showPicker, setShowPicker] = useState(false);
-  const [pickerMode, setPickerMode] = useState<"swap" | "acquire">("swap");
+  restType = "none",
+}: { onRollQueued?: () => void; restType?: "short" | "long" | "none" } = {}) {
+  const { activeCharacter, flushPendingSave } = useCharacterStore();
+  const viewerMode = useViewerMode();
   const [drillCard, setDrillCard] = useState<DomainCard | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(true);
+  const [vaultOpen, setVaultOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
 
   // Drag state
-  const dragIndex = useRef<number | null>(null);
-  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+  const [activeDrag, setActiveDrag] = useState<ActiveDrag>(null);
+  const [dragCard, setDragCard] = useState<DomainCard | null>(null);
+  const [overTarget, setOverTarget] = useState<"loadout" | "vault" | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor),
+  );
+
+  const moveAction = useActionButton(activeCharacter?.characterId ?? "");
+  const swapAction = useActionButton(activeCharacter?.characterId ?? "");
+
+  const domainLoadout = activeCharacter?.domainLoadout ?? [];
+  const domainVault = activeCharacter?.domainVault ?? [];
+  const characterId = activeCharacter?.characterId ?? "";
+
+  const isFull = domainLoadout.length >= 5;
+  const loadoutNotFull = !isFull;
+
+  // The vault shows only cards not currently in the loadout. Filtering here
+  // keeps a cardId from being a draggable in both containers at once (which
+  // caused dnd-kit to pick up both cards when the data was momentarily shared).
+  const vaultOnlyIds = useMemo(
+    () => domainVault.filter((id) => !domainLoadout.includes(id)),
+    [domainVault, domainLoadout],
+  );
+
+  // Lock loadout order into tier (level ascending).
+  const [cardLevels, setCardLevels] = useState<Record<string, number>>({});
+  const registerLevel = useCallback((cardId: string, lvl: number) => {
+    setCardLevels((prev) => (prev[cardId] === lvl ? prev : { ...prev, [cardId]: lvl }));
+  }, []);
+  const sortedLoadout = useMemo(() => {
+    return [...domainLoadout].sort(
+      (a, b) => (cardLevels[a] ?? 0) - (cardLevels[b] ?? 0),
+    );
+  }, [domainLoadout, cardLevels]);
+
+  const handleMoveToVault = useCallback(
+    async (cardId: string) => {
+      if (viewerMode) return;
+      await flushPendingSave();
+      moveAction.fire("move-loadout-to-vault", { cardId });
+    },
+    [moveAction, flushPendingSave, viewerMode],
+  );
+
+  const handleAddToLoadout = useCallback(
+    async (card: DomainCard) => {
+      if (viewerMode) return;
+      await flushPendingSave();
+      swapAction.fire("swap-loadout-card", {
+        vaultCardId: `${card.domain}/${card.cardId}`,
+        restType,
+        n: card.recallCost ?? card.level ?? 0,
+        isCursed: card.isCursed ?? false,
+        isLinkedCurse: card.isLinkedCurse ?? false,
+      });
+    },
+    [swapAction, restType, flushPendingSave, viewerMode],
+  );
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const data = event.active.data.current as DragData | undefined;
+    if (!data) return;
+    setActiveDrag({ container: data.container, cardId: data.cardId });
+    setDragCard(data.card ?? null);
+    setOverTarget(null);
+    // Auto-expand the vault so a loadout→vault drag has a visible drop target.
+    if (data.container === "loadout") {
+      setVaultOpen(true);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const overId = event.over?.id;
+    if (overId === "vault") setOverTarget("vault");
+    else if (overId === "loadout") setOverTarget("loadout");
+    else setOverTarget(null);
+  }, []);
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const data = event.active.data.current as DragData | undefined;
+      const overId = event.over?.id;
+      if (data?.container === "loadout" && overId === "vault") {
+        handleMoveToVault(data.cardId);
+      } else if (
+        data?.container === "vault" &&
+        overId === "loadout" &&
+        data.card
+      ) {
+        handleAddToLoadout(data.card);
+      }
+      setActiveDrag(null);
+      setDragCard(null);
+      setOverTarget(null);
+    },
+    [handleMoveToVault, handleAddToLoadout],
+  );
+
+  const handleDragCancel = useCallback(() => {
+    setActiveDrag(null);
+    setDragCard(null);
+    setOverTarget(null);
+  }, []);
+
+  const cardNameOf = useCallback((id: string) => {
+    const parts = id.includes("/") ? id.split("/") : null;
+    return parts?.[1] ?? id;
+  }, []);
 
   if (!activeCharacter) return null;
-
-  const {
-    domainLoadout,
-    domainVault,
-    characterId,
-    classId,
-    level,
-    multiclassDomainId,
-  } = activeCharacter;
-
-  const handleDragStart = (index: number) => {
-    dragIndex.current = index;
-    setDraggingIndex(index);
-  };
-
-  const handleDragEnter = (index: number) => {
-    if (dragIndex.current === null || dragIndex.current === index) return;
-    reorderLoadout(dragIndex.current, index);
-    dragIndex.current = index;
-    setDraggingIndex(index);
-  };
-
-  const handleDragEnd = () => {
-    dragIndex.current = null;
-    setDraggingIndex(null);
-  };
-
-  // Determine which mode to show and what button text to use
-  const canSwap = domainVault.length > 0;
-  const canAcquire = classId !== undefined; // Need class to determine eligible domains
-  const isFull = domainLoadout.length >= 5;
-
-  const handleTogglePicker = () => {
-    if (showPicker) {
-      setShowPicker(false);
-    } else {
-      // If vault is empty but can acquire, start with acquire mode
-      // If vault has cards, start with swap mode
-      setPickerMode(canSwap ? "swap" : "acquire");
-      setShowPicker(true);
-    }
-  };
-
-  const handleModeSwitch = (newMode: "swap" | "acquire") => {
-    setPickerMode(newMode);
-  };
-
-  // Collected acquired card IDs (loadout + vault)
-  const acquiredCardIds = new Set(domainLoadout.concat(domainVault));
 
   return (
     <>
@@ -1416,194 +1528,252 @@ export function DomainLoadout({
         onRollQueued={onRollQueued}
         characterName={activeCharacter?.name}
       />
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-parchment-400">
-            Active Loadout{" "}
-            <span className="text-parchment-600">
-              ({domainLoadout.length}/5)
-            </span>
-          </h3>
-          <button
-            type="button"
-            onClick={handleTogglePicker}
-            aria-expanded={showPicker}
-            aria-controls="domain-card-picker"
-            data-field-key="loadout.change"
-            className="
-            rounded px-2 py-0.5 text-xs font-semibold
-            bg-steel-400/15 text-parchment-300 border border-steel-400/40
-            hover:bg-steel-400/25 hover:border-steel-400 transition-colors
-            focus:outline-none focus:ring-2 focus:ring-gold-500
-          "
-          >
-            {showPicker
-              ? "Hide"
-              : isFull && canSwap
-                ? "Swap Card"
-                : domainLoadout.length > 0
-                  ? "Change Loadout"
-                  : "Add Card"}
-          </button>
+
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+        accessibility={{
+          screenReaderInstructions: {
+            draggable:
+              "To pick up this domain card, press Space or Enter. While dragging, use the arrow keys to move it between the loadout and vault. Press Space or Enter to drop, or Escape to cancel.",
+          },
+          announcements: {
+            onDragStart: ({ active }) =>
+              `Picked up ${cardNameOf(String(active.id))}.`,
+            onDragOver: ({ active, over }) =>
+              over
+                ? `${cardNameOf(String(active.id))} is over ${over.id === "vault" ? "the vault" : "the loadout"}.`
+                : `${cardNameOf(String(active.id))} is not over a drop area.`,
+            onDragEnd: ({ active, over }) =>
+              over
+                ? `${cardNameOf(String(active.id))} was dropped in ${over.id === "vault" ? "the vault" : "the loadout"}.`
+                : `${cardNameOf(String(active.id))} was returned to its original location.`,
+            onDragCancel: ({ active }) =>
+              `Move cancelled. ${cardNameOf(String(active.id))} returned to its original location.`,
+          },
+        }}
+      >
+        <div className="space-y-3">
+          {/* Drawer header */}
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => setDrawerOpen((o) => !o)}
+              aria-expanded={drawerOpen}
+              aria-controls="domain-cards-drawer"
+              className="flex items-center gap-2 group"
+            >
+              <i
+                className={`fa-solid fa-chevron-right w-3.5 h-3.5 shrink-0 text-center text-[0.6rem] leading-[0.875rem] text-steel-accessible transition-transform duration-150 ${
+                  drawerOpen ? "rotate-90" : ""
+                }`}
+                aria-hidden="true"
+              />
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-parchment-400 group-hover:text-parchment-200 transition-colors">
+                Domain Cards{" "}
+                <span className="text-parchment-600">
+                  ({domainLoadout.length}/5 · {vaultOnlyIds.length} in vault)
+                </span>
+              </h3>
+            </button>
+            {!viewerMode && (
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
+                data-field-key="loadout.add"
+                className="
+                  rounded-lg border border-gold-800/60 bg-gold-950/20 px-3 py-1.5
+                  text-xs font-semibold text-gold-300
+                  hover:bg-gold-900/30 hover:border-gold-700
+                  focus:outline-none focus:ring-2 focus:ring-gold-500
+                  transition-colors
+                "
+              >
+                ＋ Add a domain card
+              </button>
+            )}
+          </div>
+
+          {drawerOpen && (
+            <div id="domain-cards-drawer" className="space-y-4">
+              {/* Warning help (not full) above loadout */}
+              {loadoutNotFull && <RoomAvailableHelp />}
+
+              {/* Loadout zone (droppable) */}
+              <LoadoutDropZone
+                isOver={overTarget === "loadout"}
+                dimmed={activeDrag?.container === "vault"}
+              >
+                {sortedLoadout.length === 0 ? (
+                  <p className="text-sm text-parchment-500">
+                    No cards in loadout.
+                  </p>
+                ) : (
+                  <div role="list" className="space-y-2">
+                    {sortedLoadout.map((cardId, index) => (
+                      <div key={`${cardId}-${index}`} data-field-key={`loadout.card.${index}`}>
+                        <LoadoutCard
+                          cardId={cardId}
+                          characterId={characterId}
+                          onDrill={setDrillCard}
+                          onMoveToVault={handleMoveToVault}
+                          onRegisterLevel={registerLevel}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </LoadoutDropZone>
+
+              {/* Vault section (collapsible + droppable) */}
+              <section>
+                <button
+                  type="button"
+                  onClick={() => setVaultOpen((o) => !o)}
+                  aria-expanded={vaultOpen}
+                  aria-controls="domain-vault-panel"
+                  className="flex items-center gap-2 group w-full text-left"
+                >
+                  <i
+                    className={`fa-solid fa-chevron-right w-3.5 h-3.5 shrink-0 text-center text-[0.6rem] leading-[0.875rem] text-steel-accessible transition-transform duration-150 ${
+                      vaultOpen ? "rotate-90" : ""
+                    }`}
+                    aria-hidden="true"
+                  />
+                  <span className="text-xs uppercase tracking-widest text-[#b9baa3] font-medium group-hover:text-[#f7f7ff] transition-colors">
+                    Vault
+                  </span>
+                  <span className="text-xs text-parchment-600">
+                    {vaultOnlyIds.length} card{vaultOnlyIds.length !== 1 ? "s" : ""}
+                  </span>
+                </button>
+
+                {vaultOpen && (
+                  <div id="domain-vault-panel" className="mt-2 space-y-2">
+                    {/* Info help (full) above vault */}
+                    {isFull && <FullLoadoutHelp />}
+
+                    <VaultDropZone
+                      isOver={overTarget === "vault"}
+                      dimmed={activeDrag?.container === "loadout"}
+                    >
+                      {vaultOnlyIds.length === 0 ? (
+                        <p className="text-sm text-parchment-500">
+                          Vault is empty.
+                        </p>
+                      ) : (
+                        <div role="list" className="grid gap-2 sm:grid-cols-2">
+                          {vaultOnlyIds.map((cardId) => (
+                            <VaultCard
+                              key={cardId}
+                              cardId={cardId}
+                              disabled={isFull}
+                              onAddToLoadout={handleAddToLoadout}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </VaultDropZone>
+                  </div>
+                )}
+              </section>
+            </div>
+          )}
+
+          <InlineActionError
+            message={moveAction.inlineError ?? swapAction.inlineError}
+          />
         </div>
 
-        {/* Loadout slots */}
-        {domainLoadout.length === 0 ? (
-          <p className="text-sm text-parchment-500">
-            No cards in loadout.
-          </p>
-        ) : (
-          <div role="list" className="space-y-2">
-            {domainLoadout.map((cardId, index) => (
-              <div
-                key={`${cardId}-${index}`}
-                data-field-key={`loadout.card.${index}`}
-              >
-                <LoadoutCardSlot
-                  cardId={cardId}
-                  index={index}
-                  total={domainLoadout.length}
-                  characterId={characterId}
-                  onRemove={() => removeFromLoadout(cardId)}
-                  onMoveUp={() => index > 0 && reorderLoadout(index, index - 1)}
-                  onMoveDown={() =>
-                    index < domainLoadout.length - 1 &&
-                    reorderLoadout(index, index + 1)
-                  }
-                  onDrill={setDrillCard}
-                  isDragging={draggingIndex === index}
-                  onDragStart={() => handleDragStart(index)}
-                  onDragEnter={() => handleDragEnter(index)}
-                  onDragEnd={handleDragEnd}
-                />
+        <DragOverlay>
+          {dragCard ? (
+            <div className="rounded-lg border border-gold-500 bg-slate-800 shadow-card-fantasy-hover p-3 w-64 cursor-grabbing">
+              <div className="text-sm font-semibold text-parchment-100 truncate">
+                {dragCard.name}
               </div>
-            ))}
-          </div>
-        )}
-
-        {/* Empty slots — clickable to open card picker */}
-        {domainLoadout.length < 5 && (
-          <div className="flex gap-1.5">
-            {Array.from({ length: 5 - domainLoadout.length }, (_, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => {
-                  setPickerMode(canSwap ? "swap" : "acquire");
-                  setShowPicker(true);
-                }}
-                aria-label="Add a domain card"
-                className="h-8 flex-1 rounded border border-dashed border-steel-400/30 bg-slate-900/30
-                  hover:border-steel-400/60 hover:bg-steel-400/5 transition-colors
-                  focus:outline-none focus:ring-2 focus:ring-gold-500
-                  flex items-center justify-center text-parchment-700 text-xs"
-              >
-                +
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Vault summary — always visible when vault has cards and picker is closed */}
-        {!showPicker && canSwap && (
-          <button
-            type="button"
-            onClick={() => {
-              setPickerMode("swap");
-              setShowPicker(true);
-            }}
-            className="w-full flex items-center justify-between rounded-lg border border-steel-400/20 bg-slate-900/30
-              px-3 py-2 text-xs text-parchment-500 hover:border-steel-400/40 hover:bg-slate-800/40
-              transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500"
-          >
-            <span>{domainVault.length} card{domainVault.length !== 1 ? "s" : ""} in vault</span>
-            <span className="text-parchment-600">Tap to swap ›</span>
-          </button>
-        )}
-
-        {/* Card picker — toggles between Swap and Acquire modes */}
-        {showPicker && (
-          <div id="domain-card-picker">
-            {/* SRD explanation */}
-            <CollapsibleSRDDescription
-              title="Vault & Loadout"
-              heightThreshold={400}
-              content={
-                "Your **Vault** holds every domain card you have unlocked. Your **Loadout** is the subset of up to 5 cards you can use during play. " +
-                "During a **rest**, you may freely swap cards between your vault and loadout at no cost. " +
-                "Outside of a rest, swapping a card from your vault into your loadout costs **Stress** equal to the card's Recall Cost (the lightning bolt number)."
-              }
-            />
-
-            {/* Mode toggle buttons */}
-            <div className="flex gap-2 mb-3">
-              {canSwap && (
-                <button
-                  type="button"
-                  onClick={() => handleModeSwitch("swap")}
-                  aria-pressed={pickerMode === "swap"}
-                  className={`
-                  flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-colors
-                  focus:outline-none focus:ring-2 focus:ring-gold-500
-                  ${
-                    pickerMode === "swap"
-                      ? "bg-gold-800/80 text-parchment-100 border border-gold-600 shadow-sm"
-                      : "bg-slate-800 text-parchment-400 border border-slate-700 hover:bg-slate-700"
-                  }
-                `}
-                >
-                  {pickerMode === "swap" ? "▸ " : ""}Swap from Vault ({domainVault.length})
-                </button>
-              )}
-              {canAcquire && (
-                <button
-                  type="button"
-                  onClick={() => handleModeSwitch("acquire")}
-                  aria-pressed={pickerMode === "acquire"}
-                  className={`
-                  flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-colors
-                  focus:outline-none focus:ring-2 focus:ring-gold-500
-                  ${
-                    pickerMode === "acquire"
-                      ? "bg-gold-800/80 text-parchment-100 border border-gold-600 shadow-sm"
-                      : "bg-slate-800 text-parchment-400 border border-slate-700 hover:bg-slate-700"
-                  }
-                `}
-                >
-                  {pickerMode === "acquire" ? "▸ " : ""}Acquire New Card
-                </button>
-              )}
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-xs text-parchment-500 uppercase">
+                  {dragCard.domain}
+                </span>
+                <span className="rounded-full border border-gold-800 px-1.5 text-xs font-bold text-gold-500">
+                  Lv {dragCard.level}
+                </span>
+              </div>
             </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
-            {/* Swap mode — show vault picker */}
-            {pickerMode === "swap" && canSwap && (
-              <VaultPicker
-                vaultIds={domainVault}
-                loadoutIds={domainLoadout}
-                characterId={characterId}
-                characterLevel={level}
-                onClose={() => setShowPicker(false)}
-              />
-            )}
-
-            {/* Acquire mode — show acquire picker */}
-            {pickerMode === "acquire" && classId !== undefined && (
-              <AcquireCardPicker
-                classId={classId}
-                characterLevel={level}
-                characterId={characterId}
-                acquiredCardIds={acquiredCardIds}
-                loadoutIds={domainLoadout}
-                multiclassDomainId={multiclassDomainId}
-                onCardAcquired={() => {
-                  setShowPicker(false);
-                }}
-                onClose={() => setShowPicker(false)}
-              />
-            )}
-          </div>
-        )}
-      </div>
+      {modalOpen && (
+        <AddCardModal
+          characterId={characterId}
+          loadoutIds={domainLoadout}
+          vaultIds={domainVault}
+          isFull={isFull}
+          restType={restType}
+          onClose={() => setModalOpen(false)}
+        />
+      )}
     </>
+  );
+}
+
+// ─── Drop zone wrappers ───────────────────────────────────────────────────────
+
+function LoadoutDropZone({
+  children,
+  isOver,
+  dimmed,
+}: {
+  children: React.ReactNode;
+  isOver: boolean;
+  dimmed: boolean;
+}) {
+  const { setNodeRef } = useDroppable({ id: "loadout" });
+  return (
+    <section
+      ref={setNodeRef}
+      aria-label="Active loadout"
+      className={[
+        "rounded-lg transition-all duration-150",
+        isOver
+          ? "border-2 border-dashed border-gold-400/80 bg-gold-500/10"
+          : "border-2 border-dashed border-transparent",
+        dimmed ? "opacity-40 pointer-events-none saturate-[0.85]" : "",
+      ].join(" ")}
+    >
+      {children}
+    </section>
+  );
+}
+
+function VaultDropZone({
+  children,
+  isOver,
+  dimmed,
+}: {
+  children: React.ReactNode;
+  isOver: boolean;
+  dimmed: boolean;
+}) {
+  const { setNodeRef } = useDroppable({ id: "vault" });
+  return (
+    <div
+      ref={setNodeRef}
+      aria-label="Domain vault"
+      className={[
+        "rounded-lg p-2 transition-all duration-150",
+        isOver
+          ? "border-2 border-dashed border-gold-400/80 bg-gold-500/10"
+          : "border-2 border-dashed border-transparent",
+        dimmed ? "opacity-40 pointer-events-none saturate-[0.85]" : "",
+      ].join(" ")}
+    >
+      {children}
+    </div>
   );
 }

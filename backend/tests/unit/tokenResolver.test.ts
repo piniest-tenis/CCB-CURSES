@@ -64,6 +64,7 @@ function makeCharacter(overrides: Partial<Character> = {}): Character {
     cardTokens: {},
     downtimeProjects: [],
     activeAuras: [],
+    usage: {},
     companionState: null,
     reputationBonuses: {},
     favors: {},

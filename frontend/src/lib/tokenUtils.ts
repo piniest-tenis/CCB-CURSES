@@ -11,9 +11,11 @@ import type { DomainCard, CoreStatName } from "@shared/types";
  * Returns true when a domain card should show a TokenTracker.
  *
  * Conditions (any one is sufficient):
- *   - card.isCursed
- *   - card.tokenConfig !== undefined
+ *   - card.tokenConfig !== undefined (the card has a genuine token pool)
  *   - cardId is already present in the character's cardTokens map
+ *
+ * NOTE: `card.isCursed` is deliberately NOT a trigger. Cursed (★) cards that
+ * have no token pool (e.g. Manifesting ★) must not render a token tracker.
  */
 export function cardHasTokens(
   card: DomainCard | undefined,
@@ -21,7 +23,7 @@ export function cardHasTokens(
   cardId: string,
 ): boolean {
   if (!card) return false;
-  return card.isCursed || card.tokenConfig !== undefined || cardId in cardTokens;
+  return card.tokenConfig !== undefined || cardId in cardTokens;
 }
 
 // ─── Stat label helper ────────────────────────────────────────────────────────

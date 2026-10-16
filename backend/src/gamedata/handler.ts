@@ -44,6 +44,7 @@ import type {
   DomainSummary,
   RuleEntry,
 } from "@shared/types";
+import { getDomainTokenConfig } from "@shared/tokenConfigs";
 
 // ─── DynamoDB Record Shapes ───────────────────────────────────────────────────
 
@@ -197,7 +198,7 @@ function toAncestryData(record: GameDataRecord): AncestryData {
 }
 
 function toDomainCard(record: DomainCardRecord): DomainCard {
-  return {
+  const result: DomainCard = {
     cardId: record.cardId,
     domain: record.domain,
     level: record.level,
@@ -212,6 +213,16 @@ function toDomainCard(record: DomainCardRecord): DomainCard {
     grimoire: record.grimoire ?? [],
     source: record.source,
   };
+
+  // Attach the curated token config (cap/reset behaviour) only when one exists,
+  // so token-pool cards like Research/Inventor/Theoretical Magic surface a
+  // tracker without serializing `tokenConfig: undefined` for every other card.
+  const tokenConfig = getDomainTokenConfig(record.domain, record.cardId);
+  if (tokenConfig) {
+    result.tokenConfig = tokenConfig;
+  }
+
+  return result;
 }
 
 function toRuleEntry(record: GameDataRecord): RuleEntry {

@@ -27,9 +27,9 @@ describe("cardHasTokens", () => {
     expect(cardHasTokens(card, {}, "test-card")).toBe(false);
   });
 
-  it("returns true for a cursed card", () => {
+  it("returns false for a cursed card with no token pool", () => {
     const card = makeCard({ isCursed: true });
-    expect(cardHasTokens(card, {}, "test-card")).toBe(true);
+    expect(cardHasTokens(card, {}, "test-card")).toBe(false);
   });
 
   it("returns true for a card with tokenConfig", () => {

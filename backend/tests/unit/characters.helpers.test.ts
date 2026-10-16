@@ -1,7 +1,7 @@
 // backend/tests/unit/characters.helpers.test.ts
 // Unit tests for the pure helper functions in src/characters/helpers.ts:
 //   deepMerge, encodeCursor, decodeCursor, signShareToken, verifyShareToken,
-//   validateSrdRules, applyRest, normalizeWeapons
+//   validateSrdRules, applyRest, normalizeWeapons, applyAction
 
 import {
   deepMerge,
@@ -12,9 +12,11 @@ import {
   validateSrdRules,
   applyRest,
   normalizeWeapons,
+  applyAction,
+  usageClearsOn,
 } from "../../src/characters/helpers";
 import { AppError } from "../../src/common/middleware";
-import type { Character } from "@shared/types";
+import type { Character, UsageState } from "@shared/types";
 
 // ─── Shared test fixtures ─────────────────────────────────────────────────────
 
@@ -64,6 +66,7 @@ function makeCharacter(overrides: Partial<Character> = {}): Character {
     cardTokens: {},
     downtimeProjects: [],
     activeAuras: [],
+    usage: {},
     companionState: null,
     reputationBonuses: {},
     favors: {},
@@ -528,5 +531,227 @@ describe("normalizeWeapons", () => {
     expect(result.secondary).toEqual({
       name: null, trait: null, damage: null, range: null, type: null, burden: null, tier: null, feature: null,
     });
+  });
+});
+
+// ─── applyAction: swap-loadout-card ────────────────────────────────────────────
+
+describe("applyAction: swap-loadout-card", () => {
+  function makeSwapCharacter(overrides: Partial<Character> = {}): Character {
+    return makeCharacter({
+      domainVault: ["cursed-card", "normal-card"],
+      domainLoadout: [],
+      trackers: {
+        hp: { max: 6, marked: 0 },
+        stress: { max: 6, marked: 0 },
+        armor: { max: 3, marked: 0 },
+      },
+      ...overrides,
+    });
+  }
+
+  it("charges Recall Cost for a Cursed (★) card swap during a short rest", () => {
+    const char = makeSwapCharacter();
+    const result = applyAction(char, "swap-loadout-card", {
+      vaultCardId: "cursed-card",
+      restType: "short",
+      n: 3,
+      isCursed: true,
+    });
+    expect(result.trackers.stress.marked).toBe(3);
+  });
+
+  it("charges Recall Cost for a Cursed (★) card swap during a long rest", () => {
+    const char = makeSwapCharacter();
+    const result = applyAction(char, "swap-loadout-card", {
+      vaultCardId: "cursed-card",
+      restType: "long",
+      n: 3,
+      isCursed: true,
+    });
+    expect(result.trackers.stress.marked).toBe(3);
+  });
+
+  it("charges Recall Cost for a Cursed (★) card swap mid-play (restType none)", () => {
+    const char = makeSwapCharacter();
+    const result = applyAction(char, "swap-loadout-card", {
+      vaultCardId: "cursed-card",
+      restType: "none",
+      n: 3,
+      isCursed: true,
+    });
+    expect(result.trackers.stress.marked).toBe(3);
+  });
+
+  it("is free for a normal card swap during a short rest", () => {
+    const char = makeSwapCharacter();
+    const result = applyAction(char, "swap-loadout-card", {
+      vaultCardId: "normal-card",
+      restType: "short",
+      n: 3,
+    });
+    expect(result.trackers.stress.marked).toBe(0);
+  });
+
+  it("is free for a normal card swap during a long rest", () => {
+    const char = makeSwapCharacter();
+    const result = applyAction(char, "swap-loadout-card", {
+      vaultCardId: "normal-card",
+      restType: "long",
+      n: 3,
+    });
+    expect(result.trackers.stress.marked).toBe(0);
+  });
+
+  it("charges Recall Cost for a normal card swap mid-play (restType none)", () => {
+    const char = makeSwapCharacter();
+    const result = applyAction(char, "swap-loadout-card", {
+      vaultCardId: "normal-card",
+      restType: "none",
+      n: 3,
+    });
+    expect(result.trackers.stress.marked).toBe(3);
+  });
+});
+
+// ─── usageClearsOn ────────────────────────────────────────────────────────────
+
+describe("usageClearsOn", () => {
+  it("returns false for frequency 'none' on both rest types", () => {
+    expect(usageClearsOn("none", "short")).toBe(false);
+    expect(usageClearsOn("none", "long")).toBe(false);
+  });
+
+  it("clears once-per-rest on both short and long rest", () => {
+    expect(usageClearsOn("once-per-rest", "short")).toBe(true);
+    expect(usageClearsOn("once-per-rest", "long")).toBe(true);
+  });
+
+  it("clears once-per-short-rest on both short and long rest", () => {
+    expect(usageClearsOn("once-per-short-rest", "short")).toBe(true);
+    expect(usageClearsOn("once-per-short-rest", "long")).toBe(true);
+  });
+
+  it("clears once-per-long-rest only on long rest", () => {
+    expect(usageClearsOn("once-per-long-rest", "short")).toBe(false);
+    expect(usageClearsOn("once-per-long-rest", "long")).toBe(true);
+  });
+
+  it("never clears once-per-scene or once-per-session on rest", () => {
+    expect(usageClearsOn("once-per-scene", "short")).toBe(false);
+    expect(usageClearsOn("once-per-scene", "long")).toBe(false);
+    expect(usageClearsOn("once-per-session", "short")).toBe(false);
+    expect(usageClearsOn("once-per-session", "long")).toBe(false);
+  });
+});
+
+// ─── applyAction: usage tracking ──────────────────────────────────────────────
+
+describe("applyAction: usage tracking", () => {
+  it("mark-usage sets an entry with a usedAt timestamp", () => {
+    const char = makeCharacter();
+    const result = applyAction(char, "mark-usage", {
+      usageKey: "Valiance/aura-of-bravery",
+      frequency: "once-per-rest",
+    });
+    expect(result.usage["Valiance/aura-of-bravery"]).toEqual({
+      frequency: "once-per-rest",
+      usedAt: expect.any(String),
+    });
+  });
+
+  it("mark-usage preserves other usage entries", () => {
+    const char = makeCharacter({
+      usage: { "other/key": { frequency: "once-per-session", usedAt: "2024-01-01" } },
+    });
+    const result = applyAction(char, "mark-usage", {
+      usageKey: "Valiance/aura-of-bravery",
+      frequency: "once-per-rest",
+    });
+    expect(result.usage["other/key"]).toEqual({
+      frequency: "once-per-session",
+      usedAt: "2024-01-01",
+    });
+    expect(result.usage["Valiance/aura-of-bravery"]).toBeDefined();
+  });
+
+  it("mark-usage rejects a missing usageKey", () => {
+    const char = makeCharacter();
+    expect(() =>
+      applyAction(char, "mark-usage", { frequency: "once-per-rest" })
+    ).toThrow(AppError);
+  });
+
+  it("mark-usage rejects a missing or 'none' frequency", () => {
+    const char = makeCharacter();
+    expect(() =>
+      applyAction(char, "mark-usage", { usageKey: "k", frequency: "none" })
+    ).toThrow(AppError);
+    expect(() =>
+      applyAction(char, "mark-usage", { usageKey: "k" })
+    ).toThrow(AppError);
+  });
+
+  it("clear-usage removes an entry", () => {
+    const char = makeCharacter({
+      usage: { "some/key": { frequency: "once-per-session", usedAt: "2024-01-01" } },
+    });
+    const result = applyAction(char, "clear-usage", { usageKey: "some/key" });
+    expect(result.usage["some/key"]).toBeUndefined();
+  });
+
+  it("clear-usage rejects a missing usageKey", () => {
+    const char = makeCharacter();
+    expect(() => applyAction(char, "clear-usage", {})).toThrow(AppError);
+  });
+});
+
+// ─── applyAction: reset-rest-usages ───────────────────────────────────────────
+
+describe("applyAction: reset-rest-usages", () => {
+  const seededUsage: UsageState = {
+    rest: { frequency: "once-per-rest", usedAt: "2024-01-01" },
+    short: { frequency: "once-per-short-rest", usedAt: "2024-01-01" },
+    long: { frequency: "once-per-long-rest", usedAt: "2024-01-01" },
+    scene: { frequency: "once-per-scene", usedAt: "2024-01-01" },
+    session: { frequency: "once-per-session", usedAt: "2024-01-01" },
+  };
+
+  it("short rest clears once-per-rest and once-per-short-rest only", () => {
+    const char = makeCharacter({ usage: { ...seededUsage } });
+    const result = applyAction(char, "reset-rest-usages", { restType: "short" });
+    expect(result.usage.rest).toBeUndefined();
+    expect(result.usage.short).toBeUndefined();
+    expect(result.usage.long).toBeDefined();
+    expect(result.usage.scene).toBeDefined();
+    expect(result.usage.session).toBeDefined();
+  });
+
+  it("long rest also clears once-per-long-rest", () => {
+    const char = makeCharacter({ usage: { ...seededUsage } });
+    const result = applyAction(char, "reset-rest-usages", { restType: "long" });
+    expect(result.usage.rest).toBeUndefined();
+    expect(result.usage.short).toBeUndefined();
+    expect(result.usage.long).toBeUndefined();
+    expect(result.usage.scene).toBeDefined();
+    expect(result.usage.session).toBeDefined();
+  });
+
+  it("never clears scene or session usages on either rest type", () => {
+    const char = makeCharacter({ usage: { ...seededUsage } });
+    const short = applyAction(char, "reset-rest-usages", { restType: "short" });
+    const long = applyAction(char, "reset-rest-usages", { restType: "long" });
+    expect(short.usage.scene).toBeDefined();
+    expect(short.usage.session).toBeDefined();
+    expect(long.usage.scene).toBeDefined();
+    expect(long.usage.session).toBeDefined();
+  });
+
+  it("rejects a missing or invalid restType", () => {
+    const char = makeCharacter();
+    expect(() => applyAction(char, "reset-rest-usages", {})).toThrow(AppError);
+    expect(() =>
+      applyAction(char, "reset-rest-usages", { restType: "none" })
+    ).toThrow(AppError);
   });
 });

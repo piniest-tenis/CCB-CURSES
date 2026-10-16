@@ -266,6 +266,7 @@ export const handlePostCharacter = withErrorHandling(
       cardTokens: {},
       downtimeProjects: [],
       activeAuras: [],
+      usage: {},
       companionState: null,
       reputationBonuses: {},
       favors: {},

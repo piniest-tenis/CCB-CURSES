@@ -30,7 +30,7 @@ import React, { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useCharacterAction } from "@/hooks/useCharacter";
 import { ApiError } from "@/lib/api";
-import { InlineActionError } from "./ActionButton";
+import { useActionButton, InlineActionError } from "./ActionButton";
 import { useCharacterStore } from "@/store/characterStore";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -188,8 +188,17 @@ function RestActionButton({
 export function DowntimeModal({ characterId, open, onClose }: DowntimeModalProps) {
   const [restType, setRestType] = useState<"short" | "long">("short");
   const { activeCharacter } = useCharacterStore();
+  const resetUsages = useActionButton(characterId);
 
   const handleClose = () => {
+    onClose();
+  };
+
+  // Completing the rest auto-resets rest-cadence usages (once-per-rest /
+  // once-per-short-rest / once-per-long-rest) while scene/session usages stay
+  // exhausted. The granular rest moves (clear-stress/clear-hp/etc.) are unchanged.
+  const handleDone = async () => {
+    await resetUsages.fire("reset-rest-usages", { restType });
     onClose();
   };
 
@@ -329,16 +338,29 @@ export function DowntimeModal({ characterId, open, onClose }: DowntimeModalProps
             </div>
 
             <button
-              onClick={handleClose}
+              type="button"
+              onClick={handleDone}
+              disabled={resetUsages.isPending}
+              aria-busy={resetUsages.isPending}
+              aria-describedby={resetUsages.inlineError ? "rest-reset-error" : undefined}
               className="
                 w-full rounded-lg py-2.5 font-semibold text-sm
                 bg-slate-700 text-parchment-200 hover:bg-slate-600
                 transition-colors
+                disabled:opacity-50 disabled:cursor-wait
                 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-2 focus:ring-offset-slate-900
               "
             >
-              Done
+              {resetUsages.isPending ? (
+                <span
+                  aria-hidden="true"
+                  className="inline-block h-4 w-4 align-middle animate-spin rounded-full border border-current border-t-transparent"
+                />
+              ) : (
+                "Done"
+              )}
             </button>
+            <InlineActionError message={resetUsages.inlineError} id="rest-reset-error" />
           </div>
         </Dialog.Content>
       </Dialog.Portal>
