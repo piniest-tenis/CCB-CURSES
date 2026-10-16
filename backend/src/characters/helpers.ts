@@ -270,17 +270,23 @@ export function validateSrdRules(character: Partial<Character>): SrdError[] {
 
   if (character.trackers) {
     for (const [key, tracker] of Object.entries(character.trackers)) {
+      if (tracker.marked < 0) {
+        errors.push({
+          field: `trackers.${key}.marked`,
+          issue: `Marked slots cannot be negative (found ${tracker.marked})`,
+        });
+      }
       if (tracker.marked > tracker.max) {
         errors.push({
           field: `trackers.${key}.marked`,
           issue: `Marked slots (${tracker.marked}) cannot exceed max (${tracker.max})`,
         });
       }
-      // SRD page 20: HP and Stress cannot exceed 12.
-      if ((key === "hp" || key === "stress") && tracker.max > 12) {
+      // SRD page 20 (HP/Stress) and page 29 (Armor Score) cap at 12.
+      if ((key === "hp" || key === "stress" || key === "armor") && tracker.max > 12) {
         errors.push({
           field: `trackers.${key}.max`,
-          issue: `${key === "hp" ? "Hit Point" : "Stress"} max cannot exceed 12 (SRD page 20)`,
+          issue: `${key === "hp" ? "Hit Point" : key === "stress" ? "Stress" : "Armor Score"} max cannot exceed 12 (SRD)`,
         });
       }
     }
@@ -659,19 +665,15 @@ export function applyAction(
     }
 
     // ── Stress: clear N marks ────────────────────────────────────────────────
+    // Clamps to zero so "clear all" (n: 99) clears exactly what's marked and
+    // never goes negative (SRD p.21 "Clear all Stress").
     case "clear-stress": {
       const { marked, max } = character.trackers.stress;
-      if (marked < n) {
-        invalidAction(
-          `Cannot clear ${n} stress mark(s) — only ${marked} marked`,
-          "trackers.stress.marked"
-        );
-      }
       return {
         ...character,
         trackers: {
           ...character.trackers,
-          stress: { max, marked: marked - n },
+          stress: { max, marked: Math.max(0, marked - n) },
         },
       };
     }
@@ -679,17 +681,11 @@ export function applyAction(
     // ── HP: clear N marks ────────────────────────────────────────────────────
     case "clear-hp": {
       const { marked, max } = character.trackers.hp;
-      if (marked < n) {
-        invalidAction(
-          `Cannot clear ${n} HP mark(s) — only ${marked} marked`,
-          "trackers.hp.marked"
-        );
-      }
       return {
         ...character,
         trackers: {
           ...character.trackers,
-          hp: { max, marked: marked - n },
+          hp: { max, marked: Math.max(0, marked - n) },
         },
       };
     }
@@ -759,17 +755,11 @@ export function applyAction(
         invalidAction("No companion is active on this character", "companionState");
       }
       const { marked, max } = character.companionState.stress;
-      if (marked < n) {
-        invalidAction(
-          `Cannot clear ${n} companion stress mark(s) — only ${marked} marked`,
-          "companionState.stress.marked"
-        );
-      }
       return {
         ...character,
         companionState: {
           ...character.companionState,
-          stress: { max, marked: marked - n },
+          stress: { max, marked: Math.max(0, marked - n) },
         },
       };
     }
@@ -816,17 +806,11 @@ export function applyAction(
     // ── Armor: clear N marks ──────────────────────────────────────────────────
     case "clear-armor": {
       const { marked, max } = character.trackers.armor;
-      if (marked < n) {
-        invalidAction(
-          `Cannot clear ${n} armor mark(s) — only ${marked} marked`,
-          "trackers.armor.marked"
-        );
-      }
       return {
         ...character,
         trackers: {
           ...character.trackers,
-          armor: { max, marked: marked - n },
+          armor: { max, marked: Math.max(0, marked - n) },
         },
       };
     }
