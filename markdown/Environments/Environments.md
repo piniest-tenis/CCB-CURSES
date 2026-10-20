@@ -1,4 +1,5 @@
 %% Begin Waypoint %%
+- [[Aura of Compulsion]]
 - [[Burning Creep]]
 - [[Creep Infestation]]
 - [[Pogg's Court]]

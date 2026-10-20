@@ -1236,6 +1236,256 @@ const SEED_ADVERSARIES: Adversary[] = [
     createdAt: "2026-10-01T00:00:00Z",
     updatedAt: "2026-10-01T00:00:00Z",
   },
+
+  // ── Corrupted Village adversaries ─────────────────────────────────────────
+
+  {
+    adversaryId: "hb-the-winnower",
+    name: "The Winnower",
+    tier: 2,
+    type: "Bruiser",
+    description:
+      "A final-stage reshaped Ayonik the size of a hay-cart, hunched and patient as a reaper. Six arms of fused grain-bone and villager limbs fan from its shoulders; the black crust rings its eyes and mouth, and it moves with the terrible slowness of a body that has already decided what it is. It harvests, and it is not angry — only hungry.",
+    difficulty: 14,
+    hp: 7,
+    stress: 3,
+    damageThresholds: { major: 14, severe: 28 },
+    attackModifier: 1,
+    attackRange: "Very Close",
+    attackDamage: "2d12+2 physical",
+    features: [
+      {
+        name: "Noxious Hide - Passive",
+        description:
+          "The Winnower's skin weeps Creep. All targets within Melee range must succeed on an Agility Reaction Roll (12) or mark a Stress. A character who marks two Stress this way gains the Creep-Touched condition.",
+      },
+      {
+        name: "Reap and Gather - Action",
+        description:
+          "Mark a Stress to make a standard attack against up to two targets within Very Close range. On a success against a target, that target is also dragged into Melee range and Restrained (break free with a Strength Roll (14)).",
+      },
+      {
+        name: "Momentum - Reaction",
+        description:
+          "When the Winnower makes a successful attack against a PC, you gain a Fear.",
+      },
+    ],
+    imageUrl: null,
+    source: "homebrew",
+    campaignId: null,
+    createdAt: "2026-10-19T00:00:00Z",
+    updatedAt: "2026-10-19T00:00:00Z",
+  },
+
+  {
+    adversaryId: "hb-the-granary-colossus",
+    name: "The Granary Colossus",
+    tier: 2,
+    type: "Bruiser",
+    description:
+      "What was once the village granary is now a semi-corporeal column of fused villagers and rotted grain, rooted where it stood, asymmetric and weeping. Faces press up beneath its skin — some still moving their mouths — and the black water it sweats pools in a dark ring around its base. It does not chase; it waits for the Creep to do the chasing.",
+    difficulty: 14,
+    hp: 7,
+    stress: 4,
+    damageThresholds: { major: 14, severe: 28 },
+    attackModifier: 0,
+    attackRange: "Very Close",
+    attackDamage: "2d12+3 physical",
+    features: [
+      {
+        name: "Creep Pool - Passive",
+        description:
+          "At the start of each GM turn, the area within Close range of the Colossus becomes saturated with pooled Creep (this is exposed Creep). A PC who ends their turn within Close range must succeed on an Agility Reaction Roll (12) or mark a Stress; a character who marks two Stress this way gains the Creep-Touched condition. The pool can be ignited by the Ember-Driven Villager or any fire.",
+      },
+      {
+        name: "Semi-Corporeal - Passive",
+        description:
+          "The Colossus takes half damage from physical attacks.",
+      },
+      {
+        name: "Collapse - Action",
+        description:
+          "Mark a Stress to sag its whole mass. Make an attack against all targets within Very Close range; targets it succeeds against take 2d6+3 physical damage and are knocked back to Close range.",
+      },
+      {
+        name: "Overflow - Reaction",
+        description:
+          "When the Colossus takes damage that marks its Major threshold, the Creep Pool surges. All PCs within Close range must succeed on an Agility Reaction Roll (13) or mark a Stress (two Stress → Creep-Touched).",
+      },
+    ],
+    imageUrl: null,
+    source: "homebrew",
+    campaignId: null,
+    createdAt: "2026-10-19T00:00:00Z",
+    updatedAt: "2026-10-19T00:00:00Z",
+  },
+
+  {
+    adversaryId: "hb-the-red-tunic",
+    name: "The Red Tunic",
+    tier: 2,
+    type: "Bruiser",
+    description:
+      "The child in the red tunic and belt was never resisting — she never needed to drink. She is the forest's own, the one already claimed before the wells were touched, and the village mistook her stillness for innocence. Beneath the tunic she is dihedrally symmetric, too many joints, a face that is only a child's when someone is looking.",
+    difficulty: 15,
+    hp: 7,
+    stress: 3,
+    damageThresholds: { major: 14, severe: 28 },
+    attackModifier: 2,
+    attackRange: "Melee",
+    attackDamage: "2d12+4 physical",
+    features: [
+      {
+        name: "Still in Her - Passive",
+        description:
+          "She wears the image of the village's last innocent: the child who never drank. Until a PC succeeds on an Instinct Reaction Roll (15) to see what she truly is, all PCs have disadvantage on attack rolls against her — they cannot bring themselves to strike a child. Once pierced, the illusion breaks for the whole party, and what remains is worse.",
+      },
+      {
+        name: "Under the Skin - Action",
+        description:
+          "She presses a too-cold hand to a target within Melee range and leaves a Creep filament beneath the skin. The target must succeed on an Agility Reaction Roll (14) or the filament takes root: at the start of each of the target's turns they mark a Stress and take 1d4 magical damage as it grows toward the heart (two Stress this way → Creep-Touched). The filament can be cut out with a Finesse Roll (15), or burned out (the target takes 1d6 fire damage and the effect ends).",
+      },
+      {
+        name: "Too Many Joints - Action",
+        description:
+          "Mark a Stress to move up to Far range in a burst of wrong, jointed motion — a crawl that is too fast — then make a standard attack.",
+      },
+      {
+        name: "Noxious Kiss - Reaction",
+        description:
+          "When a PC within Melee range damages her, she exhales a bloom of Creep into their mouth and eyes. That PC must succeed on an Agility Reaction Roll (14) or take 1d8 magical damage and mark a Stress (two Stress → Creep-Touched).",
+      },
+    ],
+    imageUrl: null,
+    source: "homebrew",
+    campaignId: null,
+    createdAt: "2026-10-19T00:00:00Z",
+    updatedAt: "2026-10-19T00:00:00Z",
+  },
+
+  {
+    adversaryId: "hb-gift-bloated-villager",
+    name: "Gift-Bloated Villager",
+    tier: 1,
+    type: "Minion",
+    description:
+      "A medial-stage villager whose belly is grossly distended with Creep-touched well-water, lips black-crusted, still muttering \"thank the forest\" as they shamble. They beg you to drink even as they leak. Killing them is the mistake.",
+    difficulty: 10,
+    hp: 1,
+    stress: 1,
+    damageThresholds: { major: null, severe: null },
+    attackModifier: -2,
+    attackRange: "Melee",
+    attackDamage: "2 physical",
+    features: [
+      {
+        name: "Minion (3) - Passive",
+        description:
+          "This adversary is defeated when they take any damage. For every 3 damage a PC deals to them, defeat an additional Minion within range the attack would succeed against.",
+      },
+      {
+        name: "Creep Payload - Passive",
+        description:
+          "When this adversary is defeated, they burst. All targets within Close range must succeed on an Agility Reaction Roll (12) or mark a Stress (two Stress → Creep-Touched). Their body then leaves exposed Creep in its space, which an Ember-Driven Villager can ignite.",
+      },
+      {
+        name: "Group Attack - Action",
+        description:
+          "Spend a Fear to choose a target and spotlight all Gift-Bloated Villagers within Close range of them. Those Minions move into Melee range of the target and make one shared attack roll. On a success, they deal 2 physical damage each. Combine this damage.",
+      },
+    ],
+    imageUrl: null,
+    source: "homebrew",
+    campaignId: null,
+    createdAt: "2026-10-19T00:00:00Z",
+    updatedAt: "2026-10-19T00:00:00Z",
+  },
+
+  {
+    adversaryId: "hb-ember-driven-villager",
+    name: "Ember-Driven Villager",
+    tier: 1,
+    type: "Minion",
+    description:
+      "A medial-stage villager clutching a stolen ember in a cracked clay cup, eyes hollow as lantern-sockets, jaw slack with lockjaw. They are drawn, inexorably and silently, toward any black water they can see — and they mean to set it burning.",
+    difficulty: 10,
+    hp: 1,
+    stress: 1,
+    damageThresholds: { major: null, severe: null },
+    attackModifier: -2,
+    attackRange: "Melee",
+    attackDamage: "2 physical",
+    features: [
+      {
+        name: "Minion (3) - Passive",
+        description:
+          "This adversary is defeated when they take any damage. For every 3 damage a PC deals to them, defeat an additional Minion within range the attack would succeed against.",
+      },
+      {
+        name: "Compelled to Kindle - Passive",
+        description:
+          "If any exposed Creep is present in the scene, this villager is compelled to ignite it. At the GM's next opportunity it moves to the exposed Creep and lights it, applying the Burning Creep environment's effects to the scene. It cannot be dissuaded except by being slain, restrained, or the party removing or covering all exposed Creep. It will not attack while there is Creep to burn.",
+      },
+      {
+        name: "Group Attack - Action",
+        description:
+          "Spend a Fear to choose a target and spotlight all Ember-Driven Villagers within Close range of them. Those Minions move into Melee range of the target and make one shared attack roll. On a success, they deal 2 physical damage each. Combine this damage.",
+      },
+    ],
+    imageUrl: null,
+    source: "homebrew",
+    campaignId: null,
+    createdAt: "2026-10-19T00:00:00Z",
+    updatedAt: "2026-10-19T00:00:00Z",
+  },
+
+  {
+    adversaryId: "hb-mooz-keeper-of-the-gift",
+    name: "Mooz, Keeper of the Gift",
+    tier: 3,
+    type: "Social",
+    description:
+      "Two tons of reshaped flesh, yet she kept her face, her memory, and her voice — because she chose the gift, and the forest lets the willing keep who they were. Mooz is not lying: she genuinely believes the forest is saving this town, and she will press that mercy on you with the tenderness of something that has forgotten you might say no.",
+    difficulty: 17,
+    hp: 6,
+    stress: 5,
+    damageThresholds: { major: 16, severe: 32 },
+    attackModifier: 0,
+    attackRange: "Very Close",
+    attackDamage: "3d4+2 physical",
+    features: [
+      {
+        name: "Unbidden Knowing - Passive",
+        description:
+          "Mooz knows things she was never told. The first time each scene a PC tries to lie to her, conceal a plan, or discuss her in secret, she finishes their sentence or names a memory they never shared. That PC must succeed on a Presence Reaction Roll (17) or mark a Stress and gain disadvantage on their next action roll against her.",
+      },
+      {
+        name: "Sincere as the Rot - Passive",
+        description:
+          "Mooz is not deceiving anyone. Attempts to detect deception, catch her in a lie, or shake her conviction by exposing a falsehood fail automatically — there is no falsehood to expose. A PC may still negotiate, refuse, or persuade her to wait, but they cannot win by proving her wrong.",
+      },
+      {
+        name: "Offer the Cup - Action",
+        description:
+          "Mooz proffers the well-water to a target within Close range. The target must succeed on a Presence Reaction Roll (17) or take one step toward the water and mark a Stress. A target may spend 1 Hope before rolling to gain advantage. If the target chooses to drink, resolve with the Aura of Compulsion's \"The Cure Is the Corruption.\"",
+      },
+      {
+        name: "Speak in Their Voice - Action",
+        description:
+          "Mooz quotes a lost memory or a dead loved one in the character's own remembered voice. The target must succeed on a Presence Reaction Roll (17); on a failure they must spend 1 Hope or mark 2 Stress.",
+      },
+      {
+        name: "A Gift Is a Debt - Reaction",
+        description:
+          "Once per scene, when a PC who has accepted any gift from Mooz or the forest (including drinking the water) takes an action against her, you may spend a Fear to force that PC to mark a Stress or spend a Hope as the forest asserts its claim.",
+      },
+    ],
+    imageUrl: null,
+    source: "homebrew",
+    campaignId: null,
+    createdAt: "2026-10-19T00:00:00Z",
+    updatedAt: "2026-10-19T00:00:00Z",
+  },
 ];
 
 // ─── Adversary Catalog Store ──────────────────────────────────────────────────
